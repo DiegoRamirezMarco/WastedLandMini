@@ -29,4 +29,4 @@ class Button:
         pygame.draw.rect(target, PALETTE["lamp" if active else "shadow"], self.rect)
         pygame.draw.rect(target, PALETTE["iron"], self.rect, 1)
         color = PALETTE["ink" if active else "bone"]
-        font.draw(target, self.label, (self.rect.x + PADDING_X, self.rect.y + 1), color)
+        font.draw(target, self.label, (self.rect.x + PADDING_X, self.rect.y + (self.rect.height - CELL_SIZE[1]) // 2), color)

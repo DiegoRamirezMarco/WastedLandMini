@@ -63,6 +63,9 @@ python -m simulation.headless --days 7 --seed 7
 - `C`: centre the view on the selected resident
 - `G`: go to whoever needs attention: someone waiting for advice, in the middle of something
   serious, or hurt. Press it again for the next one
+- The screen is the map with a bar on top, a menu on the left, a panel on the right and a dock
+  underneath. The menu opens the job board, the stores (what is everyone's, added up) and the
+  log, puts the minimap away, and goes back to the list of residents
 - The minimap in the corner shows everyone as a dot, blinking if they need attention. Click it
   to go there. `N` puts it away, or brings it back
 - Whoever is outside the settlement waits as a face in the top left corner; click it to select
@@ -77,10 +80,13 @@ python -m simulation.headless --days 7 --seed 7
 - `J`: open or close the job board: who holds each post and which stand empty. With a resident
   selected, `Proponer` beside a post puts it to them. They may say no, and cannot be pressed
   again for a while
+- With nobody selected the panel on the right lists everybody: click a name to go to them. So
+  does a click on anyone listed under a resident's relationships
+- While whoever is selected is talking with someone, the dock under the map shows the two of them
 - Click a resident to see their needs, their credits, what they carry, what they are doing and
   how they feel about the others. Click a pantry or a crate to see what is inside and whose it is, or the shop's
   counter to see what is on sale and at what price
-- The pause, speed, zoom, job board and log buttons at the top can also be clicked
+- The pause, speed and zoom buttons at the top can also be clicked
 - When a resident is at breaking point, is asked to take a post nobody is doing, or has a matter
   of the heart to settle, a `!` appears over them. Someone outside the settlement who comes on a
   risky find is not on the map: the line at the top says who is asking, and `Tab` opens it. Click them or press `Tab` to hear them out, then press `1`-`4` or click to give

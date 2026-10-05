@@ -23,7 +23,15 @@ from graphics.tileset import (
     Tileset,
 )
 from scenes.body_stage import BodyStage, Remains, ground_spot
-from scenes.hud import JOBS_INTENT, LOG_INTENT, PAUSE_INTENT, Hud
+from scenes.hud import (
+    JOBS_INTENT,
+    LOG_INTENT,
+    MINIMAP_INTENT,
+    PAUSE_INTENT,
+    ROSTER_INTENT,
+    STORES_INTENT,
+    Hud,
+)
 from scenes.scene import canvas_position
 from settings import SCALE, TILE_SIZE
 from simulation.commands import SetPausedCommand, SetSpeedCommand, SuggestJobCommand
@@ -33,13 +41,13 @@ from simulation.work.work_system import WORK_ACTION
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
 from skeleton.plan import IDLE_CLIP, builtin_plan
+from ui.bubble import MARK_SIZE, MARK_TAIL, draw_mark
 from ui.labels import away_residents
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
 from ui.panel import draw_panel
 from world.interactable import Interactable
 from world.map import Tile
 
-MAP_ORIGIN = (0, 32)
 # Tiles walked in one turn of the walk clip: a step with each foot.
 TILES_PER_STRIDE = 2
 # What a body does besides standing and walking, and how many times a second its clip goes round.
@@ -56,6 +64,8 @@ LYING_HEAD_OFFSET = (1, -2)
 # Frames per second of animated objects and bobbing icons.
 ANIMATION_FPS = 5
 BOBBING_ICONS = ("alert", "sleep")
+# What someone is doing is shown in a bubble over their head. These are not: they mark who it is.
+BARE_ICONS = ("selected", "heart", "friend")
 # Health below which a resident is shown as hurt.
 HURT_HEALTH = 70.0
 # Where a load is drawn on a body frame, by the way the resident faces: in their arms, or on their back.
@@ -114,7 +124,7 @@ class GlobalView:
         self.faces = faces
         # Everyone's body, and what a blow leaves lying about. Presentation only: nothing of it is saved.
         self.bodies = BodyStage(BodyRenderer(assets, builtin_plan()))
-        self.hud = Hud(canvas, world, font, icons)
+        self.hud = Hud(canvas, world, font, icons, faces, assets)
         # Real seconds of unpaused play, driving animations that have nothing to do with game state.
         self.time = 0.0
         # How far the current game minute has played out, from 0 to 1. Set by the game shell.
@@ -148,14 +158,13 @@ class GlobalView:
         tiles = (world.tile_map.width, world.tile_map.height)
         self._minimap = minimap_base(self.roofed_terrain, tiles)
         width, height = minimap_size(tiles)
+        # The part of the canvas that shows the map, and the map pixel at its top-left corner.
+        self.viewport = self.hud.layout.map.copy()
+        # The minimap keeps to the bottom left of the map, out of the way of what opens on the right.
         self._minimap_rect = pygame.Rect(
-            canvas.get_width() - MINIMAP_MARGIN - width, canvas.get_height() - MINIMAP_MARGIN - height, width, height
+            self.viewport.left + MINIMAP_MARGIN, self.viewport.bottom - MINIMAP_MARGIN - height, width, height
         )
         self.hud.minimap_rect = self._minimap_rect
-        # The part of the canvas that shows the map, and the map pixel at its top-left corner.
-        self.viewport = pygame.Rect(
-            MAP_ORIGIN, (canvas.get_width() - MAP_ORIGIN[0], canvas.get_height() - MAP_ORIGIN[1])
-        )
         self.camera = [0.0, 0.0]
         # Index into ZOOM_TILE_SIZES.
         self.zoom = DEFAULT_ZOOM
@@ -182,8 +191,7 @@ class GlobalView:
             self.roofs_on = not self.roofs_on
             self.hud.notify(ROOFS_ON if self.roofs_on else ROOFS_OFF)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_n:
-            self.hud.minimap_rect = None if self.hud.minimap_rect is not None else self._minimap_rect
-            self.hud.notify(MINIMAP_ON if self.hud.minimap_rect is not None else MINIMAP_OFF)
+            self._apply(MINIMAP_INTENT)
         elif event.type == pygame.KEYDOWN and event.key in ZOOM_KEYS:
             self.set_zoom(self.zoom + ZOOM_KEYS[event.key])
         elif event.type == pygame.MOUSEWHEEL:
@@ -358,6 +366,20 @@ class GlobalView:
             self.hud.toggle_log()
         elif intent == JOBS_INTENT:
             self.hud.toggle_jobs()
+        elif intent == STORES_INTENT:
+            self.hud.toggle_stores()
+        elif intent == ROSTER_INTENT:
+            # Nobody in particular: the panel goes back to listing everybody.
+            self.hud.select_resident(None)
+        elif intent == MINIMAP_INTENT:
+            self.hud.minimap_rect = None if self.hud.minimap_rect is not None else self._minimap_rect
+            self.hud.notify(MINIMAP_ON if self.hud.minimap_rect is not None else MINIMAP_OFF)
+        elif isinstance(intent, tuple) and intent[0] == "select":
+            self.hud.select_resident(intent[1])
+            self.centre_on_resident(intent[1])
+            decision = self._decision_of(intent[1])
+            if decision is not None:
+                self.requested_decision = decision
         elif isinstance(intent, tuple) and intent[0] == "suggest":
             self._suggest_job(intent[1])
         elif isinstance(intent, tuple) and intent[0] == "speed":
@@ -428,19 +450,26 @@ class GlobalView:
             scene = pygame.transform.scale(scene, size, self._buffer(size))
         self.canvas.blit(scene, self._canvas_point(*region.topleft))
         # Names, icons and faces go straight on the canvas, so they keep their size at any zoom.
+        self._draw_zone_names()
         for overlay in self._overlays:
             overlay()
         self.canvas.set_clip(None)
 
         self.hud.render()
         self._draw_minimap(region)
-        self._draw_sky()
         self._draw_away()
 
-    def _draw_sky(self) -> None:
-        """A sun or a moon after the clock, for whether residents can see far or not."""
-        icon = self.assets.image(icon_path("moon" if self.world.is_dark() else "sun"), size=ICON_SIZE)
-        self.canvas.blit(icon, (MINIMAP_MARGIN + self.font.width(self.world.clock.label) + 4, 5))
+    def _draw_zone_names(self) -> None:
+        """A sign over each named place, on the wall at its back, so that the map can be read."""
+        for room in self.world.rooms.values():
+            name = room.name.upper()
+            width = self.font.width(name) + 6
+            centre_x, top = self._canvas_point((room.x + room.width / 2) * TILE_SIZE, (room.y - 1) * TILE_SIZE)
+            sign = pygame.Rect(centre_x - width // 2, top + 1, width, CELL_SIZE[1] + 2)
+            if not self.viewport.colliderect(sign):
+                continue
+            draw_panel(self.canvas, sign, fill="ink", border="copper")
+            self.font.draw(self.canvas, name, (sign.x + 3, sign.y + 1), PALETTE["sand"])
 
     def _draw_away(self) -> None:
         """Whoever is outside the settlement is nowhere on the map: their faces go in a corner, to be picked there."""
@@ -452,7 +481,7 @@ class GlobalView:
         label_width = self.font.width(AWAY_LABEL)
         face = self.faces.marker(away[0].resident_id)
         width = label_width + 8 + (face.get_width() + 2) * len(away)
-        panel = pygame.Rect(MINIMAP_MARGIN, top, width + 4, face.get_height() + 4)
+        panel = pygame.Rect(self.viewport.left + MINIMAP_MARGIN, top, width + 4, face.get_height() + 4)
         draw_panel(self.canvas, panel)
         self.font.draw(self.canvas, AWAY_LABEL, (panel.x + 4, panel.y + 4), PALETTE["dust"])
         x = panel.x + 4 + label_width + 4
@@ -808,8 +837,14 @@ class GlobalView:
             self.canvas.blit(image, (x - image.get_width() // 2, y))
         bob = int(self.time * ANIMATION_FPS) % 2
         for icon in icons:
-            if icon is not None:
+            if icon is None:
+                continue
+            image = self.assets.image(icon_path(icon), size=ICON_SIZE)
+            lift = bob if icon in BOBBING_ICONS else 0
+            if icon in BARE_ICONS:
                 y -= ICON_SIZE[1] + 1
-                image = self.assets.image(icon_path(icon), size=ICON_SIZE)
-                lift = bob if icon in BOBBING_ICONS else 0
                 self.canvas.blit(image, (x - ICON_SIZE[0] // 2, y - lift))
+            else:
+                # What they are doing, in a bubble that points at them.
+                y -= MARK_SIZE[1] + MARK_TAIL + 1
+                draw_mark(self.canvas, image, (x, y - lift))

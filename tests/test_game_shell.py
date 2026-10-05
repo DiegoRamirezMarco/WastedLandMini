@@ -11,6 +11,7 @@ from graphics.face_renderer import MARKER_SIZE
 from graphics.lighting import NIGHT, STEPS, ambient, daylight
 from graphics.shelf_display import displayed_goods
 from scenes.body_stage import REMAINS_MINUTES
+from scenes.hud import STORES_INTENT
 from scenes.global_view import (
     MINIMAP_OFF,
     MINIMAP_ON,
@@ -27,9 +28,15 @@ from simulation.residents.activity import Activity
 from simulation.work.expedition import Expedition
 from skeleton.character import Mode
 from ui.inventory_view import condition_color
-from ui.resident_card import card_height
+from ui.resident_panel import relationship_hitboxes, roster_rows
 from ui.job_board import post_rows, suggest_buttons, suggest_intent
 from ui.labels import (
+    expression_of,
+    relationship_rows,
+    settlement_counts,
+    settlement_stock,
+    spoken_line,
+    trait_names,
     affordable_goods,
     away_residents,
     condition_of,
@@ -156,9 +163,11 @@ class GameShellTests(unittest.TestCase):
         self.assertEqual(view.hud.selected_id, "raul")
         self.assertIsNotNone(view.hud.card_rect())
         view.render()
-        self._click(view.hud.card_rect().center)
+        card = view.hud.card_rect()
+        self.assertEqual(card, view.hud.layout.panel)
+        self._click((card.x + 20, card.y + 20))
         self.assertEqual(view.hud.selected_id, "raul", "a click on the card fell through to the map")
-        self._click((320, 300))
+        self._click(view.viewport.center)
         self.assertIsNone(view.hud.selected_id)
 
     def test_log_opens_by_button_and_key_and_lists_events(self) -> None:
@@ -776,10 +785,8 @@ class GameShellTests(unittest.TestCase):
         beans.quantity = 1
         self.assertEqual(price_at(world, "shop_counter", beans), 20, "the last tin is dear")
         self.assertEqual(affordable_goods(world, lucia), ["hoe", "canned_beans"])
-        with_shop = card_height(world)
         del world.containers["shop_counter"]
         self.assertFalse(has_shop(world))
-        self.assertLess(card_height(world), with_shop, "no shop, no row for it on the card")
         world.containers["shop_counter"] = counter
         for select, target in ((view.hud.select_container, "shop_counter"), (view.hud.select_resident, "lucia")):
             select(target)
@@ -1133,8 +1140,8 @@ class GameShellTests(unittest.TestCase):
     def test_the_minimap_shows_the_settlement_and_a_click_on_it_goes_there(self) -> None:
         view, world = self.game.global_view, self.game.world
         minimap = view.hud.minimap_rect
-        self.assertTrue(self.game.canvas.get_rect().contains(minimap))
-        self.assertGreater(minimap.left, self.game.canvas.get_width() // 2)
+        self.assertTrue(view.viewport.contains(minimap), "it sits in a corner of the map")
+        self.assertLess(minimap.right, view.viewport.centerx, "out of the way of what opens on the right")
         self.assertTrue(view.hud.covers(minimap.center))
         view.hud.select_resident("raul")
         view.centre_on((5, 5))
@@ -1189,6 +1196,156 @@ class GameShellTests(unittest.TestCase):
         texts = [event.text for event in view.hud.feed.recent(10)]
         self.assertTrue(any("Lucía ha muerto" in text for text in texts))
         self.assertEqual(self.game.world.clock.speed, 1)
+
+    # --- The frame round the map ---
+
+    def test_the_screen_is_a_map_with_a_bar_a_menu_a_panel_and_a_dock_round_it(self) -> None:
+        view = self.game.global_view
+        layout = view.hud.layout
+        canvas = self.game.canvas.get_rect()
+        parts = [layout.top, layout.sidebar, layout.map, layout.dock, layout.panel]
+        self.assertEqual(sum(part.width * part.height for part in parts), canvas.width * canvas.height)
+        for index, part in enumerate(parts):
+            self.assertTrue(canvas.contains(part))
+            self.assertFalse(any(part.colliderect(other) for other in parts[index + 1 :]))
+        self.assertEqual(view.viewport, layout.map)
+        self.assertGreater(layout.map.width, layout.panel.width * 2)
+        # Only the map is map: everything round it is in front of it.
+        self.assertFalse(view.hud.covers(layout.map.center))
+        for part in (layout.top, layout.sidebar, layout.dock, layout.panel):
+            self.assertTrue(view.hud.covers(part.center))
+
+    def test_with_nobody_selected_the_panel_lists_everybody_to_be_picked(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        view.render()
+        self.assertIsNone(view.hud.card_rect())
+        rows = roster_rows(view.hud.layout.panel, world)
+        self.assertEqual([resident_id for _, resident_id in rows], list(world.residents))
+        row, resident_id = rows[3]
+        self._click(row.center)
+        self.assertEqual(view.hud.selected_id, resident_id)
+        view.render()
+        self.assertTrue(view.viewport.contains(view.hitboxes[resident_id]), "the view goes to whoever is picked")
+        # The first entry of the menu goes back to the list.
+        self._click(view.hud.menu[0].rect.center)
+        self.assertIsNone(view.hud.selected_id)
+
+    def test_the_panel_shows_who_matters_to_a_resident_and_a_click_goes_to_them(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        raul = world.residents["raul"]
+        view.hud.select_resident("raul")
+        rows = relationship_rows(world, raul, 5)
+        self.assertEqual(rows[0][0].resident_id, "marta", "whoever he feels most about comes first")
+        self.assertEqual((rows[0][1], rows[0][2], rows[0][3]), (-35, "Se llevan mal", "argument"))
+        raul.couple_with, world.residents["ines"].couple_with = "ines", "raul"
+        self.assertEqual(relationship_rows(world, raul, 5)[0][2], "Pareja")
+        self.assertEqual(trait_names(world, world.residents["marta"]), ["Le pierde la música"])
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        row, other_id = relationship_hitboxes(view.hud.layout.panel, world, raul)[0]
+        self.assertEqual(other_id, "ines")
+        self._click(row.center)
+        self.assertEqual(view.hud.selected_id, "ines")
+
+    def test_the_bar_counts_what_the_settlement_has(self) -> None:
+        world = self.game.world
+        counts = dict(settlement_counts(world))
+        self.assertEqual(counts["people"], f"{len(world.residents)}/11")
+        food = int(counts["food"])
+        self.assertGreater(food, 0)
+        pantry = world.containers["pantry_1"]
+        world.stock(pantry, "canned_beans", 5, None)
+        world.stock(pantry, "canned_beans", 3, "raul")
+        self.assertEqual(int(dict(settlement_counts(world))["food"]), food + 5, "what is somebody's own is not counted")
+        stock = dict(settlement_stock(world))
+        everyones = sum(
+            item.quantity
+            for inventory in world.containers.values()
+            for item in inventory.items
+            if item.definition_id == "canned_beans" and item.owner_id is None
+        )
+        self.assertEqual(stock["canned_beans"], everyones)
+
+    def test_the_stores_open_from_the_menu_and_share_their_corner_with_the_board_and_the_log(self) -> None:
+        view = self.game.global_view
+        hud = view.hud
+        stores = next(button for button in hud.menu if button.intent == STORES_INTENT)
+        self._click(stores.rect.center)
+        self.assertTrue(hud.stores_open)
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        self.assertTrue(hud.covers(hud.stores_rect().center))
+        self.assertTrue(view.viewport.contains(hud.stores_rect()))
+        self._click(hud.jobs_button.rect.center)
+        self.assertEqual((hud.stores_open, hud.jobs_open, hud.log_open), (False, True, False))
+        self._click(hud.log_button.rect.center)
+        self.assertEqual((hud.stores_open, hud.jobs_open, hud.log_open), (False, False, True))
+        self.assertTrue(view.viewport.contains(hud.log_rect()))
+        self.assertTrue(view.viewport.contains(hud.jobs_rect()))
+
+    def test_the_dock_shows_the_exchange_of_whoever_is_selected(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        self._stand_together("raul", "tomas")
+        raul, tomas = world.residents["raul"], world.residents["tomas"]
+        dock = view.hud.layout.dock
+        view.hud.select_resident("raul")
+        view.render()
+        quiet = pygame.image.tobytes(self.game.canvas.subsurface(dock), "RGB")
+        raul.activity = Activity("chat", partner_id="tomas", using=True)
+        tomas.activity = Activity("chat", partner_id="raul", using=True)
+        self.assertIn(spoken_line(world, raul), world.registries.dialogue["chat"])
+        self.assertEqual(expression_of(world, raul), "happy")
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(dock), "RGB"), quiet)
+        raul.activity = Activity("argument", partner_id="tomas", using=True)
+        self.assertEqual(expression_of(world, raul), "angry")
+        raul.activity = None
+        self.assertIsNone(spoken_line(world, raul))
+        self.assertEqual(expression_of(world, raul), "neutral")
+        raul.injuries = [Injury("cut", 40)]
+        self.assertEqual(expression_of(world, raul), "sad")
+
+    def test_advice_is_asked_for_in_the_dock_with_the_settlement_still_on_show(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        self._play(8)
+        decision = next(iter(world.decisions.values()))
+        view.render()
+        above = pygame.image.tobytes(self.game.canvas.subsurface(view.hud.layout.top), "RGB")
+        self.game.open_interaction(decision.decision_id)
+        self.assertEqual(view.hud.selected_id, decision.resident_id, "whoever asks is the one on the panel")
+        scene = self.game.interaction_view
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            self.game.active_scene.render()
+        self.assertEqual(pygame.image.tobytes(self.game.canvas.subsurface(view.hud.layout.top), "RGB"), above)
+        self.assertEqual(len(scene.buttons), len(decision.options))
+        dock = view.hud.layout.dock
+        for button in scene.buttons:
+            self.assertTrue(dock.contains(button.rect))
+        self._click(scene.buttons[0].rect.center)
+        self.assertIsNotNone(scene.result)
+        self.game.active_scene.render()
+
+    def test_every_place_has_its_name_on_the_map_and_doing_something_shows_in_a_bubble(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        self._stand_together("raul")
+        view.set_zoom(0)
+        view.render()
+        plain = pygame.image.tobytes(self.game.canvas.subsurface(view.viewport), "RGB")
+        names = {room.name for room in world.rooms.values()}
+        self.assertGreater(len(names), 5)
+        for room in world.rooms.values():
+            room.name = ""
+        view.render()
+        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(view.viewport), "RGB"), plain)
+        view.set_zoom(1)
+        view.centre_on((20, 14))
+        view.render()
+        idle = pygame.image.tobytes(self.game.canvas.subsurface(view.viewport), "RGB")
+        world.residents["raul"].activity = Activity("work", using=True)
+        self.assertEqual(view._status_icon(world.residents["raul"], resting=False), "work")
+        view.render()
+        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(view.viewport), "RGB"), idle)
 
     # --- Bodies with bones ---
 

@@ -77,10 +77,11 @@ def draw_container_panel(
     position: tuple[int, int],
     world: SimulationWorld,
     container_id: str,
+    width: int = PANEL_WIDTH,
 ) -> pygame.Rect:
     """Panel listing everything in a container: whose it is, or what it costs on a shop's counter."""
     inventory = world.containers[container_id]
-    rect = pygame.Rect(position, (PANEL_WIDTH, container_panel_height(inventory)))
+    rect = pygame.Rect(position, (width, container_panel_height(inventory)))
     draw_panel(target, rect)
     x, y = rect.x + PADDING, rect.y + PADDING
     placed = world.interactables.get(container_id)

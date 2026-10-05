@@ -307,6 +307,51 @@ Still open here:
 - Nobody carries the dead to their grave. The body lies a while and is gone.
 - The interaction view still shows faces only.
 
+### P11 — The frame of the picture — done
+The first step towards `docs/concept/visual-target.png`, the look the game is meant to have.
+
+- A larger canvas, 800×450, cut into a bar, a menu, the map, a panel and a dock
+- The bar: day, hour, speed, and what the settlement has in people, beds, food and scrap
+- The menu: residents, posts, stores, events and the minimap
+- The panel: a resident in full, with a face, bars, traits, who matters to them and what they
+  carry; or everybody at a glance, to be picked there
+- The dock: advice is asked for under the map, with two large faces and a speech bubble, and the
+  settlement left on show. With nobody asking, it shows the exchange the selected resident is in
+- On the map: a sign with the name of every place, and a bubble for what each resident is doing
+
+Still open here:
+- The bar counts only what exists: there is no water, energy or medicine to count yet (S15).
+- The menu has no construction or research, because there is none (S16, S17), and no radio screen.
+- Traits are two. The panel has room for more than the settlement has.
+- The speech in the dock is drawn from a handful of lines per kind of exchange.
+
+### P12 — The settlement with height — next
+- Buildings seen at an angle: front walls two tiles high, roofs with a slope, tents and awnings
+- A watchtower, a fence with depth, strings of lights, more clutter between the buildings
+- A horizon: the ruined city beyond the fence, and a warm light at dusk
+- Larger bodies, to match
+
+Done when: the default view reads as the concept picture does, building by building, and every
+piece of it is still a PNG that can be replaced by hand.
+
+### S15 — What the settlement lives on — planned
+- Water, energy, materials and medicine as stores of the settlement, produced and used up
+- A mood for each resident, apart from stress, that what they live through raises and lowers
+- A limit to how many can live here, set by the beds there are
+- How dangerous it is outside, as something the settlement knows or does not
+
+### S16 — Building — planned
+- Things to build, as data: what they cost, how long they take, who builds them
+- Sites: materials carried to them, work done at them, and the thing standing at the end
+- The player proposes what to build and where. The residents do it, or do not
+
+### S17 — Research — planned
+- Things to work out, as data: what each needs and what it opens up
+- A post where it is done, and time on shift that goes towards it
+
+Each of S15, S16 and S17 is followed by its screen: the counters in the bar, and the construction
+and research entries of the menu.
+
 ## Later
 - Voice/TTS modulation
 - SQLite persistence

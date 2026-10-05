@@ -47,10 +47,10 @@ class EventFeed:
         line = font.truncate(f"{format_time(event.timestamp)}  {event.text}", width)
         font.draw(target, line, position, self.color(event))
 
-    def draw_panel(self, target: pygame.Surface, font: BitmapFont, rect: pygame.Rect) -> None:
+    def draw_panel(self, target: pygame.Surface, font: BitmapFont, rect: pygame.Rect, title: str = "Registro") -> None:
         draw_panel(target, rect)
         x, y = rect.x + PADDING, rect.y + PADDING
-        font.draw(target, "Registro", (x, y), PALETTE["paper"])
+        font.draw(target, title, (x, y), PALETTE["paper"])
         y += LINE_HEIGHT + 2
         events = self.recent((rect.bottom - PADDING - y) // LINE_HEIGHT)
         if not events:

@@ -1,54 +1,115 @@
-"""Heads-up display of the global view: clock, speed and zoom buttons, event feed, job board and the resident card."""
+"""Everything round the map: the bar on top, the menu on the left, the panel on the right and the dock below."""
 
 from collections.abc import Hashable, Iterable
+from dataclasses import dataclass
 
 import pygame
 
+from graphics.assets import AssetStore
+from graphics.face_renderer import FaceRenderer
 from graphics.font import LINE_HEIGHT, BitmapFont
+from graphics.icons import ICON_SIZE, icon_path
+from graphics.item_icons import ICON_SIZE as ITEM_ICON_SIZE
 from graphics.item_icons import ItemIcons
 from graphics.palette import PALETTE
 from settings import SPEEDS
 from simulation.events.event import DomainEvent
 from simulation.world import SimulationWorld
 from ui.button import Button
+from ui.dock import draw_scene
 from ui.event_log import EventFeed
-from ui.inventory_view import PANEL_WIDTH, container_panel_height, draw_container_panel
+from ui.inventory_view import container_panel_height, draw_container_panel
 from ui.job_board import PANEL_WIDTH as BOARD_WIDTH
 from ui.job_board import draw_job_board, job_board_height, suggest_buttons
-from ui.labels import describe_weather, known_forecasts
+from ui.labels import (
+    FEELING_LABELS,
+    describe_action,
+    describe_weather,
+    expression_of,
+    known_forecasts,
+    settlement_counts,
+    settlement_stock,
+    spoken_line,
+)
+from ui.layout import Layout, layout_for
 from ui.panel import draw_panel
-from ui.resident_card import CARD_WIDTH, card_height, draw_resident_card
+from ui.resident_panel import draw_resident_panel, draw_roster, relationship_hitboxes, roster_rows
 
-HEADER_HEIGHT = 32
 MARGIN = 6
-BUTTONS_LEFT = 104
 LOG_SIZE = (250, 168)
+STORES_WIDTH = 184
 OUTLOOK_WIDTH = 300
 OUTLOOK_PADDING = 4
+# Rows of the menu on the left: an icon at twice its size with a word under it.
+MENU_ROW = 34
+MENU_ICON_SCALE = 2
 
 PAUSE_INTENT = ("pause",)
 LOG_INTENT = ("log",)
 JOBS_INTENT = ("jobs",)
+STORES_INTENT = ("stores",)
+ROSTER_INTENT = ("roster",)
+MINIMAP_INTENT = ("minimap",)
 ZOOM_OUT_INTENT = ("zoom", -1)
 ZOOM_IN_INTENT = ("zoom", 1)
 NOTICE_SECONDS = 3.0
+STORES_TITLE = "Almacén: lo que es de todos"
+STORES_EMPTY = "No queda nada"
+DOCK_TITLE = "Lo último"
 
 
 def speed_intent(speed: int) -> tuple[str, int]:
     return ("speed", speed)
 
 
+def select_intent(resident_id: str) -> tuple[str, str]:
+    return ("select", resident_id)
+
+
+@dataclass
+class MenuButton:
+    """An entry of the menu on the left: an icon over a word."""
+
+    rect: pygame.Rect
+    icon: str
+    label: str
+    intent: Hashable
+
+    def contains(self, position: tuple[int, int]) -> bool:
+        return self.rect.collidepoint(position)
+
+    def draw(self, target: pygame.Surface, font: BitmapFont, assets: AssetStore, active: bool = False) -> None:
+        pygame.draw.rect(target, PALETTE["shadow" if active else "ink"], self.rect)
+        if active:
+            pygame.draw.rect(target, PALETTE["lamp"], self.rect, 1)
+        size = (ICON_SIZE[0] * MENU_ICON_SCALE, ICON_SIZE[1] * MENU_ICON_SCALE)
+        icon = pygame.transform.scale(assets.image(icon_path(self.icon), size=ICON_SIZE), size)
+        target.blit(icon, (self.rect.centerx - size[0] // 2, self.rect.y + 3))
+        left = self.rect.centerx - font.width(self.label) // 2
+        font.draw(target, self.label, (left, self.rect.y + 5 + size[1]), PALETTE["paper" if active else "bone"])
+
+
 class Hud:
     def __init__(
-        self, canvas: pygame.Surface, world: SimulationWorld, font: BitmapFont, icons: ItemIcons
+        self,
+        canvas: pygame.Surface,
+        world: SimulationWorld,
+        font: BitmapFont,
+        icons: ItemIcons,
+        faces: FaceRenderer,
+        assets: AssetStore,
     ) -> None:
         self.canvas = canvas
         self.world = world
         self.font = font
         self.icons = icons
-        # The log and the job board share a corner of the screen, so only one is open at a time.
+        self.faces = faces
+        self.assets = assets
+        self.layout: Layout = layout_for(canvas.get_size())
+        # The log, the job board and the stores share a corner of the map, so only one is open at a time.
         self.log_open = False
         self.jobs_open = False
+        self.stores_open = False
         # At most one of these is set: the resident or the container whose panel is showing.
         self.selected_id: str | None = None
         self.selected_container: str | None = None
@@ -63,41 +124,56 @@ class Hud:
             intervention_from=self.intervention_from,
         )
 
-        self.pause_button = Button.at(font, BUTTONS_LEFT, 2, "II", PAUSE_INTENT)
+        top, sidebar = self.layout.top, self.layout.sidebar
+        self.clock_left = sidebar.right + MARGIN
+        self.pause_button = Button.at(font, self.clock_left + ICON_SIZE[0] + 40, 1, "II", PAUSE_INTENT)
         self.speed_buttons: list[Button] = []
         x = self.pause_button.rect.right + 4
         for speed in SPEEDS:
-            button = Button.at(font, x, 2, f"x{speed}", speed_intent(speed))
+            button = Button.at(font, x, 1, f"x{speed}", speed_intent(speed))
             self.speed_buttons.append(button)
             x = button.rect.right + 2
-        self.log_button = Button.at(font, 0, 2, "Registro", LOG_INTENT)
-        self.log_button.rect.right = canvas.get_width() - MARGIN
-        self.jobs_button = Button.at(font, 0, 2, "Puestos", JOBS_INTENT)
-        self.jobs_button.rect.right = self.log_button.rect.left - 2
+        self.counts_left = x + 10
         self.zoom_buttons = [
-            Button.at(font, 0, 2, "-", ZOOM_OUT_INTENT),
-            Button.at(font, 0, 2, "+", ZOOM_IN_INTENT),
+            Button.at(font, 0, 1, "-", ZOOM_OUT_INTENT),
+            Button.at(font, 0, 1, "+", ZOOM_IN_INTENT),
         ]
-        right = self.jobs_button.rect.left - 4
+        right = top.right - MARGIN
         for button in reversed(self.zoom_buttons):
             button.rect.right = right
             right = button.rect.left - 2
-        self.hint_left = x + 8
-        self.hint_width = right - self.hint_left - 4
+        self.counts_right = right - 6
+
+        entries = (
+            ("people", "Residentes", ROSTER_INTENT),
+            ("work", "Puestos", JOBS_INTENT),
+            ("scrap", "Almacén", STORES_INTENT),
+            ("log", "Eventos", LOG_INTENT),
+            ("map", "Mapa", MINIMAP_INTENT),
+        )
+        self.menu = [
+            MenuButton(pygame.Rect(sidebar.x, sidebar.y + index * MENU_ROW, sidebar.width, MENU_ROW), icon, label, intent)
+            for index, (icon, label, intent) in enumerate(entries)
+        ]
+        self.jobs_button = self.menu[1]
+        self.log_button = self.menu[3]
 
     @property
-    def buttons(self) -> list[Button]:
+    def buttons(self) -> list[Button | MenuButton]:
         """Every button on show, the ones of an open panel included."""
-        header = [self.pause_button, *self.speed_buttons, *self.zoom_buttons, self.jobs_button, self.log_button]
+        fixed = [self.pause_button, *self.speed_buttons, *self.zoom_buttons, *self.menu]
         if not self.jobs_open:
-            return header
-        return header + suggest_buttons(self.font, self.jobs_rect(), self.world, self.selected_id)
+            return fixed
+        return fixed + suggest_buttons(self.font, self.jobs_rect(), self.world, self.selected_id)
 
     def toggle_log(self) -> None:
-        self.log_open, self.jobs_open = not self.log_open, False
+        self.log_open, self.jobs_open, self.stores_open = not self.log_open, False, False
 
     def toggle_jobs(self) -> None:
-        self.jobs_open, self.log_open = not self.jobs_open, False
+        self.jobs_open, self.log_open, self.stores_open = not self.jobs_open, False, False
+
+    def toggle_stores(self) -> None:
+        self.stores_open, self.log_open, self.jobs_open = not self.stores_open, False, False
 
     def on_events(self, events: Iterable[DomainEvent]) -> None:
         self.feed.add(events)
@@ -122,22 +198,45 @@ class Hud:
         self.selected_id, self.selected_container = None, container_id
 
     def click(self, position: tuple[int, int]) -> Hashable | None:
-        """Return the intent of the button under `position`, if any."""
-        return next((button.intent for button in self.buttons if button.contains(position)), None)
+        """Return the intent of whatever is under `position`: a button, or a resident listed in the panel."""
+        for button in self.buttons:
+            if button.contains(position):
+                return button.intent
+        return next((select_intent(resident_id) for row, resident_id in self._listed() if row.collidepoint(position)), None)
+
+    def _listed(self) -> list[tuple[pygame.Rect, str]]:
+        """Residents named in the panel on the right, each of whom a click there selects."""
+        resident = self.world.residents.get(self.selected_id or "")
+        if resident is not None:
+            return relationship_hitboxes(self.layout.panel, self.world, resident)
+        if self.selected_container in self.world.containers:
+            return []
+        return roster_rows(self.layout.panel, self.world)
 
     def covers(self, position: tuple[int, int]) -> bool:
-        """True if a HUD element is in front of the map at `position`."""
-        if position[1] < HEADER_HEIGHT:
+        """True if `position` is not on the map, or something of the HUD is in front of the map there."""
+        if not self.layout.map.collidepoint(position):
             return True
-        panels = [self.card_rect(), self.container_rect(), self.minimap_rect, self.outlook_rect()]
+        panels = [self.minimap_rect, self.outlook_rect()]
         panels += [self.log_rect()] if self.log_open else []
         panels += [self.jobs_rect()] if self.jobs_open else []
+        panels += [self.stores_rect()] if self.stores_open else []
         return any(rect is not None and rect.collidepoint(position) for rect in panels)
 
+    def _float(self, width: int, height: int) -> pygame.Rect:
+        """A panel that opens over the top right corner of the map."""
+        area = self.layout.map
+        return pygame.Rect(area.right - MARGIN - width, area.y + MARGIN, width, min(height, area.height - MARGIN * 2))
+
     def log_rect(self) -> pygame.Rect:
-        return pygame.Rect(
-            self.canvas.get_width() - MARGIN - LOG_SIZE[0], HEADER_HEIGHT + MARGIN, *LOG_SIZE
-        )
+        return self._float(*LOG_SIZE)
+
+    def jobs_rect(self) -> pygame.Rect:
+        return self._float(BOARD_WIDTH, job_board_height(self.world))
+
+    def stores_rect(self) -> pygame.Rect:
+        rows = max(1, len(settlement_stock(self.world)))
+        return self._float(STORES_WIDTH, MARGIN * 2 + LINE_HEIGHT + 2 + rows * (ITEM_ICON_SIZE[1] + 2))
 
     def outlook_rect(self) -> pygame.Rect | None:
         """Where the forecasts the settlement has heard are listed, when it has heard any."""
@@ -145,52 +244,28 @@ class Hud:
         if not lines:
             return None
         height = OUTLOOK_PADDING * 2 + LINE_HEIGHT * lines
-        return pygame.Rect(MARGIN, HEADER_HEIGHT + MARGIN, OUTLOOK_WIDTH, height)
-
-    def jobs_rect(self) -> pygame.Rect:
-        return pygame.Rect(
-            self.canvas.get_width() - MARGIN - BOARD_WIDTH,
-            HEADER_HEIGHT + MARGIN,
-            BOARD_WIDTH,
-            job_board_height(self.world),
-        )
+        area = self.layout.map
+        return pygame.Rect(area.x + MARGIN, area.y + MARGIN, OUTLOOK_WIDTH, height)
 
     def card_rect(self) -> pygame.Rect | None:
-        if self.selected_id not in self.world.residents:
-            return None
-        height = card_height(self.world)
-        return pygame.Rect(MARGIN, self.canvas.get_height() - MARGIN - height, CARD_WIDTH, height)
+        """Where the selected resident is shown in full, while one is selected."""
+        return self.layout.panel if self.selected_id in self.world.residents else None
 
     def container_rect(self) -> pygame.Rect | None:
+        """Where the contents of the selected container are listed, while one is selected."""
         inventory = self.world.containers.get(self.selected_container or "")
         if inventory is None:
             return None
-        height = container_panel_height(inventory)
-        return pygame.Rect(MARGIN, self.canvas.get_height() - MARGIN - height, PANEL_WIDTH, height)
+        panel = self.layout.panel
+        return pygame.Rect(panel.x, panel.y, panel.width, min(panel.height, container_panel_height(inventory)))
 
     def render(self) -> None:
-        clock = self.world.clock
-        pygame.draw.rect(self.canvas, PALETTE["ink"], (0, 0, self.canvas.get_width(), HEADER_HEIGHT))
-        self.font.draw(self.canvas, clock.label, (MARGIN, 3), PALETTE["paper"])
-        self.pause_button.draw(self.canvas, self.font, active=clock.paused)
-        for button, speed in zip(self.speed_buttons, SPEEDS):
-            button.draw(self.canvas, self.font, active=clock.speed == speed and not clock.paused)
-        for button in self.zoom_buttons:
-            button.draw(self.canvas, self.font)
-        self.jobs_button.draw(self.canvas, self.font, active=self.jobs_open)
-        self.log_button.draw(self.canvas, self.font, active=self.log_open)
-        waiting = next(iter(self.world.decisions.values()), None)
-        asker = self.world.residents.get(waiting.resident_id) if waiting is not None else None
-        if self._notice_left > 0:
-            notice = self.font.truncate(self._notice, self.hint_width)
-            self.font.draw(self.canvas, notice, (self.hint_left, 3), PALETTE["glow"])
-        elif asker is not None:
-            hint = self.font.truncate(f"! {asker.name} necesita consejo: TAB o clic", self.hint_width)
-            self.font.draw(self.canvas, hint, (self.hint_left, 3), PALETTE["lamp"])
-        elif describe_weather(self.world) is not None:
-            self.font.draw(self.canvas, describe_weather(self.world), (self.hint_left, 3), PALETTE["sand"])
-        ticker_width = self.canvas.get_width() - MARGIN * 2
-        self.feed.draw_ticker(self.canvas, self.font, (MARGIN, 18), ticker_width)
+        self._render_top()
+        pygame.draw.rect(self.canvas, PALETTE["ink"], self.layout.sidebar)
+        for button in self.menu:
+            button.draw(self.canvas, self.font, self.assets, active=self._menu_active(button.intent))
+        self._render_panel()
+        self._render_dock()
 
         outlook = self.outlook_rect()
         if outlook is not None:
@@ -203,12 +278,116 @@ class Hud:
             self.feed.draw_panel(self.canvas, self.font, self.log_rect())
         if self.jobs_open:
             draw_job_board(self.canvas, self.font, self.jobs_rect(), self.world, self.selected_id)
-        card = self.card_rect()
-        if card is not None:
-            resident = self.world.residents[self.selected_id]
-            draw_resident_card(self.canvas, self.font, self.icons, card.topleft, self.world, resident)
-        container = self.container_rect()
-        if container is not None:
-            draw_container_panel(
-                self.canvas, self.font, self.icons, container.topleft, self.world, self.selected_container
+        if self.stores_open:
+            self._render_stores(self.stores_rect())
+
+    def _menu_active(self, intent: Hashable) -> bool:
+        if intent == ROSTER_INTENT:
+            return self.card_rect() is None and self.container_rect() is None
+        if intent == MINIMAP_INTENT:
+            return self.minimap_rect is not None
+        return {JOBS_INTENT: self.jobs_open, STORES_INTENT: self.stores_open, LOG_INTENT: self.log_open}.get(intent, False)
+
+    def _render_top(self) -> None:
+        top, clock = self.layout.top, self.world.clock
+        pygame.draw.rect(self.canvas, PALETTE["ink"], top)
+        plaque = pygame.Rect(top.x + 2, top.y + 2, self.layout.sidebar.width - 4, top.height - 4)
+        draw_panel(self.canvas, plaque, fill="shadow", border="copper")
+        day = f"Día {clock.day}"
+        self.font.draw(self.canvas, day, (plaque.centerx - self.font.width(day) // 2, plaque.y + 5), PALETTE["lamp"])
+
+        sky = self.assets.image(icon_path("moon" if self.world.is_dark() else "sun"), size=ICON_SIZE)
+        self.canvas.blit(sky, (self.clock_left, 3))
+        hour = f"{clock.hour:02d}:{clock.minute:02d}"
+        self.font.draw(self.canvas, hour, (self.clock_left + ICON_SIZE[0] + 4, 2), PALETTE["paper"])
+        self.pause_button.draw(self.canvas, self.font, active=clock.paused)
+        for button, speed in zip(self.speed_buttons, SPEEDS):
+            button.draw(self.canvas, self.font, active=clock.speed == speed and not clock.paused)
+        for button in self.zoom_buttons:
+            button.draw(self.canvas, self.font)
+
+        x = self.counts_left
+        for icon, figure in settlement_counts(self.world):
+            self.canvas.blit(self.assets.image(icon_path(icon), size=ICON_SIZE), (x, 3))
+            self.font.draw(self.canvas, figure, (x + ICON_SIZE[0] + 3, 2), PALETTE["bone"])
+            x += ICON_SIZE[0] + 3 + self.font.width(figure) + 12
+        weather = describe_weather(self.world)
+        if weather is not None and x + self.font.width(weather) < self.counts_right:
+            self.font.draw(self.canvas, weather, (self.counts_right - self.font.width(weather), 2), PALETTE["sand"])
+
+        # Under all that, one line: a word from the game, whoever is waiting for advice, or the latest news.
+        width = top.right - MARGIN - self.clock_left
+        waiting = next(iter(self.world.decisions.values()), None)
+        asker = self.world.residents.get(waiting.resident_id) if waiting is not None else None
+        if self._notice_left > 0:
+            self.font.draw(self.canvas, self.font.truncate(self._notice, width), (self.clock_left, 14), PALETTE["glow"])
+        elif asker is not None:
+            hint = self.font.truncate(f"! {asker.name} necesita consejo: TAB o clic", width)
+            self.font.draw(self.canvas, hint, (self.clock_left, 14), PALETTE["lamp"])
+        else:
+            self.feed.draw_ticker(self.canvas, self.font, (self.clock_left, 14), width)
+
+    def _render_panel(self) -> None:
+        panel = self.layout.panel
+        resident = self.world.residents.get(self.selected_id or "")
+        if resident is not None:
+            draw_resident_panel(self.canvas, self.font, self.icons, self.faces, self.assets, panel, self.world, resident)
+        elif self.container_rect() is not None:
+            draw_panel(self.canvas, panel)
+            draw_container_panel(self.canvas, self.font, self.icons, panel.topleft, self.world, self.selected_container, panel.width)
+        else:
+            draw_roster(self.canvas, self.font, self.faces, panel, self.world)
+
+    def _render_dock(self) -> None:
+        """Under the map: the exchange the selected resident is in, or else what has been going on."""
+        dock = self.layout.dock
+        resident = self.world.residents.get(self.selected_id or "")
+        activity = resident.activity if resident is not None else None
+        partner = self.world.residents.get(activity.partner_id or "") if activity is not None and activity.using else None
+        if resident is None or partner is None or resident.away:
+            self.feed.draw_panel(self.canvas, self.font, dock, title=DOCK_TITLE)
+            return
+        # They take turns to speak, a few minutes each.
+        turn = (self.world.clock.total_minutes // 4) % 2
+        speaker = resident if turn == 0 else partner
+        areas = draw_scene(
+            self.canvas,
+            self.font,
+            self.faces,
+            dock,
+            (resident.resident_id, expression_of(self.world, resident), resident.name),
+            (partner.resident_id, expression_of(self.world, partner), partner.name),
+            spoken_line(self.world, speaker) or "...",
+            speaker=-1 if turn == 0 else 1,
+        )
+        x, y = areas.side.x, areas.side.y
+        lines = [(f"{resident.name} {describe_action(self.world, resident)}", "paper")]
+        for one, other in ((resident, partner), (partner, resident)):
+            feelings = self.world.relationships.get((one.resident_id, other.resident_id))
+            felt = ", ".join(
+                f"{label} {round(getattr(feelings, feeling)) if feelings is not None else 0}"
+                for feeling, label in FEELING_LABELS.items()
             )
+            lines.append((f"{one.name} por {other.name}: {felt}", "bone"))
+        for text, color in lines:
+            for line in self.font.wrap(text, areas.side.width):
+                self.font.draw(self.canvas, line, (x, y), PALETTE[color])
+                y += LINE_HEIGHT
+            y += 2
+
+    def _render_stores(self, rect: pygame.Rect) -> None:
+        draw_panel(self.canvas, rect)
+        x, y = rect.x + MARGIN, rect.y + MARGIN
+        self.font.draw(self.canvas, STORES_TITLE, (x, y), PALETTE["paper"])
+        y += LINE_HEIGHT + 2
+        stock = settlement_stock(self.world)
+        if not stock:
+            self.font.draw(self.canvas, STORES_EMPTY, (x, y + 3), PALETTE["stone"])
+        for definition_id, quantity in stock:
+            if y + ITEM_ICON_SIZE[1] > rect.bottom - 2:
+                break
+            self.canvas.blit(self.icons.icon(definition_id), (x, y))
+            name = self.world.registries.items.resolve(definition_id).name
+            text = self.font.truncate(f"{name} x{quantity}", rect.width - MARGIN * 2 - ITEM_ICON_SIZE[0] - 4)
+            self.font.draw(self.canvas, text, (x + ITEM_ICON_SIZE[0] + 4, y + 3), PALETTE["bone"])
+            y += ITEM_ICON_SIZE[1] + 2

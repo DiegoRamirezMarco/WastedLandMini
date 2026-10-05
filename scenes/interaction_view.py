@@ -1,6 +1,8 @@
+from collections.abc import Callable
+
 import pygame
 
-from graphics.face_renderer import FACE_SIZE, FaceRenderer
+from graphics.face_renderer import FaceRenderer
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
 from scenes.scene import canvas_position
@@ -8,19 +10,17 @@ from simulation.commands import ChooseOptionCommand
 from simulation.events.decision import Decision
 from simulation.world import SimulationWorld
 from ui.button import Button
-from ui.dialogue_box import draw_dialogue_box
+from ui.dock import dock_areas, draw_scene
 from ui.labels import FEELING_LABELS
 from ui.panel import draw_panel
 
-FACE_SCALE = 2
-PORTRAIT = (FACE_SIZE[0] * FACE_SCALE, FACE_SIZE[1] * FACE_SCALE)
-LEFT_PORTRAIT = (72, 62)
-RIGHT_PORTRAIT = (440, 62)
-BOX = pygame.Rect(72, 214, 496, 50)
-OPTIONS_TOP = 276
-OPTION_GAP = 8
+OPTION_HEIGHT = 18
+OPTION_GAP = 3
 OPTION_KEYS = (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6)
 CONTINUE_KEYS = (pygame.K_SPACE, pygame.K_RETURN)
+NOBODY_TITLE = "Nadie necesita consejo"
+NOBODY_TEXT = "Cuando alguien esté al límite verás un ! sobre su cabeza. ESPACIO o TAB para volver."
+CONTINUE_TEXT = "ESPACIO para continuar"
 # Face each resident shows once they have made up their mind, by outcome ID.
 OUTCOME_EXPRESSIONS = {
     "confront": "angry", "talk_it_out": "neutral", "cool_off": "sad", "fight": "angry", "walk_away": "sad",
@@ -34,15 +34,26 @@ DECISION_EXPRESSIONS = {"job_offer": "neutral", "confession": "neutral", "breaku
 
 
 class InteractionView:
-    """Close-up of a resident asking for advice. Time stands still while it is open."""
+    """A resident asking for advice, in the dock under the map. Time stands still while it is open.
+
+    The rest of the screen is whatever `backdrop` draws: the settlement, as it was left.
+    """
 
     def __init__(
-        self, canvas: pygame.Surface, world: SimulationWorld, font: BitmapFont, faces: FaceRenderer
+        self,
+        canvas: pygame.Surface,
+        world: SimulationWorld,
+        font: BitmapFont,
+        faces: FaceRenderer,
+        dock: pygame.Rect | None = None,
+        backdrop: Callable[[], None] | None = None,
     ) -> None:
         self.canvas = canvas
         self.world = world
         self.font = font
         self.faces = faces
+        self.dock = dock if dock is not None else canvas.get_rect()
+        self.backdrop = backdrop
         self.decision: Decision | None = None
         # Narration shown once the resident has decided, until the player moves on.
         self.result: str | None = None
@@ -52,7 +63,7 @@ class InteractionView:
         self.buttons: list[Button] = []
 
     def open(self, decision_id: str | None) -> None:
-        """Show the given open decision, or an empty scene if there is none."""
+        """Show the given open decision, or say that there is none."""
         self.decision = self.world.decisions.get(decision_id) if decision_id else None
         self.result = None
         # Someone weighing a job or their own heart is not at the end of their tether, as in a crisis.
@@ -61,15 +72,15 @@ class InteractionView:
         self.buttons = self._option_buttons()
 
     def _option_buttons(self) -> list[Button]:
+        """The advice on offer, one under another down the side of the dock."""
         if self.decision is None:
             return []
-        count = len(self.decision.options)
-        width = (BOX.width - OPTION_GAP * (count - 1)) // count
+        side = dock_areas(self.dock).side
         buttons = []
         for index, option in enumerate(self.decision.options):
-            label = self.font.truncate(f"[{index + 1}] {option.text}", width - 8)
-            button = Button.at(self.font, BOX.x + index * (width + OPTION_GAP), OPTIONS_TOP, label, option.option_id)
-            button.rect.width = width
+            label = self.font.truncate(f"[{index + 1}] {option.text}", side.width - 8)
+            button = Button.at(self.font, side.x, side.y + index * (OPTION_HEIGHT + OPTION_GAP), label, option.option_id)
+            button.rect.size = (side.width, OPTION_HEIGHT)
             buttons.append(button)
         return buttons
 
@@ -103,65 +114,70 @@ class InteractionView:
     def update(self, dt: float) -> None:
         pass
 
-    def _portrait(self, position: tuple[int, int], face_id: str, expression: str, name: str) -> None:
-        frame = pygame.Rect(position[0] - 3, position[1] - 3, PORTRAIT[0] + 6, PORTRAIT[1] + 6)
-        draw_panel(self.canvas, frame, fill="iron", border="stone")
-        face = pygame.transform.scale(self.faces.face(face_id, expression), PORTRAIT)
-        self.canvas.blit(face, position)
-        self.font.draw(
-            self.canvas, name, (frame.centerx - self.font.width(name) // 2, frame.bottom + 4), PALETTE["paper"]
-        )
-
     def render(self) -> None:
-        self.canvas.fill(PALETTE["ink"])
-        decision = self.decision
-        if decision is None:
-            self.font.draw(self.canvas, "Nadie necesita consejo", (24, 16), PALETTE["glow"], scale=2)
-            message = "Cuando alguien esté al límite verás un ! sobre su cabeza. ESPACIO o TAB para volver."
-            self.font.draw(self.canvas, message, (24, 46), PALETTE["dust"])
+        if self.backdrop is not None:
+            self.backdrop()
+        else:
+            self.canvas.fill(PALETTE["ink"])
+        dock, decision = self.dock, self.decision
+        resident = self.world.residents.get(decision.resident_id) if decision is not None else None
+        if decision is None or resident is None:
+            draw_panel(self.canvas, dock, fill="shadow", border="lamp")
+            self.font.draw(self.canvas, NOBODY_TITLE, (dock.x + 12, dock.y + 12), PALETTE["glow"], scale=2)
+            y = dock.y + 12 + LINE_HEIGHT * 2 + 6
+            for line in self.font.wrap(NOBODY_TEXT, dock.width - 24):
+                self.font.draw(self.canvas, line, (dock.x + 12, y), PALETTE["dust"])
+                y += LINE_HEIGHT
             return
 
-        resident = self.world.residents.get(decision.resident_id)
         crisis = decision.crisis
         target = self.world.residents.get(crisis.target_id) if crisis and crisis.target_id else None
-        if resident is None:
+        across = (target.resident_id, "neutral", target.name) if target is not None else None
+        text = decision.prompt if self.result is None else self.result
+        areas = draw_scene(
+            self.canvas,
+            self.font,
+            self.faces,
+            dock,
+            (resident.resident_id, self.expression, resident.name),
+            across,
+            text,
+            narration=self.result is not None,
+        )
+        # A frame in the colour of an alert: this is waiting on the player.
+        pygame.draw.rect(self.canvas, PALETTE["lamp"], dock, 1)
+        self._render_under_speech(areas.speech, resident.resident_id, target)
+        side = areas.side
+        if self.result is not None:
+            self.font.draw(self.canvas, CONTINUE_TEXT, side.topleft, PALETTE["lamp"])
             return
-        self.font.draw(self.canvas, f"{resident.name} necesita consejo", (24, 12), PALETTE["glow"], scale=2)
-        subtitle = f"{self.world.clock.label} · el tiempo está detenido"
-        self.font.draw(self.canvas, subtitle, (24, 38), PALETTE["stone"])
+        for button in self.buttons:
+            button.draw(self.canvas, self.font)
+        y = (self.buttons[-1].rect.bottom if self.buttons else side.y) + 4
+        notes = [
+            (f"Pulsa 1-{len(self.buttons)} o haz clic. Tu consejo influye, pero quien decide es {resident.name}.", "dust"),
+            (self._leaning_text(decision, resident.name, target.name if target else ""), "stone"),
+            (f"{self.world.clock.label} · el tiempo está detenido", "stone"),
+        ]
+        for note, color in notes:
+            for line in self.font.wrap(note, side.width):
+                if y + LINE_HEIGHT > side.bottom + 2:
+                    return
+                self.font.draw(self.canvas, line, (side.x, y), PALETTE[color])
+                y += LINE_HEIGHT
 
-        self._portrait(LEFT_PORTRAIT, resident.resident_id, self.expression, resident.name)
-        if target is not None:
-            self._portrait(RIGHT_PORTRAIT, target.resident_id, "neutral", target.name)
-            self._render_feelings(resident.resident_id, target.resident_id, target.name)
-
-        if self.result is None:
-            draw_dialogue_box(self.canvas, self.font, BOX, f'"{decision.prompt}"', speaker=resident.name)
-            for button in self.buttons:
-                button.draw(self.canvas, self.font)
-            hint = f"Pulsa 1-{len(self.buttons)} o haz clic. Tu consejo influye, pero quien decide es {resident.name}."
-            self.font.draw(self.canvas, hint, (BOX.x, OPTIONS_TOP + 22), PALETTE["dust"])
-            leaning = self._leaning_text(decision, resident.name, target.name if target else "")
-            if leaning:
-                self.font.draw(self.canvas, leaning, (BOX.x, OPTIONS_TOP + 22 + LINE_HEIGHT), PALETTE["stone"])
-        else:
-            draw_dialogue_box(self.canvas, self.font, BOX, self.result)
-            self.font.draw(self.canvas, "ESPACIO para continuar", (BOX.x, OPTIONS_TOP + 4), PALETTE["lamp"])
-
-    def _render_feelings(self, resident_id: str, target_id: str, target_name: str) -> None:
-        """What the resident feels about the other, between the two portraits."""
-        feelings = self.world.relationships.get((resident_id, target_id))
-        left = LEFT_PORTRAIT[0] + PORTRAIT[0] + 3
-        centre = (left + RIGHT_PORTRAIT[0] - 3) // 2
-        lines = [f"Lo que siente por {target_name}"] + [
+    def _render_under_speech(self, speech: pygame.Rect, resident_id: str, target) -> None:
+        """What the resident feels about the other, in the strip left under what is said."""
+        if target is None:
+            return
+        feelings = self.world.relationships.get((resident_id, target.resident_id))
+        felt = "  ".join(
             f"{label} {round(getattr(feelings, feeling)) if feelings is not None else 0}"
             for feeling, label in FEELING_LABELS.items()
-        ]
-        y = LEFT_PORTRAIT[1] + 40
-        for index, line in enumerate(lines):
-            color = PALETTE["dust"] if index == 0 else PALETTE["bone"]
-            self.font.draw(self.canvas, line, (centre - self.font.width(line) // 2, y), color)
-            y += LINE_HEIGHT
+        )
+        line = self.font.truncate(f"Por {target.name}: {felt}", speech.width)
+        left = speech.centerx - self.font.width(line) // 2
+        self.font.draw(self.canvas, line, (left, speech.bottom + 6), PALETTE["bone"])
 
     def _leaning_text(self, decision: Decision, name: str, target_name: str) -> str:
         """What the resident will probably do if the player says nothing."""

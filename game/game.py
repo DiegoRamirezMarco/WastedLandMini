@@ -69,7 +69,15 @@ class Game:
         self.global_view = GlobalView(
             self.canvas, self.world, self.assets, self.font, self.icons, self.faces
         )
-        self.interaction_view = InteractionView(self.canvas, self.world, self.font, self.faces)
+        # Advice is asked for in the dock under the map, with the settlement left on show around it.
+        self.interaction_view = InteractionView(
+            self.canvas,
+            self.world,
+            self.font,
+            self.faces,
+            dock=self.global_view.hud.layout.dock,
+            backdrop=self.global_view.render,
+        )
 
     def save_game(self, path: Path = SAVE_PATH) -> bool:
         """Write the settlement to disk. Returns whether it worked."""
@@ -128,6 +136,10 @@ class Game:
     def open_interaction(self, decision_id: str | None) -> None:
         """Show the close-up scene for an open decision. Time stops until it is closed."""
         self.interaction_view.open(decision_id)
+        asking = self.world.decisions.get(decision_id or "")
+        if asking is not None:
+            # Whoever asks is the one to look at: their panel says what they are going through.
+            self.global_view.hud.select_resident(asking.resident_id)
         self.scene_name = "interaction"
 
     def sync_scenes(self) -> None:

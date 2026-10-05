@@ -6,7 +6,7 @@ from graphics.icons import ICON_SIZE, icon_path
 from tools.art.grid import paint
 
 LEGEND = {
-    "o": "ink", "p": "paper", "k": "ink", "e": "ember", "y": "lamp", "g": "glow", "m": "mist", "d": "dust", "h": "copper", "b": "blood",
+    "o": "ink", "p": "paper", "k": "ink", "e": "ember", "y": "lamp", "g": "glow", "m": "mist", "d": "dust", "h": "copper", "b": "blood", "l": "lichen",
 }
 
 ICONS = {
@@ -109,6 +109,66 @@ ICONS = {
         "ommmo...",
         ".ommmo..",
         "..oooo..",
+    ],
+    "people": [
+        "..oooo..",
+        ".oppppo.",
+        ".oppppo.",
+        "..oooo..",
+        ".oooooo.",
+        "oppppppo",
+        "oppppppo",
+        "oooooooo",
+    ],
+    "food": [
+        "....ol..",
+        "...ol...",
+        ".oobboo.",
+        "obbbbbbo",
+        "obbbbbbo",
+        "obbbbbbo",
+        ".obbbbo.",
+        "..oooo..",
+    ],
+    "scrap": [
+        "oooooooo",
+        "ohhhhhho",
+        "ohdhhdho",
+        "ohhddhho",
+        "ohhddhho",
+        "ohdhhdho",
+        "ohhhhhho",
+        "oooooooo",
+    ],
+    "eat": [
+        "k.k.k..k",
+        "k.k.k.kk",
+        "k.k.k.kk",
+        ".kkk..kk",
+        "..k...k.",
+        "..k...k.",
+        "..k...k.",
+        "..k...k.",
+    ],
+    "log": [
+        ".oooooo.",
+        "oppppppo",
+        "opkkkkpo",
+        "oppppppo",
+        "opkkkkpo",
+        "oppppppo",
+        "opkkpppo",
+        ".oooooo.",
+    ],
+    "map": [
+        "oo.oo.oo",
+        "oyoyyoyo",
+        "oyoyyoyo",
+        "oyoyyoyo",
+        "oyoyyoyo",
+        "oyoyyoyo",
+        "oyoyyoyo",
+        "oo.oo.oo",
     ],
     "sleep": [
         "....mmmm",

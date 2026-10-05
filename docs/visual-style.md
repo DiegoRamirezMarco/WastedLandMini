@@ -1,5 +1,14 @@
 # Visual Direction
 
+## Where this is going
+- The look to aim for is `docs/concept/visual-target.png`: the settlement seen at an angle, with
+  buildings that have height and a name on each, a bubble over everyone for what they are doing,
+  a bar of what the settlement has, a menu down the left, whoever is selected in full down the
+  right, and the conversation docked under the map with two large faces and a speech bubble.
+- It stays pixel art, drawn from code and replaceable file by file. It will not look painted.
+- The frame of that picture is in place: see The screen below. The map with height is next, and
+  `docs/roadmap.md` says what follows.
+
 ## Pixel art
 - The game is pixel art.
 - PNG files under `assets/` are the source of truth, so they can be opened and edited by hand in any sprite editor.
@@ -12,7 +21,8 @@
 ## Style contract
 
 ### Canvas
-- Everything is drawn on a 640×360 canvas and shown scaled by a whole number (×2 = 1280×720).
+- Everything is drawn on an 800×450 canvas and shown scaled by a whole number (×2 = 1600×900,
+  which fits a 1920×1080 desktop with its title bar and task bar).
 - Scaling is nearest-neighbour. Never draw at window resolution, never scale by a fraction.
   The one exception is the overview of the global view, which shows the map at half size.
 - The numbers live in `settings.py` (`INTERNAL_WIDTH`, `INTERNAL_HEIGHT`, `SCALE`, `TILE_SIZE`).
@@ -21,7 +31,7 @@
 
 | Asset | Size | Notes |
 |---|---|---|
-| Tile | 16×16 | The canvas is 40 tiles wide and 22.5 tall |
+| Tile | 16×16 | The part of the canvas that shows the map is 34 tiles wide and 18 tall |
 | Roof tile, from afar | 16×16 | `sprites/tiles/roofs.png`. Only ever shown at half size, so it is drawn in blocks of 2×2 pixels |
 | Roof tile, from close | 16×16 | `sprites/tiles/roofs_close.png`. The same tiles in the same cells, drawn pixel by pixel |
 | Resident body | 16×24 standing at rest | Feet at the bottom centre. Drawn from parts over a skeleton: see Bodies below |
@@ -98,6 +108,29 @@ custom_content/
   checker and logs a warning. Those two colours are outside the palette on purpose.
 - Paths that leave the store's root are refused the same way.
 
+## The screen
+`ui/layout.py` cuts the canvas into five parts, and nothing is drawn across their edges.
+
+| Part | Where | What it holds |
+|---|---|---|
+| Bar | Across the top, 26 high | The day on a plaque, sun or moon and the hour, pause and speed, what the settlement has (people and beds, food, scrap) as an icon and a figure each, the weather, and zoom. Under them one line: a word from the game, whoever waits for advice, or the latest news |
+| Menu | Down the left, 58 wide | An icon at ×2 over a word for each entry: residents, posts, stores, events, map. The open one is framed in `lamp` |
+| Map | The middle | The settlement. What the menu opens floats over its top right corner, one thing at a time; the minimap keeps to its bottom left |
+| Panel | Down the right, 196 wide | Whoever is selected, in full; a container's contents; or, with nothing selected, everybody at a glance |
+| Dock | Under the map, 136 high | A scene between two faces, or else what has been going on |
+
+- **A resident in the panel**: their face at 64×64, wearing how things stand with them; the name
+  at ×2; credits, what they are doing and their post; a bar for health and one for each need;
+  their traits as chips; the five people they feel most about, each with a small face, an icon,
+  a score (affection less resentment, green or red) and a word for what they are; what they carry
+  as a grid of icons at ×2 with a count and a name; and what ails them or what they last remember.
+- A click on anybody named in the panel selects them and takes the view to them.
+- **The dock as a scene**: two faces at 128×128 in frames with a name plate, and between them a
+  comic speech bubble, `paper` with an `ink` outline and a tail towards whoever speaks. A line
+  that ends in `!` is written at ×2 where it fits. Beside them, a column of text or of buttons.
+- While whoever is selected is in an exchange, the dock shows it, the two taking turns with the
+  lines written for that exchange. Otherwise it lists the latest events.
+
 ## Global view
 - Top-down settlement, outdoors and post-apocalyptic: bare ground and dry grass, shacks of salvaged
   planks seen with the roof off up close, a scrap-metal fence, fires in barrels.
@@ -117,7 +150,10 @@ custom_content/
 - Walls and fences show their front where they end towards the viewer and their top elsewhere.
 - Objects and residents are drawn back to front, so whatever stands lower on screen is in front.
 - Simple readable bodies, drawn over a skeleton. See Bodies below.
-- Name, status icon (talking, arguing, asleep, hurt, at work, `!`) and selection arrow stacked over each resident.
+- Name, what they are doing and selection arrow stacked over each resident. What they are doing
+  (talking, arguing, asleep, hurt, at work, `!`) is an icon in a small `paper` bubble with a tail.
+- Every named place has its name on a sign, `sand` on `ink` with a `copper` border, on the wall
+  at its back. Signs are drawn on the canvas, so they keep their size at any zoom.
 - Animated objects and bobbing icons run on real time and stop while the game is paused.
 - While someone eats or uses an item, its icon floats over their head.
 - What a resident carries for their job is drawn in their hands, or on their back when they walk
@@ -142,13 +178,13 @@ custom_content/
   drawn after the light and are never dimmed.
 
 ### Minimap
-- The whole map at 2 canvas pixels a tile, in the bottom right corner, with the roofs on.
+- The whole map at 2 canvas pixels a tile, in the bottom left corner of the map, with the roofs on.
 - One dot per resident: `paper`, `lamp` for the selected one, and blinking `ember` and `glow` for
   whoever needs attention. A `glow` frame marks the part of the map in view.
 
 ### What is not on the map
-- A sun or a moon follows the clock: the moon is up while it is dark for the residents.
-- Forecasts that at least one resident has heard are listed under the header, top left, one line
+- A sun or a moon in the bar follows the clock: the moon is up while it is dark for the residents.
+- Forecasts that at least one resident has heard are listed at the top left of the map, one line
   each in `sand`. What nobody knows is never shown.
 - Whoever is outside the settlement is a face in a small panel below that list, and can be picked
   there like anyone on the map.
@@ -160,8 +196,13 @@ custom_content/
   like any other, with no use: wrecks and stacks of tyres block the way, loose junk does not.
 
 ## Interaction view
-- Close framing for important social events.
-- Large expressive faces.
+- A resident asking for advice takes over the dock, framed in `lamp`, and time stops. The rest
+  of the screen stays as it was, and the panel shows whoever is asking.
+- Their face at ×2 wears what they are going through, and then what they made of the advice.
+  What they ask is in the speech bubble; if it is about someone, that one's face is across from
+  them, with what the first feels for them underneath.
+- The advice on offer is a column of buttons beside them, with what they would do if left alone.
+  Once they have decided, what happened is told in a plain box instead of a bubble.
 - Modular faces by default, shown at ×2 in a framed portrait.
 - Custom PNG faces from `custom_content/faces/<resident_id>/` take their place when present.
 - Bodies are not shown here. The moment belongs to the faces.
