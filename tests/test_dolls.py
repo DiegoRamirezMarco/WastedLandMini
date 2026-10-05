@@ -70,6 +70,10 @@ class DollTemplateTests(unittest.TestCase):
         rest = self.plan.rests["doll"]
         self.assertLess(rest["shoulder_right"][0], rest["chest"][0], "facing right, the arm of the near side is nearer the back")
         self.assertGreater(rest["shoulder_left"][0], rest["chest"][0], "and the far one nearer the chest")
+        # The legs leave the hips as the arms leave the shoulders: the near one behind, the far one in front.
+        for side in ("left", "right"):
+            self.assertEqual(rest[f"hip_{side}"][0], rest[f"shoulder_{side}"][0], side)
+            self.assertEqual(rest[f"foot_{side}"][0], rest[f"hip_{side}"][0], f"the {side} leg hangs straight")
         order = self.plan.orders["doll"]
         self.assertLess(order.index("thigh_left"), order.index("spine"))
         self.assertLess(order.index("hips"), order.index("thigh_right"), "the near leg is drawn over the hips")

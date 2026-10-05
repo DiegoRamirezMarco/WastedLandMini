@@ -146,17 +146,17 @@
         "shoulder_right": [-1, -14.6],
         "elbow_right": [-1, -11.1],
         "hand_right": [-1, -7.6],
-        "hip_left": [-0.6, -9],
-        "knee_left": [-0.6, -5.25],
-        "foot_left": [-0.6, -1.5],
-        "hip_right": [0.5, -9],
-        "knee_right": [0.5, -5.25],
-        "foot_right": [0.5, -1.5],
+        "hip_left": [0.9, -9],
+        "knee_left": [0.9, -5.25],
+        "foot_left": [0.9, -1.5],
+        "hip_right": [-1, -9],
+        "knee_right": [-1, -5.25],
+        "foot_right": [-1, -1.5],
         "groin": [0, -9.5],
         "fingertip_left": [0.9, -6],
         "fingertip_right": [-1, -6],
-        "toe_left": [1.4, -1.5],
-        "toe_right": [2.5, -1.5]
+        "toe_left": [2.9, -1.5],
+        "toe_right": [1, -1.5]
       }
     }
   },

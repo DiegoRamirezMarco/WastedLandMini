@@ -159,7 +159,7 @@ cut apart where the body bends, each part laid along its bone and turned as the 
   every zone is left out. Everything on the head's canvas is the head, hair and all.
 - **Put together.** The doll has a build of its own, apart from the pixel bodies. The arm of the
   near side hangs from a little behind the middle of the trunk and the far one from a little in
-  front, so that both show. The legs start low in the hips, so that the top of a thigh comes to
+  front, so that both show, and the legs leave the hips the same way. The legs start low in the hips, so that the top of a thigh comes to
   just below the waist and not up into the belly; the near leg is laid over the hips and the
   far one goes behind. Arms and legs are somewhat longer than they
   are drawn: each is drawn out between its joints, so its width and its round ends stay as they
