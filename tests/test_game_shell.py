@@ -147,7 +147,10 @@ class GameShellTests(unittest.TestCase):
 
     def _click(self, canvas_position: tuple[int, int]) -> None:
         window = (canvas_position[0] * SCALE + 1, canvas_position[1] * SCALE + 1)
-        self.game.active_scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=window, button=1))
+        scene = self.game.active_scene
+        scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=window, button=1))
+        # On the map a click is the button going down and coming up in the same place.
+        scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=window, button=1))
 
     def test_buttons_pause_and_change_speed(self) -> None:
         hud = self.game.global_view.hud
@@ -482,6 +485,145 @@ class GameShellTests(unittest.TestCase):
         hover = pygame.event.Event(pygame.MOUSEMOTION, pos=(400, 300), rel=(-80, -40), buttons=(0, 0, 0))
         view.handle_event(hover)
         self.assertEqual(view.camera, [80 / SCALE, 40 / SCALE])
+
+    def _drag(self, start: tuple[int, int], end: tuple[int, int], steps: int = 4) -> None:
+        """Press the left button at a canvas position, move the mouse to another, and let go."""
+        view = self.game.global_view
+        window = lambda position: (position[0] * SCALE, position[1] * SCALE)
+        view.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=window(start), button=1))
+        last = start
+        for step in range(1, steps + 1):
+            at = (start[0] + (end[0] - start[0]) * step // steps, start[1] + (end[1] - start[1]) * step // steps)
+            rel = ((at[0] - last[0]) * SCALE, (at[1] - last[1]) * SCALE)
+            view.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=window(at), rel=rel, buttons=(1, 0, 0)))
+            last = at
+        view.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=window(end), button=1))
+
+    def test_dragging_with_the_left_button_moves_the_map_and_clicks_on_nothing(self) -> None:
+        view = self.game.global_view
+        view.centre_on_resident("raul")
+        view.render()
+        on_raul = view.hitboxes["raul"].center
+        before = list(view.camera)
+        # Pressed on a resident and pulled away: the map comes along, and nobody is selected.
+        self._drag(on_raul, (on_raul[0] - 60, on_raul[1] - 30))
+        self.assertEqual(view.camera, [before[0] + 60, before[1] + 30])
+        self.assertIsNone(view.hud.selected_id)
+        # The mouse may go on over the menu: the map still follows it until the button comes up.
+        self._drag(on_raul, (view.viewport.left - 30, on_raul[1]))
+        self.assertEqual(view.camera[0], before[0] + 60 + (on_raul[0] - view.viewport.left + 30))
+        # With the button up again, moving the mouse moves nothing.
+        still = list(view.camera)
+        view.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(400, 300), rel=(-80, -40), buttons=(0, 0, 0)))
+        self.assertEqual(view.camera, still)
+        # A hand that shakes a little is still clicking.
+        view.centre_on_resident("raul")
+        view.render()
+        still = list(view.camera)
+        on_raul = view.hitboxes["raul"].center
+        self._drag(on_raul, (on_raul[0] + 2, on_raul[1] + 1), steps=1)
+        self.assertEqual(view.camera, still)
+        self.assertEqual(view.hud.selected_id, "raul")
+        # Zoomed in, the map still keeps under the mouse: it moves half as many of its own pixels.
+        view.hud.select_resident(None)
+        view.set_zoom(2)
+        zoomed = list(view.camera)
+        self._drag((300, 200), (340, 200))
+        self.assertEqual(view.camera, [zoomed[0] - 20, zoomed[1]])
+
+    def test_a_press_on_a_button_or_the_minimap_acts_at_once_and_drags_nothing(self) -> None:
+        view, hud = self.game.global_view, self.game.global_view.hud
+        view.render()
+        minimap = hud.minimap_rect
+        view.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(minimap.right * SCALE - 4, minimap.bottom * SCALE - 4), button=1))
+        moved = list(view.camera)
+        self.assertNotEqual(moved, [0.0, 0.0])
+        view.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(600, 300), rel=(200, 0), buttons=(1, 0, 0)))
+        self.assertEqual(view.camera, moved)
+
+    def test_the_view_follows_whoever_is_selected_until_it_is_moved_by_hand(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        world.clock.paused = True
+        tomas = world.residents["tomas"]
+        # In the middle of the map, where the view can have him in its middle.
+        tomas.x, tomas.y, tomas.trail, tomas.activity = 30, 18, [], None
+
+        def off_centre() -> float:
+            view.render()
+            box = view.hitboxes["tomas"]
+            return max(abs(box.centerx - view.viewport.centerx), abs(box.bottom - view.tile_px // 2 - view.viewport.centery))
+
+        view.centre_on_resident("tomas")
+        view.scroll(40, 24)
+        self.assertGreater(off_centre(), 20)
+        view.update(0.05)
+        self.assertIsNone(view.following, "with nobody selected the view stays where it is put")
+        self.assertGreater(off_centre(), 20)
+        # Selected with a click, he is brought to the middle, smoothly and not in one jump.
+        self._click(view.hitboxes["tomas"].center)
+        view.update(0.02)
+        self.assertEqual(view.following, "tomas")
+        self.assertGreater(off_centre(), 4)
+        for _ in range(60):
+            view.update(0.02)
+        self.assertLess(off_centre(), 3)
+        # He walks off, and the view goes with him, part-way through a step as well.
+        tomas.trail = [(tomas.x, tomas.y), (tomas.x + 1, tomas.y), (tomas.x + 2, tomas.y), (tomas.x + 3, tomas.y)]
+        tomas.x += 3
+        before = view.camera[0]
+        view.tick_progress = 0.5
+        view.update(0.02)
+        for _ in range(60):
+            view.update(0.02)
+        self.assertAlmostEqual(view.camera[0], before + 1.5 * TILE_SIZE, delta=1.0)
+        view.tick_progress = 1.0
+        for _ in range(60):
+            view.update(0.02)
+        self.assertAlmostEqual(view.camera[0], before + 3 * TILE_SIZE, delta=1.0)
+        self.assertLess(off_centre(), 3)
+        # Zooming keeps him in the middle.
+        view.set_zoom(2, (view.viewport.left + 10, view.viewport.top + 10))
+        for _ in range(60):
+            view.update(0.02)
+        self.assertLess(off_centre(), 7)
+        view.set_zoom(1)
+        # Moved by hand, the view lets go of him, though he is still selected.
+        view.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(400, 300), rel=(-80, -40), buttons=(0, 0, 1)))
+        self.assertIsNone(view.following)
+        for _ in range(30):
+            view.update(0.02)
+        self.assertEqual(view.hud.selected_id, "tomas")
+        self.assertGreater(off_centre(), 20)
+        # Dragging with the left button lets go as well, and C takes him up again.
+        view.following = "tomas"
+        self._drag((300, 200), (330, 200))
+        self.assertIsNone(view.following)
+        view.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_c))
+        self.assertEqual(view.following, "tomas")
+        self.assertLess(off_centre(), 3)
+        # Someone else selected from the list is the one followed from then on.
+        view.hud.select_resident("raul")
+        view.update(0.02)
+        self.assertEqual(view.following, "raul")
+        # Someone away on an expedition is nowhere to follow: the view stays put.
+        tomas.expedition = Expedition(returns_at=world.clock.total_minutes + 60, finds=0, danger=0.0)
+        self.assertTrue(tomas.away)
+        view.hud.select_resident("tomas")
+        resting = None
+        for _ in range(10):
+            view.update(0.02)
+            resting, moved = list(view.camera), resting
+        self.assertEqual(resting, moved)
+
+    def test_whoever_asks_for_advice_does_not_take_the_view_off_someone_being_followed(self) -> None:
+        view = self.game.global_view
+        view.hud.select_resident("tomas")
+        view.centre_on_resident("tomas")
+        view.update(0.02)
+        self.assertEqual(view.following, "tomas")
+        there = list(view.camera)
+        self._open_raul_crisis()
+        self.assertEqual(view.camera, there)
 
     def test_someone_asking_for_advice_is_brought_into_view(self) -> None:
         view = self.game.global_view

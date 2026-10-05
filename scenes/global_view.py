@@ -98,6 +98,13 @@ SCROLL_KEYS = {
     (0, 1): (pygame.K_DOWN, pygame.K_s),
 }
 RIGHT_MOUSE_BUTTON = 2
+# Canvas pixels the mouse must move with the left button held before it is pulling the map along
+# and no longer clicking on it.
+DRAG_START = 4
+# How fast the view closes on whoever it follows: the share of the way left that it covers in a
+# second, were it to keep its speed. Nearer than FOLLOW_SNAP map pixels, it is simply there.
+FOLLOW_RATE = 8.0
+FOLLOW_SNAP = 0.75
 # Canvas pixels a tile takes at each zoom step, whole multiples of the art but for the first.
 # The first is the overview: the settlement from afar, with the roofs on and a face for each resident.
 ZOOM_TILE_SIZES = (TILE_SIZE // 2, TILE_SIZE, TILE_SIZE * 2, TILE_SIZE * 3)
@@ -202,6 +209,15 @@ class GlobalView:
         )
         self.hud.minimap_rect = self._minimap_rect
         self.camera = [0.0, 0.0]
+        # Whoever the view keeps in its middle as they move: the resident last selected, until the
+        # player moves the view by hand. `_selection_seen` is what tells a new selection from an old one.
+        self.following: str | None = None
+        self._selection_seen: str | None = None
+        # Where on the canvas the left button went down on the map and where the mouse last was
+        # with it held, and whether it has moved far enough since to be dragging.
+        self._press: tuple[int, int] | None = None
+        self._drag_last: tuple[int, int] | None = None
+        self._dragging = False
         # Index into ZOOM_TILE_SIZES.
         self.zoom = DEFAULT_ZOOM
         # What is being drawn this frame: the visible part of the map at the size of its art, where
@@ -221,6 +237,7 @@ class GlobalView:
             self._apply(JOBS_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
             self.centre_on_resident(self.hud.selected_id)
+            self.following = self.hud.selected_id
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_g:
             self.jump_to_attention()
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_t:
@@ -238,12 +255,29 @@ class GlobalView:
             self.set_zoom(self.zoom + steps, canvas_position(pygame.mouse.get_pos()))
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self.pointer = canvas_position(event.pos)
-            self.click(self.pointer)
+            if self._on_map(self.pointer):
+                # On the map a press may be the start of a drag. It is a click once the button
+                # comes up without the mouse having gone anywhere.
+                self._press, self._drag_last, self._dragging = self.pointer, self.pointer, False
+            else:
+                self.click(self.pointer)
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            press, dragged = self._press, self._dragging
+            self._press, self._drag_last, self._dragging = None, None, False
+            if press is not None and not dragged:
+                self.click(press)
         elif event.type == pygame.MOUSEMOTION:
             self.pointer = canvas_position(event.pos)
-            if event.buttons[RIGHT_MOUSE_BUTTON]:
-                # Dragging with the right button pulls the map along with the mouse.
-                self.scroll(-event.rel[0] / SCALE, -event.rel[1] / SCALE)
+            if self._press is not None and self._drag_last is not None:
+                if not self._dragging:
+                    self._dragging = max(abs(self.pointer[axis] - self._press[axis]) for axis in (0, 1)) >= DRAG_START
+                if self._dragging:
+                    # Dragging pulls the map along with the mouse, from where it was pressed.
+                    self.pan(self._drag_last[0] - self.pointer[0], self._drag_last[1] - self.pointer[1])
+                    self._drag_last = self.pointer
+            elif event.buttons[RIGHT_MOUSE_BUTTON]:
+                # So does the right button, which clicks on nothing.
+                self.pan(-event.rel[0] / SCALE, -event.rel[1] / SCALE)
 
     def update(self, dt: float) -> None:
         if not self.world.clock.paused:
@@ -253,7 +287,35 @@ class GlobalView:
         pressed = pygame.key.get_pressed()
         for (dx, dy), keys in SCROLL_KEYS.items():
             if any(pressed[key] for key in keys):
-                self.scroll(dx * SCROLL_SPEED * dt, dy * SCROLL_SPEED * dt)
+                self.pan(dx * SCROLL_SPEED * dt, dy * SCROLL_SPEED * dt)
+        self._follow(dt)
+
+    def _follow(self, dt: float) -> None:
+        """Keep whoever is selected in the middle of the view, catching up with them smoothly."""
+        selected = self.hud.selected_id
+        if selected != self._selection_seen:
+            # Somebody else was just selected: the view goes with them from now on.
+            self._selection_seen = self.following = selected
+        resident = self.world.residents.get(self.following or "")
+        if resident is None or resident.away:
+            return
+        x, y, _, _ = self._walk_state(resident)
+        target = ((x + 0.5) * TILE_SIZE, (y + 0.5) * TILE_SIZE)
+        for axis in (0, 1):
+            wanted = target[axis] - self.viewport.size[axis] / 2 * TILE_SIZE / self.tile_px
+            gap = wanted - self.camera[axis]
+            share = 1.0 if abs(gap) <= FOLLOW_SNAP else min(1.0, FOLLOW_RATE * dt)
+            self.camera[axis] += gap * share
+        self.scroll(0, 0)
+
+    def _on_map(self, position: tuple[int, int]) -> bool:
+        """Whether a canvas position is on the map itself, with nothing of the HUD over it."""
+        return self.viewport.collidepoint(position) and not self.hud.covers(position) and self.hud.click(position) is None
+
+    def pan(self, dx: float, dy: float) -> None:
+        """Move the view by hand, by a distance in canvas pixels. It lets go of whoever it was following."""
+        self.following = None
+        self.scroll(dx, dy)
 
     @property
     def tile_px(self) -> int:
@@ -308,9 +370,10 @@ class GlobalView:
         for event in events:
             if event.importance >= self.hud.intervention_from:
                 self.alerts.update(event.participants)
-        # Someone asking for advice may be off screen: bring them into view.
+        # Someone asking for advice may be off screen: bring them into view, unless the view is
+        # with somebody the player chose to follow. The notice at the top says who is waiting.
         for decision in self.world.decisions.values():
-            if any(decision.resident_id in event.participants for event in events):
+            if self.following is None and any(decision.resident_id in event.participants for event in events):
                 self.centre_on_resident(decision.resident_id)
                 break
 
@@ -371,6 +434,7 @@ class GlobalView:
         if intent is not None:
             self._apply(intent)
         elif minimap is not None and minimap.collidepoint(position):
+            self.following = None
             self.centre_on(tile_at(minimap, position))
         elif not self.hud.covers(position) and self.viewport.collidepoint(position):
             # The resident drawn last is in front, so it is the one picked.

@@ -57,10 +57,11 @@ python -m simulation.headless --days 7 --seed 7
 
 ## Controls
 
-- Arrow keys or `WASD`, or drag with the right mouse button: move the view over the settlement
+- Arrow keys or `WASD`, or drag the map with either mouse button: move the view over the settlement
+- Selecting a resident makes the view follow them wherever they go, until you move it yourself
 - Mouse wheel, `+` / `-`, or the `-` `+` buttons at the top: zoom. Zoomed all the way out the
   whole settlement fits on screen, buildings have their roof on and residents are shown as faces
-- `C`: centre the view on the selected resident
+- `C`: centre the view on the selected resident, and follow them again
 - `G`: go to whoever needs attention: someone waiting for advice, in the middle of something
   serious, or hurt. Press it again for the next one
 - The screen is the map with a bar on top, a menu on the left, a panel on the right and a dock
