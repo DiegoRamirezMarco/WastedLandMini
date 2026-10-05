@@ -340,8 +340,18 @@ Still open here:
 - Bodies are the size they were.
 
 ### S15 — What the settlement lives on — planned
-- Water, energy, materials and medicine as stores of the settlement, produced and used up
-- A mood for each resident, apart from stress, that what they live through raises and lowers
+Settled with the player before building:
+
+- **Water is a thirst of each resident's own**, a need like hunger: whoever is thirsty goes and
+  drinks, from water that someone's work brings in
+- **Energy is light and word from outside**: a generator that someone has to feed. Without it
+  the lamps give no light at night, and the radio gives no warning
+- **Mood is a state of its own**, apart from stress: it rises and falls slowly with what a
+  resident lives through, and with it low they work worse and argue more
+
+Still to settle:
+- Medicine: used up by the clinic's care, and brought in from outside
+- Materials: the scrap there already is, later spent on building
 - A limit to how many can live here, set by the beds there are
 - How dangerous it is outside, as something the settlement knows or does not
 
