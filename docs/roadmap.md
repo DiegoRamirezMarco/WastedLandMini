@@ -191,6 +191,22 @@ Still open here:
 - The dark hides what happens but changes nothing else: nobody is afraid of it or stays in.
 - Nobody lights or puts out a lamp: they burn all night by themselves.
 
+### S14 — Bodies that break — done
+- Limbs as data: which ones a resident can lose for good, and what going without each one costs
+- A cut bad enough may take one off, by luck. It is an event of its own, and a fact that those
+  who saw it know and pass on
+- Short of an arm the same work takes longer; short of a leg the same walk does
+- Events carry the particulars of a blow: who dealt it, how hard, and where a body fell
+
+Done when: a blade in a fight or at the gate can cost a limb and a lesser blow never does, the
+limb stays lost through saving and loading while the wound itself mends, a maimed resident still
+works their shifts and looks after themselves, and the same seed maims the same people.
+
+Still open here:
+- Nobody is afraid of whoever maimed them, and nobody looks after the maimed any differently.
+- There is no crutch or false limb to buy or make: what is lost stays lost, and so does its cost.
+- Only cuts take limbs. A fall, a machine or a trip outside never does more than its injury.
+
 ## Presentation track
 
 ### P0 — Style contract (no dependency) — done

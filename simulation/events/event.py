@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass, field
+from typing import Any
 
 # In Spanish "y" becomes "e" before a word that starts with the sound of an i.
 _Y_BEFORE_I = re.compile(r"\by (?=[IiÍí]|[Hh][iIíÍ])")
@@ -20,3 +21,6 @@ class DomainEvent:
     location_id: str | None = None
     # Game minutes since day 1, 00:00. Set by the world when the event is emitted.
     timestamp: int = 0
+    # Plain particulars for whoever shows or sounds the event: who struck, how hard, where.
+    # Nothing in the simulation reads them back.
+    data: dict[str, Any] = field(default_factory=dict)

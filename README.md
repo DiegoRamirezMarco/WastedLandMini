@@ -11,7 +11,8 @@ watches, advises and intervenes, but does not control them.
 - Residents with jobs, posts, shifts and days off; places that only work while someone staffs them.
 - A working economy: what is made is carried to where it is used, tools wear out and are mended,
   work earns credits and credits buy things, and a post left empty is taken up by someone else.
-- Consequences that last: injuries, a clinic, fights you can try to stop, and death.
+- Consequences that last: injuries, a clinic, fights you can try to stop, a limb lost for good
+  to a blade, and death.
 - A world beyond the fence: someone goes out to scavenge, is gone for hours, and comes back with
   what stocks the shop and mends the tools, or comes back hurt.
 - A world that does not leave it alone: strangers who ask to stay, caravans, dust storms to take

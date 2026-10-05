@@ -1,5 +1,6 @@
 """Jobs: residents go to their post during their shift, and the post does its work while staffed."""
 
+import math
 from typing import TYPE_CHECKING
 
 from simulation.ai.navigation import path_beside
@@ -273,8 +274,11 @@ class WorkSystem:
             return hauling.errand(world, resident, rule, shift_left) is None
         tool = self.tool_of(world, resident, job)
         speed = job.tool.speed if job.tool is not None and tool is not None else 1.0
-        resident.work_progress = min(resident.work_progress + 1, rule.every_minutes)
-        if resident.work_progress * speed < rule.every_minutes:
+        # Short of an arm the work still gets done, in more minutes.
+        speed *= world.health.work_pace(world, resident)
+        needed = math.ceil(rule.every_minutes / speed)
+        resident.work_progress = min(resident.work_progress + 1, needed)
+        if resident.work_progress < needed:
             return True
         if rule.source is not None:
             material = hauling.raw_carried(world, resident, rule)

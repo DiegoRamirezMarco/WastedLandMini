@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 14 (current)
+## Version 15 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `14` |
+| `version` | `15` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -18,7 +18,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `under_raid` | ID of the raid at the gate while whoever is on watch decides what to do |
 | `map_id` | ID of the map in `data/maps/` |
 | `interactables` | Placed objects: `id`, `kind`, tile `x` and `y` |
-| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries` |
+| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `lost_limbs` (limb IDs) |
 | `containers` | Per container object ID, the items inside |
 | `item_count` | Counter behind item IDs |
 | `thefts`, `theft_cooldowns`, `notices` | Record of every theft; last theft per resident; once-a-day notices already given |
@@ -30,7 +30,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `decisions` | Open decisions with their options, deadline, crisis and, for a job offer, `job_id` |
 | `decision_count`, `crisis_cooldowns` | Counter for decision IDs; game minute of each resident's last crisis, and of the last time each vacant job was offered |
 | `deaths` | Everyone who has died: `resident_id`, `name`, `timestamp`, `cause`, `killer_id`, `grave_id` |
-| `history` | Every noteworthy event so far, in full |
+| `history` | Every noteworthy event so far, in full, with its `data` |
 | `event_log` | Text history of emitted events |
 
 A resident's `activity` is `null` or `action`, `target_id` (an object ID), `partner_id` (a resident
@@ -53,6 +53,8 @@ when loading.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 14** had no lost limbs and no particulars on its events: everyone loads whole.
+- A lost limb that is no longer defined, or listed twice, is dropped.
 - **Version 13** had no raids, and has simply never had one. Raiders at the gate whom nobody is
   deciding about are dropped.
 - **Version 12** had nothing on its way and no radio in the cantina. It gains the radio.

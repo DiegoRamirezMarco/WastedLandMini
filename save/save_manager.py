@@ -45,12 +45,13 @@ FIRST_ECONOMY_VERSION = 8
 # Version 12 added what happens from outside: weather, the gate, and beds for whoever is let in.
 # Version 13 added events that are on their way, and the settlement's radio to hear of them.
 # Version 14 added raids. A save from before simply has never had one.
+# Version 15 added lost limbs, none by default, and the particulars of events, empty by default.
 LAST_MAP_CHANGE_VERSION = 13
 FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 14
+    CURRENT_VERSION = 15
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -101,6 +102,7 @@ class SaveManager:
                     "last_expedition_day": resident.last_expedition_day,
                     "seeks_work": resident.seeks_work,
                     "injuries": [vars(injury) for injury in resident.injuries],
+                    "lost_limbs": list(resident.lost_limbs),
                     "inventory": _inventory_to_data(resident.inventory),
                 }
                 for resident in world.residents.values()
@@ -240,6 +242,12 @@ class SaveManager:
                     Injury(str(injury.get("kind", "bruise")), float(injury.get("severity", 0.0)))
                     for injury in resident_data.get("injuries", [])
                     if isinstance(injury, dict)
+                ],
+                # A limb that is no longer defined is simply not missed.
+                lost_limbs=[
+                    str(limb)
+                    for limb in dict.fromkeys(_list_or_empty(resident_data.get("lost_limbs")))
+                    if limb in world.registries.limbs
                 ],
                 inventory=_inventory_from_data(resident_data.get("inventory")),
             )
@@ -640,6 +648,7 @@ def _event_from_data(data: dict[str, Any]) -> DomainEvent:
         witnesses=[str(person) for person in data.get("witnesses", [])],
         location_id=str(location_id) if location_id is not None else None,
         timestamp=int(data.get("timestamp", 0)),
+        data=dict(_object_or_empty(data.get("data"))),
     )
 
 
@@ -662,3 +671,7 @@ def _text_or_none(value: Any) -> str | None:
 
 def _object_or_empty(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _list_or_empty(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []

@@ -3,8 +3,9 @@
 from typing import TYPE_CHECKING
 
 from simulation.events.event import DomainEvent
-from simulation.health.injury import Death, Injury
+from simulation.health.injury import Death, Injury, InjuryDefinition, LimbDefinition
 from simulation.items.item import ItemInstance
+from simulation.residents.activity import MOVE_TILES_PER_MINUTE
 from simulation.residents.resident import Resident
 from simulation.social.interaction import InteractionDefinition
 from world.interactable import Interactable, UseDefinition
@@ -25,6 +26,7 @@ BED_REST_BONUS = 2.0
 # A single blow at least this hard breaks something.
 FRACTURE_DAMAGE = 28.0
 INJURY_IMPORTANCE = 45
+LIMB_LOSS_IMPORTANCE = 85
 DEATH_IMPORTANCE = 95
 GRAVE_KIND = "grave"
 DEFAULT_INJURY = "bruise"
@@ -33,6 +35,22 @@ DEFAULT_INJURY = "bruise"
 class HealthSystem:
     def is_fit_for_work(self, resident: Resident) -> bool:
         return resident.health >= UNFIT_HEALTH
+
+    def work_pace(self, world: "SimulationWorld", resident: Resident) -> float:
+        """How fast a resident gets on with their work, from 0 to 1, for the limbs they are short of."""
+        pace = 1.0
+        for limb_id in resident.lost_limbs:
+            limb = world.registries.limbs.get(limb_id)
+            pace *= limb.work_pace if limb is not None else 1.0
+        return pace
+
+    def walk_tiles(self, world: "SimulationWorld", resident: Resident) -> int:
+        """Tiles a resident covers in a minute. Short of a leg they still get there, slowly."""
+        pace = 1.0
+        for limb_id in resident.lost_limbs:
+            limb = world.registries.limbs.get(limb_id)
+            pace *= limb.walk_pace if limb is not None else 1.0
+        return max(1, round(MOVE_TILES_PER_MINUTE * pace))
 
     def care_use(self, world: "SimulationWorld", resident: Resident) -> UseDefinition | None:
         """The healing use a resident is lying in right now, if any."""
@@ -119,6 +137,22 @@ class HealthSystem:
             return False
         definition = world.registries.injuries.get(kind)
         room = world.room_at(resident.tile)
+        details = {"amount": amount, "kind": kind, "by": by.resident_id if by is not None else None}
+        limb = self._lose_limb(world, resident, amount, definition)
+        if limb is not None:
+            world.emit_event(
+                DomainEvent(
+                    "limb_lost",
+                    LIMB_LOSS_IMPORTANCE,
+                    f"{resident.name} pierde {limb.name} en {cause}",
+                    [resident.resident_id],
+                    location_id=room.room_id if room is not None else None,
+                    data={**details, "limb": limb.limb_id},
+                ),
+                at=resident.tile,
+                fact_text=f"{resident.name} perdió {limb.name} en {cause}",
+            )
+            return True
         world.emit_event(
             DomainEvent(
                 "injured",
@@ -126,14 +160,28 @@ class HealthSystem:
                 f"{resident.name} sale con {definition.name if definition else 'heridas'} de {cause}",
                 [resident.resident_id],
                 location_id=room.room_id if room is not None else None,
+                data=details,
             ),
             at=resident.tile,
         )
         return True
 
+    def _lose_limb(
+        self, world: "SimulationWorld", resident: Resident, amount: float, definition: InjuryDefinition | None
+    ) -> LimbDefinition | None:
+        """Take a limb off a resident if the injury they just got was of a kind and a severity to do it."""
+        if definition is None or definition.severs_from is None or amount < definition.severs_from:
+            return None
+        left = [limb for limb_id, limb in world.registries.limbs.items() if limb_id not in resident.lost_limbs]
+        if not left or world.rng.random() >= definition.severs_chance:
+            return None
+        limb = world.rng.choice(left)
+        resident.lost_limbs.append(limb.limb_id)
+        return limb
+
     def die(self, world: "SimulationWorld", resident: Resident, cause: str, killer: Resident | None = None) -> None:
         """Remove a resident from the living and deal with everything they leave behind."""
-        dead_id, tile = resident.resident_id, resident.tile
+        dead_id, tile, away = resident.resident_id, resident.tile, resident.away
         room = world.room_at(tile)
         del world.residents[dead_id]
         resident.activity = None
@@ -169,6 +217,13 @@ class HealthSystem:
             f"{resident.name} ha muerto tras {cause}",
             [killer.resident_id] if killer is not None else [],
             location_id=room.room_id if room is not None else None,
+            # Where the body falls, unless they died out of sight beyond the fence.
+            data={
+                "resident_id": dead_id,
+                "tile": None if away else list(tile),
+                "by": killer.resident_id if killer is not None else None,
+                "lost_limbs": list(resident.lost_limbs),
+            },
         )
         subjects = [killer.resident_id, dead_id] if killer is not None else [dead_id]
         world.emit_event(event, at=tile, fact_text=f"{resident.name} murió tras {cause}", subjects=subjects)

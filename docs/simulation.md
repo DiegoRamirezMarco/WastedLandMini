@@ -212,6 +212,15 @@ room. An argument's importance rises with the resentment between the two.
 - A fight is an exchange with a `damage` range. Each side is hurt by what the other deals: more
   from the aggressive and the healthy, and multiplied by the best working weapon they carry (an
   item's `damage` property). A blade cuts, a heavy blow breaks something, the rest are bruises.
+- **Limbs.** `data/body.json` lists the limbs a resident can lose for good. A single injury of a
+  kind that `severs_from` a given severity, such as a bad cut, takes one off with the chance its
+  kind gives; which one is drawn from those they still have. The loss is the `limb_lost` event
+  instead of `injured`, and a fact like any other: those who saw it know. The wound mends as it
+  would have; the limb does not come back. `Resident.lost_limbs` holds the IDs. Each limb names
+  what is left of the pace of its owner's work (`work_pace`) and of their walk (`walk_pace`): a
+  one-armed farmer grows less in a shift, and a one-legged resident covers one tile a minute.
+  A fight and a raid are both preceded by a decision, so the player always had a say before
+  anyone could be maimed.
 - **Death.** At 0 health a resident dies. They are removed from the living and recorded in
   `world.deaths`; a grave appears on the map's next free plot; what they owned becomes everyone's
   and what they carried is put in the nearest container; decisions and activities that involved

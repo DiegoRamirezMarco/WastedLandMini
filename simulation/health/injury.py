@@ -10,6 +10,21 @@ class InjuryDefinition:
     name: str
     heal_per_day: float
     treated_per_day: float
+    # A single injury of this kind at least this severe may take a limb off, with this chance.
+    severs_from: float | None = None
+    severs_chance: float = 0.0
+
+
+@dataclass(frozen=True)
+class LimbDefinition:
+    """A limb that can be lost for good, and what going without it does to its owner."""
+
+    limb_id: str
+    # With its article, as it reads after a verb: "el brazo izquierdo".
+    name: str
+    # What is left of the pace of their work, and of their walk, from 0 to 1.
+    work_pace: float = 1.0
+    walk_pace: float = 1.0
 
 
 @dataclass
@@ -40,4 +55,17 @@ def injury_definition_from_data(kind: str, data: dict[str, Any]) -> InjuryDefini
     treated = float(data.get("treated_per_day", heal))
     if heal <= 0 or treated <= 0:
         raise ValueError(f"Injury {kind} must heal at a positive rate")
-    return InjuryDefinition(kind, str(data["name"]), heal, treated)
+    severs_from = float(data["severs_from"]) if data.get("severs_from") is not None else None
+    severs_chance = float(data.get("severs_chance", 0.0))
+    if not 0.0 <= severs_chance <= 1.0:
+        raise ValueError(f"Injury {kind} takes a limb off with a chance outside 0 to 1")
+    return InjuryDefinition(kind, str(data["name"]), heal, treated, severs_from, severs_chance)
+
+
+def limb_definition_from_data(limb_id: str, data: dict[str, Any]) -> LimbDefinition:
+    if "name" not in data:
+        raise ValueError(f"Missing fields in limb {limb_id}: ['name']")
+    work_pace, walk_pace = float(data.get("work_pace", 1.0)), float(data.get("walk_pace", 1.0))
+    if not (0.0 < work_pace <= 1.0 and 0.0 < walk_pace <= 1.0):
+        raise ValueError(f"Limb {limb_id} must leave a pace above 0 and no more than 1")
+    return LimbDefinition(limb_id, str(data["name"]), work_pace, walk_pace)

@@ -57,7 +57,7 @@ class ActivitySystem:
             return
 
         if activity.path:
-            self._walk(resident, activity)
+            self._walk(resident, activity, world.health.walk_tiles(world, resident))
             if activity.intent is not None:
                 # Chasing someone counts against the time they will keep at it.
                 activity.minutes_left -= 1
@@ -89,8 +89,8 @@ class ActivitySystem:
             activity.using = True
         self._spend_minute(world, resident, activity, use)
 
-    def _walk(self, resident: Resident, activity: Activity) -> None:
-        for _ in range(MOVE_TILES_PER_MINUTE):
+    def _walk(self, resident: Resident, activity: Activity, tiles: int = MOVE_TILES_PER_MINUTE) -> None:
+        for _ in range(tiles):
             if not activity.path:
                 break
             step = activity.path.pop(0)

@@ -7,7 +7,12 @@ from typing import Any
 from simulation.economy.settings import EconomySettings, economy_settings_from_data
 from simulation.events.decision import DecisionDefinition, decision_definition_from_data
 from simulation.events.world_event import RAID, STRANGER, WorldEventSettings, world_event_settings_from_data
-from simulation.health.injury import InjuryDefinition, injury_definition_from_data
+from simulation.health.injury import (
+    InjuryDefinition,
+    LimbDefinition,
+    injury_definition_from_data,
+    limb_definition_from_data,
+)
 from simulation.items.custom_content import load_custom_items
 from simulation.items.registry import ItemRegistry
 from simulation.residents.personality import Personality
@@ -121,6 +126,8 @@ class BuiltInRegistries:
     decisions: dict[str, DecisionDefinition] = field(default_factory=dict)
     jobs: dict[str, JobDefinition] = field(default_factory=dict)
     injuries: dict[str, InjuryDefinition] = field(default_factory=dict)
+    # Limbs a resident can lose for good, by limb ID.
+    limbs: dict[str, LimbDefinition] = field(default_factory=dict)
     economy: EconomySettings = field(default_factory=EconomySettings)
     bonds: BondSettings = field(default_factory=BondSettings)
     expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
@@ -168,6 +175,12 @@ class BuiltInRegistries:
             registries.injuries = {
                 str(kind): injury_definition_from_data(str(kind), values)
                 for kind, values in _read_object(injuries_path).items()
+            }
+        body_path = root / "body.json"
+        if body_path.is_file():
+            registries.limbs = {
+                str(limb_id): limb_definition_from_data(str(limb_id), values)
+                for limb_id, values in _read_object(body_path).get("limbs", {}).items()
             }
         jobs_path = root / "jobs.json"
         if jobs_path.is_file():

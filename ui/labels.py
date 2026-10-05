@@ -160,6 +160,10 @@ def describe_injuries(world: SimulationWorld, resident: Resident) -> str:
         name = definition.name if definition is not None else "heridas"
         if name not in names:
             names.append(name)
+    for limb_id in resident.lost_limbs:
+        limb = world.registries.limbs.get(limb_id)
+        if limb is not None:
+            names.append(f"sin {limb.name}")
     return "Heridas: " + ", ".join(names) if names else "Sin heridas"
 
 

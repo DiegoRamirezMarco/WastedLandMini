@@ -7,7 +7,9 @@
   "cut": {
     "name": "un corte",
     "heal_per_day": 6,
-    "treated_per_day": 25
+    "treated_per_day": 25,
+    "severs_from": 24,
+    "severs_chance": 0.35
   },
   "fracture": {
     "name": "una fractura",

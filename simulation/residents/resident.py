@@ -45,6 +45,8 @@ class Resident:
     # Whether they are looking for a job to take, as someone newly arrived is.
     seeks_work: bool = False
     injuries: list[Injury] = field(default_factory=list)
+    # IDs of the limbs they have lost for good, from the limb registry.
+    lost_limbs: list[str] = field(default_factory=list)
     # Tiles walked during the last tick, starting where the tick began. Lets the
     # presentation animate movement; it is not saved.
     trail: list[Tile] = field(default_factory=list, compare=False, repr=False)

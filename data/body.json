@@ -1,0 +1,20 @@
+{
+  "limbs": {
+    "arm_left": {
+      "name": "el brazo izquierdo",
+      "work_pace": 0.6
+    },
+    "arm_right": {
+      "name": "el brazo derecho",
+      "work_pace": 0.6
+    },
+    "leg_left": {
+      "name": "la pierna izquierda",
+      "walk_pace": 0.5
+    },
+    "leg_right": {
+      "name": "la pierna derecha",
+      "walk_pace": 0.5
+    }
+  }
+}

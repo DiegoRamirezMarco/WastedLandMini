@@ -80,6 +80,12 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
 ## Health and weapons
 
 - `data/injuries.json` defines kinds of injury: `name`, `heal_per_day` and `treated_per_day`.
+  With `severs_from` and `severs_chance`, a single injury of that kind at least that severe takes
+  a limb off with that chance, from 0 to 1.
+- `data/body.json` lists under `limbs` what can be lost: a `name` with its article, as it reads
+  after a verb, and what is left of the pace of work and of walking without it (`work_pace`,
+  `walk_pace`, above 0 and up to 1). A limb ID must be a part of the body in `data/skeleton.json`
+  to be seen coming off. Without the file nobody loses anything.
 - An item is a weapon if its `properties` give it a `damage` multiplier, e.g. `{"damage": 1.8}`.
   The tag `blade` makes the wounds it leaves cuts.
 - An object's use heals with `"heals": true`; `"care_job"` names the job whose worker on duty

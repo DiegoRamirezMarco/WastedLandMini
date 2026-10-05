@@ -34,6 +34,7 @@ Event types emitted so far:
 | `fight_brewing` | A resident squares up to another and waits for advice | 60 to 69 |
 | `fight_started` | Two residents come to blows | 60, plus up to 20 with resentment, plus 15 |
 | `injured` | A resident comes out of something hurt | 45 |
+| `limb_lost` | A resident loses a limb to an injury, in place of `injured` | 85 |
 | `death` | A resident dies | 95 |
 | `friendship_changed` | What one resident feels for another grows into a friendship, or out of it | 25 |
 | `feelings_stirring` | A resident wonders whether to tell someone what they feel, and waits for advice | 50 |
@@ -70,3 +71,14 @@ participants of an ongoing event of importance 50 or more. An event that importa
 the game back to normal speed.
 
 Events describe what is happening. Decisions describe how the player can influence it. Advice should usually modify the resident's decision inputs rather than directly commanding the outcome.
+
+## Particulars
+
+An event may carry `data`: plain values for whoever shows or sounds it. The simulation never reads
+them back, and they are saved with the event.
+
+| Event | `data` |
+|---|---|
+| `injured` | `amount` (the severity of the injury), `kind`, and `by` (who dealt it, or null) |
+| `limb_lost` | The same, and `limb` (the ID of the limb) |
+| `death` | `resident_id`, `tile` (where the body fell, or null beyond the fence), `by` and `lost_limbs` |
