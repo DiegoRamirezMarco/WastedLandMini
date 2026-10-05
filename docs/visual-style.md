@@ -142,8 +142,9 @@ cut apart where the body bends, each part laid along its bone and turned as the 
 
 - **Two canvases of a fixed size.** The body is 320×384 and the head 192×192, sixteen pixels of
   drawing to one of the skeleton's. The figure is seen from the side, facing right.
-- **A guide to draw over.** Each part has a place on the body's canvas: trunk, upper arms,
-  forearms with the hands, thighs, shins with the feet. The guide shows two things for each. A
+- **A guide to draw over.** Each part has a place on the body's canvas: trunk, neck, upper arms,
+  forearms with the hands, thighs, shins with the feet. The trunk stops at the shoulders and the
+  neck comes out of it, a part of its own, so that the head does not sit on the body. The guide shows two things for each. A
   slim **example**, a rounded strip from one joint to the next, with a dot at each joint. And the
   frame of its **zone**, which is how far the part may be drawn: about twice as wide as the
   example and longer at both ends, so that a body can be made stout, or any odd shape. The limbs

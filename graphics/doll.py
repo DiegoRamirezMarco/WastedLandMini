@@ -71,6 +71,9 @@ class PartSpec:
     whole: bool = False
     # The part does not turn about its first joint against another: the trunk, which the rest hangs from.
     free_start: bool = False
+    # Nor is it cut round at its second joint, though another part starts there: the shoulders of the
+    # trunk are left as drawn, with the neck coming out of them.
+    free_end: bool = False
 
     def zone(self) -> list[Point]:
         """The corners of the zone: a box along the part, wider than it and reaching past both joints."""
@@ -119,7 +122,7 @@ class DollTemplate:
             return self.mask(bone)
         mask = pygame.Surface(self.canvases[spec.canvas], pygame.SRCALPHA)
         solid = (255, 255, 255, 255)
-        followed = any(
+        followed = not spec.free_end and any(
             other is not spec and other.canvas == spec.canvas and other.start == spec.end for other in self.parts.values()
         )
         shaft = replace(
@@ -185,34 +188,44 @@ class DollTemplate:
             if not spec.whole:
                 self._zone(guide, spec, (*tints[bone], 255), ZONE_EDGE)
         for bone, spec in mine:
-            if spec.whole:
-                pygame.draw.circle(guide, (*tints[bone], 255), spec.end, round(spec.radius))
-                continue
-            self._capsule(guide, spec, (*tints[bone], 255))
+            guide.blit(self.example(bone, tints[bone]), (0, 0))
         for spec in self.parts.values():
             if spec.canvas == canvas:
                 for joint in (spec.start, spec.end):
                     pygame.draw.circle(guide, GUIDE_JOINT, joint, max(2, self.unit // 5))
         return guide
 
+    def example(self, bone: str, color: Color, outline: Color | None = None) -> pygame.Surface:
+        """The slim example of one part on a clear canvas, kept inside its zone.
+
+        The trunk's stops at the shoulders, so that the neck shows between it and the head.
+        """
+        spec = self.parts[bone]
+        surface = pygame.Surface(self.canvases[spec.canvas], pygame.SRCALPHA)
+        edge = max(1, self.unit // 8) if outline is not None else 0
+        if spec.whole:
+            centre, radius = spec.end, round(spec.radius)
+            if outline is not None:
+                pygame.draw.circle(surface, outline, centre, radius)
+            pygame.draw.circle(surface, color, centre, radius - edge)
+            return surface
+        if outline is not None:
+            self._capsule(surface, spec, (*outline, 255))
+        inner = (spec.cap[0], spec.cap[1], spec.cap[2] - edge) if spec.cap is not None else None
+        self._capsule(surface, replace(spec, radius=spec.radius - edge, cap=inner), (*color, 255))
+        surface.blit(self.mask(bone), (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        return surface
+
     def mannequin(self, colors: dict[str, Color], outline: Color = PALETTE["ink"]) -> dict[str, pygame.Surface]:
         """A plain figure filling every zone, in the colours given by bone: something to start a drawing from."""
         drawings = {name: pygame.Surface(size, pygame.SRCALPHA) for name, size in self.canvases.items()}
-        edge = max(1, self.unit // 8)
         for bone, spec in self.parts.items():
-            surface = drawings[spec.canvas]
-            color = colors.get(bone, GUIDE_MIDDLE)
+            drawings[spec.canvas].blit(self.example(bone, colors.get(bone, GUIDE_MIDDLE), outline), (0, 0))
             if spec.whole:
-                centre, radius = spec.end, round(spec.radius)
-                pygame.draw.circle(surface, outline, centre, radius + edge)
-                pygame.draw.circle(surface, color, centre, radius)
                 # An eye, on the side it faces.
-                pygame.draw.circle(surface, outline, (centre[0] + radius * 0.45, centre[1] - radius * 0.1), max(2, radius // 8))
-                continue
-            self._capsule(surface, spec, (*outline, 255))
-            inner = (spec.cap[0], spec.cap[1], spec.cap[2] - edge) if spec.cap is not None else None
-            thin = PartSpec(spec.bone, spec.canvas, spec.start, spec.end, spec.radius - edge, cap=inner)
-            self._capsule(surface, thin, (*color, 255))
+                radius = round(spec.radius)
+                eye = (spec.end[0] + radius * 0.45, spec.end[1] - radius * 0.1)
+                pygame.draw.circle(drawings[spec.canvas], outline, eye, max(2, radius // 8))
         return drawings
 
 
@@ -240,6 +253,7 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
             float(values.get("cap_reach", 0.0)) * unit,
             bool(values.get("whole", False)),
             bool(values.get("free_start", False)),
+            bool(values.get("free_end", False)),
         )
     return DollTemplate(unit, canvases, parts)
 

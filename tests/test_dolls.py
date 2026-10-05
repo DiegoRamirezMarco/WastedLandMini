@@ -57,13 +57,34 @@ class DollTemplateTests(unittest.TestCase):
                 self.assertGreater(min(spec.end[0], width - spec.end[0], spec.end[1]), spec.radius * 1.7, bone)
                 continue
             self.assertGreaterEqual(spec.reach, spec.radius * 1.9, f"{bone} can be drawn about twice as wide")
-            self.assertGreater(min(spec.ends), spec.radius, f"{bone} can be drawn longer at both ends")
+            if not spec.free_end:
+                self.assertGreater(min(spec.ends), spec.radius, f"{bone} can be drawn longer at both ends")
             zone = pygame.mask.from_surface(self.template.mask(bone))
-            example = pygame.Surface(self.template.canvases[spec.canvas], pygame.SRCALPHA)
-            self.template._capsule(example, spec, (255, 255, 255, 255))
-            example = pygame.mask.from_surface(example)
+            example = pygame.mask.from_surface(self.template.example(bone, RED))
             self.assertEqual(example.overlap_area(zone, (0, 0)), example.count(), f"the example of {bone} is inside its zone")
             self.assertGreater(zone.count(), example.count() * 2, bone)
+
+    def test_there_is_a_neck_between_the_shoulders_and_the_head(self) -> None:
+        neck, trunk = self.template.parts["neck"], self.template.parts["spine"]
+        self.assertEqual(neck.start, trunk.end, "it comes out of the trunk where the shoulders are")
+        self.assertLess(neck.radius, trunk.radius / 2, "and is a good deal thinner")
+        # The trunk's example stops just above the shoulders, so the neck's shows over it.
+        top_of_trunk = pygame.mask.from_surface(self.template.example("spine", RED)).get_bounding_rects()[0].top
+        top_of_neck = pygame.mask.from_surface(self.template.example("neck", BLUE)).get_bounding_rects()[0].top
+        self.assertGreater(top_of_trunk - top_of_neck, self.template.unit)
+        # Put together, the head clears the shoulders by the length of the neck: there is skin to see between them.
+        doll = Doll(self.template, self.template.mannequin({**{bone: RED for bone in self.template.parts}, "neck": BLUE}))
+        skeleton = Skeleton(self.plan, "right")
+        skeleton.set_pose(self.plan.pose("right"))
+        picture = pygame.Surface((400, 500), pygame.SRCALPHA)
+        detail = float(self.template.unit)
+        draw_doll(picture, doll, self.plan, skeleton, (200, 460), detail)
+        showing = pygame.mask.from_threshold(picture, (*BLUE, 255), (30, 30, 30, 255))
+        self.assertGreater(showing.count(), 200, "the neck is in sight")
+        box = showing.get_bounding_rects()[0]
+        chest_y = 460 + (skeleton.joints["chest"].y + 0.5) * detail
+        self.assertLess(box.top, chest_y - detail, "and rises well above the shoulders")
+        self.assertLess(box.width, trunk.radius * 2)
 
     def test_the_guide_marks_every_zone_and_the_mannequin_fills_them_all(self) -> None:
         for canvas, size in self.template.canvases.items():

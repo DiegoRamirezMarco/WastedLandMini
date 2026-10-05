@@ -121,7 +121,7 @@
     ],
     "side": [
       "upper_arm_left", "forearm_left", "thigh_left", "shin_left",
-      "thigh_right", "shin_right", "spine", "skull",
+      "thigh_right", "shin_right", "neck", "spine", "skull",
       "upper_arm_right", "forearm_right"
     ]
   },
@@ -211,7 +211,8 @@
     "unit": 16,
     "canvases": {"body": [20, 24], "head": [12, 12]},
     "parts": {
-      "spine": {"canvas": "body", "from": [10, 7], "to": [10, 3], "radius": 2.4, "reach": 4.6, "ends": [2.6, 2.6], "free_start": true},
+      "neck": {"canvas": "body", "from": [10, 3], "to": [10, 1], "radius": 0.7, "reach": 1.6, "ends": [0.8, 0.9]},
+      "spine": {"canvas": "body", "from": [10, 7], "to": [10, 3], "radius": 2.4, "reach": 4.6, "ends": [2.6, 0.8], "free_start": true, "free_end": true},
       "skull": {"canvas": "head", "from": [6, 10.2], "to": [6, 7.2], "radius": 3.2, "whole": true},
       "upper_arm_left": {"canvas": "body", "from": [2.6, 3], "to": [2.6, 6], "radius": 1.1, "reach": 2.4, "ends": [1.4, 1.6]},
       "forearm_left": {"canvas": "body", "from": [2.6, 6], "to": [2.6, 9], "radius": 1.1, "reach": 2.4, "ends": [1.6, 2.6], "cap": [0, 0, 1.4]},

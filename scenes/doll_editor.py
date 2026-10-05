@@ -42,7 +42,7 @@ SAVED_TEXT = "Guardado: ya anda así por el asentamiento"
 NOTES_TEXT = (
     "Cada marco es una pieza: lo que pintes dentro se mueve con ella.",
     "La figura fina es solo un ejemplo. Hazlo más gordo o con la forma que quieras, hasta el marco.",
-    "Naranja: lado de delante. Azul: el de detrás. Puntos rojos: articulaciones.",
+    "Naranja: lado de delante. Azul: el de detrás. Puntos rojos: articulaciones. El cuello va aparte, sobre los hombros.",
     "Mira a la derecha. Ctrl+Z deshace, Esc vuelve sin guardar.",
 )
 
@@ -174,7 +174,7 @@ class DollEditor:
             sprite = skin.sprites[("side", cell, False)]
             return tuple(sprite.image.get_at(sprite.anchor))[:3]
 
-        colors = {"spine": middle("torso"), "skull": middle("head")}
+        colors = {"spine": middle("torso"), "skull": middle("head"), "neck": middle("head")}
         for side in ("_left", "_right"):
             colors[f"upper_arm{side}"] = strip("upper_arm", 0)
             colors[f"forearm{side}"] = strip("forearm", -1)
