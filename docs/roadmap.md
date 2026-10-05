@@ -404,6 +404,7 @@ guide, and put together by the game.
 - **The inside**, empty: the floor and whatever belongs to the room itself, with nothing standing
   in it
 - **The roof as seen from outside**, which is what shows until the building is looked into
+- **The door**, a part of its own, so that it can be drawn apart from the wall it is in
 - Each building its own drawing, kept as a resident's is, and optional in the same way: a
   building nobody has drawn looks as it does now
 - An editor for them in the game, after the pattern of the one for residents
@@ -412,7 +413,8 @@ Not part of this: furniture and objects. They are to be drawn separately, later,
 to be seen.
 
 To be settled when it is built: the size of each canvas for buildings of different sizes, where
-the door and the sign go on a drawing, and how the three parts are told apart on the guide.
+the door is hung and the sign goes on a drawing, whether the door is seen to open, and how the
+parts are told apart on the guide.
 
 ### S15 — What the settlement lives on — done
 
