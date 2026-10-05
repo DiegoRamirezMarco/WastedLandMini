@@ -142,10 +142,13 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   that is missing stands still.
 - `doll`: how a body is drawn by hand. `unit` is the pixels of a drawing to one of the skeleton's;
   `canvases` gives the size of the body's and the head's in those units; and each entry of `parts`
-  is a bone with the canvas it is drawn on, the two points it runs `from` and `to`, the `radius`
-  of its zone, an optional `cap` (offset and radius of a rounder end, for a hand or a foot), or
-  `whole` for a part that is everything on its canvas. A part must be as long as its bone is in
-  the `side` view, and zones may only overlap where two parts are jointed.
+  is a bone with the canvas it is drawn on and the two points it runs `from` and `to`. `radius`
+  is half the width of the slim example the guide shows, with an optional `cap` (offset and radius
+  of a rounder end, for a hand or a foot). `reach` is half the width of the zone the part may be
+  drawn in and `ends` how far that zone goes beyond each joint, with `cap_reach` for a rounder
+  end to it; give them room, so that people can draw other builds than the example. `whole` is
+  for a part that is everything on its canvas. A part must be as long as its bone is in the
+  `side` view, and zones may only overlap where two parts are jointed.
 - `physics`: gravity in pixels per second squared, how much speed is kept each step (`damping`),
   lost along the ground (`friction`) and given back on landing (`bounce`), how hard limits push
   back, and when a body that lies still goes to sleep.

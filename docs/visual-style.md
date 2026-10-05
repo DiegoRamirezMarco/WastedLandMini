@@ -140,12 +140,15 @@ illustrations/                   free of the style contract: see Illustrations
 A resident whose body has been drawn is no longer pixel art. They are a paper doll: one drawing,
 cut apart where the body bends, each part laid along its bone and turned as the bone turns.
 
-- **Two canvases of a fixed size.** The body is 256×352 and the head 160×160, sixteen pixels of
+- **Two canvases of a fixed size.** The body is 320×384 and the head 192×192, sixteen pixels of
   drawing to one of the skeleton's. The figure is seen from the side, facing right.
-- **A guide to draw over.** Each part has a zone on the body's canvas, a rounded strip from one
-  joint to the next: trunk, upper arms, forearms with the hands, thighs, shins with the feet. The
-  limbs of the near side are tinted one colour and those of the far side another, and every joint
-  is a dot. The parts are set apart from each other, so that each can be drawn whole.
+- **A guide to draw over.** Each part has a place on the body's canvas: trunk, upper arms,
+  forearms with the hands, thighs, shins with the feet. The guide shows two things for each. A
+  slim **example**, a rounded strip from one joint to the next, with a dot at each joint. And the
+  frame of its **zone**, which is how far the part may be drawn: about twice as wide as the
+  example and longer at both ends, so that a body can be made stout, or any odd shape. The limbs
+  of the near side are tinted one colour and those of the far side another. The parts are set
+  apart from each other, so that each can be drawn whole.
 - **Cutting.** What is painted inside a zone goes with that part. Two parts that are jointed
   overlap at the joint, and what is painted there goes with both, which is what keeps a bent limb
   from showing a gap. What is painted outside every zone is left out. Everything on the head's

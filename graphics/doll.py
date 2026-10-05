@@ -33,6 +33,9 @@ GUIDE_NEAR = PALETTE["sand"]
 GUIDE_FAR = PALETTE["teal"]
 GUIDE_MIDDLE = PALETTE["dust"]
 GUIDE_JOINT = PALETTE["ember"]
+# How solid the inside of a zone is on the guide, out of 255, and how thick its edge.
+ZONE_FILL = 60
+ZONE_EDGE = 2
 
 
 def doll_path(body_id: str, canvas: str) -> str:
@@ -42,17 +45,43 @@ def doll_path(body_id: str, canvas: str) -> str:
 
 @dataclass(frozen=True)
 class PartSpec:
-    """Where one part is drawn on its canvas: along a line from one joint to the next, so wide either side."""
+    """Where one part is drawn on its canvas, along a line from one joint to the next.
+
+    The example is the slim figure the guide shows. The zone is how far the part may be drawn: a
+    good deal wider and longer, so that a body can be made stout, or any odd shape, and still be
+    cut into its parts.
+    """
 
     bone: str
     canvas: str
     start: Point
     end: Point
+    # Half the width of the example.
     radius: float
-    # A rounder end, for a hand or a foot: its offset from the far joint and its radius.
+    # Half the width of the zone, and how far it goes beyond the first joint and beyond the second.
+    reach: float = 0.0
+    ends: tuple[float, float] = (0.0, 0.0)
+    # A rounder end to the example, for a hand or a foot: its offset from the far joint and its radius.
     cap: tuple[float, float, float] | None = None
+    # The radius of the zone round that end, where it needs more room than the rest of the zone gives.
+    cap_reach: float = 0.0
     # The part is everything drawn on its canvas, such as a head with its hair.
     whole: bool = False
+
+    def zone(self) -> list[Point]:
+        """The corners of the zone: a box along the part, wider than it and reaching past both joints."""
+        dx, dy = self.end[0] - self.start[0], self.end[1] - self.start[1]
+        length = math.hypot(dx, dy) or 1.0
+        along, across = (dx / length, dy / length), (-dy / length, dx / length)
+        near = (self.start[0] - along[0] * self.ends[0], self.start[1] - along[1] * self.ends[0])
+        far = (self.end[0] + along[0] * self.ends[1], self.end[1] + along[1] * self.ends[1])
+        side = (across[0] * self.reach, across[1] * self.reach)
+        return [
+            (near[0] + side[0], near[1] + side[1]),
+            (far[0] + side[0], far[1] + side[1]),
+            (far[0] - side[0], far[1] - side[1]),
+            (near[0] - side[0], near[1] - side[1]),
+        ]
 
 
 @dataclass(frozen=True)
@@ -70,10 +99,18 @@ class DollTemplate:
         if spec.whole:
             mask.fill((255, 255, 255, 255))
             return mask
-        self._capsule(mask, spec, (255, 255, 255, 255))
+        self._zone(mask, spec, (255, 255, 255, 255))
         return mask
 
+    def _zone(self, target: pygame.Surface, spec: PartSpec, color: tuple[int, ...], width: int = 0) -> None:
+        """Paint the zone of a part, or with `width` only its edge."""
+        pygame.draw.polygon(target, color, spec.zone(), width)
+        if spec.cap is not None and spec.cap_reach > 0:
+            centre = (spec.end[0] + spec.cap[0], spec.end[1] + spec.cap[1])
+            pygame.draw.circle(target, color, centre, round(spec.cap_reach), width)
+
     def _capsule(self, target: pygame.Surface, spec: PartSpec, color: tuple[int, ...]) -> None:
+        """Paint the example of a part: a rounded strip from one joint to the next."""
         radius = round(spec.radius)
         pygame.draw.line(target, color, spec.start, spec.end, radius * 2 + 1)
         pygame.draw.circle(target, color, spec.start, radius)
@@ -82,13 +119,28 @@ class DollTemplate:
             pygame.draw.circle(target, color, (spec.end[0] + spec.cap[0], spec.end[1] + spec.cap[1]), round(spec.cap[2]))
 
     def guide(self, canvas: str) -> pygame.Surface:
-        """What is shown under a canvas to draw over: every part's zone, and a dot at each joint."""
+        """What is shown under a canvas to draw over.
+
+        For every part, a slim example of it, the frame of the zone it may be drawn in, faintly
+        filled, and a dot at each joint.
+        """
         guide = pygame.Surface(self.canvases[canvas], pygame.SRCALPHA)
-        for bone, spec in self.parts.items():
-            if spec.canvas != canvas:
+        mine = [(bone, spec) for bone, spec in self.parts.items() if spec.canvas == canvas]
+        tints = {
+            bone: GUIDE_NEAR if bone.endswith("_right") else (GUIDE_FAR if bone.endswith("_left") else GUIDE_MIDDLE)
+            for bone, _ in mine
+        }
+        for bone, spec in mine:
+            if not spec.whole:
+                self._zone(guide, spec, (*tints[bone], ZONE_FILL))
+        for bone, spec in mine:
+            if not spec.whole:
+                self._zone(guide, spec, (*tints[bone], 255), ZONE_EDGE)
+        for bone, spec in mine:
+            if spec.whole:
+                pygame.draw.circle(guide, (*tints[bone], 255), spec.end, round(spec.radius))
                 continue
-            tint = GUIDE_NEAR if bone.endswith("_right") else (GUIDE_FAR if bone.endswith("_left") else GUIDE_MIDDLE)
-            self._capsule(guide, spec, (*tint, 255))
+            self._capsule(guide, spec, (*tints[bone], 255))
         for spec in self.parts.values():
             if spec.canvas == canvas:
                 for joint in (spec.start, spec.end):
@@ -103,18 +155,15 @@ class DollTemplate:
             surface = drawings[spec.canvas]
             color = colors.get(bone, GUIDE_MIDDLE)
             if spec.whole:
-                centre, radius = spec.end, round(spec.radius * 0.8)
+                centre, radius = spec.end, round(spec.radius)
                 pygame.draw.circle(surface, outline, centre, radius + edge)
                 pygame.draw.circle(surface, color, centre, radius)
                 # An eye, on the side it faces.
                 pygame.draw.circle(surface, outline, (centre[0] + radius * 0.45, centre[1] - radius * 0.1), max(2, radius // 8))
                 continue
-            fat = PartSpec(spec.bone, spec.canvas, spec.start, spec.end, spec.radius - 0.5 * edge, spec.cap)
-            self._capsule(surface, fat, (*outline, 255))
-            thin = PartSpec(
-                spec.bone, spec.canvas, spec.start, spec.end, spec.radius - 1.5 * edge,
-                (spec.cap[0], spec.cap[1], spec.cap[2] - edge) if spec.cap is not None else None,
-            )
+            self._capsule(surface, spec, (*outline, 255))
+            inner = (spec.cap[0], spec.cap[1], spec.cap[2] - edge) if spec.cap is not None else None
+            thin = PartSpec(spec.bone, spec.canvas, spec.start, spec.end, spec.radius - edge, cap=inner)
             self._capsule(surface, thin, (*color, 255))
         return drawings
 
@@ -128,13 +177,19 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
         if canvas not in canvases:
             raise ValueError(f"Doll part {bone} is drawn on unknown canvas: {canvas}")
         cap = values.get("cap")
+        radius = float(values["radius"])
+        ends = values.get("ends", (radius, radius))
         parts[str(bone)] = PartSpec(
             str(bone),
             canvas,
             (values["from"][0] * unit, values["from"][1] * unit),
             (values["to"][0] * unit, values["to"][1] * unit),
-            float(values["radius"]) * unit,
+            radius * unit,
+            # Without a reach of its own, a part may be drawn no wider than its example.
+            float(values.get("reach", radius)) * unit,
+            (float(ends[0]) * unit, float(ends[1]) * unit),
             (cap[0] * unit, cap[1] * unit, cap[2] * unit) if cap is not None else None,
+            float(values.get("cap_reach", 0.0)) * unit,
             bool(values.get("whole", False)),
         )
     return DollTemplate(unit, canvases, parts)

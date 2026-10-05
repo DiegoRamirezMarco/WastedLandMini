@@ -18,9 +18,9 @@ from ui.button import Button
 from ui.panel import draw_panel
 
 BODY_AT = (196, 58)
-HEAD_AT = (476, 58)
-PREVIEW = pygame.Rect(476, 238, 160, 172)
-NOTES = pygame.Rect(650, 58, 142, 352)
+HEAD_AT = (530, 58)
+PREVIEW = pygame.Rect(530, 272, 192, 170)
+NOTES = pygame.Rect(8, 272, 180, 174)
 TOOLS_LEFT = 8
 SWATCH = (28, 16)
 SWATCHES_PER_ROW = 6
@@ -40,11 +40,10 @@ PREVIEW_CLIPS = ("walk", "idle", "work", "fight")
 PREVIEW_SECONDS = 4.0
 SAVED_TEXT = "Guardado: ya anda así por el asentamiento"
 NOTES_TEXT = (
-    "Dibuja encima del calco. Cada zona es una pieza: lo que pintes dentro se moverá con ella.",
-    "Naranja: brazo y pierna de delante. Azul: los de detrás. Gris: el tronco.",
-    "Los puntos rojos son las articulaciones. Deja que las piezas se solapen un poco en ellas.",
-    "El personaje mira a la derecha. La cabeza va en su propio lienzo, con el cuello abajo.",
-    "Ctrl+Z deshace. Esc vuelve sin guardar.",
+    "Cada marco es una pieza: lo que pintes dentro se mueve con ella.",
+    "La figura fina es solo un ejemplo. Hazlo más gordo o con la forma que quieras, hasta el marco.",
+    "Naranja: lado de delante. Azul: el de detrás. Puntos rojos: articulaciones.",
+    "Mira a la derecha. Ctrl+Z deshace, Esc vuelve sin guardar.",
 )
 
 
@@ -112,7 +111,7 @@ class DollEditor:
         self.guide_button.rect.width = 110
         y += 18
         self.mannequin_button = Button.at(font, TOOLS_LEFT, y, "Maniquí de partida", ("mannequin",))
-        self.top_buttons = self._row(6, [("<", ("step", -1)), (">", ("step", 1)), ("Guardar", ("save",)), ("Volver", ("close",))], left=560)
+        self.top_buttons = self._row(6, [("<", ("step", -1)), (">", ("step", 1)), ("Guardar", ("save",)), ("Volver", ("close",))], left=530)
 
     def _row(self, y: int, entries: list[tuple[str, tuple]], left: int = TOOLS_LEFT) -> list[Button]:
         buttons, x = [], left
@@ -349,7 +348,7 @@ class DollEditor:
             for line in font.wrap(note, NOTES.width):
                 font.draw(canvas, line, (NOTES.x, y), PALETTE["bone"])
                 y += LINE_HEIGHT
-            y += 5
+            y += 3
 
     def _show_drawing(self, name: str, area: pygame.Rect) -> Callable[[pygame.Surface], None]:
         place = self.layers.on_screen(area)

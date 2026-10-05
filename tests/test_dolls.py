@@ -49,6 +49,22 @@ class DollTemplateTests(unittest.TestCase):
             for other in lower:
                 self.assertGreater(mask.overlap_area(masks[other], (0, 0)), 0, f"{bone} and {other} must overlap at their joint")
 
+    def test_every_zone_leaves_room_round_the_example_to_draw_a_stouter_or_odder_body(self) -> None:
+        for bone, spec in self.template.parts.items():
+            if spec.whole:
+                # A head has its whole canvas, and its example leaves room all round for hair or a hat.
+                width, height = self.template.canvases[spec.canvas]
+                self.assertGreater(min(spec.end[0], width - spec.end[0], spec.end[1]), spec.radius * 1.7, bone)
+                continue
+            self.assertGreaterEqual(spec.reach, spec.radius * 1.9, f"{bone} can be drawn about twice as wide")
+            self.assertGreater(min(spec.ends), spec.radius, f"{bone} can be drawn longer at both ends")
+            zone = pygame.mask.from_surface(self.template.mask(bone))
+            example = pygame.Surface(self.template.canvases[spec.canvas], pygame.SRCALPHA)
+            self.template._capsule(example, spec, (255, 255, 255, 255))
+            example = pygame.mask.from_surface(example)
+            self.assertEqual(example.overlap_area(zone, (0, 0)), example.count(), f"the example of {bone} is inside its zone")
+            self.assertGreater(zone.count(), example.count() * 2, bone)
+
     def test_the_guide_marks_every_zone_and_the_mannequin_fills_them_all(self) -> None:
         for canvas, size in self.template.canvases.items():
             guide = self.template.guide(canvas)
@@ -82,6 +98,21 @@ class DollCuttingTests(unittest.TestCase):
         colours = lambda part: {tuple(part.image.get_at((x, y)))[:3] for x in range(part.image.get_width()) for y in range(part.image.get_height()) if part.image.get_at((x, y))[3]}
         self.assertEqual(colours(doll.parts["forearm_right"]), {RED})
         self.assertEqual(colours(doll.parts["thigh_left"]), {BLUE})
+
+    def test_a_body_drawn_well_outside_the_example_is_still_cut_into_its_parts(self) -> None:
+        trunk, arm = self.template.parts["spine"], self.template.parts["upper_arm_right"]
+        # A belly out to the edge of the trunk's zone, and an arm twice as thick as the example.
+        belly = (trunk.start[0] + trunk.reach - 6, trunk.start[1] - 10)
+        thick = (arm.start[0] - arm.reach + 6, (arm.start[1] + arm.end[1]) / 2 - 8)
+        self.assertGreater(belly[0] - trunk.start[0], trunk.radius * 1.5)
+        pygame.draw.circle(self.body, RED, belly, 5)
+        pygame.draw.circle(self.body, BLUE, thick, 5)
+        doll = self._doll()
+        self.assertEqual(set(doll.parts), {"spine", "upper_arm_right"})
+        self.assertEqual(_painted(doll.parts["spine"].image), _painted(doll.parts["upper_arm_right"].image))
+        # It moves with its part: laid out at any angle, the belly is still there, whole.
+        image, _ = doll.placed("spine", False, self.template.unit, 2.0)
+        self.assertAlmostEqual(_painted(image), _painted(doll.parts["spine"].image), delta=30)
 
     def test_what_is_drawn_across_a_joint_goes_with_both_parts(self) -> None:
         elbow = self.template.parts["forearm_right"].start
@@ -273,17 +304,17 @@ class DollEditorTests(unittest.TestCase):
     def test_the_guide_goes_under_over_or_away_and_the_drawing_shows_at_twice_its_size(self) -> None:
         editor = self._open("raul")
         body = editor.areas[BODY_CANVAS]
-        spot = ((body.x + 128) * SCALE, (body.y + 100) * SCALE)
+        spot = ((body.x + 160) * SCALE, (body.y + 80) * SCALE)
         with_guide = tuple(self._show().get_at(spot))[:3]
         self._click(editor.guide_button.rect.center)
         self._click(editor.guide_button.rect.center)
         self.assertEqual(editor.guide, "off")
         self.assertNotEqual(tuple(self._show().get_at(spot))[:3], with_guide, "under the trunk the guide was tinting the paper")
         editor.color = RED
-        editor.press((body.x + 128, body.y + 100))
+        editor.press((body.x + 160, body.y + 80))
         editor.release()
         self.assertEqual(tuple(self._show().get_at(spot))[:3], RED)
-        self.assertEqual(self.game.canvas.get_at((body.x + 128, body.y + 100))[3], 0, "the canvas is clear over the drawing")
+        self.assertEqual(self.game.canvas.get_at((body.x + 160, body.y + 80))[3], 0, "the canvas is clear over the drawing")
 
     def test_a_saved_drawing_is_cut_into_a_doll_that_walks_the_map_and_gives_them_a_face(self) -> None:
         game, view = self.game, self.game.global_view
