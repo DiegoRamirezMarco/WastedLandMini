@@ -396,6 +396,24 @@ Still open here:
 - A line is said in the same way whatever the mood of whoever says it
 - At x4 and x16 lines change faster than they can be said, and most go unsaid
 
+### P15 — Houses drawn by hand — planned
+Every house and premises is to be drawable in the game as residents are: in parts, each over a
+guide, and put together by the game.
+
+- **The walls** of a building, as a part of their own
+- **The inside**, empty: the floor and whatever belongs to the room itself, with nothing standing
+  in it
+- **The roof as seen from outside**, which is what shows until the building is looked into
+- Each building its own drawing, kept as a resident's is, and optional in the same way: a
+  building nobody has drawn looks as it does now
+- An editor for them in the game, after the pattern of the one for residents
+
+Not part of this: furniture and objects. They are to be drawn separately, later, and how is still
+to be seen.
+
+To be settled when it is built: the size of each canvas for buildings of different sizes, where
+the door and the sign go on a drawing, and how the three parts are told apart on the guide.
+
 ### S15 — What the settlement lives on — done
 
 - **Water is a thirst of each resident's own**, a need like hunger: whoever is thirsty goes and
