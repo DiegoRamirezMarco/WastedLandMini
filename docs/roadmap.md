@@ -350,8 +350,18 @@ Done:
   darken it too
 - Illustrated buildings, faces at any size, and a skin for the large parts of the screen
 - All of it optional, file by file: `illustrations/README.md` says what goes where
+- **Paper dolls**: a resident's body and head drawn once over a guide, cut apart at the joints
+  and moved by the skeleton, as smooth pictures on the window. One drawing from the side does
+  for every pose and both ways of facing
+- **An editor in the game** to draw them: two canvases over the guide, brushes, a rubber, a
+  bucket, undo, a mannequin to start from, and the doll moving beside the drawing
 
 Still open here:
+- A doll is always seen from the side, and is drawn over everything else on the map: someone
+  standing behind a table is in front of it
+- The editor's brush has hard edges and the palette's colours only. There is no picking a colour
+  off the drawing, no zoom, and no layers
+- What a doll carries or wears is not shown on it
 - The pictures themselves. The first six, for one whole screen, are being made
 - Text is still the pixel font, and bars, buttons and icons are still pixel art
 - Furniture, objects and residents are still pixel art, standing on an illustrated ground

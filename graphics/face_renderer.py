@@ -13,6 +13,8 @@ FACE_SIZE = (64, 64)
 MARKER_SIZE = (16, 16)
 EXPRESSIONS = ("neutral", "angry", "sad", "happy")
 DEFAULT_EXPRESSION = "neutral"
+# The head drawn for a resident's paper doll, which does for their face where no face has been drawn.
+DRAWN_HEAD = "dolls/{id}/head.png"
 # Bottom layer first. `{id}` layers belong to one resident, `{expression}` layers are shared.
 LAYERS = (
     "faces/base/{id}.png",
@@ -85,7 +87,16 @@ class FaceRenderer:
         for name in (f"{expression}.png", f"{DEFAULT_EXPRESSION}.png"):
             if name in available:
                 return self._illustrations.fitted(f"{folder}/{name}", size)
-        return self._illustrations.fitted(f"{folder}/{available[0]}", size) if len(available) == 1 else None
+        if len(available) == 1:
+            return self._illustrations.fitted(f"{folder}/{available[0]}", size)
+        # Nobody has drawn their face, but they may have drawn their head, for their body.
+        return self._illustrations.fitted(DRAWN_HEAD.replace("{id}", face_id), size)
+
+    def forget(self, face_id: str) -> None:
+        """Have a resident's face made again the next time it is asked for, as after it has been drawn anew."""
+        for cache in (self._cache, self._markers):
+            for key in [key for key in cache if key[0] == face_id]:
+                del cache[key]
 
     def marker(self, face_id: str, expression: str = DEFAULT_EXPRESSION) -> pygame.Surface:
         """Return the same face at `MARKER_SIZE`, small enough to mark a resident on the map."""

@@ -52,6 +52,7 @@ JOBS_INTENT = ("jobs",)
 STORES_INTENT = ("stores",)
 ROSTER_INTENT = ("roster",)
 MINIMAP_INTENT = ("minimap",)
+DRAW_INTENT = ("draw",)
 ZOOM_OUT_INTENT = ("zoom", -1)
 ZOOM_IN_INTENT = ("zoom", 1)
 NOTICE_SECONDS = 3.0
@@ -105,6 +106,7 @@ class Hud:
         assets: AssetStore,
         illustrations: Illustrations | None = None,
         layers: ScreenLayers | None = None,
+        drawable: bool = False,
     ) -> None:
         self.canvas = canvas
         self.layers = layers
@@ -157,13 +159,16 @@ class Hud:
             right = button.rect.left - 2
         self.counts_right = right - 6
 
-        entries = (
+        entries = [
             ("people", "Residentes", ROSTER_INTENT),
             ("work", "Puestos", JOBS_INTENT),
             ("scrap", "Almacén", STORES_INTENT),
             ("log", "Eventos", LOG_INTENT),
             ("map", "Mapa", MINIMAP_INTENT),
-        )
+        ]
+        if drawable:
+            # Where there is somewhere to keep drawings, residents can be drawn.
+            entries.append(("brush", "Dibujar", DRAW_INTENT))
         self.menu = [
             MenuButton(pygame.Rect(sidebar.x, sidebar.y + index * MENU_ROW, sidebar.width, MENU_ROW), icon, label, intent)
             for index, (icon, label, intent) in enumerate(entries)

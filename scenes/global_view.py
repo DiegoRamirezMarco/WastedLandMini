@@ -1,3 +1,4 @@
+import math
 from collections.abc import Callable, Hashable, Iterable
 
 import pygame
@@ -5,6 +6,7 @@ import pygame
 from graphics.assets import AssetStore
 from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE, BodyRenderer
 from graphics.building_renderer import FACADE_ROWS, BuildingRenderer, building_area
+from graphics.doll import Doll, DollStore, draw_doll
 from graphics.face_renderer import FaceRenderer
 from graphics.font import CELL_SIZE, BitmapFont
 from graphics.icons import ICON_SIZE, icon_path
@@ -26,6 +28,7 @@ from graphics.tileset import (
 )
 from scenes.body_stage import BodyStage, Remains, ground_spot
 from scenes.hud import (
+    DRAW_INTENT,
     JOBS_INTENT,
     LOG_INTENT,
     MINIMAP_INTENT,
@@ -43,6 +46,7 @@ from simulation.work.work_system import WORK_ACTION
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
 from skeleton.plan import IDLE_CLIP, builtin_plan
+from skeleton.rig import Skeleton
 from ui.bubble import MARK_SIZE, MARK_TAIL, draw_mark
 from ui.labels import away_residents
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
@@ -110,6 +114,14 @@ ZOOM_KEYS = {
 }
 
 Draw = tuple[float, int, Callable[[], None]]
+# A paper doll to put on the window this frame: how far down the map it stands, the doll, and either
+# the skeleton it is laid over or, for someone lying under a blanket, where their neck is.
+DollDraw = tuple[float, Doll, Skeleton | None, tuple[float, float] | None]
+# Which way a doll faces until its resident has walked to one side or the other.
+DOLL_FACING = "right"
+HEAD_BONE = "skull"
+# Where the neck of a doll lying in a bed is, from the bed's top left corner, in map pixels.
+LYING_NECK = (7.5, 10.0)
 
 
 class GlobalView:
@@ -124,8 +136,16 @@ class GlobalView:
         custom: AssetStore | None = None,
         illustrations: Illustrations | None = None,
         layers: ScreenLayers | None = None,
+        dolls: DollStore | None = None,
     ) -> None:
         self.canvas = canvas
+        # Residents whose body has been drawn are shown as paper dolls, on the window itself.
+        self.dolls = dolls if layers is not None else None
+        self._doll_facing: dict[str, str] = {}
+        self._doll_draws: list[DollDraw] = []
+        self._posed: dict[tuple, Skeleton] = {}
+        # Resident the player asked to draw. The game shell picks it up.
+        self.requested_editor: str | None = None
         # Pictures made outside the game, and where they are put to go straight on the window.
         self.illustrations = illustrations if layers is not None else None
         self.layers = layers
@@ -136,7 +156,8 @@ class GlobalView:
         self.faces = faces
         # Everyone's body, and what a blow leaves lying about. Presentation only: nothing of it is saved.
         self.bodies = BodyStage(BodyRenderer(assets, builtin_plan()))
-        self.hud = Hud(canvas, world, font, icons, faces, assets, illustrations, layers)
+        drawable = self.dolls is not None and illustrations is not None and illustrations.root is not None
+        self.hud = Hud(canvas, world, font, icons, faces, assets, illustrations, layers, drawable)
         # Real seconds of unpaused play, driving animations that have nothing to do with game state.
         self.time = 0.0
         # How far the current game minute has played out, from 0 to 1. Set by the game shell.
@@ -207,6 +228,8 @@ class GlobalView:
             self.hud.notify(ROOFS_ON if self.roofs_on else ROOFS_OFF)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_n:
             self._apply(MINIMAP_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_F2:
+            self._apply(DRAW_INTENT)
         elif event.type == pygame.KEYDOWN and event.key in ZOOM_KEYS:
             self.set_zoom(self.zoom + ZOOM_KEYS[event.key])
         elif event.type == pygame.MOUSEWHEEL:
@@ -376,6 +399,9 @@ class GlobalView:
             self.hud.toggle_jobs()
         elif intent == STORES_INTENT:
             self.hud.toggle_stores()
+        elif intent == DRAW_INTENT and self.dolls is not None:
+            # Whoever is selected, or else the first resident there is.
+            self.requested_editor = self.hud.selected_id or next(iter(self.world.residents), None)
         elif intent == ROSTER_INTENT:
             # Nobody in particular: the panel goes back to listing everybody.
             self.hud.select_resident(None)
@@ -461,6 +487,7 @@ class GlobalView:
         self.hitboxes = {}
         self.container_hitboxes = {}
         self._overlays = []
+        self._doll_draws = []
         for _, _, draw in sorted(draws, key=lambda entry: entry[:2]):
             draw()
         stormy = self._storm(region)
@@ -469,7 +496,7 @@ class GlobalView:
         # Nothing of the map is drawn outside its part of the canvas.
         self.canvas.set_clip(self.viewport)
         size = (self._scaled(region.width), self._scaled(region.height))
-        if ground is not None:
+        if ground is not None or self._doll_draws:
             self._show_illustrated(region, size, ground, pictures, stormy, light)
         else:
             if stormy:
@@ -543,16 +570,20 @@ class GlobalView:
         self,
         region: pygame.Rect,
         size: tuple[int, int],
-        ground: pygame.Surface,
+        ground: pygame.Surface | None,
         pictures: list[tuple[pygame.Rect, str]],
         stormy: bool,
         light: pygame.Surface | None,
     ) -> None:
-        """Have the map drawn on the window itself: the illustrated ground, then everything that stands on it.
+        """Have the map drawn on the window itself: the illustrated ground if there is one, everything
+        that stands on it, and then the paper dolls, at the full resolution of the window.
 
         The canvas is left clear over the map, so that only names, bubbles and signs are drawn there.
         """
         layers, illustrations, scene = self.layers, self.illustrations, self._scene
+        plan = self.bodies.plan
+        # Whoever stands lower on the map is in front.
+        dolls = sorted(self._doll_draws, key=lambda entry: entry[0])
         corner = self._canvas_point(*region.topleft)
         place = layers.on_screen(pygame.Rect(corner, size))
         clip = layers.on_screen(self.viewport)
@@ -565,8 +596,9 @@ class GlobalView:
         def draw(screen: pygame.Surface) -> None:
             before = screen.get_clip()
             screen.set_clip(clip)
-            piece = ground.subsurface(source)
-            screen.blit(piece if piece.get_size() == place.size else pygame.transform.smoothscale(piece, place.size), place)
+            if ground is not None:
+                piece = ground.subsurface(source)
+                screen.blit(piece if piece.get_size() == place.size else pygame.transform.smoothscale(piece, place.size), place)
             for area, path in pictures:
                 spot = pygame.Rect(
                     place.x + round((area.x - region.x) * detail),
@@ -577,6 +609,16 @@ class GlobalView:
                 screen.blit(illustrations.fitted(path, spot.size), spot)
             # The pixel art keeps its hard edges however large it is shown.
             screen.blit(scene if scene.get_size() == place.size else pygame.transform.scale(scene, place.size), place)
+            origin = (place.x - region.x * detail, place.y - region.y * detail)
+            for _, doll, skeleton, neck in dolls:
+                if skeleton is not None:
+                    draw_doll(screen, doll, plan, skeleton, origin, detail)
+                    continue
+                # Lying under a blanket: only the head, upright on the pillow.
+                head = doll.placed(HEAD_BONE, False, detail, math.pi)
+                if head is not None:
+                    image, joint = head
+                    screen.blit(image, (round(origin[0] + neck[0] * detail - joint[0]), round(origin[1] + neck[1] * detail - joint[1])))
             if stormy:
                 screen.fill(STORM_TINT, place, special_flags=pygame.BLEND_RGB_MULT)
             if light is not None:
@@ -733,6 +775,9 @@ class GlobalView:
         if lying_in is not None:
             return self._lying_draw(resident, lying_in)
         x, y, facing, stride = self._walk_state(resident)
+        doll = self._doll_of(resident.resident_id)
+        if doll is not None:
+            facing = self._side_facing(resident.resident_id, facing)
         top = round(y * TILE_SIZE)
         spot = ground_spot(x, y)
         # Where a body stands at rest, which is what is picked with the mouse whatever it is doing.
@@ -746,10 +791,14 @@ class GlobalView:
         turn = stride if stride is not None else self.time * CLIP_RATES.get(clip, 0.0)
         index = int(turn * frames) % frames
         character = self.bodies.character(resident)
-        character.stand(spot[0], spot[1], facing, clip, index / frames, overlay)
+        # A doll turns smoothly; the game's own bodies go from one kept picture to the next.
+        character.stand(spot[0], spot[1], facing, clip, turn % 1.0 if doll is not None else index / frames, overlay)
 
         def draw() -> None:
-            if character.physical:
+            if doll is not None:
+                skeleton = character.skeleton if character.physical else self._posed_skeleton(resident.resident_id, character)
+                self._doll_draws.append((spot[1], doll, skeleton, None))
+            elif character.physical:
                 # Reeling from a blow or knocked down: drawn joint by joint, wherever physics has them.
                 renderer.draw_limp(
                     self._scene, character.skeleton, resident.resident_id, (-self._scene_origin[0], -self._scene_origin[1])
@@ -759,7 +808,7 @@ class GlobalView:
                     resident.resident_id, facing, clip, index, tuple(character.lost), overlay
                 )
                 self._blit(picture, (spot[0] - origin[0], spot[1] - origin[1]))
-            if load is not None:
+            if load is not None and doll is None:
                 dx, dy = LOAD_OFFSETS[facing]
                 self._blit(self.icons.small(load), (body.left + dx, body.top + dy))
             hitbox = self._canvas_rect(body)
@@ -778,10 +827,34 @@ class GlobalView:
 
         return (area.bottom, 0, draw)
 
+    def _doll_of(self, body_id: str) -> Doll | None:
+        """The paper doll of a body, if its body has been drawn and there is a window to show it on."""
+        return self.dolls.get(body_id) if self.dolls is not None else None
+
+    def _side_facing(self, resident_id: str, facing: str) -> str:
+        """Which way a doll faces: it is drawn from the side, so walking up or down it keeps the side it last had."""
+        if facing in ("left", "right"):
+            self._doll_facing[resident_id] = facing
+        return self._doll_facing.get(resident_id, DOLL_FACING)
+
+    def _posed_skeleton(self, resident_id: str, character) -> Skeleton:
+        """A skeleton standing as a resident's clips have them right now, to lay their doll over."""
+        key = (resident_id, character.facing, tuple(character.lost))
+        if key not in self._posed:
+            self._posed[key] = Skeleton(self.bodies.plan, character.facing, character.lost)
+        skeleton = self._posed[key]
+        pose = self.bodies.plan.pose(character.facing, character.clip, character.phase, character.overlay)
+        skeleton.set_pose(pose, character.x, character.y)
+        return skeleton
+
     def _remains_draw(self, remains: Remains) -> Draw:
         """A dead body or a part of one, in among the living by how far down the map it lies."""
+        doll = self._doll_of(remains.body_id)
 
         def draw() -> None:
+            if doll is not None:
+                self._doll_draws.append((remains.skeleton.ground, doll, remains.skeleton, None))
+                return
             self.bodies.draw_remains(self._scene, remains, self._scene_origin)
 
         return (remains.skeleton.ground, 1, draw)
@@ -856,8 +929,13 @@ class GlobalView:
         face = self.bodies.renderer.head(resident.resident_id)
         head = face.subsurface((0, 0, face.get_width(), LYING_HEAD_ROWS))
 
+        doll = self._doll_of(resident.resident_id)
+
         def draw() -> None:
-            self._blit(head, (bed.left + LYING_HEAD_OFFSET[0], bed.top + LYING_HEAD_OFFSET[1]))
+            if doll is not None:
+                self._doll_draws.append((bed.bottom, doll, None, (bed.left + LYING_NECK[0], bed.top + LYING_NECK[1])))
+            else:
+                self._blit(head, (bed.left + LYING_HEAD_OFFSET[0], bed.top + LYING_HEAD_OFFSET[1]))
             hitbox = self._canvas_rect(bed)
             self.hitboxes[resident.resident_id] = hitbox
             self._overlays.append(

@@ -6,12 +6,14 @@ import pygame
 from audio.audio_manager import AudioManager, load_sound_map
 from audio.music import load_music_settings, track_for
 from graphics.assets import ASSETS_DIR, AssetStore
+from graphics.doll import DollStore, load_template
 from graphics.face_renderer import FaceRenderer
 from graphics.font import FONT_SHEET, SHEET_SIZE, BitmapFont
 from graphics.illustrations import ILLUSTRATIONS_DIR, Illustrations
 from graphics.item_icons import ItemIcons
 from graphics.screen_layers import ScreenLayers
 from save.save_manager import SaveManager
+from scenes.doll_editor import DollEditor
 from scenes.global_view import GlobalView
 from scenes.interaction_view import InteractionView
 from settings import (
@@ -27,6 +29,7 @@ from settings import (
 from simulation.commands import AdvanceTimeCommand, SetPausedCommand, SetSpeedCommand
 from simulation.registries import DATA_DIR
 from simulation.world import SimulationWorld
+from skeleton.plan import builtin_plan
 
 SPEED_KEYS = dict(zip((pygame.K_1, pygame.K_2, pygame.K_3), SPEEDS))
 CUSTOM_CONTENT_DIR = ASSETS_DIR.parent / "custom_content"
@@ -60,6 +63,8 @@ class Game:
         self.font = BitmapFont(self.assets.image(FONT_SHEET, size=SHEET_SIZE))
         self.icons = ItemIcons(self.assets, self.custom)
         self.faces = FaceRenderer(self.assets, self.custom, self.illustrations)
+        # Residents whose body has been drawn, cut into parts that move.
+        self.dolls = DollStore(self.illustrations, load_template())
         self.music = load_music_settings(DATA_DIR / "audio.json")
         self.audio = AudioManager(
             ASSETS_DIR / "sounds",
@@ -76,7 +81,7 @@ class Game:
         self.minutes_owed = 0.0
         self.global_view = GlobalView(
             self.canvas, self.world, self.assets, self.font, self.icons, self.faces, self.custom,
-            self.illustrations, self.layers,
+            self.illustrations, self.layers, self.dolls,
         )
         # Advice is asked for in the dock under the map, with the settlement left on show around it.
         self.interaction_view = InteractionView(
@@ -87,6 +92,22 @@ class Game:
             dock=self.global_view.hud.layout.dock,
             backdrop=self.global_view.render,
             layers=self.layers,
+        )
+        # Where residents are drawn, if there is a folder to keep the drawings in.
+        self.doll_editor = (
+            DollEditor(
+                self.canvas,
+                self.world,
+                self.font,
+                self.layers,
+                self.illustrations.root,
+                self.dolls,
+                builtin_plan(),
+                self.global_view.bodies.renderer,
+                on_saved=self.faces.forget,
+            )
+            if self.illustrations.root is not None
+            else None
         )
 
     def save_game(self, path: Path = SAVE_PATH) -> bool:
@@ -119,9 +140,14 @@ class Game:
 
     @property
     def active_scene(self):
+        if self.scene_name == "editor" and self.doll_editor is not None:
+            return self.doll_editor
         return self.global_view if self.scene_name == "global" else self.interaction_view
 
     def handle_key(self, key: int) -> None:
+        if key == pygame.K_ESCAPE and self.scene_name == "editor":
+            # Out of the drawing, not out of the game. The editor closes itself on the same key.
+            return
         if key == pygame.K_ESCAPE:
             self.running = False
         elif key == pygame.K_TAB:
@@ -154,11 +180,17 @@ class Game:
 
     def sync_scenes(self) -> None:
         """Follow requests from the scenes to switch between them."""
-        if self.scene_name == "global" and self.global_view.requested_decision is not None:
+        if self.scene_name == "editor" and (self.doll_editor is None or self.doll_editor.closed):
+            self.scene_name = "global"
+        elif self.scene_name == "global" and self.global_view.requested_editor is not None and self.doll_editor is not None:
+            self.doll_editor.open(self.global_view.requested_editor)
+            self.scene_name = "editor"
+        elif self.scene_name == "global" and self.global_view.requested_decision is not None:
             self.open_interaction(self.global_view.requested_decision)
         elif self.scene_name == "interaction" and self.interaction_view.closed:
             self.scene_name = "global"
         self.global_view.requested_decision = None
+        self.global_view.requested_editor = None
 
     def update_music(self) -> None:
         """Have the music follow the mood of the settlement."""

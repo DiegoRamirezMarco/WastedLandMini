@@ -140,6 +140,12 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   the whole body with `root`. A positive angle swings a hanging limb to the right of the screen.
   The game uses `idle`, `walk`, `work`, `argue`, `fight` and, over any of them, `carry`. A clip
   that is missing stands still.
+- `doll`: how a body is drawn by hand. `unit` is the pixels of a drawing to one of the skeleton's;
+  `canvases` gives the size of the body's and the head's in those units; and each entry of `parts`
+  is a bone with the canvas it is drawn on, the two points it runs `from` and `to`, the `radius`
+  of its zone, an optional `cap` (offset and radius of a rounder end, for a hand or a foot), or
+  `whole` for a part that is everything on its canvas. A part must be as long as its bone is in
+  the `side` view, and zones may only overlap where two parts are jointed.
 - `physics`: gravity in pixels per second squared, how much speed is kept each step (`damping`),
   lost along the ground (`friction`) and given back on landing (`bounce`), how hard limits push
   back, and when a body that lies still goes to sleep.

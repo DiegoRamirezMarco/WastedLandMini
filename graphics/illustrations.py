@@ -40,6 +40,12 @@ class Illustrations:
             self._fitted[key] = picture if picture.get_size() == size else pygame.transform.smoothscale(picture, size)
         return self._fitted[key]
 
+    def forget(self, relative_path: str) -> None:
+        """Have a picture read from its file again the next time it is asked for, as after it has been changed."""
+        self._pictures.pop(relative_path, None)
+        for key in [key for key in self._fitted if key[0] == relative_path]:
+            del self._fitted[key]
+
     def names(self, relative_dir: str) -> list[str]:
         """Names of the PNG files directly inside a folder. Empty if there is none."""
         if self.root is None:

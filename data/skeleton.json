@@ -207,6 +207,22 @@
       "side": [{"upper_arm_left": 30, "forearm_left": 95, "upper_arm_right": 30, "forearm_right": 95}]
     }
   },
+  "doll": {
+    "unit": 16,
+    "canvases": {"body": [16, 22], "head": [10, 10]},
+    "parts": {
+      "spine": {"canvas": "body", "from": [8, 8.5], "to": [8, 4.5], "radius": 2.8},
+      "skull": {"canvas": "head", "from": [5, 8.4], "to": [5, 5.4], "radius": 4.4, "whole": true},
+      "upper_arm_left": {"canvas": "body", "from": [2, 4.5], "to": [2, 7.5], "radius": 1.3},
+      "forearm_left": {"canvas": "body", "from": [2, 7.5], "to": [2, 10.5], "radius": 1.3, "cap": [0, 0, 1.6]},
+      "upper_arm_right": {"canvas": "body", "from": [14, 4.5], "to": [14, 7.5], "radius": 1.3},
+      "forearm_right": {"canvas": "body", "from": [14, 7.5], "to": [14, 10.5], "radius": 1.3, "cap": [0, 0, 1.6]},
+      "thigh_left": {"canvas": "body", "from": [5, 13.2], "to": [5, 16.2], "radius": 1.6},
+      "shin_left": {"canvas": "body", "from": [5, 16.2], "to": [5, 19.2], "radius": 1.6, "cap": [0.8, 0.5, 2.0]},
+      "thigh_right": {"canvas": "body", "from": [11, 13.2], "to": [11, 16.2], "radius": 1.6},
+      "shin_right": {"canvas": "body", "from": [11, 16.2], "to": [11, 19.2], "radius": 1.6, "cap": [0.8, 0.5, 2.0]}
+    }
+  },
   "physics": {
     "gravity": 320.0,
     "damping": 0.985,

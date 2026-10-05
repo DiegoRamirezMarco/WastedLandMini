@@ -93,6 +93,9 @@ python -m simulation.headless --days 7 --seed 7
   advice. Time stops while you decide; if you never answer, they make up their own mind after a
   while
 - `Tab` again returns to the settlement
+- `Dibujar` in the menu, or `F2`: draw the selected resident. Paint their body and their head
+  over the guide, watch them move as you go, and save: from then on that is how they look, in the
+  settlement and in their portrait. `Esc` goes back without saving
 - `F5` saves the game to `saves/quicksave.json`; `F9` loads it
 - `M`: sound and music on / off
 - `Esc`: quit

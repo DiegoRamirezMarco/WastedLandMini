@@ -1,0 +1,278 @@
+"""Paper dolls: a body drawn once, cut apart where it bends, and moved by its skeleton.
+
+A resident's body and head are drawn on two canvases of a fixed size, over a guide that marks where
+each part goes and where it is jointed. The drawing is cut into those parts, and each part is laid
+along its bone, turned as the bone turns. One drawing, seen from the side, does for every pose:
+facing the other way it is the same drawing in a mirror.
+"""
+
+import json
+import math
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import pygame
+
+from graphics.illustrations import Illustrations
+from graphics.palette import PALETTE
+from skeleton.plan import PLAN_PATH, SkeletonPlan, wrapped
+from skeleton.rig import Skeleton
+
+Point = tuple[float, float]
+Color = tuple[int, int, int]
+
+BODY_CANVAS = "body"
+HEAD_CANVAS = "head"
+# Parts are kept turned in this many steps of a full turn.
+TURN_STEPS = 96
+# The view of the skeleton that a doll is posed in, and its order of drawing.
+DOLL_VIEW = "side"
+# Parts on the far side of the body are tinted on the guide in one colour, the near side in another.
+GUIDE_NEAR = PALETTE["sand"]
+GUIDE_FAR = PALETTE["teal"]
+GUIDE_MIDDLE = PALETTE["dust"]
+GUIDE_JOINT = PALETTE["ember"]
+
+
+def doll_path(body_id: str, canvas: str) -> str:
+    """Where a resident's drawing of one canvas is kept, below the illustrations folder."""
+    return f"dolls/{body_id}/{canvas}.png"
+
+
+@dataclass(frozen=True)
+class PartSpec:
+    """Where one part is drawn on its canvas: along a line from one joint to the next, so wide either side."""
+
+    bone: str
+    canvas: str
+    start: Point
+    end: Point
+    radius: float
+    # A rounder end, for a hand or a foot: its offset from the far joint and its radius.
+    cap: tuple[float, float, float] | None = None
+    # The part is everything drawn on its canvas, such as a head with its hair.
+    whole: bool = False
+
+
+@dataclass(frozen=True)
+class DollTemplate:
+    # Pixels of a drawing to one pixel of the skeleton's own measure.
+    unit: int
+    # Size in pixels of each canvas.
+    canvases: dict[str, tuple[int, int]]
+    parts: dict[str, PartSpec]
+
+    def mask(self, bone: str) -> pygame.Surface:
+        """The zone of a part on its canvas: white and solid where the part is, clear elsewhere."""
+        spec = self.parts[bone]
+        mask = pygame.Surface(self.canvases[spec.canvas], pygame.SRCALPHA)
+        if spec.whole:
+            mask.fill((255, 255, 255, 255))
+            return mask
+        self._capsule(mask, spec, (255, 255, 255, 255))
+        return mask
+
+    def _capsule(self, target: pygame.Surface, spec: PartSpec, color: tuple[int, ...]) -> None:
+        radius = round(spec.radius)
+        pygame.draw.line(target, color, spec.start, spec.end, radius * 2 + 1)
+        pygame.draw.circle(target, color, spec.start, radius)
+        pygame.draw.circle(target, color, spec.end, radius)
+        if spec.cap is not None:
+            pygame.draw.circle(target, color, (spec.end[0] + spec.cap[0], spec.end[1] + spec.cap[1]), round(spec.cap[2]))
+
+    def guide(self, canvas: str) -> pygame.Surface:
+        """What is shown under a canvas to draw over: every part's zone, and a dot at each joint."""
+        guide = pygame.Surface(self.canvases[canvas], pygame.SRCALPHA)
+        for bone, spec in self.parts.items():
+            if spec.canvas != canvas:
+                continue
+            tint = GUIDE_NEAR if bone.endswith("_right") else (GUIDE_FAR if bone.endswith("_left") else GUIDE_MIDDLE)
+            self._capsule(guide, spec, (*tint, 255))
+        for spec in self.parts.values():
+            if spec.canvas == canvas:
+                for joint in (spec.start, spec.end):
+                    pygame.draw.circle(guide, GUIDE_JOINT, joint, max(2, self.unit // 5))
+        return guide
+
+    def mannequin(self, colors: dict[str, Color], outline: Color = PALETTE["ink"]) -> dict[str, pygame.Surface]:
+        """A plain figure filling every zone, in the colours given by bone: something to start a drawing from."""
+        drawings = {name: pygame.Surface(size, pygame.SRCALPHA) for name, size in self.canvases.items()}
+        edge = max(1, self.unit // 8)
+        for bone, spec in self.parts.items():
+            surface = drawings[spec.canvas]
+            color = colors.get(bone, GUIDE_MIDDLE)
+            if spec.whole:
+                centre, radius = spec.end, round(spec.radius * 0.8)
+                pygame.draw.circle(surface, outline, centre, radius + edge)
+                pygame.draw.circle(surface, color, centre, radius)
+                # An eye, on the side it faces.
+                pygame.draw.circle(surface, outline, (centre[0] + radius * 0.45, centre[1] - radius * 0.1), max(2, radius // 8))
+                continue
+            fat = PartSpec(spec.bone, spec.canvas, spec.start, spec.end, spec.radius - 0.5 * edge, spec.cap)
+            self._capsule(surface, fat, (*outline, 255))
+            thin = PartSpec(
+                spec.bone, spec.canvas, spec.start, spec.end, spec.radius - 1.5 * edge,
+                (spec.cap[0], spec.cap[1], spec.cap[2] - edge) if spec.cap is not None else None,
+            )
+            self._capsule(surface, thin, (*color, 255))
+        return drawings
+
+
+def template_from_data(data: dict[str, Any]) -> DollTemplate:
+    unit = int(data["unit"])
+    canvases = {str(name): (int(size[0] * unit), int(size[1] * unit)) for name, size in data["canvases"].items()}
+    parts = {}
+    for bone, values in data["parts"].items():
+        canvas = str(values["canvas"])
+        if canvas not in canvases:
+            raise ValueError(f"Doll part {bone} is drawn on unknown canvas: {canvas}")
+        cap = values.get("cap")
+        parts[str(bone)] = PartSpec(
+            str(bone),
+            canvas,
+            (values["from"][0] * unit, values["from"][1] * unit),
+            (values["to"][0] * unit, values["to"][1] * unit),
+            float(values["radius"]) * unit,
+            (cap[0] * unit, cap[1] * unit, cap[2] * unit) if cap is not None else None,
+            bool(values.get("whole", False)),
+        )
+    return DollTemplate(unit, canvases, parts)
+
+
+def load_template(path: Path = PLAN_PATH) -> DollTemplate:
+    return template_from_data(json.loads(path.read_text(encoding="utf-8"))["doll"])
+
+
+@dataclass(frozen=True)
+class DollPart:
+    """One part cut out of a drawing: its picture, and where on it the part is jointed."""
+
+    image: pygame.Surface
+    start: Point
+    end: Point
+
+
+class Doll:
+    """A drawing cut into its parts, ready to be laid over a skeleton."""
+
+    def __init__(self, template: DollTemplate, drawings: dict[str, pygame.Surface]) -> None:
+        self.unit = template.unit
+        self.parts: dict[str, DollPart] = {}
+        for bone, spec in template.parts.items():
+            drawing = drawings.get(spec.canvas)
+            if drawing is None:
+                continue
+            if drawing.get_size() != template.canvases[spec.canvas]:
+                drawing = pygame.transform.smoothscale(drawing, template.canvases[spec.canvas])
+            cut = drawing.convert_alpha() if pygame.display.get_surface() is not None else drawing.copy()
+            # Whatever of the drawing falls outside the part's zone belongs to another part.
+            cut.blit(template.mask(bone), (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            box = cut.get_bounding_rect()
+            if box.width == 0:
+                continue
+            self.parts[bone] = DollPart(
+                cut.subsurface(box).copy(),
+                (spec.start[0] - box.x, spec.start[1] - box.y),
+                (spec.end[0] - box.x, spec.end[1] - box.y),
+            )
+        self._sized: dict[tuple[str, bool, int], DollPart] = {}
+        self._turned: dict[tuple[str, bool, int, int], tuple[pygame.Surface, Point]] = {}
+
+    def _sized_part(self, bone: str, mirrored: bool, detail: float) -> DollPart:
+        """A part at the size it is shown, and in a mirror if the body faces the other way."""
+        key = (bone, mirrored, round(detail * 1000))
+        if key not in self._sized:
+            part = self.parts[bone]
+            factor = detail / self.unit
+            size = (max(1, round(part.image.get_width() * factor)), max(1, round(part.image.get_height() * factor)))
+            image = pygame.transform.smoothscale(part.image, size)
+            start = (part.start[0] * factor, part.start[1] * factor)
+            end = (part.end[0] * factor, part.end[1] * factor)
+            if mirrored:
+                image = pygame.transform.flip(image, True, False)
+                start, end = (size[0] - start[0], start[1]), (size[0] - end[0], end[1])
+            self._sized[key] = DollPart(image, start, end)
+        return self._sized[key]
+
+    def placed(self, bone: str, mirrored: bool, detail: float, angle: float) -> tuple[pygame.Surface, Point] | None:
+        """A part turned to point along `angle`, and where on that picture its first joint is.
+
+        `detail` is how many pixels of the target go to one of the skeleton's. None if the drawing
+        left that part empty.
+        """
+        if bone not in self.parts:
+            return None
+        part = self._sized_part(bone, mirrored, detail)
+        drawn = math.atan2(part.end[0] - part.start[0], part.end[1] - part.start[1])
+        steps = round(wrapped(angle - drawn) / math.tau * TURN_STEPS) % TURN_STEPS
+        key = (bone, mirrored, round(detail * 1000), steps)
+        if key not in self._turned:
+            turn = steps * math.tau / TURN_STEPS
+            image = pygame.transform.rotozoom(part.image, math.degrees(turn), 1.0) if steps else part.image
+            # Where the joint went: it turned about the middle of the picture, and the picture grew to fit.
+            from_middle = (part.start[0] - part.image.get_width() / 2, part.start[1] - part.image.get_height() / 2)
+            sine, cosine = math.sin(turn), math.cos(turn)
+            joint = (
+                image.get_width() / 2 + from_middle[0] * cosine + from_middle[1] * sine,
+                image.get_height() / 2 - from_middle[0] * sine + from_middle[1] * cosine,
+            )
+            self._turned[key] = (image, joint)
+        return self._turned[key]
+
+
+class DollStore:
+    """The dolls there are drawings for, cut the first time each is asked for."""
+
+    def __init__(self, illustrations: Illustrations | None, template: DollTemplate) -> None:
+        self._illustrations = illustrations
+        self.template = template
+        self._dolls: dict[str, Doll | None] = {}
+
+    def drawings(self, body_id: str) -> dict[str, pygame.Surface]:
+        """The drawings kept for a body, by canvas. Empty if nobody has drawn it."""
+        if self._illustrations is None:
+            return {}
+        found = {canvas: self._illustrations.find(doll_path(body_id, canvas)) for canvas in self.template.canvases}
+        return {canvas: picture for canvas, picture in found.items() if picture is not None}
+
+    def get(self, body_id: str) -> Doll | None:
+        """The doll of a body. None unless its body has been drawn."""
+        if body_id not in self._dolls:
+            drawings = self.drawings(body_id)
+            self._dolls[body_id] = Doll(self.template, drawings) if BODY_CANVAS in drawings else None
+        return self._dolls[body_id]
+
+    def forget(self, body_id: str) -> None:
+        """Have a body's drawings read again, as after they have been changed."""
+        self._dolls.pop(body_id, None)
+        if self._illustrations is not None:
+            for canvas in self.template.canvases:
+                self._illustrations.forget(doll_path(body_id, canvas))
+
+
+def draw_doll(
+    target: pygame.Surface,
+    doll: Doll,
+    plan: SkeletonPlan,
+    skeleton: Skeleton,
+    origin: Point,
+    detail: float,
+) -> None:
+    """Lay a doll's parts over a skeleton, the furthest first.
+
+    `origin` is where on the target the skeleton's own (0, 0) falls, and `detail` how many pixels
+    of the target go to one of the skeleton's.
+    """
+    for name in plan.orders[DOLL_VIEW]:
+        bone = skeleton.bones.get(skeleton.as_posed(name))
+        if bone is None:
+            continue
+        placed = doll.placed(name, skeleton.mirrored, detail, bone.angle)
+        if placed is None:
+            continue
+        image, joint = placed
+        # A whole number of the skeleton's is the middle of one of its pixels.
+        x = origin[0] + (bone.a.x + 0.5) * detail - joint[0]
+        y = origin[1] + (bone.a.y + 0.5) * detail - joint[1]
+        target.blit(image, (round(x), round(y)))

@@ -108,6 +108,7 @@ illustrations/                   free of the style contract: see Illustrations
     map/<map_id>.png
     buildings/<room_id>.png
     faces/<resident_id>/<expression>.png
+    dolls/<resident_id>/body.png, head.png
     ui/panel.png
 ```
 
@@ -134,6 +135,39 @@ illustrations/                   free of the style contract: see Illustrations
 - **The skin** dresses the bar, the menu, the panel and the dock: its border keeps its width and
   its middle stretches. Text, bars and buttons are still drawn on the canvas, over it.
 - With nothing in the folder, or without the folder, the game looks exactly as it did.
+
+### Paper dolls
+A resident whose body has been drawn is no longer pixel art. They are a paper doll: one drawing,
+cut apart where the body bends, each part laid along its bone and turned as the bone turns.
+
+- **Two canvases of a fixed size.** The body is 256×352 and the head 160×160, sixteen pixels of
+  drawing to one of the skeleton's. The figure is seen from the side, facing right.
+- **A guide to draw over.** Each part has a zone on the body's canvas, a rounded strip from one
+  joint to the next: trunk, upper arms, forearms with the hands, thighs, shins with the feet. The
+  limbs of the near side are tinted one colour and those of the far side another, and every joint
+  is a dot. The parts are set apart from each other, so that each can be drawn whole.
+- **Cutting.** What is painted inside a zone goes with that part. Two parts that are jointed
+  overlap at the joint, and what is painted there goes with both, which is what keeps a bent limb
+  from showing a gap. What is painted outside every zone is left out. Everything on the head's
+  canvas is the head, hair and all.
+- **Moving.** The doll is posed from the side by the same clips as any body. Facing left it is
+  the same drawing in a mirror, and walking up or down the map it keeps the side it last faced.
+  It reels, falls, loses limbs and lies still exactly as the game's own bodies do, since it is the
+  same skeleton underneath.
+- **Showing.** Dolls go on the window itself, at its full resolution and with smooth edges, over
+  everything else that stands on the map, the one lower down in front. In a bed only the head shows.
+- **The head is also the face.** Where no face has been drawn for a resident, the head of their
+  doll is used in the panel, in the dock and for the markers on the map.
+
+### The editor
+- `Dibujar` in the menu, or `F2`, opens it on whoever is selected. Time stops while it is open.
+- The two canvases are shown at two window pixels to one of the drawing's, over the guide, with
+  the doll going through its clips beside them, cut again after every stroke.
+- Tools: the palette's colours, four widths of brush, a rubber and a bucket; undo, clear, and a
+  plain mannequin in the resident's colours to start from. The guide can go under the drawing,
+  over it, or away.
+- Saving writes both drawings to `illustrations/dolls/<resident_id>/`, and the resident walks the
+  map as their doll at once. The files are ordinary PNGs: they can be touched up in any program.
 
 ## The screen
 `ui/layout.py` cuts the canvas into five parts, and nothing is drawn across their edges.
