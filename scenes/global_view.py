@@ -31,7 +31,9 @@ from simulation.items.item_system import USE_ITEM_ACTION
 from simulation.work.work_system import WORK_ACTION
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
+from ui.labels import away_residents
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
+from ui.panel import draw_panel
 from world.interactable import Interactable
 from world.map import Tile
 
@@ -51,6 +53,9 @@ SUGGESTION_REFUSED = "Ahora no se le puede proponer ese puesto"
 NOBODY_NEEDS_ATTENTION = "Nadie necesita atención ahora"
 ROOFS_ON = "Tejados puestos: se quitan al mirar dentro"
 ROOFS_OFF = "Tejados quitados"
+MINIMAP_ON = "Minimapa a la vista"
+MINIMAP_OFF = "Minimapa guardado"
+AWAY_LABEL = "Fuera"
 MINIMAP_MARGIN = 6
 # What bad weather multiplies the picture of the map by, and how many streaks of dust blow across it.
 STORM_TINT = (226, 198, 156)
@@ -131,9 +136,10 @@ class GlobalView:
         tiles = (world.tile_map.width, world.tile_map.height)
         self._minimap = minimap_base(self.roofed_terrain, tiles)
         width, height = minimap_size(tiles)
-        self.hud.minimap_rect = pygame.Rect(
+        self._minimap_rect = pygame.Rect(
             canvas.get_width() - MINIMAP_MARGIN - width, canvas.get_height() - MINIMAP_MARGIN - height, width, height
         )
+        self.hud.minimap_rect = self._minimap_rect
         # The part of the canvas that shows the map, and the map pixel at its top-left corner.
         self.viewport = pygame.Rect(
             MAP_ORIGIN, (canvas.get_width() - MAP_ORIGIN[0], canvas.get_height() - MAP_ORIGIN[1])
@@ -163,6 +169,9 @@ class GlobalView:
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_t:
             self.roofs_on = not self.roofs_on
             self.hud.notify(ROOFS_ON if self.roofs_on else ROOFS_OFF)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_n:
+            self.hud.minimap_rect = None if self.hud.minimap_rect is not None else self._minimap_rect
+            self.hud.notify(MINIMAP_ON if self.hud.minimap_rect is not None else MINIMAP_OFF)
         elif event.type == pygame.KEYDOWN and event.key in ZOOM_KEYS:
             self.set_zoom(self.zoom + ZOOM_KEYS[event.key])
         elif event.type == pygame.MOUSEWHEEL:
@@ -407,6 +416,36 @@ class GlobalView:
 
         self.hud.render()
         self._draw_minimap(region)
+        self._draw_sky()
+        self._draw_away()
+
+    def _draw_sky(self) -> None:
+        """A sun or a moon after the clock, for whether residents can see far or not."""
+        icon = self.assets.image(icon_path("moon" if self.world.is_dark() else "sun"), size=ICON_SIZE)
+        self.canvas.blit(icon, (MINIMAP_MARGIN + self.font.width(self.world.clock.label) + 4, 5))
+
+    def _draw_away(self) -> None:
+        """Whoever is outside the settlement is nowhere on the map: their faces go in a corner, to be picked there."""
+        away = away_residents(self.world)
+        if not away:
+            return
+        outlook = self.hud.outlook_rect()
+        top = (outlook.bottom if outlook is not None else self.viewport.top) + MINIMAP_MARGIN
+        label_width = self.font.width(AWAY_LABEL)
+        face = self.faces.marker(away[0].resident_id)
+        width = label_width + 8 + (face.get_width() + 2) * len(away)
+        panel = pygame.Rect(MINIMAP_MARGIN, top, width + 4, face.get_height() + 4)
+        draw_panel(self.canvas, panel)
+        self.font.draw(self.canvas, AWAY_LABEL, (panel.x + 4, panel.y + 4), PALETTE["dust"])
+        x = panel.x + 4 + label_width + 4
+        for resident in away:
+            marker = self.faces.marker(resident.resident_id)
+            spot = marker.get_rect(topleft=(x, panel.y + 2))
+            self.canvas.blit(marker, spot)
+            self.hitboxes[resident.resident_id] = spot
+            if resident.resident_id == self.hud.selected_id:
+                pygame.draw.rect(self.canvas, PALETTE["glow"], spot, 1)
+            x += marker.get_width() + 2
 
     def _storm(self, region: pygame.Rect) -> None:
         """Under bad weather, wash the scene in dust and blow streaks of it across."""
@@ -643,12 +682,24 @@ class GlobalView:
             self.alerts.discard(resident.resident_id)
         if in_exchange:
             interaction = self.world.registries.interactions.get(activity.action)
+            if interaction is not None and interaction.romance == "tryst":
+                return "heart"
             return "argument" if interaction is not None and interaction.hostile else "chat"
         if resting:
             return "sleep"
         if resident.health < HURT_HEALTH:
             return "hurt"
         return "work" if activity is not None and activity.using and activity.action == WORK_ACTION else None
+
+    def _bond_icon(self, resident: Resident) -> str | None:
+        """What a resident is to whoever is selected: their partner, someone they hold as a friend, or neither."""
+        selected = self.world.residents.get(self.hud.selected_id or "")
+        if selected is None:
+            return None
+        if selected.couple_with == resident.resident_id:
+            return "heart"
+        feelings = self.world.relationships.get((selected.resident_id, resident.resident_id))
+        return "friend" if feelings is not None and self.world.bonds.tier(self.world, feelings) is not None else None
 
     def _name_left(self, resident: Resident, centre_x: int, width: int) -> int:
         """Left edge of a name label. Two residents talking side by side push theirs apart."""
@@ -688,6 +739,8 @@ class GlobalView:
         icons = [self._status_icon(resident, resting)]
         if resident.resident_id == self.hud.selected_id:
             icons.append("selected")
+        else:
+            icons.append(self._bond_icon(resident))
         # From afar there is only room for what calls for attention.
         in_hand = None if self.overview else self._item_in_hand(resident)
         if in_hand is not None:

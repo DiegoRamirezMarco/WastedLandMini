@@ -111,6 +111,41 @@ def describe_weather(world: SimulationWorld) -> str | None:
     return weather.name.capitalize() if weather is not None else None
 
 
+OBSTACLE_LABELS = {
+    "own_job": "ya es su puesto",
+    "no_post": "sin puesto libre",
+    "deciding": "tiene algo que decidir",
+    "asked_recently": "se lo preguntaron hace poco",
+}
+
+
+def describe_obstacle(code: str | None) -> str:
+    """Why a job cannot be put to someone right now, in a few words. Nothing if it can."""
+    return OBSTACLE_LABELS.get(code or "", "no se le puede proponer" if code else "")
+
+
+def known_forecasts(world: SimulationWorld) -> list[str]:
+    """What is on its way that at least one resident knows of, soonest first, one line each.
+
+    It shows what the settlement knows, not what is true: a storm nobody has heard of is not listed.
+    """
+    lines = []
+    for upcoming in sorted(world.upcoming, key=lambda each: each.at):
+        definition = world.registries.world_events.events.get(upcoming.event_id)
+        if definition is None or upcoming.fact_id is None:
+            continue
+        knowers = sum(world.knowledge.knows(resident_id, upcoming.fact_id) for resident_id in world.residents)
+        if knowers:
+            heard = "lo sabe 1" if knowers == 1 else f"lo saben {knowers}"
+            lines.append(f"A las {upcoming.at // 60 % 24}: {definition.forecast} ({heard})")
+    return lines
+
+
+def away_residents(world: SimulationWorld) -> list[Resident]:
+    """Whoever is outside the settlement right now."""
+    return [resident for resident in world.residents.values() if resident.away]
+
+
 def describe_credits(resident: Resident) -> str:
     """What a resident has earned and not spent, in whole credits, such as `12 vales`."""
     whole = int(resident.credits)

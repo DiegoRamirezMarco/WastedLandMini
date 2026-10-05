@@ -503,6 +503,21 @@ class ChangingJobsTests(unittest.TestCase):
         self.assertEqual(self.world.apply_command(SuggestJobCommand("lucia", "farmer")), "take")
         self.assertEqual(self.lucia.job_id, "farmer")
 
+    def test_what_stands_in_the_way_of_a_suggestion_can_be_asked(self) -> None:
+        obstacle = self.world.interventions.suggestion_obstacle
+        self.assertIsNone(obstacle(self.world, "lucia", "farmer"))
+        self.assertEqual(obstacle(self.world, "lucia", "bartender"), "own_job")
+        self.assertEqual(obstacle(self.world, "lucia", "guard"), "no_post")
+        self.assertEqual(obstacle(self.world, "nobody", "farmer"), "unknown")
+        self.assertEqual(obstacle(self.world, "lucia", "astronaut"), "unknown")
+        self.world.apply_command(SuggestJobCommand("lucia", "farmer", "discourage"))
+        self.assertEqual(obstacle(self.world, "lucia", "farmer"), "asked_recently")
+        marta = self.world.residents["marta"]
+        marta.job_id = marta.post_id = None
+        self.world.vacancies["cook"] = self.world.clock.total_minutes - 30 * 60
+        marta.activity = self.world.interventions.maybe_offer_job(self.world, marta)
+        self.assertEqual(obstacle(self.world, "marta", "farmer"), "deciding")
+
     def test_a_suggestion_does_not_wake_or_interrupt_whoever_gets_it(self) -> None:
         self.lucia.activity = Activity("sleep", "bed_1", minutes_left=300, using=True)
         self.assertEqual(self.world.apply_command(SuggestJobCommand("lucia", "farmer")), "take")

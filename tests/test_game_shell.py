@@ -9,7 +9,14 @@ from graphics.character_renderer import FRAME_SIZE
 from graphics.face_renderer import MARKER_SIZE
 from graphics.lighting import NIGHT, STEPS, ambient, daylight
 from graphics.shelf_display import displayed_goods
-from scenes.global_view import NOBODY_NEEDS_ATTENTION, ROOFS_OFF, SUGGESTION_REFUSED, ZOOM_TILE_SIZES
+from scenes.global_view import (
+    MINIMAP_OFF,
+    MINIMAP_ON,
+    NOBODY_NEEDS_ATTENTION,
+    ROOFS_OFF,
+    SUGGESTION_REFUSED,
+    ZOOM_TILE_SIZES,
+)
 from settings import GAME_MINUTES_PER_REAL_SECOND, SCALE, TILE_SIZE
 from simulation.events.event import DomainEvent
 from simulation.events.world_event import Upcoming, Weather
@@ -20,15 +27,18 @@ from ui.resident_card import card_height
 from ui.job_board import post_rows, suggest_buttons, suggest_intent
 from ui.labels import (
     affordable_goods,
+    away_residents,
     condition_of,
     describe_action,
     describe_bond,
     describe_credits,
     describe_injuries,
     describe_job,
+    describe_obstacle,
     describe_weather,
     format_time,
     has_shop,
+    known_forecasts,
     price_at,
     selling_use,
     shop_goods,
@@ -730,11 +740,16 @@ class GameShellTests(unittest.TestCase):
         self.assertEqual(hud.notice, "Lucía decide hacerse cargo del puesto: Huerto")
         self.assertEqual(hud.selected_id, "lucia", "a click on the board fell through to the map")
 
-        # The bar she left has a free post now, but she has only just been asked.
+        # The bar she left has a free post now, but she has only just been asked, and the board says so.
         view.render()
-        buttons = {button.intent: button for button in suggest_buttons(view.font, hud.jobs_rect(), world, "lucia")}
-        self.assertEqual(list(buttons), [suggest_intent("bartender")])
-        self._click(buttons[suggest_intent("bartender")].rect.center)
+        self.assertEqual(suggest_buttons(view.font, hud.jobs_rect(), world, "lucia"), [])
+        rows = {row.job_id: row for row in post_rows(world, "lucia")}
+        self.assertEqual(rows["bartender"].obstacle, "se lo preguntaron hace poco")
+        self.assertEqual(rows["farmer"].obstacle, "ya es su puesto")
+        self.assertEqual(rows["guard"].obstacle, "sin puesto libre")
+        self.assertEqual({row.obstacle for row in post_rows(world, None)}, {""}, "with nobody picked, no reasons")
+        self.assertFalse(hud.jobs_rect().colliderect(hud.minimap_rect), "the board leaves the minimap in view")
+        view._suggest_job("bartender")
         self.assertEqual(lucia.job_id, "farmer")
         self.assertEqual(hud.notice, SUGGESTION_REFUSED)
         self._play(1)
@@ -867,12 +882,19 @@ class GameShellTests(unittest.TestCase):
         self.assertIn("sergio", view.hitboxes)
         while not sergio.away:
             world.step(1)
+        on_the_map = view.hitboxes["sergio"].copy()
         view.centre_on_resident("sergio")
         with self.assertNoLogs("graphics.assets", level="WARNING"):
             view.render()
-        self.assertNotIn("sergio", view.hitboxes)
+        # He is not on the map any more: his face waits in a corner, where he can still be picked.
+        corner = view.hitboxes["sergio"]
+        self.assertEqual(corner.size, MARKER_SIZE)
+        self.assertNotEqual(corner.center, on_the_map.center)
+        self.assertLess(corner.right, 120)
+        self.assertEqual([resident.resident_id for resident in away_residents(world)], ["sergio"])
         self.assertEqual(describe_action(world, sergio), "fuera del asentamiento")
-        view.hud.select_resident("sergio")
+        self._click(corner.center)
+        self.assertEqual(view.hud.selected_id, "sergio")
         view.render()
         self.assertIsNotNone(view.hud.card_rect(), "his card can still be read")
 
@@ -956,6 +978,83 @@ class GameShellTests(unittest.TestCase):
         view.centre_on_resident("tomas")
         with self.assertNoLogs("graphics.assets", level="WARNING"):
             view.render()
+
+    # --- At a glance ---
+
+    def test_what_the_settlement_has_heard_is_coming_is_on_screen_and_what_it_has_not_is_not(self) -> None:
+        self._make_everyone_get_along()
+        view, world = self.game.global_view, self.game.world
+        storm = Upcoming("dust_storm", world.clock.total_minutes + 5 * 60)
+        world.upcoming.append(storm)
+        self.assertEqual(known_forecasts(world), [], "it is coming, but nobody knows")
+        self.assertIsNone(view.hud.outlook_rect())
+        # Each hears it alone behind walls, so that nobody else is in earshot.
+        lucia, marta = world.residents["lucia"], world.residents["marta"]
+        lucia.x, lucia.y = 5, 5
+        marta.x, marta.y = 16, 4
+        world.happenings.hear_radio(world, lucia)
+        self.assertEqual(known_forecasts(world), ["A las 13: una tormenta de polvo (lo sabe 1)"])
+        world.happenings.hear_radio(world, marta)
+        self.assertEqual(known_forecasts(world), ["A las 13: una tormenta de polvo (lo saben 2)"])
+        panel = view.hud.outlook_rect()
+        self.assertTrue(view.hud.covers(panel.center))
+        before = pygame.image.tobytes(self.game.canvas.subsurface(panel), "RGB")
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(panel), "RGB"), before)
+        world.upcoming.clear()
+        self.assertEqual(known_forecasts(world), [])
+        self.assertIsNone(view.hud.outlook_rect())
+
+    def test_partner_and_friends_of_whoever_is_selected_are_marked(self) -> None:
+        self._make_everyone_get_along()
+        view, world = self.game.global_view, self.game.world
+        tomas, ines, vera, raul = (world.residents[name] for name in ("tomas", "ines", "vera", "raul"))
+        self.assertIsNone(view._bond_icon(ines), "with nobody selected there is nothing to mark")
+        view.hud.select_resident("tomas")
+        self.assertIsNone(view._bond_icon(ines))
+        tomas.couple_with, ines.couple_with = "ines", "tomas"
+        self.assertEqual(view._bond_icon(ines), "heart")
+        world.relationship("tomas", "vera").affection = 40
+        world.relationship("tomas", "vera").trust = 20
+        self.assertEqual(view._bond_icon(vera), "friend")
+        self.assertIsNone(view._bond_icon(raul))
+        view.hud.select_resident("vera")
+        self.assertIsNone(view._bond_icon(tomas), "what she feels for him is another matter")
+        ines.activity = Activity("tryst", minutes_left=30, using=True, partner_id="tomas")
+        self.assertEqual(view._status_icon(ines, resting=False), "heart")
+        view.hud.select_resident("tomas")
+        view.centre_on_resident("tomas")
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+
+    def test_the_sky_by_the_clock_and_a_minimap_that_can_be_put_away(self) -> None:
+        self._make_everyone_get_along()
+        view, world = self.game.global_view, self.game.world
+        sky = pygame.Rect(6 + view.font.width(world.clock.label) + 4, 5, 8, 8)
+        view.render()
+        by_day = pygame.image.tobytes(self.game.canvas.subsurface(sky), "RGB")
+        world.clock.hour = 23
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        sky = pygame.Rect(6 + view.font.width(world.clock.label) + 4, 5, 8, 8)
+        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(sky), "RGB"), by_day)
+
+        minimap = view.hud.minimap_rect
+        put_away = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_n)
+        view.handle_event(put_away)
+        self.assertIsNone(view.hud.minimap_rect)
+        self.assertEqual(view.hud.notice, MINIMAP_OFF)
+        self.assertFalse(view.hud.covers(minimap.center))
+        view.render()
+        view.handle_event(put_away)
+        self.assertEqual(view.hud.minimap_rect, minimap)
+        self.assertEqual(view.hud.notice, MINIMAP_ON)
+
+    def test_every_reason_not_to_ask_has_words(self) -> None:
+        self.assertEqual(describe_obstacle(None), "")
+        for code in ("own_job", "no_post", "deciding", "asked_recently", "unknown"):
+            self.assertTrue(describe_obstacle(code), code)
 
     # --- Atmosphere ---
 

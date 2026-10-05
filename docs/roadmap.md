@@ -119,7 +119,7 @@ Still open here:
 - Who is drawn to whom is fixed per pair, with no notion of what kind of person anyone is drawn to.
 - A couple changes nothing about where the two sleep or how they spend the day.
 - Jealousy only comes from learning of an affair, never from mere suspicion.
-- On screen a couple is only a word on the card: there is no sign of it on the map.
+- On the map a couple shows only while one of the two is selected or they are alone together (P9).
 
 ### S10 — Beyond the fence — done
 - Scavenging as a job: a cart by the gate, one trip a day, hours outside
@@ -171,7 +171,8 @@ Still open here:
   of a storm or goes to meet a caravan.
 - The radio is never wrong, and says nothing but what is on its way: no voices, no music, no
   other settlements.
-- The player sees a forecast only when a resident hears it.
+- The player sees a forecast only once a resident has heard it. From then on it stays on screen
+  (P9), with how many know.
 
 ### S13 — Dark and danger — done
 - Darkness that limits what is seen: at night only what is close, or lit by a fire or a lamp
@@ -236,8 +237,8 @@ instead of crashing.
 - A minimap, and jumping to whoever needs attention
 - More wear and scrap: the place should look salvaged
 
-Still open here: the minimap is always on screen and cannot be put away. (S13 made darkness
-matter: it now limits what residents see.)
+Nothing is left open here: S13 made darkness limit what residents see, and P9 let the minimap be
+put away.
 
 ### P7 — The economy on screen (needs S8) — done
 - A job board: who holds which post, which are vacant, and suggesting who should do what
@@ -247,8 +248,7 @@ matter: it now limits what residents see.)
 - Shelves and stock that make the shop look like one
 
 Still open here: a suggestion from the board always comes with the same encouragement, though the
-simulation would take any of the three advices; and the board does not say why someone cannot be
-asked just now.
+simulation would take any of the three advices. (P9 made the board say why someone cannot be asked.)
 
 ### P8 — Music — done
 - Synthesised loops written by the art tool, like the sound effects
@@ -257,6 +257,18 @@ asked just now.
 
 Still open here: nobody but the tool has composed anything, and nobody has listened to it with a
 critical ear. The tracks are short and there is one per mood, so they repeat soon.
+
+### P9 — At a glance (needs S9 to S13) — done
+- What the settlement knows is coming, on screen: each forecast and how many have heard it
+- Who is outside the settlement, where they can be seen and picked
+- Partner and friends of whoever is selected marked on the map, and a couple alone marked as such
+- The job board says why someone cannot be asked just now
+- Sun or moon by the clock, and a minimap that can be put away
+
+Still open here:
+- A trip outside is still not seen: only the face of whoever is on it, waiting in a corner.
+- A stranger at the gate and raiders are words and a decision. Nobody is drawn at the gate.
+- A couple shows only while one of the two is selected, or while they are alone together.
 
 ## Later
 - Voice/TTS modulation

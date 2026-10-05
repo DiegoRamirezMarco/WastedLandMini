@@ -9,12 +9,13 @@ from graphics.palette import PALETTE
 from simulation.world import SimulationWorld
 from ui.button import HEIGHT as BUTTON_HEIGHT
 from ui.button import Button
-from ui.labels import describe_holders, describe_shifts, describe_vacancy
+from ui.labels import describe_holders, describe_obstacle, describe_shifts, describe_vacancy
 from ui.panel import draw_panel
 
 PANEL_WIDTH = 250
 PADDING = 5
-ROW_HEIGHT = LINE_HEIGHT * 2 + 3
+# Tight enough for every post to fit above the minimap.
+ROW_HEIGHT = LINE_HEIGHT * 2 + 1
 SUGGEST_LABEL = "Proponer"
 NOBODY_SELECTED = "Elige a alguien para proponerle un puesto."
 
@@ -31,8 +32,9 @@ class PostRow:
     title: str
     holders: str
     vacant: bool
-    # Whether the selected resident could be asked to take it: a free post, and not theirs already.
+    # Whether the selected resident could be asked to take it, and if not, why, in a few words.
     can_suggest: bool
+    obstacle: str = ""
 
 
 def post_rows(world: SimulationWorld, selected_id: str | None) -> list[PostRow]:
@@ -44,15 +46,15 @@ def post_rows(world: SimulationWorld, selected_id: str | None) -> list[PostRow]:
     for job in sorted(jobs, key=lambda job: -job.priority):
         vacancy = describe_vacancy(world, job.job_id)
         holders = describe_holders(world, job.job_id)
+        code = world.interventions.suggestion_obstacle(world, selected.resident_id, job.job_id) if selected else None
         rows.append(
             PostRow(
                 job_id=job.job_id,
                 title=f"{job.name} ({describe_shifts(job)})",
                 holders=f"{holders} · {vacancy}" if vacancy is not None else holders,
                 vacant=vacancy is not None,
-                can_suggest=selected is not None
-                and selected.job_id != job.job_id
-                and world.staffing.free_post(world, job) is not None,
+                can_suggest=selected is not None and code is None,
+                obstacle=describe_obstacle(code),
             )
         )
     return rows
@@ -97,6 +99,10 @@ def draw_job_board(
         font.draw(target, holders, (x, y + LINE_HEIGHT), PALETTE["lamp" if row.vacant else "stone"])
         if button is not None:
             button.draw(target, font)
+        elif row.obstacle:
+            # In place of the button, why there is none.
+            reason = font.truncate(row.obstacle, rect.width // 2)
+            font.draw(target, reason, (rect.right - PADDING - font.width(reason), y + LINE_HEIGHT), PALETTE["iron"])
         y += ROW_HEIGHT
     selected = world.residents.get(selected_id or "")
     hint = NOBODY_SELECTED if selected is None else f"Proponer un puesto a {selected.name}: decide por su cuenta."

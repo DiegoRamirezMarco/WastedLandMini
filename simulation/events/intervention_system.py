@@ -225,17 +225,32 @@ class InterventionSystem:
         shifts the scores and they pick. Returns what they chose, or None if they cannot be asked:
         no such job or no free post for it, a decision already open, or asked too recently.
         """
+        if self.suggestion_obstacle(world, resident_id, job_id) is not None:
+            return None
+        definition = world.registries.decisions[JOB_OFFER]
+        decision = self._decision(world, world.residents[resident_id], None, definition, 0.0, job_id)
+        return self._settle(world, decision, option_id, waiting=False)
+
+    def suggestion_obstacle(self, world: "SimulationWorld", resident_id: str, job_id: str) -> str | None:
+        """What stands in the way of putting a job to a resident, as a short code. None if nothing does.
+
+        `unknown` for no such resident or job, `own_job`, `no_post` when every post for it is
+        taken, `deciding` when they have a decision open, `asked_recently` within the cooldown.
+        """
         definition = world.registries.decisions.get(JOB_OFFER)
         resident = world.residents.get(resident_id)
         job = world.registries.jobs.get(job_id)
-        if definition is None or resident is None or job is None or resident.job_id == job_id:
-            return None
+        if definition is None or resident is None or job is None:
+            return "unknown"
+        if resident.job_id == job_id:
+            return "own_job"
         if world.staffing.free_post(world, job) is None:
-            return None
-        if self.pending_for(world, resident_id) is not None or self._cooling_down(world, definition, resident):
-            return None
-        decision = self._decision(world, resident, None, definition, 0.0, job_id)
-        return self._settle(world, decision, option_id, waiting=False)
+            return "no_post"
+        if self.pending_for(world, resident_id) is not None:
+            return "deciding"
+        if self._cooling_down(world, definition, resident):
+            return "asked_recently"
+        return None
 
     def _cooldown_key(self, kind: str, resident_id: str) -> str:
         return resident_id if kind == GRIEVANCE else f"{kind}:{resident_id}"

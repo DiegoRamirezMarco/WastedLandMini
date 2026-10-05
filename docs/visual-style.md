@@ -140,6 +140,15 @@ custom_content/
 - One dot per resident: `paper`, `lamp` for the selected one, and blinking `ember` and `glow` for
   whoever needs attention. A `glow` frame marks the part of the map in view.
 
+### What is not on the map
+- A sun or a moon follows the clock: the moon is up while it is dark for the residents.
+- Forecasts that at least one resident has heard are listed under the header, top left, one line
+  each in `sand`. What nobody knows is never shown.
+- Whoever is outside the settlement is a face in a small panel below that list, and can be picked
+  there like anyone on the map.
+- While a resident is selected, a heart is drawn over their partner and a star over those they
+  hold as friends. A couple alone together has a heart for a status icon.
+
 ### Set dressing
 - The settlement should look salvaged. Things that are only there to be looked at are object kinds
   like any other, with no use: wrecks and stacks of tyres block the way, loose junk does not.

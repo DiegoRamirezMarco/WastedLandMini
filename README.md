@@ -62,7 +62,10 @@ python -m simulation.headless --days 7 --seed 7
 - `G`: go to whoever needs attention: someone waiting for advice, in the middle of something
   serious, or hurt. Press it again for the next one
 - The minimap in the corner shows everyone as a dot, blinking if they need attention. Click it
-  to go there
+  to go there. `N` puts it away, or brings it back
+- Whoever is outside the settlement waits as a face in the top left corner; click it to select
+  them. What the residents have heard is coming is listed there too, with how many know
+- With a resident selected, a heart marks their partner and a star those they hold as friends
 - A building keeps its roof on until you rest the mouse on it or select someone or something
   inside. Whoever is under a roof shows as a face on it. `T` takes every roof off, or puts them
   back

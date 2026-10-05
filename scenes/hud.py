@@ -4,7 +4,7 @@ from collections.abc import Hashable, Iterable
 
 import pygame
 
-from graphics.font import BitmapFont
+from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.item_icons import ItemIcons
 from graphics.palette import PALETTE
 from settings import SPEEDS
@@ -15,13 +15,16 @@ from ui.event_log import EventFeed
 from ui.inventory_view import PANEL_WIDTH, container_panel_height, draw_container_panel
 from ui.job_board import PANEL_WIDTH as BOARD_WIDTH
 from ui.job_board import draw_job_board, job_board_height, suggest_buttons
-from ui.labels import describe_weather
+from ui.labels import describe_weather, known_forecasts
+from ui.panel import draw_panel
 from ui.resident_card import CARD_WIDTH, card_height, draw_resident_card
 
 HEADER_HEIGHT = 32
 MARGIN = 6
 BUTTONS_LEFT = 104
 LOG_SIZE = (250, 168)
+OUTLOOK_WIDTH = 300
+OUTLOOK_PADDING = 4
 
 PAUSE_INTENT = ("pause",)
 LOG_INTENT = ("log",)
@@ -126,7 +129,7 @@ class Hud:
         """True if a HUD element is in front of the map at `position`."""
         if position[1] < HEADER_HEIGHT:
             return True
-        panels = [self.card_rect(), self.container_rect(), self.minimap_rect]
+        panels = [self.card_rect(), self.container_rect(), self.minimap_rect, self.outlook_rect()]
         panels += [self.log_rect()] if self.log_open else []
         panels += [self.jobs_rect()] if self.jobs_open else []
         return any(rect is not None and rect.collidepoint(position) for rect in panels)
@@ -135,6 +138,14 @@ class Hud:
         return pygame.Rect(
             self.canvas.get_width() - MARGIN - LOG_SIZE[0], HEADER_HEIGHT + MARGIN, *LOG_SIZE
         )
+
+    def outlook_rect(self) -> pygame.Rect | None:
+        """Where the forecasts the settlement has heard are listed, when it has heard any."""
+        lines = len(known_forecasts(self.world))
+        if not lines:
+            return None
+        height = OUTLOOK_PADDING * 2 + LINE_HEIGHT * lines
+        return pygame.Rect(MARGIN, HEADER_HEIGHT + MARGIN, OUTLOOK_WIDTH, height)
 
     def jobs_rect(self) -> pygame.Rect:
         return pygame.Rect(
@@ -181,6 +192,13 @@ class Hud:
         ticker_width = self.canvas.get_width() - MARGIN * 2
         self.feed.draw_ticker(self.canvas, self.font, (MARGIN, 18), ticker_width)
 
+        outlook = self.outlook_rect()
+        if outlook is not None:
+            draw_panel(self.canvas, outlook)
+            for index, line in enumerate(known_forecasts(self.world)):
+                text = self.font.truncate(line, outlook.width - OUTLOOK_PADDING * 2)
+                position = (outlook.x + OUTLOOK_PADDING, outlook.y + OUTLOOK_PADDING + index * LINE_HEIGHT)
+                self.font.draw(self.canvas, text, position, PALETTE["sand"])
         if self.log_open:
             self.feed.draw_panel(self.canvas, self.font, self.log_rect())
         if self.jobs_open:
