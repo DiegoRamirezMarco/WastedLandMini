@@ -16,6 +16,7 @@ from graphics.item_icons import ItemIcons
 from graphics.lighting import BLOCK, LightMap, daylight, shade
 from graphics.object_sprites import ObjectSprites
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
+from graphics.object_art import ObjectArtStore
 from graphics.map_renderer import GROUND_TILES, render_roofs, render_terrain, roof_names
 from graphics.palette import PALETTE
 from graphics.shelf_display import SLOTS, displayed_goods
@@ -58,7 +59,14 @@ from ui.bubble import MARK_SIZE, MARK_TAIL, draw_mark
 from ui.labels import away_residents
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
 from ui.panel import draw_panel
-from ui.tutorial_panel import ACKNOWLEDGE_INTENT, CREATOR_INTENT
+from ui.tutorial_panel import (
+    ACKNOWLEDGE_INTENT,
+    BUILDING_ART_FOCUS,
+    CREATOR_INTENT,
+    DOLL_FOCUS,
+    owed_object,
+)
+from ui.tutorial_panel import DRAW_INTENT as TUTORIAL_DRAW_INTENT
 from world.interactable import Interactable
 from world.map import Tile
 from world.room import Room
@@ -187,6 +195,8 @@ class GlobalView:
         self.requested_urbanism = False
         # The opening of a new settlement asks for the screen where its first resident is made.
         self.requested_creator = False
+        # Kind of object the player asked to draw.
+        self.requested_object_editor: str | None = None
         # Pictures made outside the game, and where they are put to go straight on the window.
         self.illustrations = illustrations if layers is not None else None
         self.layers = layers
@@ -195,6 +205,8 @@ class GlobalView:
         self.font = font
         self.icons = icons
         self.object_sprites = ObjectSprites(assets, custom)
+        # Furniture and objects somebody has drawn take the place of the game's own, kind by kind.
+        self.object_art = ObjectArtStore(self.illustrations, self.object_sprites)
         self.faces = faces
         # Everyone's body, and what a blow leaves lying about. Presentation only: nothing of it is saved.
         self.bodies = BodyStage(BodyRenderer(assets, builtin_plan(), faces.looks))
@@ -524,6 +536,8 @@ class GlobalView:
             self.requested_urbanism = True
         elif intent == CREATOR_INTENT:
             self.requested_creator = True
+        elif intent == TUTORIAL_DRAW_INTENT:
+            self._draw_for_the_step()
         elif intent == ACKNOWLEDGE_INTENT:
             self.world.apply_command(AcknowledgeTutorialCommand())
         elif intent == DRAW_INTENT and self.dolls is not None:
@@ -553,6 +567,18 @@ class GlobalView:
             self.world.apply_command(SetSpeedCommand(intent[1]))
         elif isinstance(intent, tuple) and intent[0] == "zoom":
             self.set_zoom(self.zoom + intent[1])
+
+    def _draw_for_the_step(self) -> None:
+        """Ask for the drawing the step of the opening in hand wants: of someone, of a building or of an object."""
+        step = self.world.guide.current(self.world)
+        if step is None:
+            return
+        if step.focus == DOLL_FOCUS:
+            self.requested_editor = self.hud.selected_id or next(iter(self.world.residents), None)
+        elif step.focus == BUILDING_ART_FOCUS:
+            self.requested_building_editor = self._building_to_draw()
+        else:
+            self.requested_object_editor = owed_object(self.world)
 
     def _building_to_draw(self) -> str | None:
         """The roofed building currently in context, or the first one on the map."""
@@ -594,6 +620,9 @@ class GlobalView:
         # alpha-capable buffer even when nobody has drawn the ground below it.
         open_rooms = self.looked_into()
         self._closed = set(self.roof_tiles) - open_rooms
+        # A roof hides what is under it.
+        self._hidden = set().union(*(self.roof_tiles[room_id] for room_id in self._closed))
+        drawn_objects = self._drawn_objects(region)
         closed_pictures = {
             room_id: self.building_art.closed(self.world.rooms[room_id]) for room_id in self._closed
         }
@@ -606,7 +635,9 @@ class GlobalView:
         has_building_pictures = any(
             (*closed_pictures.values(), *open_backgrounds.values(), *open_foregrounds.values())
         )
-        self._scene = self._buffer(region.size, clear=ground is not None or has_building_pictures)
+        self._scene = self._buffer(
+            region.size, clear=ground is not None or has_building_pictures or bool(drawn_objects)
+        )
         self._scene_origin = region.topleft
         if ground is None:
             self._scene.blit(self.terrain, (0, 0), region)
@@ -619,9 +650,7 @@ class GlobalView:
         foreground_pictures: list[tuple[pygame.Rect, pygame.Surface]] = []
         # Objects, residents and buildings share one list so that whatever stands lower on screen is in front.
         draws: list[Draw] = []
-        self._hidden = set()
         for room_id in self._closed:
-            self._hidden |= self.roof_tiles[room_id]
             room = self.world.rooms[room_id]
             if not building_area(room).colliderect(region):
                 continue
@@ -641,11 +670,12 @@ class GlobalView:
                 pictures.append((area, background))
             if foreground is not None:
                 foreground_pictures.append((area, foreground))
+        # Drawn furniture goes over the floor of a drawn building, whatever stands lower in front.
+        pictures.extend(sorted(drawn_objects, key=lambda entry: entry[0].bottom))
         for area, picture in pictures:
             # Remove only where a drawing has paint. Clear corners continue to show the ground.
             self._erase_for_picture(area, picture)
         for placed in self.world.interactables.values():
-            # A roof hides what is under it.
             if (placed.x, placed.y) not in self._hidden:
                 draws.append(self._object_draw(placed))
         for resident in self.world.residents.values():
@@ -952,9 +982,35 @@ class GlobalView:
             image, (map_position[0] - self._scene_origin[0], map_position[1] - self._scene_origin[1])
         )
 
+    def _object_area(self, placed: Interactable) -> pygame.Rect:
+        """Where an object is drawn, in map pixels: on its tiles, and as far above them as it rises."""
+        width, height = self.object_art.frame_size(self.world.definition_of(placed))
+        bottom = (placed.y + self.world.definition_of(placed).height) * TILE_SIZE
+        return pygame.Rect(placed.x * TILE_SIZE, bottom - height, width, height)
+
+    def _drawn_objects(self, region: pygame.Rect) -> list[tuple[pygame.Rect, pygame.Surface]]:
+        """The objects in view that somebody has drawn, each with its picture at the size the window shows it."""
+        if not self.object_art.available or self.layers is None:
+            return []
+        drawn: list[tuple[pygame.Rect, pygame.Surface]] = []
+        scale = self.layers.scale
+        for placed in self.world.interactables.values():
+            if (placed.x, placed.y) in self._hidden:
+                continue
+            area = self._object_area(placed)
+            if not area.colliderect(region):
+                continue
+            size = (self._scaled(area.width) * scale, self._scaled(area.height) * scale)
+            picture = self.object_art.shown(self.world.definition_of(placed), size)
+            if picture is not None:
+                drawn.append((area, picture))
+        return drawn
+
     def _object_draw(self, placed: Interactable) -> Draw:
         definition = self.world.definition_of(placed)
         sheet = self.object_sprites.sheet(definition)
+        # Somebody's drawing of it goes on the window by itself: here only what sits on it is drawn.
+        drawn = self.layers is not None and self.object_art.drawing(definition) is not None
         # A sheet wider than the object holds animation frames side by side.
         width = definition.width * TILE_SIZE
         frame = int(self.time * ANIMATION_FPS) % self.object_sprites.frames(definition)
@@ -965,7 +1021,8 @@ class GlobalView:
         goods = displayed_goods(self.world, placed) if definition.display_of is not None else []
 
         def draw() -> None:
-            self._blit(image, area.topleft)
+            if not drawn:
+                self._blit(image, area.topleft)
             for definition_id, (dx, dy) in zip(goods, SLOTS):
                 self._blit(self.icons.small(definition_id), (area.left + dx, area.top + dy))
             if placed.object_id in self.world.containers:

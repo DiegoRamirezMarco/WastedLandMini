@@ -4,53 +4,120 @@
     {
       "id": "founder",
       "title": "Alguien que empiece",
-      "text": "Este solar está vacío. Crea a quien va a levantar aquí un asentamiento: su nombre, su edad y su forma de ser.",
+      "text": "Este solar está vacío. Di quién va a levantar aquí un asentamiento: su nombre, su edad y su forma de ser. Su aspecto lo dibujas tú a continuación.",
       "goal": {"type": "residents", "count": 1},
       "gifts": [{"item": "hoe", "count": 1, "to": "resident"}],
       "focus": "creator",
       "done": "Ya hay alguien en el solar. Trae una azada y poco más"
     },
     {
+      "id": "draw_color",
+      "title": "Aquí todo se dibuja",
+      "text": "Nada viene hecho: a la gente, las casas y los muebles los dibujas tú. Empieza por tu habitante. Elige un color de la paleta.",
+      "goal": {"type": "deed", "target": "color"},
+      "focus": "doll",
+      "hint": "palette",
+      "done": "Primera lección: se elige un color"
+    },
+    {
+      "id": "draw_stroke",
+      "title": "El pincel",
+      "text": "Pinta sobre el papel con el botón apretado. Cada marco del calco es una pieza del cuerpo: lo que pintes dentro se moverá con ella. Los cuatro círculos cambian el grosor del pincel.",
+      "goal": {"type": "deed", "target": "stroke"},
+      "focus": "doll",
+      "hint": "canvas",
+      "done": "Segunda lección: se pinta arrastrando"
+    },
+    {
+      "id": "draw_fill",
+      "title": "El cubo",
+      "text": "Cierra una forma con el pincel, elige Cubo y haz clic dentro: se rellena del color que tengas. Con el papel en blanco lo llena entero.",
+      "goal": {"type": "deed", "target": "fill"},
+      "focus": "doll",
+      "hint": "tools",
+      "done": "Tercera lección: el cubo rellena lo cerrado"
+    },
+    {
+      "id": "draw_undo",
+      "title": "Equivocarse no cuesta",
+      "text": "Deshacer, o Ctrl+Z, quita lo último que hiciste: pruébalo. La Goma borra a mano, y Limpiar deja el papel en blanco.",
+      "goal": {"type": "deed", "target": "undo"},
+      "focus": "doll",
+      "hint": "edit",
+      "done": "Cuarta lección: todo se puede deshacer"
+    },
+    {
+      "id": "draw_resident",
+      "title": "Dibuja a tu habitante",
+      "text": "Dibújalo entero: el cuerpo de lado, mirando a la derecha, y la cabeza aparte. Maniquí de partida deja una figura sencilla para pintar encima. Abajo a la derecha ves cómo se mueve. Cuando te guste, Guardar.",
+      "goal": {"type": "deed", "target": "save_resident"},
+      "focus": "doll",
+      "hint": "save",
+      "done": "Tu habitante ya tiene el aspecto que le has dado"
+    },
+    {
       "id": "shack",
       "title": "Un techo",
-      "text": "Abre Urbanismo (tecla U). En Edificios, arrastra una chabola al solar y suéltala donde quepa: en verde cabe, en rojo no.",
+      "text": "Abre Urbanismo (tecla U). En Edificios, arrastra una chabola al solar y suéltala donde quepa: en verde cabe, en rojo no. Al soltarla se abre su dibujo.",
       "goal": {"type": "building", "count": 1},
       "focus": "urbanism",
       "done": "La primera chabola está en pie"
     },
     {
+      "id": "draw_parts",
+      "title": "Una casa son cuatro dibujos",
+      "text": "Interior, muros, tejado y puerta se dibujan aparte, sobre el mismo marco. Pasa de uno a otro con las pestañas de arriba.",
+      "goal": {"type": "deed", "target": "part"},
+      "focus": "building_art",
+      "hint": "parts",
+      "done": "Cada pieza de una casa tiene su papel"
+    },
+    {
+      "id": "draw_building",
+      "title": "Dibuja la chabola",
+      "text": "Dibuja las cuatro piezas. Arte de partida pone la del juego para pintar encima, y Vista cambia entre verla con tejado o por dentro. El tejado se quita solo cuando miras dentro. Luego, Guardar.",
+      "goal": {"type": "deed", "target": "save_building"},
+      "focus": "building_art",
+      "hint": "save",
+      "done": "La chabola es como la has dibujado"
+    },
+    {
       "id": "bed",
       "title": "Una cama",
-      "text": "En Urbanismo, pestaña Muebles: pon una cama dentro de la chabola. Quien no tiene cama no descansa, y nadie más vendrá sin una libre.",
-      "goal": {"type": "object", "target": "bed", "indoors": true},
+      "text": "En Urbanismo, pestaña Muebles: pon una cama dentro de la chabola, sin tapar la puerta. Al soltarla se abre su dibujo. Dibújala y guarda: todas las camas serán así.",
+      "goal": {"type": "object", "target": "bed", "indoors": true, "deed": "draw:bed"},
       "focus": "urbanism",
-      "done": "Hay una cama bajo techo"
+      "hint": "save",
+      "done": "Hay una cama bajo techo, dibujada por ti"
     },
     {
       "id": "crate",
       "title": "Su primera caja",
-      "text": "Pon una caja (Muebles). En las cajas se guarda lo de cada uno y lo de todos. Un clic sobre ella en el mapa enseña lo que hay dentro.",
-      "goal": {"type": "object", "target": "crate"},
+      "text": "Pon una caja (Muebles) y dibújala. En las cajas se guarda lo de cada uno y lo de todos: un clic sobre ella en el mapa enseña lo que hay dentro.",
+      "goal": {"type": "object", "target": "crate", "deed": "draw:crate"},
       "gifts": [{"item": "scrap", "count": 6, "into": "crate"}],
       "focus": "urbanism",
+      "hint": "save",
       "done": "En la caja queda la chatarra que venía en el macuto"
     },
     {
       "id": "pantry",
       "title": "Comida",
-      "text": "Pon una despensa (Muebles). De ella come todo el mundo. La barra de arriba cuenta lo que queda de comida, agua, energía y chatarra.",
-      "goal": {"type": "object", "target": "pantry"},
+      "text": "Pon una despensa (Muebles) y dibújala. De ella come todo el mundo. La barra de arriba cuenta lo que queda de comida, agua, energía y chatarra.",
+      "goal": {"type": "object", "target": "pantry", "deed": "draw:pantry"},
       "gifts": [{"item": "canned_beans", "count": 30, "into": "pantry"}],
       "focus": "urbanism",
+      "hint": "save",
       "done": "Las latas que quedaban van a la despensa: treinta"
     },
     {
       "id": "water",
       "title": "Agua",
-      "text": "Pon un depósito de agua (Muebles). Ocupa dos casillas por dos, mejor al aire libre. La sed aprieta antes que el hambre.",
-      "goal": {"type": "object", "target": "water_tank"},
+      "text": "Pon un depósito de agua (Muebles), mejor al aire libre, y dibújalo. Ocupa dos casillas por dos. La sed aprieta antes que el hambre.",
+      "goal": {"type": "object", "target": "water_tank", "deed": "draw:water_tank"},
       "gifts": [{"item": "water", "count": 120, "into": "water_tank"}],
       "focus": "urbanism",
+      "hint": "save",
       "done": "El depósito queda lleno hasta la mitad"
     },
     {
@@ -64,9 +131,10 @@
     {
       "id": "garden",
       "title": "Un huerto",
-      "text": "Las latas se acaban. En Urbanismo, pestaña Decorado, pon al menos dos bancales: lo que den irá a la despensa.",
-      "goal": {"type": "object", "target": "crop_bed", "count": 2},
+      "text": "Las latas se acaban. En Urbanismo, pestaña Decorado, pon al menos dos bancales y dibuja uno: vale para todos. Lo que den irá a la despensa.",
+      "goal": {"type": "object", "target": "crop_bed", "count": 2, "deed": "draw:crop_bed"},
       "focus": "urbanism",
+      "hint": "save",
       "done": "Hay tierra removida donde plantar"
     },
     {
@@ -80,15 +148,16 @@
     {
       "id": "fire",
       "title": "Una hoguera",
-      "text": "Pon una hoguera (Muebles) al aire libre. Da luz de noche, y junto a ella se descansa y se habla.",
-      "goal": {"type": "object", "target": "campfire"},
+      "text": "Pon una hoguera (Muebles) al aire libre y dibújala. Da luz de noche, y junto a ella se descansa y se habla.",
+      "goal": {"type": "object", "target": "campfire", "deed": "draw:campfire"},
       "focus": "urbanism",
+      "hint": "save",
       "done": "Ya hay lumbre para la noche"
     },
     {
       "id": "second_bed",
       "title": "Sitio para otro",
-      "text": "Nadie se queda donde no hay cama para él. Pon una segunda cama, en la misma chabola o en otra nueva.",
+      "text": "Nadie se queda donde no hay cama para él. Pon una segunda cama, en la misma chabola o en otra nueva. Ya está dibujada: saldrá como la primera.",
       "goal": {"type": "object", "target": "bed", "count": 2},
       "focus": "urbanism",
       "done": "Hay una cama libre"
@@ -105,7 +174,7 @@
     {
       "id": "free",
       "title": "A tu aire",
-      "text": "Desde ahora llegan forasteros, caravanas, tormentas y merodeadores: un puesto de guardia junto a la puerta y alguien en él sirven para atenderlos. F5 guarda la partida y Esc vuelve al menú.",
+      "text": "Desde ahora llegan forasteros, caravanas, tormentas y merodeadores. Lo que pongas se dibuja igual: Arte en Urbanismo para casas y muebles, Dibujar para quien llegue. F5 guarda y Esc vuelve al menú.",
       "goal": {"type": "acknowledged"},
       "focus": "save",
       "done": "El solar ya es un asentamiento"

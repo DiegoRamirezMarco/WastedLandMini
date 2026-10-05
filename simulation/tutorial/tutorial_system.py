@@ -11,6 +11,7 @@ from simulation.tutorial.tutorial import (
     ACKNOWLEDGED,
     ANSWERED,
     BUILDING,
+    DEED,
     ELAPSED,
     JOB,
     OBJECT,
@@ -57,6 +58,29 @@ class TutorialSystem:
             return False
         world.tutorial.acknowledged = True
         return True
+
+    def report(self, world: "SimulationWorld", deed: str) -> bool:
+        """The player has done something the simulation cannot see for itself, such as a drawing.
+
+        It counts only if the step in hand asks for it. Returns whether it did.
+        """
+        step = self.current(world)
+        if step is None or step.goal.needed_deed != deed:
+            return False
+        if deed not in world.tutorial.deeds:
+            world.tutorial.deeds.append(deed)
+        return True
+
+    def owed(self, world: "SimulationWorld") -> str | None:
+        """What the player has yet to do with their own hands for the step in hand, once the
+        settlement itself has what the step asks for. None if nothing, or if that comes first."""
+        step = self.current(world)
+        if step is None:
+            return None
+        deed = step.goal.needed_deed
+        if deed is None or deed in world.tutorial.deeds or not self._stands(world, step):
+            return None
+        return deed
 
     def check(self, world: "SimulationWorld") -> None:
         """Move on from every step that is done. Run each minute and after anything the player does."""
@@ -106,7 +130,14 @@ class TutorialSystem:
     # ----- whether it is done -----
 
     def _met(self, world: "SimulationWorld", step: TutorialStep) -> bool:
+        deed = step.goal.needed_deed
+        return self._stands(world, step) and (deed is None or deed in world.tutorial.deeds)
+
+    def _stands(self, world: "SimulationWorld", step: TutorialStep) -> bool:
+        """Whether the settlement has become what the step asks for, whatever the player still owes it."""
         state, goal = world.tutorial, step.goal
+        if goal.kind == DEED:
+            return True
         if goal.kind == RESIDENTS:
             return len(world.residents) >= goal.count
         if goal.kind == BUILDING:
@@ -147,6 +178,7 @@ class TutorialSystem:
         state.since = world.clock.total_minutes
         state.opened = False
         state.acknowledged = False
+        state.deeds = []
 
     def _complete(self, world: "SimulationWorld", step: TutorialStep) -> None:
         state = world.tutorial

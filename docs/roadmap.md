@@ -480,13 +480,16 @@ and research entries of the menu.
 ### S18 — A beginning — done
 - **A new settlement is an empty plot** (`data/maps/homestead.json`): a fence, a gate, some scrap
   lying about, and nobody
-- **The first resident is made by the player**: a name, an age, a way of being, up to two traits
-  and a look. Only a settlement nobody has ever lived in takes one. Everyone after comes by the gate
+- **The first resident is made by the player**: a name, an age, a way of being and up to two
+  traits. Only a settlement nobody has ever lived in takes one. Everyone after comes by the gate
 - **An opening made of steps, as data** (`data/tutorial.json`): what to do, what counts as done,
   and what the settlement is handed for it. A hoe, scrap, thirty tins and half a tank of water are
   where a settlement's stores come from
 - A step is done by what the settlement has become, however it got there, and with time stopped
   too: a building or an object standing, someone in a job, time gone by, an answer given
+- **A step may also wait for something the player does with their own hands**, which the
+  simulation cannot see and knows only by name: a colour chosen, a stroke, a drawing saved. That
+  is how the opening teaches drawing without the simulation knowing what a drawing is
 - **The world outside keeps away** until the opening is over: no strangers, caravans, storms,
   vermin or raiders
 - **One stranger is brought on purpose**, for whoever is there to answer, guard or not. It is the
@@ -519,19 +522,49 @@ Still open here:
   open the settlement that comes ready made, or leave. `Esc` on the map goes there, and no longer
   out of the game. A settlement being played is only thrown away when asked twice
 - **Where the first resident is made**: a name, an age, a slider for each side of their way of
-  being with what it does, traits, and one of the game's own looks to choose
-- **Nobody is a placeholder**: whoever has no art under their own ID wears the look they were
-  given, or else one of the game's own, always the same for the same ID
+  being with what it does, and traits. There is no look to choose: they are drawn (P17)
+- **Nobody is a placeholder**: until somebody draws them, whoever has no art under their own ID
+  borrows one of the game's looks, always the same for the same ID
 - **The step in hand, on show**: in a panel over the map and above the map in Urbanismo, with
   the entry of the menu or the controls it is about blinking, and a button where only a button
   will do
 
 Still open here:
 - The menu is words on black: no picture, no music
-- A look is one of the thirteen the game comes with. Drawing someone of your own is done
-  afterwards, with `Dibujar`
-- The opening says where to click, and opens nothing by itself and locks nothing
+- The opening says where to click and locks nothing
 - It is read, not heard: nobody says the steps out loud
+
+### P17 — Everything is drawn (needs S18) — done
+In a new settlement nothing comes ready made: whoever is made is drawn, and so is whatever is
+put down. The opening teaches how.
+
+- **Whoever is made is drawn next.** The screen where the first resident is made leads straight
+  to the one where they are drawn, body and head
+- **Drawing is taught a thing at a time**, each lesson done by doing it: choosing a colour,
+  painting a stroke, pouring the bucket, undoing, and then drawing them whole and saving. The
+  lesson stands where the editor's notes do, and what it is about blinks
+- **A building put down in the opening opens its drawing**: one lesson for its four parts, one
+  to draw them and save
+- **Furniture and loose objects can be drawn** (`scenes/object_editor.py`): one picture a kind,
+  which every object of that kind wears, kept in `illustrations/objects/<kind>.png`. Four pixels
+  to one of the map's art, over a guide of the tiles it stands on and the room it has above
+  them, with the game's own art to start from and the picture as it will look on the map beside
+- **Drawn furniture is shown at the resolution of the window**, under the pixel art of the map
+  and over the floor of a drawn building, and in the layout editor too
+- In the opening, each first bed, crate, pantry, water tank, crop bed and fire is drawn as it is
+  put down. Afterwards anything is drawn by selecting it in Urbanismo and pressing `Arte`
+- Out of a drawing opened from Urbanismo is back to Urbanismo, to go on putting things down
+- With no folder for drawings there are no editors, and the steps that teach drawing are passed over
+
+Still open here:
+- A drawn object is one still picture: a fire that somebody has drawn no longer flickers
+- Drawn furniture lies under everything else on the map: someone in the game's own pixel art
+  standing behind a tall drawn thing is seen in front of it
+- Drawings go by name, not by settlement: a new settlement finds `shack_1`, the bed and anyone
+  of the same name already drawn, as the last one left them
+- The lessons do not check what was drawn, only that the tool was used: a scribble passes
+- What is carried, worn or grown is still the game's own art, and so is the ground
+- Nobody is taught to give a resident a voice
 
 ## Later
 - SQLite persistence

@@ -20,7 +20,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `terrain`, `rooms` | The live terrain grid and stable room records after changes made in Urbanismo |
 | `urbanism` | Stable placement counters and the terrain kept below constructed buildings, so they can be moved or removed later |
 | `interactables` | Placed objects: `id`, `kind`, tile `x` and `y` |
-| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `look`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `lost_limbs` (limb IDs) |
+| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `lost_limbs` (limb IDs) |
 | `containers` | Per container object ID, the items inside |
 | `item_count` | Counter behind item IDs |
 | `thefts`, `theft_cooldowns`, `notices` | Record of every theft; last theft per resident; once-a-day notices already given |
@@ -34,7 +34,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `deaths` | Everyone who has died: `resident_id`, `name`, `timestamp`, `cause`, `killer_id`, `grave_id` |
 | `history` | Every noteworthy event so far, in full, with its `data` |
 | `event_log` | Text history of emitted events |
-| `tutorial` | Where a new settlement is in its opening: `step` (a step ID from `data/tutorial.json`, or `null` once it is over or if it never had one), `since` (game minute the step began), `opened`, `acknowledged`, and the IDs of the steps `done` |
+| `tutorial` | Where a new settlement is in its opening: `step` (a step ID from `data/tutorial.json`, or `null` once it is over or if it never had one), `since` (game minute the step began), `opened`, `acknowledged`, the `deeds` the player has done of what the step asks them to do themselves, and the IDs of the steps `done` |
 
 A resident's `activity` is `null` or `action`, `target_id` (an object ID), `partner_id` (a resident
 ID, when talking or walking over to talk), `intent` (the exchange they are set on having), the
@@ -57,9 +57,8 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
-- **Version 18** added `tutorial` and each resident's `look`. An older save is past its opening and
-  everyone in it looks like themselves. A save made on a step that is no longer defined is past
-  its opening too.
+- **Version 18** added `tutorial`. An older save is past its opening, and so is one made on a step
+  that is no longer defined. Drawings are not part of a save: they are kept as pictures, by ID.
 - **Version 17** added the editable terrain, rooms and construction underlays. Older saves use the
   rooms and terrain from their registered map and can be edited normally after loading.
 - **Version 16** added thirst, mood, the water tank's stock and generator fuel. Older saves load

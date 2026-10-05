@@ -23,6 +23,18 @@ from scenes.scene import canvas_position
 from simulation.world import SimulationWorld
 from ui.button import Button
 from ui.panel import draw_panel
+from ui.tutorial_panel import (
+    BUILDING_ART_FOCUS,
+    BUILDING_DRAWN_DEED,
+    COLOR_DEED,
+    FILL_DEED,
+    PART_DEED,
+    STROKE_DEED,
+    UNDO_DEED,
+    draw_hint,
+    draw_lesson,
+    lesson_for,
+)
 
 DRAWING_AT = (196, 58)
 PREVIEW = pygame.Rect(660, 64, 132, 116)
@@ -59,6 +71,7 @@ class BuildingEditor:
         root: Path,
         buildings: BuildingArtStore,
         on_saved: Callable[[str], None] | None = None,
+        on_deed: Callable[[str], None] | None = None,
     ) -> None:
         self.canvas = canvas
         self.world = world
@@ -67,6 +80,8 @@ class BuildingEditor:
         self.root = root
         self.buildings = buildings
         self.on_saved = on_saved
+        self.on_deed = on_deed
+        self.time = 0.0
         self.closed = False
         self.room_id: str | None = None
         self.part = INSIDE_PART
@@ -141,6 +156,27 @@ class BuildingEditor:
             self.preview_button,
         ]
 
+    def _did(self, deed: str) -> None:
+        """Say that the player has done something the opening of a new settlement may be waiting for."""
+        if self.on_deed is not None:
+            self.on_deed(deed)
+
+    def _hint_rect(self, hint: str | None) -> pygame.Rect | None:
+        """Where on the screen what a lesson is about is."""
+        if hint == "palette":
+            return self.swatches[0][0].unionall([rect for rect, _ in self.swatches])
+        if hint == "canvas":
+            return self.area
+        if hint == "tools":
+            return self.tool_buttons[0].rect.unionall([button.rect for button in self.tool_buttons])
+        if hint == "edit":
+            return self.edit_buttons[0].rect.unionall([button.rect for button in self.edit_buttons])
+        if hint == "parts":
+            return self.part_buttons[0].rect.unionall([button.rect for button in self.part_buttons])
+        if hint == "save":
+            return next(button.rect for button in self.top_buttons if button.intent == ("save",))
+        return None
+
     def _rooms(self) -> list[str]:
         return [room_id for room_id, room in self.world.rooms.items() if room.roofed]
 
@@ -182,6 +218,7 @@ class BuildingEditor:
             part, surface = self._undo.pop()
             self.drawings[part] = surface
             self._set_part(part)
+            self._did(UNDO_DEED)
 
     def clear(self) -> None:
         self._remember()
@@ -209,6 +246,7 @@ class BuildingEditor:
         if self.on_saved is not None:
             self.on_saved(self.room_id)
         self.notice = SAVED_TEXT
+        self._did(BUILDING_DRAWN_DEED)
         return True
 
     def step(self, by: int) -> None:
@@ -231,6 +269,7 @@ class BuildingEditor:
             self.starter()
         elif intent[0] == "part":
             self._set_part(intent[1])
+            self._did(PART_DEED)
         elif intent[0] == "preview":
             self.roof_on = not self.roof_on
             self.preview_button.label = "Vista: tejado" if self.roof_on else "Vista: interior"
@@ -260,6 +299,7 @@ class BuildingEditor:
             self._remember()
             if self.tool == FILL_TOOL:
                 self._fill(at)
+                self._did(FILL_DEED)
             else:
                 self._paint(at, at)
                 self._stroke = at
@@ -273,6 +313,7 @@ class BuildingEditor:
                 self.color = color
                 if self.tool == ERASER_TOOL:
                     self.tool = BRUSH_TOOL
+                self._did(COLOR_DEED)
                 return
         for rect, size in self.brush_buttons:
             if rect.collidepoint(position):
@@ -287,7 +328,9 @@ class BuildingEditor:
         self._stroke = at
 
     def release(self) -> None:
-        self._stroke = None
+        if self._stroke is not None:
+            self._stroke = None
+            self._did(STROKE_DEED)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -302,7 +345,7 @@ class BuildingEditor:
             self.closed = True
 
     def update(self, dt: float) -> None:
-        pass
+        self.time += dt
 
     def render(self) -> None:
         self.layers.clear()
@@ -344,6 +387,12 @@ class BuildingEditor:
         self.layers.under(self._show_preview)
         self.preview_button.draw(self.canvas, self.font)
 
+        lesson = lesson_for(self.world, focus=BUILDING_ART_FOCUS)
+        if lesson is not None:
+            # While the opening of a new settlement teaches drawing, the lesson goes where the notes do.
+            draw_lesson(self.canvas, self.font, NOTES, self.world, lesson)
+            draw_hint(self.canvas, self._hint_rect(lesson.hint), self.time)
+            return
         y = NOTES.y
         for note in NOTES_TEXT:
             for line in self.font.wrap(note, NOTES.width):

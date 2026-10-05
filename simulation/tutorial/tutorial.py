@@ -15,7 +15,8 @@ JOB = "job"  # so many residents holding a job, one in particular or any
 ELAPSED = "elapsed"  # so many game minutes since the step began
 ANSWERED = "answered"  # whatever the step set going has been settled
 ACKNOWLEDGED = "acknowledged"  # the player has said they have read it
-GOAL_KINDS = (RESIDENTS, BUILDING, OBJECT, JOB, ELAPSED, ANSWERED, ACKNOWLEDGED)
+DEED = "deed"  # the player has done something that only whoever shows the game can see, such as drawing
+GOAL_KINDS = (RESIDENTS, BUILDING, OBJECT, JOB, ELAPSED, ANSWERED, ACKNOWLEDGED, DEED)
 
 # What a step may set going when it begins.
 STRANGER_OPENING = "stranger"
@@ -33,6 +34,13 @@ class Goal:
     count: int = 1
     minutes: int = 0
     indoors: bool = False
+    # Something the player has to have done besides, by the name whoever shows the game gives it.
+    # A goal of the `deed` kind asks for nothing else, and names it as its target.
+    deed: str | None = None
+
+    @property
+    def needed_deed(self) -> str | None:
+        return self.target if self.kind == DEED else self.deed
 
 
 @dataclass(frozen=True)
@@ -56,8 +64,9 @@ class TutorialStep:
     gifts: tuple[Gift, ...] = ()
     # What the step sets going when it begins, one of OPENINGS.
     opening: str | None = None
-    # The part of the game the step is about, for whoever shows it to point at.
+    # The part of the game the step is about, for whoever shows it to point at, and what in it.
     focus: str | None = None
+    hint: str | None = None
     # What is said once it is done.
     done: str = ""
 
@@ -85,6 +94,8 @@ class TutorialState:
     # Whether what the step sets going has been set going.
     opened: bool = False
     acknowledged: bool = False
+    # What the player has done, of what the step in hand asks them to do.
+    deeds: list[str] = field(default_factory=list)
     # Steps done so far, in order.
     done: list[str] = field(default_factory=list)
 
@@ -102,6 +113,7 @@ def _goal_from_data(step_id: str, data: Any) -> Goal:
         count=int(data.get("count", 1)),
         minutes=int(data.get("minutes", 0)),
         indoors=bool(data.get("indoors", False)),
+        deed=str(data["deed"]) if data.get("deed") is not None else None,
     )
     if goal.kind not in GOAL_KINDS:
         raise ValueError(f"Tutorial step {step_id} has an unknown kind of goal: {goal.kind}")
@@ -109,6 +121,8 @@ def _goal_from_data(step_id: str, data: Any) -> Goal:
         raise ValueError(f"Tutorial step {step_id} asks for a count or a time that makes no sense")
     if goal.kind == OBJECT and goal.target is None:
         raise ValueError(f"Tutorial step {step_id} waits for an object without saying which kind")
+    if goal.kind == DEED and goal.target is None:
+        raise ValueError(f"Tutorial step {step_id} waits for the player to do something without saying what")
     return goal
 
 
@@ -153,6 +167,7 @@ def tutorial_definition_from_data(data: dict[str, Any]) -> TutorialDefinition:
                 gifts=tuple(_gift_from_data(step_id, gift) for gift in entry.get("gifts", [])),
                 opening=opening,
                 focus=str(entry["focus"]) if entry.get("focus") is not None else None,
+                hint=str(entry["hint"]) if entry.get("hint") is not None else None,
                 done=str(entry.get("done", "")),
             )
         )

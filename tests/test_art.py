@@ -28,7 +28,6 @@ from graphics.font import SHEET_SIZE as FONT_SHEET_SIZE
 from graphics.icons import ICON_SIZE
 from graphics.item_icons import ICON_SIZE as ITEM_ICON_SIZE
 from graphics.item_icons import ItemIcons
-from graphics.looks import Looks
 from graphics.object_sprites import ObjectSprites
 from graphics.map_renderer import render_roofs, render_terrain, roof_names, tile_names
 from graphics.tileset import (
@@ -379,13 +378,6 @@ class BodyRendererTests(unittest.TestCase):
         self.assertEqual(_pixels(picture), _pixels(self.renderer.frame(borrowed, "down", "idle")[0]))
         # Whoever has a body of their own keeps it.
         self.assertEqual(self.renderer.looks.of("marta"), "marta")
-
-    def test_a_look_someone_was_given_comes_before_their_own(self) -> None:
-        given = {"nobody": "tomas", "marta": "raul", "lucia": "no_such_look"}
-        renderer = BodyRenderer(AssetStore(ASSETS_DIR), self.plan, Looks(AssetStore(ASSETS_DIR), given.get))
-        self.assertEqual(renderer.looks.of("nobody"), "tomas")
-        self.assertEqual(renderer.looks.of("marta"), "raul")
-        self.assertEqual(renderer.looks.of("lucia"), "lucia")
 
     def test_with_no_bodies_to_borrow_an_unknown_one_is_drawn_with_placeholder_parts(self) -> None:
         logging.disable(logging.WARNING)

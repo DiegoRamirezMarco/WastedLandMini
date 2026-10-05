@@ -15,6 +15,7 @@ from simulation.commands import (
     MoveObjectCommand,
     PlaceBuildingCommand,
     PlaceObjectCommand,
+    ReportDeedCommand,
     SuggestJobCommand,
 )
 from simulation.registries import builtin_registries
@@ -29,17 +30,34 @@ SECOND_SHACK_AT = (10, 20)
 
 def settle(world: SimulationWorld, until: str | None = None) -> None:
     """Do what each step of the opening asks for, in order, stopping once `until` is the step in hand."""
+
+    def drew(deed: str) -> None:
+        """What the player draws is only a name to the simulation: say it was done."""
+        world.apply_command(ReportDeedCommand(deed))
+
+    def put(kind: str, *tiles: tuple[int, int]) -> None:
+        for tile in tiles:
+            world.apply_command(PlaceObjectCommand(kind, tile))
+        drew(f"draw:{kind}")
+
     moves = {
         "founder": lambda: world.apply_command(FoundResidentCommand("Ada", 34, {"empathy": 70.0}, ["music_lover"])),
+        "draw_color": lambda: drew("color"),
+        "draw_stroke": lambda: drew("stroke"),
+        "draw_fill": lambda: drew("fill"),
+        "draw_undo": lambda: drew("undo"),
+        "draw_resident": lambda: drew("save_resident"),
         "shack": lambda: world.apply_command(PlaceBuildingCommand("shack", SHACK_AT)),
-        "bed": lambda: world.apply_command(PlaceObjectCommand("bed", (10, 10))),
-        "crate": lambda: world.apply_command(PlaceObjectCommand("crate", (13, 10))),
-        "pantry": lambda: world.apply_command(PlaceObjectCommand("pantry", (12, 10))),
-        "water": lambda: world.apply_command(PlaceObjectCommand("water_tank", (18, 10))),
+        "draw_parts": lambda: drew("part"),
+        "draw_building": lambda: drew("save_building"),
+        "bed": lambda: put("bed", (10, 10)),
+        "crate": lambda: put("crate", (13, 10)),
+        "pantry": lambda: put("pantry", (12, 10)),
+        "water": lambda: put("water_tank", (18, 10)),
         "time": lambda: world.step(120),
-        "garden": lambda: [world.apply_command(PlaceObjectCommand("crop_bed", (x, 16))) for x in (20, 22)],
+        "garden": lambda: put("crop_bed", (20, 16), (22, 16)),
         "job": lambda: world.apply_command(SuggestJobCommand(next(iter(world.residents)), "farmer")),
-        "fire": lambda: world.apply_command(PlaceObjectCommand("campfire", (16, 16))),
+        "fire": lambda: put("campfire", (16, 16)),
         "second_bed": lambda: [
             world.apply_command(PlaceBuildingCommand("shack", SECOND_SHACK_AT)),
             world.apply_command(PlaceObjectCommand("bed", SECOND_SHACK_AT)),
@@ -76,7 +94,7 @@ class NewSettlementTests(unittest.TestCase):
 
     def test_the_first_resident_is_made_by_the_player_and_only_the_first(self) -> None:
         created = self.world.apply_command(
-            FoundResidentCommand("  Ñoño   Pérez ", 5, {"empathy": 140.0, "no_such_thing": 3.0}, ["music_lover", "no_such"], "tomas")
+            FoundResidentCommand("  Ñoño   Pérez ", 5, {"empathy": 140.0, "no_such_thing": 3.0}, ["music_lover", "no_such"])
         )
         self.assertEqual(created, "nono_perez")
         resident = self.world.residents[created]
@@ -84,7 +102,6 @@ class NewSettlementTests(unittest.TestCase):
         self.assertEqual(resident.age, 18)
         self.assertEqual(resident.personality.empathy, 100.0)
         self.assertEqual(resident.traits, ["music_lover"])
-        self.assertEqual(resident.look, "tomas")
         self.assertIn(resident.tile, self.world.entry_tiles())
         self.assertEqual(self.world.events.drain()[0].event_type, "resident_founded")
         # After that people come by the gate, or not at all.
@@ -106,7 +123,9 @@ class NewSettlementTests(unittest.TestCase):
     def test_steps_are_done_by_what_the_settlement_becomes_even_with_time_stopped(self) -> None:
         self.world.set_paused(True)
         settle(self.world, until="time")
-        self.assertEqual(self.world.tutorial.done, ["founder", "shack", "bed", "crate", "pantry", "water"])
+        steps = [step.step_id for step in self.world.registries.tutorial.steps]
+        self.assertEqual(self.world.tutorial.done, steps[: steps.index("time")])
+        self.assertTrue({"shack", "bed", "crate", "pantry", "water"} <= set(self.world.tutorial.done))
         done = [event for event in self.world.events.drain() if event.event_type == "tutorial_step_done"]
         self.assertEqual([event.data["step"] for event in done], self.world.tutorial.done)
         # Waiting is the one step that time has to pass for.
@@ -122,8 +141,36 @@ class NewSettlementTests(unittest.TestCase):
         settle(self.world, until="bed")
         self.assertTrue(self.world.apply_command(PlaceObjectCommand("bed", (30, 10))).ok)
         self.assertEqual(self.world.tutorial.step_id, "bed")
+        self.assertIsNone(self.world.guide.owed(self.world))
         self.assertTrue(self.world.apply_command(PlaceObjectCommand("bed", (10, 10))).ok)
+        # It stands, and now it wants drawing: here whatever is made is drawn.
+        self.assertEqual(self.world.tutorial.step_id, "bed")
+        self.assertEqual(self.world.guide.owed(self.world), "draw:bed")
+        self.assertFalse(self.world.apply_command(ReportDeedCommand("draw:crate")))
+        self.assertTrue(self.world.apply_command(ReportDeedCommand("draw:bed")))
         self.assertEqual(self.world.tutorial.step_id, "crate")
+
+    def test_drawing_is_taught_a_thing_at_a_time_and_only_what_is_asked_counts(self) -> None:
+        settle(self.world, until="draw_color")
+        lessons = ["color", "stroke", "fill", "undo", "save_resident"]
+        for index, deed in enumerate(lessons):
+            self.assertEqual(self.world.guide.owed(self.world), deed)
+            # Doing what a later lesson teaches is not doing this one.
+            for other in lessons[index + 1 :]:
+                self.assertFalse(self.world.apply_command(ReportDeedCommand(other)))
+            self.assertEqual(self.world.guide.owed(self.world), deed)
+            self.assertTrue(self.world.apply_command(ReportDeedCommand(deed)))
+        self.assertEqual(self.world.tutorial.step_id, "shack")
+        self.assertIsNone(self.world.guide.owed(self.world))
+        # A building, like a person, is not done until it has been drawn.
+        self.world.apply_command(PlaceBuildingCommand("shack", SHACK_AT))
+        self.assertEqual(self.world.tutorial.step_id, "draw_parts")
+        self.assertEqual(self.world.guide.current(self.world).focus, "building_art")
+
+    def test_nothing_is_reported_to_a_settlement_that_is_past_its_opening(self) -> None:
+        demo = SimulationWorld.demo_world()
+        self.assertFalse(demo.apply_command(ReportDeedCommand("color")))
+        self.assertIsNone(demo.guide.owed(demo))
 
     def test_each_step_hands_over_what_the_settlement_starts_with(self) -> None:
         settle(self.world, until="time")
@@ -178,10 +225,19 @@ class NewSettlementTests(unittest.TestCase):
         loaded = manager.from_data(data, self.world.registries)
         self.assertEqual(loaded.tutorial, self.world.tutorial)
         self.assertEqual(manager.to_data(loaded), data)
-        self.assertEqual(next(iter(loaded.residents.values())).look, next(iter(self.world.residents.values())).look)
         # And it goes on from there.
         settle(loaded)
         self.assertFalse(loaded.tutorial.active)
+
+    def test_what_has_been_drawn_for_a_step_is_saved_with_it(self) -> None:
+        settle(self.world, until="garden")
+        self.world.apply_command(ReportDeedCommand("draw:crop_bed"))
+        manager = SaveManager()
+        loaded = manager.from_data(manager.to_data(self.world), self.world.registries)
+        self.assertEqual(loaded.tutorial.deeds, ["draw:crop_bed"])
+        for x in (20, 22):
+            loaded.apply_command(PlaceObjectCommand("crop_bed", (x, 16)))
+        self.assertEqual(loaded.tutorial.step_id, "job")
 
     def test_older_saves_and_steps_that_are_gone_are_past_the_opening(self) -> None:
         manager = SaveManager()
@@ -228,6 +284,7 @@ class TutorialDataTests(unittest.TestCase):
             {**step, "goal": {"type": "no_such_goal"}},
             {**step, "goal": {"type": "object"}},
             {**step, "goal": {"type": "answered"}},
+            {**step, "goal": {"type": "deed"}},
             {**step, "opening": "no_such_opening"},
             {**step, "gifts": [{"item": "hoe"}]},
             {**step, "gifts": [{"item": "hoe", "into": "crate", "to": "resident"}]},
@@ -382,8 +439,6 @@ class MenuAndCreatorTests(unittest.TestCase):
         creator = self.game.creator
         creator.set_age(creator.age + 5)
         creator.toggle_trait("music_lover")
-        self._click(creator.look_buttons[1].rect.center)
-        look = creator.look
         slider = creator.sliders["courage"]
         self._click((slider.rect.right, slider.rect.centery))
         self._frame()
@@ -391,13 +446,15 @@ class MenuAndCreatorTests(unittest.TestCase):
 
         self.assertEqual(self.game.scene_name, "global")
         resident = self.game.world.residents["ada"]
-        self.assertEqual((resident.age, resident.traits, resident.look), (35, ["music_lover"], look))
+        self.assertEqual((resident.age, resident.traits), (35, ["music_lover"]))
         self.assertEqual(resident.personality.courage, 100.0)
         self.assertEqual(self.game.global_view.hud.selected_id, "ada")
+        # With nowhere to keep drawings there is no drawing them: those steps are passed over.
+        self.assertIsNone(self.game.doll_editor)
         self.assertEqual(self.game.world.tutorial.step_id, "shack")
-        # They are drawn with the look they were given, by face and body alike.
-        self.assertEqual(self.game.faces.looks.of("ada"), look)
-        self.assertEqual(self.game.global_view.bodies.renderer.looks.of("ada"), look)
+        # Until somebody draws them they borrow one of the game's looks, face and body alike.
+        self.assertIn(self.game.faces.looks.of("ada"), self.game.faces.looks.known)
+        self.assertEqual(self.game.global_view.bodies.renderer.looks.of("ada"), self.game.faces.looks.of("ada"))
         self._frame()
         self.assertIsNotNone(self.game.global_view.hud.tutorial_rect())
 
@@ -422,6 +479,7 @@ class MenuAndCreatorTests(unittest.TestCase):
         self.assertEqual(self.game.scene_name, "urbanism")
         self._frame()
         self.game.world.apply_command(PlaceBuildingCommand("shack", SHACK_AT))
+        self.game.sync_scenes()
         self.assertEqual(self.game.world.tutorial.step_id, "bed")
         self._frame()
         # The editor says why something cannot go where it is held, and that it would wall a bed in.
@@ -484,6 +542,8 @@ class MenuAndCreatorTests(unittest.TestCase):
         self.assertEqual(again.scene_name, "global")
         self.assertTrue(again.in_session)
         self.assertEqual(list(again.world.residents), ["ada"])
+        self.assertEqual(again.world.tutorial.step_id, "draw_parts")
+        again.sync_scenes()
         self.assertEqual(again.world.tutorial.step_id, "bed")
 
     def test_a_save_that_cannot_be_read_leaves_the_menu_saying_so(self) -> None:
@@ -503,6 +563,229 @@ class MenuAndCreatorTests(unittest.TestCase):
         self.game.main_menu.choose("quit")
         self.game.sync_scenes()
         self.assertFalse(self.game.running)
+
+
+class DrawingLessonsTests(unittest.TestCase):
+    """With somewhere to keep drawings, a new settlement is drawn as it is made, and the opening teaches how."""
+
+    def setUp(self) -> None:
+        for variable in ("SDL_VIDEODRIVER", "SDL_AUDIODRIVER"):
+            self.addCleanup(MenuAndCreatorTests._restore_driver, variable, os.environ.get(variable))
+            os.environ[variable] = "dummy"
+        from game.game import Game
+
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+        # Nothing drawn here touches what the player has drawn for real.
+        self.drawings = self.root / "illustrations"
+        self.drawings.mkdir()
+        (self.root / "custom").mkdir()
+        self.game = Game(
+            illustrations_dir=self.drawings,
+            voices_dir=None,
+            custom_content_dir=self.root / "custom",
+            save_path=self.root / "save.json",
+        )
+        self.addCleanup(pygame.quit)
+
+    @property
+    def step(self) -> str | None:
+        return self.game.world.tutorial.step_id
+
+    def _event(self, kind: int, **particulars) -> None:
+        self.game.handle_event(pygame.event.Event(kind, **particulars))
+        self.game.sync_scenes()
+
+    def _key(self, key: int, text: str = "", mod: int = 0) -> None:
+        self._event(pygame.KEYDOWN, key=key, unicode=text, mod=mod)
+
+    def _press(self, position: tuple[int, int]) -> None:
+        self._event(pygame.MOUSEBUTTONDOWN, pos=(position[0] * SCALE, position[1] * SCALE), button=1)
+
+    def _move(self, position: tuple[int, int]) -> None:
+        self._event(pygame.MOUSEMOTION, pos=(position[0] * SCALE, position[1] * SCALE), rel=(0, 0), buttons=(1, 0, 0))
+
+    def _release(self, position: tuple[int, int]) -> None:
+        self._event(pygame.MOUSEBUTTONUP, pos=(position[0] * SCALE, position[1] * SCALE), button=1)
+
+    def _click(self, position: tuple[int, int]) -> None:
+        self._press(position)
+        self._release(position)
+
+    def _stroke(self, start: tuple[int, int], end: tuple[int, int]) -> None:
+        self._press(start)
+        self._move(end)
+        self._release(end)
+
+    def _frame(self) -> None:
+        self.game.active_scene.update(1 / 60)
+        self.game.active_scene.render()
+        self.game.present()
+
+    def _make_someone(self, name: str = "Zoe") -> str:
+        self.game.main_menu.choose("new")
+        self.game.sync_scenes()
+        for char in name:
+            self._key(pygame.key.key_code(char.lower()), char)
+        self._key(pygame.K_RETURN)
+        return next(iter(self.game.world.residents))
+
+    def _button(self, scene, intent: tuple) -> tuple[int, int]:
+        return next(button for button in scene.buttons if button.intent == intent).rect.center
+
+    def _draw_someone(self) -> None:
+        """Go through the lessons of the first drawing, as the mouse would."""
+        editor = self.game.doll_editor
+        body = editor.areas["body"]
+        self._click(editor.swatches[9][0].center)
+        self._stroke((body.x + 100, body.y + 80), (body.x + 140, body.y + 120))
+        self._click(self._button(editor, ("tool", "fill")))
+        self._click((body.x + 10, body.y + 10))
+        self._key(pygame.K_z, "z", pygame.KMOD_CTRL)
+        self._click(self._button(editor, ("mannequin",)))
+        self._click(self._button(editor, ("save",)))
+
+    def _put_down(self, category: str, catalog_id: str, tile: tuple[int, int]) -> None:
+        """Drag something out of the catalogue of the layout editor and let go of it on a tile."""
+        editor = self.game.urbanism_editor
+        self._click(self._button(editor, ("category", category)))
+        self._press(self._button(editor, ("catalog", catalog_id)))
+        target = editor._tile_rect(tile).center
+        self._move(target)
+        self._release(target)
+
+    def test_whoever_is_made_is_drawn_next_and_each_lesson_is_done_by_doing_it(self) -> None:
+        resident_id = self._make_someone()
+        self.assertEqual(self.game.scene_name, "editor")
+        self.assertEqual(self.game.doll_editor.resident_id, resident_id)
+        self.assertEqual(self.step, "draw_color")
+        self._frame()
+        editor = self.game.doll_editor
+        body = editor.areas["body"]
+
+        # Painting before a colour is chosen is not the lesson in hand.
+        self._stroke((body.x + 60, body.y + 60), (body.x + 80, body.y + 90))
+        self.assertEqual(self.step, "draw_color")
+        self._click(editor.swatches[9][0].center)
+        self.assertEqual(self.step, "draw_stroke")
+        self._stroke((body.x + 100, body.y + 80), (body.x + 140, body.y + 120))
+        self.assertEqual(self.step, "draw_fill")
+        self._frame()
+        # Choosing the bucket is not using it.
+        self._click(self._button(editor, ("tool", "fill")))
+        self.assertEqual(self.step, "draw_fill")
+        self._click((body.x + 10, body.y + 10))
+        self.assertEqual(self.step, "draw_undo")
+        self._key(pygame.K_z, "z", pygame.KMOD_CTRL)
+        self.assertEqual(self.step, "draw_resident")
+        self._click(self._button(editor, ("mannequin",)))
+        self._frame()
+        self.assertEqual(self.step, "draw_resident")
+        self._click(self._button(editor, ("save",)))
+        self.assertEqual(self.step, "shack")
+        for name in ("body", "head"):
+            self.assertTrue((self.drawings / "dolls" / resident_id / f"{name}.png").is_file())
+        # Time has stood still all the while.
+        self.assertEqual(self.game.world.clock.total_minutes, 8 * 60)
+        self._key(pygame.K_ESCAPE)
+        self.assertEqual(self.game.scene_name, "global")
+        self.assertIsNotNone(self.game.dolls.get(resident_id))
+        self._frame()
+
+    def test_a_drawing_left_half_done_can_be_gone_back_to_from_the_map(self) -> None:
+        self._make_someone()
+        self._key(pygame.K_ESCAPE)
+        self.assertEqual(self.game.scene_name, "global")
+        self.assertEqual(self.step, "draw_color")
+        self._frame()
+        hud = self.game.global_view.hud
+        button = next(button for button in hud.buttons if button.intent == ("tutorial_draw",))
+        self._click(button.rect.center)
+        self.assertEqual(self.game.scene_name, "editor")
+
+    def test_a_building_put_down_is_drawn_there_and_then_in_four_parts(self) -> None:
+        self._make_someone()
+        self._draw_someone()
+        self._key(pygame.K_ESCAPE)
+        self._key(pygame.K_u, "u")
+        self._put_down("buildings", "shack", (20, 12))
+        self.assertEqual(self.game.scene_name, "building_editor")
+        self.assertEqual(self.step, "draw_parts")
+        self._frame()
+        editor = self.game.building_editor
+        room_id = editor.room_id
+        self._click(editor.part_buttons[1].rect.center)
+        self.assertEqual(self.step, "draw_building")
+        for part in editor.part_buttons:
+            self._click(part.rect.center)
+            self._click(self._button(editor, ("starter",)))
+        self._frame()
+        self._click(self._button(editor, ("save",)))
+        self.assertEqual(self.step, "bed")
+        self.assertEqual(len(list((self.drawings / "buildings" / room_id).glob("*.png"))), 4)
+        # Out of the drawing is back to where the building was put down, to go on from there.
+        self._key(pygame.K_ESCAPE)
+        self.assertEqual(self.game.scene_name, "urbanism")
+        self._frame()
+
+    def test_furniture_put_down_is_drawn_once_for_all_of_its_kind(self) -> None:
+        self._make_someone()
+        settle(self.game.world, until="bed")
+        self._key(pygame.K_ESCAPE)
+        self._key(pygame.K_u, "u")
+        self.assertEqual(self.game.scene_name, "urbanism")
+        self._put_down("furniture", "bed", (10, 11))
+        self.assertEqual(self.game.scene_name, "object_editor")
+        self.assertEqual(self.step, "bed")
+        self._frame()
+        editor = self.game.object_editor
+        self.assertEqual(editor.kind, "bed")
+        self.assertEqual(editor.drawing.get_size(), (64, 128))
+        self._click(self._button(editor, ("starter",)))
+        self._click(editor.swatches[26][0].center)
+        corner = (editor.area.x + 4 * editor.zoom, editor.area.y + 4 * editor.zoom)
+        self._stroke(corner, (corner[0] + 20, corner[1] + 10))
+        self.assertEqual(tuple(editor.drawing.get_at((4, 4)))[:3], editor.color)
+        self._key(pygame.K_z, "z", pygame.KMOD_CTRL)
+        self.assertNotEqual(tuple(editor.drawing.get_at((4, 4)))[:3], editor.color)
+        self._stroke(corner, (corner[0] + 20, corner[1] + 10))
+        self._frame()
+        self._click(self._button(editor, ("save",)))
+        self.assertEqual(self.step, "crate")
+        self.assertTrue((self.drawings / "objects" / "bed.png").is_file())
+        self._key(pygame.K_ESCAPE)
+        self.assertEqual(self.game.scene_name, "urbanism")
+        self._frame()
+
+        # A second bed needs no drawing: it is the same bed.
+        self.game.world.apply_command(PlaceObjectCommand("bed", (13, 11)))
+        self._key(pygame.K_ESCAPE)
+        self.assertEqual(self.game.scene_name, "global")
+        view = self.game.global_view
+        view.roofs_on = False
+        self._frame()
+        beds = [area for area, _ in view._drawn_objects(view.terrain.get_rect())]
+        self.assertEqual(len(beds), 2)
+        self.assertEqual({area.size for area in beds}, {(16, 32)})
+        # Whatever nobody has drawn keeps the art it came with.
+        barrel = next(placed for placed in self.game.world.interactables.values() if placed.kind == "barrel")
+        self.assertIsNone(view.object_art.drawing(self.game.world.definition_of(barrel)))
+
+    def test_what_is_put_down_outside_the_opening_is_only_drawn_when_asked(self) -> None:
+        self._make_someone()
+        settle(self.game.world)
+        self.assertFalse(self.game.world.tutorial.active)
+        self._key(pygame.K_ESCAPE)
+        self._key(pygame.K_u, "u")
+        self._put_down("furniture", "stool", (30, 12))
+        self.assertEqual(self.game.scene_name, "urbanism")
+        editor = self.game.urbanism_editor
+        self.assertEqual(editor.selection[0], "object")
+        self._click(self._button(editor, ("art",)))
+        self.assertEqual(self.game.scene_name, "object_editor")
+        self.assertEqual(self.game.object_editor.kind, "stool")
+        self._frame()
 
 
 if __name__ == "__main__":

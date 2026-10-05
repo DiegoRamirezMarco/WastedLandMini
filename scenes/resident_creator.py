@@ -5,7 +5,6 @@ The scene only gathers what was chosen. Whether anyone comes of it is the simula
 
 import pygame
 
-from graphics.face_renderer import FACE_SIZE, FaceRenderer
 from graphics.font import FONT_CHARS, LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
 from graphics.screen_layers import ScreenLayers
@@ -25,15 +24,15 @@ SLIDERS_Y = 150
 SLIDER_ROW = 24
 SLIDER_LEFT = LEFT + 78
 SLIDER_SIZE = (200, 8)
-FACE_SCALE = 2
-FACE_AT = (470, 48)
-NOTES = pygame.Rect(470, 214, 300, 190)
+WHO_AT = (470, 48)
+NOTES = pygame.Rect(470, 150, 300, 250)
 DEFAULT_AGE = 30
 TITLE = "TU PRIMER HABITANTE"
 SUBTITLE = "Quien levanta el asentamiento. Los demás llegarán por la puerta."
 NAMELESS = "Hace falta un nombre"
 REFUSED = "Aquí ya vive alguien: los demás llegan por la puerta"
 NO_NAME_YET = "Sin nombre"
+DRAWN_NEXT = "Aquí no se elige una cara ya hecha: en cuanto lo crees, lo dibujas tú, cuerpo y cabeza."
 # What each side of a personality is called, and what it does to how they act.
 PERSONALITY_LABELS = {
     "empathy": ("Empatía", "se pone en el lugar de los demás, y abre la puerta a quien llama"),
@@ -45,7 +44,7 @@ PERSONALITY_LABELS = {
 }
 NOTES_TEXT = (
     "Nada de esto le obliga: decide por su cuenta, y tú le aconsejas.",
-    "Si hay carpeta de ilustraciones, luego se le puede dibujar entero desde el mapa (Dibujar), y darle voz (Voz).",
+    "Más adelante puedes volver a dibujarlo desde el mapa (Dibujar) y darle voz (Voz).",
     "Enter lo crea. Esc vuelve sin crear a nadie.",
 )
 
@@ -58,13 +57,11 @@ class ResidentCreator:
         canvas: pygame.Surface,
         world: SimulationWorld,
         font: BitmapFont,
-        faces: FaceRenderer,
         layers: ScreenLayers | None = None,
     ) -> None:
         self.canvas = canvas
         self.world = world
         self.font = font
-        self.faces = faces
         self.layers = layers
         self.closed = True
         # ID of whoever was made, once someone has been.
@@ -73,8 +70,6 @@ class ResidentCreator:
         self.age = DEFAULT_AGE
         self.personality: dict[str, float] = {}
         self.traits: list[str] = []
-        # Which of the game's own looks they are to have, as an index into the ones there are.
-        self.look_index = 0
         self.notice = ""
         self._held: str | None = None
         self._blink = 0.0
@@ -100,30 +95,19 @@ class ResidentCreator:
                 button = Button.at(font, x, row, label, ("trait", trait_id))
             self.trait_buttons.append(button)
             x = button.rect.right + 4
-        looks_y = FACE_AT[1] + FACE_SIZE[1] * FACE_SCALE + 6
-        self.look_buttons = [
-            Button.at(font, FACE_AT[0], looks_y, "<", ("look", -1)),
-            Button.at(font, FACE_AT[0] + FACE_SIZE[0] * FACE_SCALE - 14, looks_y, ">", ("look", 1)),
-        ]
         bottom = canvas.get_height() - 30
         self.create_button = Button.at(font, LEFT, bottom, "Crear habitante", ("create",))
         self.close_button = Button.at(font, self.create_button.rect.right + 6, bottom, "Volver", ("close",))
 
     @property
     def buttons(self) -> list[Button]:
-        return [*self.age_buttons, *self.look_buttons, *self.trait_buttons, self.create_button, self.close_button]
-
-    @property
-    def look(self) -> str | None:
-        """ID of the look chosen, if the game has any to choose from."""
-        known = self.faces.looks.known
-        return known[self.look_index % len(known)] if known else None
+        return [*self.age_buttons, *self.trait_buttons, self.create_button, self.close_button]
 
     def open(self) -> None:
         """Start from a blank: nobody in particular, of middling everything."""
         self.closed = False
         self.created = None
-        self.name, self.age, self.traits, self.look_index = "", DEFAULT_AGE, [], 0
+        self.name, self.age, self.traits = "", DEFAULT_AGE, []
         self.personality = {trait: 50.0 for trait in self.sliders}
         self.notice = ""
         self._held = None
@@ -147,7 +131,7 @@ class ResidentCreator:
             self.notice = NAMELESS
             return None
         created = self.world.apply_command(
-            FoundResidentCommand(self.name, self.age, dict(self.personality), tuple(self.traits), self.look)
+            FoundResidentCommand(self.name, self.age, dict(self.personality), tuple(self.traits))
         )
         if not isinstance(created, str):
             self.notice = REFUSED
@@ -158,8 +142,6 @@ class ResidentCreator:
     def _apply(self, intent: tuple) -> None:
         if intent[0] == "age":
             self.set_age(self.age + intent[1])
-        elif intent[0] == "look":
-            self.look_index = (self.look_index + intent[1]) % max(1, len(self.faces.looks.known))
         elif intent[0] == "trait":
             self.toggle_trait(intent[1])
         elif intent[0] == "create":
@@ -235,21 +217,15 @@ class ResidentCreator:
             font.draw(canvas, self.notice, (self.close_button.rect.right + 12, self.close_button.rect.y + 2), PALETTE["glow"])
 
     def _render_who(self) -> None:
-        """The face they would have, and what each side of their way of being means."""
+        """Who they are so far, and what each side of their way of being means. Their looks come after."""
         font, canvas = self.font, self.canvas
         name = tidy_name(self.name)
-        size = (FACE_SIZE[0] * FACE_SCALE, FACE_SIZE[1] * FACE_SCALE)
-        frame = pygame.Rect(FACE_AT, size)
-        draw_panel(canvas, frame, fill="shadow", border="stone")
-        if self.look is not None:
-            canvas.blit(pygame.transform.scale(self.faces.face(self.look), size), frame)
-        for button in self.look_buttons:
-            button.draw(canvas, font)
-        label = "Aspecto"
-        font.draw(canvas, label, (frame.centerx - font.width(label) // 2, self.look_buttons[0].rect.y + 2), PALETTE["sand"])
-        beside = frame.right + 12
-        font.draw(canvas, name or NO_NAME_YET, (beside, frame.y), PALETTE["paper" if name else "stone"], scale=2)
-        font.draw(canvas, f"{self.age} años", (beside, frame.y + LINE_HEIGHT * 2 + 4), PALETTE["bone"])
+        font.draw(canvas, name or NO_NAME_YET, (WHO_AT[0], WHO_AT[1]), PALETTE["paper" if name else "stone"], scale=2)
+        font.draw(canvas, f"{self.age} años", (WHO_AT[0], WHO_AT[1] + LINE_HEIGHT * 2 + 4), PALETTE["bone"])
+        blank = pygame.Rect(WHO_AT[0], WHO_AT[1] + LINE_HEIGHT * 4, NOTES.width, LINE_HEIGHT * 3 + 8)
+        draw_panel(canvas, blank, fill="shadow", border="lamp")
+        for index, line in enumerate(font.wrap(DRAWN_NEXT, blank.width - 10)):
+            font.draw(canvas, line, (blank.x + 5, blank.y + 5 + index * LINE_HEIGHT), PALETTE["lamp"])
 
         y = NOTES.y
         for trait in self.sliders:

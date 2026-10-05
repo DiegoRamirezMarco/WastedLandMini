@@ -16,8 +16,6 @@ NAME_LENGTH = 16
 # Residents are adults: nothing in the settlement is written for anyone younger.
 AGE_RANGE = (18, 80)
 MAX_TRAITS = 2
-# A look is the ID of some art, and nothing else is taken for one.
-LOOK_ID = re.compile(r"[a-z0-9_]{1,32}")
 FOUNDED_EVENT = "resident_founded"
 FOUNDED_IMPORTANCE = 45
 FALLBACK_ID = "resident"
@@ -52,7 +50,6 @@ def found_resident(
     age: int,
     personality: Mapping[str, float],
     traits: Sequence[str],
-    look: str | None = None,
 ) -> Resident | None:
     """Put the player's first resident just inside the gate.
 
@@ -79,7 +76,6 @@ def found_resident(
         ],
         age=min(max(int(age), youngest), oldest),
         credits=world.registries.economy.starting_credits,
-        look=look if look is not None and LOOK_ID.fullmatch(look) else None,
     )
     world.residents[resident.resident_id] = resident
     room = world.room_at(resident.tile)

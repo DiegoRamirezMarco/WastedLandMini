@@ -357,11 +357,13 @@ Everything here is between adults, and nothing happens to anyone who does not wa
 - `SimulationWorld.new_settlement` gives an empty plot, the map named in `data/tutorial.json`,
   with nobody on it. `demo_world` is the settlement that comes ready made, and has no opening.
 - `FoundResidentCommand` makes the first resident, just inside the gate: a name, an age, a
-  personality, up to two traits and the ID of a look. It is refused once anyone lives or has
-  died there. Their ID is made from their name, and never one that a newcomer or the dead have.
+  personality and up to two traits. It is refused once anyone lives or has died there. Their ID is made from their name, and never one that a newcomer or the dead have.
 - The opening is a list of steps. A step has a goal: so many `residents`, a `building`, an
   `object` of a kind (under a roof, if `indoors`), someone with a `job`, minutes `elapsed`,
   something `answered`, or the step `acknowledged` with `AcknowledgeTutorialCommand`.
+- A goal may also wait for a `deed`: something the player does that the simulation cannot see,
+  such as drawing. Whoever shows the game says so with `ReportDeedCommand` and a name; it counts
+  only if the step in hand asks for that name. The simulation never learns what a drawing is.
 - Goals are checked every minute and after every command, so building with time stopped moves
   the opening on. Nothing is forced: a step is done by what the settlement has become.
 - A finished step hands over its `gifts`, into the first container of a kind or to whoever has

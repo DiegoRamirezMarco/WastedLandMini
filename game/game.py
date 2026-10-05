@@ -24,6 +24,7 @@ from scenes.doll_editor import DollEditor
 from scenes.global_view import GlobalView
 from scenes.interaction_view import InteractionView
 from scenes.item_editor import ItemEditor
+from scenes.object_editor import ObjectEditor
 from scenes.main_menu import CONTINUE, DEMO, NEW_GAME, QUIT, MainMenu
 from scenes.resident_creator import ResidentCreator
 from scenes.urbanism import UrbanismEditor
@@ -38,10 +39,11 @@ from settings import (
     SCREEN_WIDTH,
     SPEEDS,
 )
-from simulation.commands import AdvanceTimeCommand, SetPausedCommand, SetSpeedCommand
+from simulation.commands import AdvanceTimeCommand, ReportDeedCommand, SetPausedCommand, SetSpeedCommand
 from simulation.registries import DATA_DIR, BuiltInRegistries
 from simulation.world import SimulationWorld
 from skeleton.plan import builtin_plan
+from ui.tutorial_panel import BUILDING_ART_FOCUS, DOLL_FOCUS
 
 SPEED_KEYS = dict(zip((pygame.K_1, pygame.K_2, pygame.K_3), SPEEDS))
 CUSTOM_CONTENT_DIR = ASSETS_DIR.parent / "custom_content"
@@ -58,6 +60,8 @@ EDITOR_SCENE, BUILDING_SCENE, ITEM_SCENE, VOICE_SCENE, URBANISM_SCENE = (
     "voice",
     "urbanism",
 )
+OBJECT_SCENE = "object_editor"
+NO_DRAWINGS = "No hay carpeta de ilustraciones disponible"
 # Screens that read the keyboard themselves: the way in, and where the first resident is made.
 MENU_SCENE, CREATOR_SCENE = "menu", "creator"
 LOAD_FAILED = "No se pudo cargar la partida guardada"
@@ -96,9 +100,8 @@ class Game:
         self.custom = AssetStore(self.custom_content_dir)
         self.font = BitmapFont(self.assets.image(FONT_SHEET, size=SHEET_SIZE))
         self.icons = ItemIcons(self.assets, self.custom)
-        # Whoever was made with a look is drawn with it, by faces and bodies alike.
-        looks = Looks(self.assets, self._look_of)
-        self.faces = FaceRenderer(self.assets, self.custom, self.illustrations, looks)
+        # Until somebody draws them, whoever has no art of their own borrows one of the game's looks.
+        self.faces = FaceRenderer(self.assets, self.custom, self.illustrations, Looks(self.assets))
         # Residents whose body has been drawn, cut into parts that move.
         self.dolls = DollStore(self.illustrations, load_template())
         self.music = load_music_settings(DATA_DIR / "audio.json")
@@ -127,18 +130,12 @@ class Game:
         if start_in_menu:
             self.open_menu()
 
-    def _look_of(self, resident_id: str) -> str | None:
-        resident = self.world.residents.get(resident_id)
-        return resident.look if resident is not None else None
-
     def _build_scenes(self) -> None:
         """Create the scenes for the current world. Called again whenever the world is replaced."""
         self.scene_name = "global"
-        # Someone of the same name may have looked otherwise in the settlement before this one.
-        for resident_id, resident in self.world.residents.items():
-            if resident.look is not None:
-                self.faces.forget(resident_id)
         self.minutes_owed = 0.0
+        # Whether the drawing on show was opened from the layout editor, to go back there from it.
+        self._art_from_urbanism = False
         self.global_view = GlobalView(
             self.canvas, self.world, self.assets, self.font, self.icons, self.faces, self.custom,
             self.illustrations, self.layers, self.dolls, self.voices,
@@ -172,6 +169,7 @@ class Game:
                 builtin_plan(),
                 self.global_view.bodies.renderer,
                 on_saved=self.faces.forget,
+                on_deed=self._report_deed,
             )
             if self.illustrations.root is not None
             else None
@@ -185,6 +183,21 @@ class Game:
                 self.layers,
                 self.illustrations.root,
                 self.global_view.building_art,
+                on_deed=self._report_deed,
+            )
+            if self.illustrations.root is not None
+            else None
+        )
+        # Furniture and loose objects are drawn a kind at a time, and kept in the same folder.
+        self.object_editor = (
+            ObjectEditor(
+                self.canvas,
+                self.world,
+                self.font,
+                self.layers,
+                self.illustrations.root,
+                self.global_view.object_art,
+                on_deed=self._report_deed,
             )
             if self.illustrations.root is not None
             else None
@@ -206,8 +219,39 @@ class Game:
             self.assets,
             self.custom,
             self.layers,
+            self.global_view.object_art,
         )
-        self.creator = ResidentCreator(self.canvas, self.world, self.font, self.faces, self.layers)
+        self.creator = ResidentCreator(self.canvas, self.world, self.font, self.layers)
+
+    def _report_deed(self, deed: str) -> None:
+        """Tell the simulation of something the player has done in an editor, which only the opening cares about."""
+        self.world.apply_command(ReportDeedCommand(deed))
+
+    def _skip_what_cannot_be_drawn(self) -> None:
+        """With nowhere to keep drawings there are no editors, and the steps that teach drawing are passed over."""
+        for _ in self.world.registries.tutorial.steps:
+            step = self.world.guide.current(self.world)
+            deed = step.goal.needed_deed if step is not None else None
+            if deed is None or deed in self.world.tutorial.deeds:
+                return
+            if step.focus == DOLL_FOCUS:
+                editor = self.doll_editor
+            elif step.focus == BUILDING_ART_FOCUS:
+                editor = self.building_editor
+            else:
+                editor = self.object_editor
+            if editor is not None:
+                return
+            self._report_deed(deed)
+
+    def _leave_art(self) -> None:
+        """Go back from a drawing to where it was opened from."""
+        if self._art_from_urbanism:
+            self._art_from_urbanism = False
+            self.urbanism_editor.open()
+            self.scene_name = URBANISM_SCENE
+        else:
+            self.scene_name = "global"
 
     def describe_save(self) -> str | None:
         """A few words about the saved settlement, for the menu. None if there is none to go on with."""
@@ -298,6 +342,8 @@ class Game:
             return self.doll_editor
         if self.scene_name == BUILDING_SCENE and self.building_editor is not None:
             return self.building_editor
+        if self.scene_name == OBJECT_SCENE and self.object_editor is not None:
+            return self.object_editor
         if self.scene_name == ITEM_SCENE:
             return self.item_editor
         if self.scene_name == URBANISM_SCENE:
@@ -313,6 +359,7 @@ class Game:
         if key == pygame.K_ESCAPE and self.scene_name in (
             EDITOR_SCENE,
             BUILDING_SCENE,
+            OBJECT_SCENE,
             ITEM_SCENE,
             VOICE_SCENE,
             URBANISM_SCENE,
@@ -372,31 +419,50 @@ class Game:
         if self.scene_name == MENU_SCENE:
             self._follow_menu()
             return
+        self._skip_what_cannot_be_drawn()
         if self.scene_name == CREATOR_SCENE:
             if self.creator.closed:
                 self.scene_name = "global"
-                if self.creator.created is not None:
+                created = self.creator.created
+                step = self.world.guide.current(self.world)
+                if created is not None:
                     # Whoever has just been made is who there is to look at.
-                    self.faces.forget(self.creator.created)
-                    self.global_view.hud.select_resident(self.creator.created)
-                    self.global_view.centre_on_resident(self.creator.created)
+                    self.global_view.hud.select_resident(created)
+                    self.global_view.centre_on_resident(created)
+                if created is not None and self.doll_editor is not None and step is not None and step.focus == DOLL_FOCUS:
+                    # And nobody comes ready drawn: the next thing is to draw them.
+                    self.doll_editor.open(created)
+                    self.scene_name = EDITOR_SCENE
             return
         if self.scene_name == EDITOR_SCENE and (self.doll_editor is None or self.doll_editor.closed):
             self.scene_name = "global"
         elif self.scene_name == BUILDING_SCENE and (self.building_editor is None or self.building_editor.closed):
-            self.scene_name = "global"
+            self._leave_art()
+        elif self.scene_name == OBJECT_SCENE and (self.object_editor is None or self.object_editor.closed):
+            self._leave_art()
+        elif self.scene_name == URBANISM_SCENE and self.urbanism_editor.requested_art_object is not None:
+            kind = self.urbanism_editor.requested_art_object
+            self.urbanism_editor.requested_art_object = None
+            if self.object_editor is None:
+                self.urbanism_editor.message = NO_DRAWINGS
+                return
+            self.object_editor.open(kind)
+            if not self.object_editor.closed:
+                self._art_from_urbanism = True
+                self.scene_name = OBJECT_SCENE
         elif self.scene_name == ITEM_SCENE and self.item_editor.closed:
             self.scene_name = "global"
         elif self.scene_name == URBANISM_SCENE and self.urbanism_editor.requested_art_room is not None:
             room_id = self.urbanism_editor.requested_art_room
             if self.building_editor is None:
                 self.urbanism_editor.requested_art_room = None
-                self.urbanism_editor.message = "No hay carpeta de ilustraciones disponible"
+                self.urbanism_editor.message = NO_DRAWINGS
                 return
             # Rebuild render caches first; the drawing editor must guide from the edited terrain.
             self._build_scenes()
             if room_id in self.world.rooms:
                 self.building_editor.open(room_id)
+                self._art_from_urbanism = True
                 self.scene_name = BUILDING_SCENE
         elif self.scene_name == URBANISM_SCENE and self.urbanism_editor.closed:
             notice = self.urbanism_editor.message
@@ -425,6 +491,14 @@ class Game:
             self.scene_name = URBANISM_SCENE
         elif self.scene_name == "global" and self.global_view.requested_creator:
             self.open_creator()
+        elif (
+            self.scene_name == "global"
+            and self.global_view.requested_object_editor is not None
+            and self.object_editor is not None
+        ):
+            self.object_editor.open(self.global_view.requested_object_editor)
+            if not self.object_editor.closed:
+                self.scene_name = OBJECT_SCENE
         elif self.scene_name == "global" and self.global_view.requested_voice is not None and self.voice_editor is not None:
             self.voice_editor.open(self.global_view.requested_voice)
             self.scene_name = VOICE_SCENE
@@ -439,6 +513,7 @@ class Game:
         self.global_view.requested_save = False
         self.global_view.requested_urbanism = False
         self.global_view.requested_creator = False
+        self.global_view.requested_object_editor = None
         self.global_view.requested_voice = None
 
     def update_music(self) -> None:

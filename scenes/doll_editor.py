@@ -16,6 +16,17 @@ from skeleton.plan import SkeletonPlan
 from skeleton.rig import Skeleton
 from ui.button import Button
 from ui.panel import draw_panel
+from ui.tutorial_panel import (
+    COLOR_DEED,
+    DOLL_FOCUS,
+    FILL_DEED,
+    RESIDENT_DRAWN_DEED,
+    STROKE_DEED,
+    UNDO_DEED,
+    draw_hint,
+    draw_lesson,
+    lesson_for,
+)
 
 BODY_AT = (196, 58)
 HEAD_AT = (530, 58)
@@ -65,12 +76,14 @@ class DollEditor:
         plan: SkeletonPlan,
         bodies: BodyRenderer,
         on_saved: Callable[[str], None] | None = None,
+        on_deed: Callable[[str], None] | None = None,
     ) -> None:
         self.canvas = canvas
         self.world = world
         self.font = font
         self.layers = layers
         self.root = root
+        self.on_deed = on_deed
         self.dolls = dolls
         self.plan = plan
         self.bodies = bodies
@@ -143,6 +156,25 @@ class DollEditor:
             self.drawings[name] = surface
         self._cut()
 
+    def _did(self, deed: str) -> None:
+        """Say that the player has done something the opening of a new settlement may be waiting for."""
+        if self.on_deed is not None:
+            self.on_deed(deed)
+
+    def _hint_rect(self, hint: str | None) -> pygame.Rect | None:
+        """Where on the screen what a lesson is about is."""
+        if hint == "palette":
+            return self.swatches[0][0].unionall([rect for rect, _ in self.swatches])
+        if hint == "canvas":
+            return self.areas[BODY_CANVAS]
+        if hint == "tools":
+            return self.tool_buttons[0].rect.unionall([button.rect for button in self.tool_buttons])
+        if hint == "edit":
+            return self.edit_buttons[0].rect.unionall([button.rect for button in self.edit_buttons])
+        if hint == "save":
+            return next(button.rect for button in self.top_buttons if button.intent == ("save",))
+        return None
+
     def _cut(self) -> None:
         """Cut the drawings as they stand into a doll, to be seen moving in the preview."""
         self._preview = Doll(self.template, self.drawings)
@@ -156,6 +188,7 @@ class DollEditor:
             name, surface = self._undo.pop()
             self.drawings[name] = surface
             self._cut()
+            self._did(UNDO_DEED)
 
     def clear(self) -> None:
         for name in self.drawings:
@@ -203,6 +236,7 @@ class DollEditor:
         if self.on_saved is not None:
             self.on_saved(self.resident_id)
         self.notice = SAVED_TEXT
+        self._did(RESIDENT_DRAWN_DEED)
         return True
 
     def step(self, by: int) -> None:
@@ -261,6 +295,7 @@ class DollEditor:
             if self.tool == FILL_TOOL:
                 self._fill(name, at)
                 self._cut()
+                self._did(FILL_DEED)
             else:
                 self._paint(name, at, at)
                 self._stroke = on
@@ -274,6 +309,7 @@ class DollEditor:
                 self.color = color
                 if self.tool == ERASER_TOOL:
                     self.tool = BRUSH_TOOL
+                self._did(COLOR_DEED)
                 return
         for rect, size in self.brush_buttons:
             if rect.collidepoint(position):
@@ -294,6 +330,7 @@ class DollEditor:
         if self._stroke is not None:
             self._stroke = None
             self._cut()
+            self._did(STROKE_DEED)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -345,6 +382,12 @@ class DollEditor:
         canvas.fill(TRANSPARENT, PREVIEW)
         self.layers.under(self._show_preview)
 
+        lesson = lesson_for(self.world, focus=DOLL_FOCUS)
+        if lesson is not None:
+            # While the opening of a new settlement teaches drawing, the lesson goes where the notes do.
+            draw_lesson(canvas, font, NOTES, self.world, lesson)
+            draw_hint(canvas, self._hint_rect(lesson.hint), self.time)
+            return
         y = NOTES.y
         for note in NOTES_TEXT:
             for line in font.wrap(note, NOTES.width):

@@ -41,11 +41,14 @@ class CommandTarget(Protocol):
         ...
 
     def found_resident(
-        self, name: str, age: int, personality: Mapping[str, float], traits: Sequence[str], look: str | None = None
+        self, name: str, age: int, personality: Mapping[str, float], traits: Sequence[str]
     ) -> str | None:
         ...
 
     def acknowledge_tutorial(self) -> bool:
+        ...
+
+    def report_deed(self, deed: str) -> bool:
         ...
 
 
@@ -164,12 +167,10 @@ class FoundResidentCommand:
     age: int = 30
     personality: Mapping[str, float] = field(default_factory=dict)
     traits: Sequence[str] = ()
-    # ID of the look they are to be drawn with, which is all the simulation knows of it.
-    look: str | None = None
 
     def apply(self, world: CommandTarget) -> str | None:
         """Returns the ID of whoever now lives there, or None if the settlement would not have them."""
-        return world.found_resident(self.name, self.age, self.personality, self.traits, self.look)
+        return world.found_resident(self.name, self.age, self.personality, self.traits)
 
 
 @dataclass(frozen=True)
@@ -178,3 +179,17 @@ class AcknowledgeTutorialCommand:
 
     def apply(self, world: CommandTarget) -> bool:
         return world.acknowledge_tutorial()
+
+
+@dataclass(frozen=True)
+class ReportDeedCommand:
+    """The player has done something with their own hands that the opening may be waiting for.
+
+    What it was is a name and nothing more to the simulation: drawing is not its business.
+    """
+
+    deed: str
+
+    def apply(self, world: CommandTarget) -> bool:
+        """Returns whether the step in hand was waiting for it."""
+        return world.report_deed(self.deed)

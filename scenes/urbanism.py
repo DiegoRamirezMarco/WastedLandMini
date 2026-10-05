@@ -12,6 +12,7 @@ import pygame
 
 from graphics.assets import AssetStore
 from graphics.font import LINE_HEIGHT, BitmapFont
+from graphics.object_art import ObjectArtStore
 from graphics.object_sprites import ObjectSprites
 from graphics.palette import PALETTE
 from graphics.screen_layers import ScreenLayers
@@ -27,7 +28,7 @@ from simulation.commands import (
 from simulation.world import SimulationWorld
 from ui.button import Button
 from ui.panel import draw_panel
-from ui.tutorial_panel import tutorial_heading
+from ui.tutorial_panel import BUILDING_ART_FOCUS, lit, owed_object, tutorial_heading
 from world.interactable import InteractableDefinition
 from world.map import Tile
 from world.room import Room
@@ -91,12 +92,17 @@ class UrbanismEditor:
         assets: AssetStore,
         custom: AssetStore | None = None,
         layers: ScreenLayers | None = None,
+        object_art: ObjectArtStore | None = None,
     ) -> None:
         self.canvas = canvas
         self.world = world
         self.font = font
         self.layers = layers
         self.sprites = ObjectSprites(assets, custom)
+        # What somebody has drawn of each kind of object, if there is anywhere to keep drawings.
+        self.object_art = object_art if object_art is not None and object_art.available else None
+        self._drawn: dict[tuple[str, tuple[int, int]], pygame.Surface] = {}
+        self.time = 0.0
         self.closed = False
         self.category = "buildings"
         # The catalogue entry in hand. It stays there after a drop, so a click sets down another.
@@ -110,6 +116,8 @@ class UrbanismEditor:
         self.pointer_tile: Tile | None = None
         self.catalog_offset = 0
         self.requested_art_room: str | None = None
+        # Kind of object the player asked to draw. The game shell picks it up.
+        self.requested_art_object: str | None = None
         # Why the thing in hand cannot go where it was last asked about. Time stands still here,
         # so the answer holds until something is placed, moved or removed.
         self._judged: tuple[tuple[Held, Tile], str | None] | None = None
@@ -146,8 +154,11 @@ class UrbanismEditor:
     def open(self) -> None:
         self.closed = False
         self.requested_art_room = None
+        self.requested_art_object = None
         self.drag = None
         self._judged = None
+        # Whatever was drawn while this was out of sight is read again.
+        self._drawn = {}
 
     def _catalog(self) -> list[tuple[str, str]]:
         if self.category == "buildings":
@@ -178,10 +189,24 @@ class UrbanismEditor:
             return []
         label = "Confirmar" if self.confirm_delete else "Retirar"
         buttons = [Button.at(self.font, MARGIN, 382, label, ("remove",))]
-        if self.selection[0] == "building":
+        if self._can_draw(self.selection):
             x = buttons[-1].rect.right + 4
             buttons.append(Button.at(self.font, x, 382, "Arte", ("art",)))
         return buttons
+
+    def _can_draw(self, selection: Selection) -> bool:
+        """Whether what is selected has a drawing of its own to open."""
+        if selection[0] == "building":
+            return True
+        return self.object_art is not None and selection[1] in self.world.interactables
+
+    def _ask_for_art(self, selection: Selection) -> None:
+        if not self._can_draw(selection):
+            return
+        if selection[0] == "building":
+            self.requested_art_room = selection[1]
+        else:
+            self.requested_art_object = self.world.interactables[selection[1]].kind
 
     @property
     def buttons(self) -> list[Button]:
@@ -244,8 +269,8 @@ class UrbanismEditor:
             self.message = "Suéltalo en el mapa; un clic coloca otro igual"
         elif intent == ("remove",):
             self._remove_selected()
-        elif intent == ("art",) and self.selection is not None and self.selection[0] == "building":
-            self.requested_art_room = self.selection[1]
+        elif intent == ("art",) and self.selection is not None:
+            self._ask_for_art(self.selection)
 
     def _press_map(self, tile: Tile) -> None:
         picked = self._pick(tile)
@@ -294,6 +319,17 @@ class UrbanismEditor:
         self._accept(result)
         if result.ok and result.entity_id is not None:
             self.selection = (held.kind, result.entity_id)
+            if self._step_wants_it_drawn(held.kind):
+                # In the opening of a new settlement, what is put down is drawn there and then.
+                self._ask_for_art(self.selection)
+
+    def _step_wants_it_drawn(self, kind: str) -> bool:
+        step = self.world.guide.current(self.world)
+        if step is None:
+            return False
+        if kind == "building":
+            return step.focus == BUILDING_ART_FOCUS
+        return owed_object(self.world) is not None
 
     def _let_go(self) -> None:
         """Put down whatever is in hand without changing the settlement."""
@@ -412,7 +448,7 @@ class UrbanismEditor:
         }
 
     def update(self, dt: float) -> None:
-        pass
+        self.time += dt
 
     def render(self) -> None:
         if self.layers is not None:
@@ -427,6 +463,8 @@ class UrbanismEditor:
                 or (isinstance(button.intent, tuple) and button.intent[:1] == ("catalog",) and button.intent[1] == self.catalog_id)
             )
             button.draw(self.canvas, self.font, active=active)
+            if button.intent == ("art",) and owed_object(self.world) is not None and lit(self.time):
+                pygame.draw.rect(self.canvas, PALETTE["glow"], button.rect.inflate(4, 4), 1)
         self._render_step()
         self._render_map()
         self._render_held()
@@ -450,9 +488,12 @@ class UrbanismEditor:
         x, y = PANEL_WIDTH + MARGIN, 6
         width = self.close_button.rect.left - MARGIN - x
         self.font.draw(self.canvas, tutorial_heading(self.world, step), (x, y), PALETTE["lamp"])
-        for line in self.font.wrap(step.text, width)[: max(0, (self.map_rect.top - y) // LINE_HEIGHT - 1)]:
+        lines = [(line, "paper") for line in self.font.wrap(step.text, width)]
+        if owed_object(self.world) is not None:
+            lines = [("Ya está puesto. Selecciónalo y pulsa Arte para dibujarlo.", "glow")]
+        for line, color in lines[: max(0, (self.map_rect.top - y) // LINE_HEIGHT - 1)]:
             y += LINE_HEIGHT
-            self.font.draw(self.canvas, line, (x, y), PALETTE["paper"])
+            self.font.draw(self.canvas, line, (x, y), PALETTE[color])
 
     def _render_map(self) -> None:
         for y, row in enumerate(self.world.tile_map.tiles):
@@ -529,6 +570,12 @@ class UrbanismEditor:
         return self.world.definition_of(placed) if placed is not None else None
 
     def _object_image(self, definition: InteractableDefinition, size: tuple[int, int]) -> pygame.Surface:
+        drawing = self.object_art.drawing(definition) if self.object_art is not None else None
+        if drawing is not None:
+            key = (definition.kind, size)
+            if key not in self._drawn:
+                self._drawn[key] = pygame.transform.smoothscale(drawing, size)
+            return self._drawn[key]
         sheet = self.sprites.sheet(definition)
         frame_width = definition.width * 16
         image = sheet.subsurface((0, 0, min(frame_width, sheet.get_width()), sheet.get_height()))

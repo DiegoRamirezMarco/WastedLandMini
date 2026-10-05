@@ -175,12 +175,20 @@ A step has an `id`, a `title`, a `text`, and a `goal`:
 | `elapsed` | that many game minutes have gone by since the step began | `minutes` |
 | `answered` | whatever the step's `opening` set going has been settled | |
 | `acknowledged` | the player presses the step's button | |
+| `deed` | the player has done the thing named | `target` (the name) |
+
+Any goal may also carry a `deed`, to be done besides: `{"type": "object", "target": "bed", "deed":
+"draw:bed"}` is done once a bed stands and has been drawn. The names the game reports are `color`,
+`stroke`, `fill` and `undo` from any drawing screen, `part` and `save_building` from the one for
+buildings, `save_resident` from the one for residents, and `draw:<kind>` when an object's drawing
+is saved.
 
 Optional: `gifts`, each an `item` and a `count` with either `into` (a kind of container, where it
 is left as nobody's) or `"to": "resident"` (given to whoever has been there longest, as their
 own); `opening`, which is `stranger` to bring someone to the gate; `done`, the line logged when
-the step is finished; and `focus`, which names what the step is about so the screen can point at
-it: `creator`, `urbanism`, `jobs`, `save` or `clock`.
+the step is finished; `focus`, which names what the step is about so the screen can point at
+it: `creator`, `doll`, `building_art`, `urbanism`, `jobs`, `save` or `clock`; and `hint`, what
+inside a drawing screen it is about: `palette`, `canvas`, `tools`, `edit`, `parts` or `save`.
 
 The map, the kinds, blueprints and jobs a goal names, and the containers gifts go into are
 checked when the game starts. A gift of an item that is not defined is left out.

@@ -51,8 +51,7 @@ FIRST_ECONOMY_VERSION = 8
 # Version 15 added lost limbs, none by default, and the particulars of events, empty by default.
 # Version 16 added thirst, mood, water and generator fuel.
 # Version 17 stores changes made in urbanism mode: terrain, rooms and construction underlays.
-# Version 18 added where a new settlement is in its opening, and the look a resident was made
-# with. Older saves are simply past the opening, and everyone in them looks like themselves.
+# Version 18 added where a new settlement is in its opening. Older saves are simply past it.
 LAST_MAP_CHANGE_VERSION = 16
 FIRST_URBANISM_VERSION = 17
 FIRST_TILE_VERSION = 2
@@ -132,7 +131,6 @@ class SaveManager:
                     "day_off": resident.day_off,
                     "credits": resident.credits,
                     "age": resident.age,
-                    "look": resident.look,
                     "couple_with": resident.couple_with,
                     "expedition": vars(resident.expedition) if resident.expedition is not None else None,
                     "last_expedition_day": resident.last_expedition_day,
@@ -186,6 +184,7 @@ class SaveManager:
                 "since": world.tutorial.since,
                 "opened": world.tutorial.opened,
                 "acknowledged": world.tutorial.acknowledged,
+                "deeds": list(world.tutorial.deeds),
                 "done": list(world.tutorial.done),
             },
         }
@@ -272,7 +271,6 @@ class SaveManager:
                 day_off=int(day_off) if day_off is not None else None,
                 credits=float(resident_data.get("credits", pocket_money)),
                 age=int(resident_data.get("age", 30)),
-                look=_text_or_none(resident_data.get("look")),
                 couple_with=_text_or_none(resident_data.get("couple_with")),
                 expedition=Expedition(
                     returns_at=int(trip.get("returns_at", 0)),
@@ -372,6 +370,7 @@ class SaveManager:
             since=int(saved.get("since", 0)),
             opened=bool(saved.get("opened", False)),
             acknowledged=bool(saved.get("acknowledged", False)),
+            deeds=[str(deed) for deed in _list_or_empty(saved.get("deeds"))],
             done=[str(done) for done in _list_or_empty(saved.get("done"))],
         )
 

@@ -165,14 +165,17 @@ class SimulationWorld:
         return self.urbanism.remove_building(self, room_id)
 
     def found_resident(
-        self, name: str, age: int, personality: Mapping[str, float], traits: Sequence[str], look: str | None = None
+        self, name: str, age: int, personality: Mapping[str, float], traits: Sequence[str]
     ) -> str | None:
         """Take in the player's first resident. Returns their ID, or None if there is already someone."""
-        resident = found_resident(self, name, age, personality, traits, look)
+        resident = found_resident(self, name, age, personality, traits)
         return resident.resident_id if resident is not None else None
 
     def acknowledge_tutorial(self) -> bool:
         return self.guide.acknowledge(self)
+
+    def report_deed(self, deed: str) -> bool:
+        return self.guide.report(self, deed)
 
     def set_speed(self, speed: int) -> None:
         if speed < 1:

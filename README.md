@@ -44,9 +44,11 @@ python main.py
 ```
 
 The game opens on a menu. `Partida nueva` starts on an empty plot and leads through settling it,
-step by step: making the first resident, a shack, a bed, a crate, food, water, a garden, a job, a
-fire, and the first stranger at the gate. `Asentamiento de ejemplo` opens a settlement that is
-already running, with nine residents. `Continuar` goes on with whatever was last saved.
+step by step. Nothing there comes ready made: the first resident is named and then drawn, with
+the game teaching how, and so are the shack, the bed, the crate and the rest as they are put
+down. Then come food, water, a garden, a job, a fire, and the first stranger at the gate.
+`Asentamiento de ejemplo` opens a settlement that is already running, with nine residents.
+`Continuar` goes on with whatever was last saved.
 
 Run the tests:
 
@@ -123,7 +125,8 @@ python -m simulation.headless --days 7 --seed 7
   the catalogue onto the map, and move anything already placed by dragging it. The outline under
   the pointer is green where it fits and red where it does not; a click on the map sets down
   another of the last thing taken, and a right click puts it away. Click something placed to
-  remove it after confirmation or to open a building in the art editor. Time stops while the
+  remove it after confirmation, or press `Arte` to draw it: a building in its four parts, a piece
+  of furniture once for all of its kind. Time stops while the
   editor is open and the changed layout is part of the save
 - `Guardar` in the menu, or `F5`, saves the game to `saves/quicksave.json`; `F9` loads it
 - `M`: sound on / off, voices and all
