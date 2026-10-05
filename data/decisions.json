@@ -1,0 +1,150 @@
+{
+  "grievance": {
+    "event_type": "crisis_opened",
+    "window_minutes": 90,
+    "cooldown_minutes": 1440,
+    "anger_threshold": 45,
+    "importance": 50,
+    "text": "{name} está que revienta con {target}",
+    "prompt": "No aguanto más a {target}. Estoy que reviento.",
+    "outcomes": {
+      "confront": {
+        "score": {
+          "bias": -0.1,
+          "anger": 0.9,
+          "aggression": 0.5,
+          "impulsiveness": 0.2,
+          "empathy": -0.3
+        },
+        "interaction": "argument",
+        "text": "{name} va a buscar a {target} para decirle cuatro cosas"
+      },
+      "talk_it_out": {
+        "score": {
+          "bias": 0.1,
+          "empathy": 0.6,
+          "affection": 0.4,
+          "anger": -0.2,
+          "courage": 0.2
+        },
+        "interaction": "heart_to_heart",
+        "text": "{name} decide hablar las cosas con {target}"
+      },
+      "cool_off": {
+        "score": {
+          "bias": 0.35,
+          "impulsiveness": -0.4,
+          "aggression": -0.2,
+          "stress": 0.2
+        },
+        "needs": {
+          "stress": -15
+        },
+        "feelings": {
+          "resentment": -3
+        },
+        "text": "{name} respira hondo y lo deja estar",
+        "memory": "Me tragué el enfado con {target}."
+      }
+    },
+    "options": [
+      {
+        "id": "calm",
+        "text": "Relájate",
+        "influence": {
+          "cool_off": 0.5,
+          "confront": -0.4
+        }
+      },
+      {
+        "id": "talk",
+        "text": "Habla con {target}",
+        "influence": {
+          "talk_it_out": 0.6,
+          "confront": -0.2
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "provoke",
+        "text": "Dale, dale",
+        "influence": {
+          "confront": 0.5,
+          "cool_off": -0.3
+        }
+      }
+    ]
+  },
+  "brawl": {
+    "event_type": "fight_brewing",
+    "window_minutes": 20,
+    "cooldown_minutes": 360,
+    "anger_threshold": 0,
+    "importance": 60,
+    "text": "{name} está a punto de irse a las manos con {target}",
+    "prompt": "Como {target} diga una palabra más, no respondo.",
+    "outcomes": {
+      "fight": {
+        "score": {
+          "bias": -0.5,
+          "anger": 0.8,
+          "aggression": 0.6,
+          "impulsiveness": 0.3,
+          "courage": 0.3,
+          "empathy": -0.4,
+          "fear": -0.5
+        },
+        "interaction": "fight",
+        "text": "{name} se lanza a por {target}"
+      },
+      "walk_away": {
+        "score": {
+          "bias": 0.45,
+          "empathy": 0.3,
+          "impulsiveness": -0.3,
+          "fear": 0.3
+        },
+        "needs": {
+          "stress": -5
+        },
+        "text": "{name} aprieta los puños y se da la vuelta",
+        "memory": "Estuve a punto de pegar a {target}."
+      }
+    },
+    "options": [
+      {
+        "id": "separate",
+        "text": "¡Quieto, déjalo!",
+        "influence": {
+          "walk_away": 0.7,
+          "fight": -0.6
+        }
+      },
+      {
+        "id": "talk",
+        "text": "Respira hondo",
+        "influence": {
+          "walk_away": 0.4,
+          "fight": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "No es asunto mío",
+        "influence": {}
+      },
+      {
+        "id": "provoke",
+        "text": "Que aprenda",
+        "influence": {
+          "fight": 0.5,
+          "walk_away": -0.3
+        }
+      }
+    ]
+  }
+}

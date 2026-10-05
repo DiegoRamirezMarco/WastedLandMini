@@ -1,0 +1,10 @@
+{
+  "id": "pizza_radioactiva",
+  "name": "pizza radiactiva",
+  "article": "una",
+  "category": "food",
+  "description": "Una pizza sospechosamente brillante.",
+  "base_value": 18,
+  "tags": ["meal", "junk_food", "weird", "custom"],
+  "effects": {"hunger": -35, "stress": -5}
+}

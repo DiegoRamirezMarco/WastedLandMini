@@ -1,0 +1,237 @@
+import functools
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from simulation.events.decision import DecisionDefinition, decision_definition_from_data
+from simulation.health.injury import InjuryDefinition, injury_definition_from_data
+from simulation.items.custom_content import load_custom_items
+from simulation.items.registry import ItemRegistry
+from simulation.residents.personality import Personality
+from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
+from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
+from world.interactable import InteractableDefinition, interactable_definition_from_data
+from world.map import TerrainDefinition
+from world.settlement import SettlementLayout, layout_from_data
+
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+CUSTOM_CONTENT_DIR = DATA_DIR.parent / "custom_content"
+DEFAULT_MAP_ID = "settlement"
+
+
+class PersonalityRegistry:
+    def __init__(self) -> None:
+        self._definitions: dict[str, Personality] = {}
+
+    def register(self, personality_id: str, definition: Personality) -> None:
+        if personality_id in self._definitions:
+            raise ValueError(f"Duplicate personality id: {personality_id}")
+        self._definitions[personality_id] = definition
+
+    def get(self, personality_id: str) -> Personality:
+        return self._definitions[personality_id]
+
+    def load_json_file(self, path: Path) -> None:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected object in {path}")
+        for personality_id, values in data.items():
+            if not isinstance(values, dict):
+                raise ValueError(f"Expected object for personality {personality_id} in {path}")
+            self.register(
+                str(personality_id),
+                Personality(
+                    aggression=float(values.get("aggression", 50.0)),
+                    empathy=float(values.get("empathy", 50.0)),
+                    impulsiveness=float(values.get("impulsiveness", 50.0)),
+                    sociability=float(values.get("sociability", 50.0)),
+                    greed=float(values.get("greed", 50.0)),
+                    courage=float(values.get("courage", 50.0)),
+                ),
+            )
+
+
+class JsonDefinitionRegistry:
+    def __init__(self) -> None:
+        self._definitions: dict[str, dict[str, Any]] = {}
+
+    def register(self, definition_id: str, definition: dict[str, Any]) -> None:
+        if definition_id in self._definitions:
+            raise ValueError(f"Duplicate definition id: {definition_id}")
+        self._definitions[definition_id] = definition
+
+    def get(self, definition_id: str) -> dict[str, Any]:
+        return self._definitions[definition_id]
+
+    def find(self, definition_id: str) -> dict[str, Any] | None:
+        return self._definitions.get(definition_id)
+
+    def load_json_file(self, path: Path) -> None:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected object in {path}")
+        for definition_id, definition in data.items():
+            if not isinstance(definition, dict):
+                raise ValueError(f"Expected object for {definition_id} in {path}")
+            self.register(str(definition_id), dict(definition))
+
+
+class InteractableRegistry:
+    def __init__(self) -> None:
+        self._definitions: dict[str, InteractableDefinition] = {}
+
+    def register(self, definition: InteractableDefinition) -> None:
+        if definition.kind in self._definitions:
+            raise ValueError(f"Duplicate interactable kind: {definition.kind}")
+        self._definitions[definition.kind] = definition
+
+    def get(self, kind: str) -> InteractableDefinition:
+        return self._definitions[kind]
+
+    def find(self, kind: str) -> InteractableDefinition | None:
+        return self._definitions.get(kind)
+
+    def kinds(self) -> list[str]:
+        return list(self._definitions)
+
+    def load_json_file(self, path: Path) -> None:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected object in {path}")
+        for kind, values in data.items():
+            if not isinstance(values, dict):
+                raise ValueError(f"Expected object for interactable {kind} in {path}")
+            self.register(interactable_definition_from_data(str(kind), values))
+
+
+@dataclass
+class BuiltInRegistries:
+    items: ItemRegistry = field(default_factory=ItemRegistry)
+    personalities: PersonalityRegistry = field(default_factory=PersonalityRegistry)
+    traits: JsonDefinitionRegistry = field(default_factory=JsonDefinitionRegistry)
+    interactables: InteractableRegistry = field(default_factory=InteractableRegistry)
+    terrain: dict[str, TerrainDefinition] = field(default_factory=dict)
+    maps: dict[str, SettlementLayout] = field(default_factory=dict)
+    interactions: dict[str, InteractionDefinition] = field(default_factory=dict)
+    decisions: dict[str, DecisionDefinition] = field(default_factory=dict)
+    jobs: dict[str, JobDefinition] = field(default_factory=dict)
+    injuries: dict[str, InjuryDefinition] = field(default_factory=dict)
+    event_settings: dict[str, Any] = field(default_factory=dict)
+    dialogue: dict[str, list[str]] = field(default_factory=dict)
+
+    @classmethod
+    def load(cls, data_dir: Path | str = DATA_DIR, custom_dir: Path | str | None = None) -> "BuiltInRegistries":
+        """Load definitions from `data_dir`, then items from the content packs in `custom_dir`.
+
+        Built-in data must be valid or loading fails. A bad content pack is only skipped.
+        """
+        root = Path(data_dir)
+        registries = cls()
+        registries.items.load_collection_json_file(root / "items.json")
+        if custom_dir is not None:
+            load_custom_items(registries.items, Path(custom_dir))
+        registries.personalities.load_json_file(root / "personalities.json")
+        registries.traits.load_json_file(root / "traits.json")
+        registries.interactables.load_json_file(root / "interactables.json")
+        registries.terrain = {
+            str(terrain_id): TerrainDefinition(
+                str(terrain_id), bool(values.get("walkable", True)), bool(values.get("opaque", False))
+            )
+            for terrain_id, values in _read_object(root / "terrain.json").items()
+        }
+        for path in sorted((root / "maps").glob("*.json")):
+            layout = layout_from_data(_read_object(path), str(path))
+            if layout.map_id in registries.maps:
+                raise ValueError(f"Duplicate map id: {layout.map_id}")
+            registries.maps[layout.map_id] = layout
+        registries.event_settings = _read_object(root / "events.json")
+        registries.dialogue = _read_object(root / "dialogue.json")
+        registries.interactions = {
+            str(interaction_id): interaction_definition_from_data(str(interaction_id), values)
+            for interaction_id, values in _read_object(root / "social.json").items()
+        }
+        registries.decisions = {
+            str(kind): decision_definition_from_data(str(kind), values)
+            for kind, values in _read_object(root / "decisions.json").items()
+        }
+        injuries_path = root / "injuries.json"
+        if injuries_path.is_file():
+            registries.injuries = {
+                str(kind): injury_definition_from_data(str(kind), values)
+                for kind, values in _read_object(injuries_path).items()
+            }
+        jobs_path = root / "jobs.json"
+        if jobs_path.is_file():
+            registries.jobs = {
+                str(job_id): job_definition_from_data(str(job_id), values)
+                for job_id, values in _read_object(jobs_path).items()
+            }
+        registries.validate()
+        return registries
+
+    def validate(self) -> None:
+        """Check that definitions only reference IDs that exist."""
+        for kind in self.interactables.kinds():
+            use = self.interactables.get(kind).use
+            if use is not None and use.item_id is not None and self.items.find(use.item_id) is None:
+                raise ValueError(f"Interactable {kind} uses unknown item: {use.item_id}")
+        for interaction_id, interaction in self.interactions.items():
+            if interaction.dialogue is not None and interaction.dialogue not in self.dialogue:
+                raise ValueError(f"Interaction {interaction_id} uses unknown dialogue: {interaction.dialogue}")
+        for job_id, job in self.jobs.items():
+            station = self.interactables.find(job.station)
+            if station is None:
+                raise ValueError(f"Job {job_id} is worked at unknown object kind: {job.station}")
+            rule = job.produces
+            if rule is None:
+                continue
+            if self.items.find(rule.item) is None:
+                raise ValueError(f"Job {job_id} produces unknown item: {rule.item}")
+            for label, kind in (("into", job.station if rule.into == INTO_STATION else rule.into), ("from", rule.source)):
+                holder = self.interactables.find(kind) if kind is not None else None
+                if kind is not None and (holder is None or not holder.container):
+                    raise ValueError(f"Job {job_id} '{label}' must name a container kind, not: {kind}")
+        for kind in self.interactables.kinds():
+            use = self.interactables.get(kind).use
+            if use is not None and use.staffed_by is not None and use.staffed_by not in self.jobs:
+                raise ValueError(f"Interactable {kind} is staffed by unknown job: {use.staffed_by}")
+            if use is not None and use.care_job is not None and use.care_job not in self.jobs:
+                raise ValueError(f"Interactable {kind} is cared for by unknown job: {use.care_job}")
+        for kind, decision in self.decisions.items():
+            for outcome in decision.outcomes.values():
+                if outcome.interaction is not None and outcome.interaction not in self.interactions:
+                    raise ValueError(f"Decision {kind} uses unknown interaction: {outcome.interaction}")
+        for map_id, layout in self.maps.items():
+            tile_map = layout.tile_map
+            unknown = {terrain for row in tile_map.tiles for terrain in row} - self.terrain.keys()
+            if unknown:
+                raise ValueError(f"Map {map_id} uses unknown terrain: {sorted(unknown)}")
+            for placed in layout.interactables.values():
+                definition = self.interactables.find(placed.kind)
+                if definition is None:
+                    raise ValueError(f"Map {map_id} places unknown interactable: {placed.kind}")
+                if not all(tile_map.in_bounds(tile) for tile in placed.footprint(definition)):
+                    raise ValueError(f"Map {map_id} places {placed.object_id} outside the map")
+            for entry in [*layout.stock, *layout.supplies]:
+                # Unknown items are tolerated here: a map may stock things from an optional pack.
+                placed = layout.interactables.get(entry.container)
+                definition = self.interactables.find(placed.kind) if placed is not None else None
+                if definition is None or not definition.container:
+                    raise ValueError(f"Map {map_id} puts items in {entry.container}, which is not a container")
+            for spawn in layout.spawns:
+                if not tile_map.in_bounds(spawn) or not self.terrain[tile_map.terrain_at(spawn)].walkable:
+                    raise ValueError(f"Map {map_id} has a spawn on a blocked tile: {spawn}")
+
+
+def _read_object(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"Expected object in {path}")
+    return data
+
+
+@functools.cache
+def builtin_registries() -> BuiltInRegistries:
+    """Built-in definitions, loaded once. They are read-only, so worlds can share them."""
+    return BuiltInRegistries.load(custom_dir=CUSTOM_CONTENT_DIR)

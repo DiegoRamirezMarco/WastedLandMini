@@ -1,0 +1,4 @@
+{
+  "balanced": {"aggression": 50, "empathy": 50, "impulsiveness": 50, "sociability": 50},
+  "hotheaded": {"aggression": 78, "empathy": 35, "impulsiveness": 82, "sociability": 55}
+}

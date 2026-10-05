@@ -1,0 +1,4 @@
+{
+  "music_lover": {"tags": ["music"], "item_value_multiplier": 1.5},
+  "sweet_tooth": {"tags": ["sweet"], "food_reaction_bonus": 15}
+}

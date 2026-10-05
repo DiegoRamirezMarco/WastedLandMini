@@ -1,0 +1,83 @@
+{
+  "farmer": {
+    "name": "Huerto",
+    "station": "crop_bed",
+    "shifts": [
+      [8, 13],
+      [15, 18]
+    ],
+    "text": "se pone a trabajar en el huerto",
+    "interruptible": true,
+    "per_minute": {
+      "tiredness": 0.02,
+      "social": -0.03
+    },
+    "produces": {
+      "item": "vegetables",
+      "every_minutes": 25,
+      "into": "pantry",
+      "max_stock": 40
+    }
+  },
+  "cook": {
+    "name": "Cocina",
+    "station": "cooking_pot",
+    "shifts": [
+      [11, 14],
+      [18, 21]
+    ],
+    "text": "se pone a cocinar",
+    "interruptible": true,
+    "produces": {
+      "item": "stew",
+      "every_minutes": 15,
+      "into": "station",
+      "max_stock": 8,
+      "from": "pantry",
+      "from_category": "food",
+      "skip_tag": "cooked"
+    },
+    "per_minute": {
+      "social": -0.03
+    }
+  },
+  "bartender": {
+    "name": "Cantina",
+    "station": "bar",
+    "shifts": [
+      [18, 23]
+    ],
+    "text": "abre la cantina",
+    "interruptible": true,
+    "per_minute": {
+      "social": -0.08
+    }
+  },
+  "guard": {
+    "name": "Guardia",
+    "station": "guard_post",
+    "shifts": [
+      [9, 13],
+      [17, 21]
+    ],
+    "text": "empieza su turno de guardia",
+    "interruptible": true,
+    "sight_bonus": 8,
+    "per_minute": {
+      "social": -0.04
+    }
+  },
+  "medic": {
+    "name": "Enfermería",
+    "station": "medicine_cabinet",
+    "shifts": [
+      [9, 13],
+      [16, 20]
+    ],
+    "text": "abre la enfermería",
+    "interruptible": true,
+    "per_minute": {
+      "social": -0.03
+    }
+  }
+}

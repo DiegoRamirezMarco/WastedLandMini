@@ -1,0 +1,38 @@
+GIMP Palette
+Name: Wasteland Minis
+Columns: 8
+#
+ 26  22  20	ink
+ 46  42  43	shadow
+ 74  69  69	iron
+111 106 100	stone
+163 156 143	dust
+217 210 192	bone
+242 236 220	paper
+ 59  36  32	rust_dark
+107  58  42	rust
+163  90  52	copper
+209 139  79	sand
+ 94  78  64	earth_dark
+122 102  82	earth
+ 92  58  46	skin_1
+143  90  66	skin_2
+198 138  99	skin_3
+232 185 143	skin_4
+ 42  51  38	moss_dark
+ 70  85  58	moss
+111 128  72	olive
+163 176 106	lichen
+ 31  47  58	deep
+ 50  80  94	steel
+ 79 127 138	teal
+140 188 184	mist
+ 90  30  34	blood_dark
+163  50  47	blood
+217  90  69	ember
+176 122  30	ochre
+227 178  60	lamp
+245 224 138	glow
+ 58  42  68	dusk
+110  74 122	plum
+201 135 159	rose

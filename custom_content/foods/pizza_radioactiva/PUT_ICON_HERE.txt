@@ -1,0 +1,1 @@
+Replace this file with icon.png. Recommended: transparent PNG, square, 128x128 or larger.

@@ -1,0 +1,89 @@
+[
+  {
+    "id": "canned_beans",
+    "name": "judías en conserva",
+    "article": "unas",
+    "category": "food",
+    "base_value": 10,
+    "tags": [
+      "food",
+      "canned"
+    ],
+    "effects": {
+      "hunger": -25
+    }
+  },
+  {
+    "id": "old_radio",
+    "name": "radio vieja",
+    "article": "una",
+    "category": "tool",
+    "base_value": 35,
+    "tags": [
+      "radio",
+      "communication",
+      "music"
+    ],
+    "effects": {
+      "stress": -8
+    }
+  },
+  {
+    "id": "vegetables",
+    "name": "verduras del huerto",
+    "article": "unas",
+    "category": "food",
+    "base_value": 8,
+    "tags": [
+      "food",
+      "fresh"
+    ],
+    "effects": {
+      "hunger": -20
+    }
+  },
+  {
+    "id": "stew",
+    "name": "guiso caliente",
+    "article": "un",
+    "category": "food",
+    "base_value": 16,
+    "tags": [
+      "food",
+      "cooked",
+      "meal"
+    ],
+    "effects": {
+      "hunger": -45,
+      "stress": -4
+    }
+  },
+  {
+    "id": "baton",
+    "name": "porra",
+    "article": "una",
+    "category": "tool",
+    "base_value": 15,
+    "tags": [
+      "weapon",
+      "blunt"
+    ],
+    "properties": {
+      "damage": 1.4
+    }
+  },
+  {
+    "id": "rusty_knife",
+    "name": "cuchillo oxidado",
+    "article": "un",
+    "category": "tool",
+    "base_value": 20,
+    "tags": [
+      "weapon",
+      "blade"
+    ],
+    "properties": {
+      "damage": 1.8
+    }
+  }
+]

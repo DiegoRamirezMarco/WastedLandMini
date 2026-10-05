@@ -1,0 +1,91 @@
+"""Small HUD icons shown over residents."""
+
+import pygame
+
+from graphics.icons import ICON_SIZE, icon_path
+from tools.art.grid import paint
+
+LEGEND = {
+    "o": "ink", "p": "paper", "k": "ink", "e": "ember", "y": "lamp", "g": "glow", "m": "mist", "d": "dust", "h": "copper", "b": "blood",
+}
+
+ICONS = {
+    "chat": [
+        ".oooooo.",
+        "oppppppo",
+        "opkkkkpo",
+        "oppppppo",
+        "opkkkppo",
+        ".oooooo.",
+        "..oo....",
+        "..o.....",
+    ],
+    "argument": [
+        ".oooooo.",
+        "oeeeeeeo",
+        "oekeekeo",
+        "oeekkeeo",
+        "oekeekeo",
+        ".oooooo.",
+        "..oo....",
+        "..o.....",
+    ],
+    "alert": [
+        "..oooo..",
+        ".oyyyyo.",
+        "oyykkyyo",
+        "oyykkyyo",
+        "oyykkyyo",
+        "oyyyyyyo",
+        ".oykkyo.",
+        "..oooo..",
+    ],
+    "selected": [
+        "........",
+        "oooooooo",
+        "oggggggo",
+        ".oggggo.",
+        "..oggo..",
+        "...oo...",
+        "........",
+        "........",
+    ],
+    "work": [
+        "..oooo..",
+        ".oddddo.",
+        ".oddddo.",
+        "..ohho..",
+        "..ohho..",
+        "..ohho..",
+        "..ohho..",
+        "...oo...",
+    ],
+    "hurt": [
+        ".oooooo.",
+        "oppbbppo",
+        "oppbbppo",
+        "obbbbbbo",
+        "obbbbbbo",
+        "oppbbppo",
+        "oppbbppo",
+        ".oooooo.",
+    ],
+    "sleep": [
+        "....mmmm",
+        "......m.",
+        ".....m..",
+        "....mmmm",
+        "mmm.....",
+        ".m......",
+        "mmm.....",
+        "........",
+    ],
+}
+
+
+def build() -> dict[str, pygame.Surface]:
+    art = {icon_path(name): paint(rows, LEGEND) for name, rows in ICONS.items()}
+    for path, surface in art.items():
+        if surface.get_size() != ICON_SIZE:
+            raise ValueError(f"{path} is {surface.get_size()}, expected {ICON_SIZE}")
+    return art

@@ -1,0 +1,66 @@
+{
+  "importance": {
+    "ambient_max": 29,
+    "noteworthy_max": 49,
+    "intervention_candidate_max": 69,
+    "major_max": 89,
+    "critical_max": 100
+  },
+  "perception": {
+    "sight_range": 8
+  },
+  "reactions": {
+    "argument_started": {
+      "blame": {
+        "resentment": 2.0,
+        "trust": -1.0
+      },
+      "needs": {
+        "stress": 2.0
+      }
+    },
+    "theft_committed": {
+      "blame_target": "actor",
+      "blame": {
+        "resentment": 6.0,
+        "trust": -8.0
+      },
+      "needs": {
+        "stress": 3.0
+      },
+      "victim": {
+        "resentment": 25.0,
+        "trust": -25.0
+      },
+      "victim_needs": {
+        "stress": 10.0
+      },
+      "secret": true
+    },
+    "fight_started": {
+      "blame": {
+        "resentment": 3.0,
+        "trust": -3.0,
+        "fear": 4.0
+      },
+      "needs": {
+        "stress": 6.0
+      }
+    },
+    "death": {
+      "blame_target": "actor",
+      "blame": {
+        "resentment": 30.0,
+        "trust": -30.0,
+        "fear": 20.0
+      },
+      "needs": {
+        "stress": 15.0
+      },
+      "mourn": {
+        "stress": 10.0,
+        "per_affection": 0.25
+      }
+    }
+  }
+}

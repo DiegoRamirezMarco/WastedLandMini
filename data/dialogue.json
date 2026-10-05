@@ -1,0 +1,31 @@
+{
+  "hungry": [
+    "Tengo hambre.",
+    "¿Queda algo de comer?"
+  ],
+  "angry": [
+    "Necesito hablar contigo.",
+    "Estoy que reviento.",
+    "Ya está bien.",
+    "A mí no me hables así.",
+    "Siempre igual contigo."
+  ],
+  "chat": [
+    "¿Qué tal el día?",
+    "Anoche hizo un frío de mil demonios.",
+    "¿Has visto qué cielo?",
+    "Hoy se está bien aquí.",
+    "¿Has dormido algo?",
+    "Echo de menos el café."
+  ],
+  "reconcile": [
+    "Tenemos que hablar.",
+    "No quiero estar a malas contigo.",
+    "Vamos a arreglar esto."
+  ],
+  "fight": [
+    "¡Te vas a enterar!",
+    "¡Ven aquí si te atreves!",
+    "¡Se acabó!"
+  ]
+}

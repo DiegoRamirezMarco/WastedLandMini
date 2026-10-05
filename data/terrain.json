@@ -1,0 +1,31 @@
+{
+  "dirt": {
+    "walkable": true
+  },
+  "grass": {
+    "walkable": true
+  },
+  "floor_wood": {
+    "walkable": true
+  },
+  "floor_concrete": {
+    "walkable": true
+  },
+  "door": {
+    "walkable": true,
+    "opaque": true
+  },
+  "gate": {
+    "walkable": true
+  },
+  "wall": {
+    "walkable": false,
+    "opaque": true
+  },
+  "fence": {
+    "walkable": false
+  },
+  "soil": {
+    "walkable": true
+  }
+}

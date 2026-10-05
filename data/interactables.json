@@ -1,0 +1,142 @@
+{
+  "bed": {
+    "name": "cama",
+    "article": "una",
+    "width": 1,
+    "height": 2,
+    "use": {
+      "action": "sleep",
+      "text": "se echa a dormir",
+      "minutes": 600,
+      "per_minute": {
+        "tiredness": -0.21,
+        "stress": -0.05
+      },
+      "position": "on",
+      "preferred_hours": [22, 7],
+      "unaware": true,
+      "until": "tiredness"
+    }
+  },
+  "pantry": {
+    "name": "despensa",
+    "article": "una",
+    "use": {
+      "action": "eat",
+      "text": "come {item}",
+      "minutes": 20,
+      "consumes": "food",
+      "capacity": 2
+    },
+    "container": true
+  },
+  "campfire": {
+    "name": "hoguera",
+    "article": "una",
+    "use": {
+      "action": "relax",
+      "text": "se sienta junto a la hoguera",
+      "minutes": 60,
+      "per_minute": {
+        "social": -0.1,
+        "stress": -0.15
+      },
+      "capacity": 4,
+      "interruptible": true
+    }
+  },
+  "table": {
+    "name": "mesa",
+    "article": "una",
+    "width": 2
+  },
+  "stool": {
+    "name": "taburete",
+    "article": "un",
+    "blocks": false
+  },
+  "crate": {
+    "name": "caja",
+    "article": "una",
+    "container": true
+  },
+  "cooking_pot": {
+    "name": "olla",
+    "article": "una",
+    "container": true,
+    "use": {
+      "action": "eat",
+      "text": "come {item}",
+      "minutes": 20,
+      "consumes": "food",
+      "capacity": 3
+    }
+  },
+  "bar": {
+    "name": "barra",
+    "article": "una",
+    "width": 3,
+    "use": {
+      "action": "drink",
+      "text": "toma algo en la cantina",
+      "minutes": 45,
+      "per_minute": {
+        "stress": -0.3,
+        "social": -0.3
+      },
+      "capacity": 4,
+      "interruptible": true,
+      "staffed_by": "bartender",
+      "preferred_hours": [18, 23]
+    }
+  },
+  "crop_bed": {
+    "name": "bancal",
+    "article": "un"
+  },
+  "guard_post": {
+    "name": "puesto de guardia",
+    "article": "un"
+  },
+  "workbench": {
+    "name": "banco de trabajo",
+    "article": "un",
+    "width": 2
+  },
+  "barrel": {
+    "name": "bidón",
+    "article": "un"
+  },
+  "scrap_pile": {
+    "name": "montón de chatarra",
+    "article": "un",
+    "width": 2
+  },
+  "water_tank": {
+    "name": "depósito de agua",
+    "article": "un",
+    "width": 2,
+    "height": 2
+  },
+  "clinic_bed": {
+    "name": "camilla",
+    "article": "una",
+    "height": 2,
+    "use": {
+      "action": "rest",
+      "text": "se tumba en la enfermería",
+      "minutes": 360,
+      "position": "on",
+      "heals": true,
+      "care_job": "medic"
+    }
+  },
+  "medicine_cabinet": {
+    "name": "botiquín",
+    "article": "un"
+  },
+  "grave": {
+    "name": "tumba",
+    "article": "una"
+  }
+}

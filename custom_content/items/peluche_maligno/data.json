@@ -1,0 +1,10 @@
+{
+  "id": "peluche_maligno",
+  "name": "peluche maligno",
+  "article": "un",
+  "category": "gift",
+  "description": "Adorable, salvo por la mirada.",
+  "base_value": 25,
+  "tags": ["toy", "cute", "creepy", "custom"],
+  "effects": {"stress": -4}
+}

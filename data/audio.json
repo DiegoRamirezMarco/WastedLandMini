@@ -1,0 +1,22 @@
+{
+  "events": {
+    "crisis_opened": "alert",
+    "crisis_resolved": "resolve",
+    "argument_started": "argument",
+    "chat_started": "chat",
+    "heart_to_heart_started": "chat",
+    "rumor_told": "whisper",
+    "gift_given": "gift",
+    "trade_made": "gift",
+    "item_returned": "gift",
+    "theft_committed": "theft",
+    "theft_noticed": "missing",
+    "no_food": "missing",
+    "supplies_arrived": "supplies",
+    "fight_brewing": "alert",
+    "fight_started": "theft",
+    "injured": "missing",
+    "death": "missing",
+    "work_started": "click"
+  }
+}

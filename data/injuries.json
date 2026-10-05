@@ -1,0 +1,17 @@
+{
+  "bruise": {
+    "name": "moratones",
+    "heal_per_day": 12,
+    "treated_per_day": 30
+  },
+  "cut": {
+    "name": "un corte",
+    "heal_per_day": 6,
+    "treated_per_day": 25
+  },
+  "fracture": {
+    "name": "una fractura",
+    "heal_per_day": 3,
+    "treated_per_day": 12
+  }
+}

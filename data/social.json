@@ -1,0 +1,93 @@
+{
+  "chat": {
+    "hostile": false,
+    "minutes": [10, 30],
+    "importance": 10,
+    "per_minute": {
+      "social": -1.0,
+      "stress": -0.1
+    },
+    "relationship": {
+      "affection": 1.0,
+      "trust": 0.4,
+      "resentment": -0.5
+    },
+    "text": "{a} y {b} charlan",
+    "dialogue": "chat",
+    "memory": "Charlé un rato con {other}.",
+    "emotional_value": 0.3,
+    "tags": [
+      "chat"
+    ]
+  },
+  "argument": {
+    "hostile": true,
+    "minutes": [5, 15],
+    "importance": 35,
+    "tension_importance": 30,
+    "per_minute": {
+      "social": -0.3,
+      "stress": 0.8
+    },
+    "relationship": {
+      "resentment": 5.0,
+      "fear": 2.0,
+      "affection": -3.0,
+      "trust": -1.5
+    },
+    "text": "{a} discute con {b}",
+    "dialogue": "angry",
+    "memory": "Discutí con {other}.",
+    "emotional_value": -0.6,
+    "tags": [
+      "argument"
+    ],
+    "fact": "{a} discutió con {b}"
+  },
+  "heart_to_heart": {
+    "hostile": false,
+    "minutes": [15, 30],
+    "importance": 30,
+    "per_minute": {
+      "social": -1.0,
+      "stress": -0.3
+    },
+    "relationship": {
+      "resentment": -8.0,
+      "trust": 2.0,
+      "affection": 1.5
+    },
+    "text": "{a} habla las cosas con {b}",
+    "dialogue": "reconcile",
+    "memory": "Hablé las cosas con {other}.",
+    "emotional_value": 0.5,
+    "tags": [
+      "reconcile"
+    ],
+    "returns_stolen": true
+  },
+  "fight": {
+    "hostile": true,
+    "minutes": [3, 8],
+    "importance": 60,
+    "tension_importance": 20,
+    "per_minute": {
+      "stress": 1.5
+    },
+    "relationship": {
+      "resentment": 8.0,
+      "fear": 10.0,
+      "affection": -8.0,
+      "trust": -6.0
+    },
+    "text": "{a} se pelea con {b}",
+    "dialogue": "fight",
+    "memory": "Me peleé con {other}.",
+    "emotional_value": -0.9,
+    "tags": [
+      "fight"
+    ],
+    "fact": "{a} se peleó con {b}",
+    "damage": [8, 18]
+  }
+}
