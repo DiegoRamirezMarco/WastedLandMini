@@ -1556,6 +1556,8 @@ class GameShellTests(unittest.TestCase):
         self._stand_together("raul", "tomas")
         raul = world.residents["raul"]
         self.assertEqual(view._clip_of(raul), "idle")
+        raul.activity = Activity("eat", "pantry_1", minutes_left=10, using=True, item_id="canned_beans")
+        self.assertEqual(view._clip_of(raul), "eat")
         raul.activity = Activity("work", using=True)
         self.assertEqual(view._clip_of(raul), "work")
         raul.activity = Activity("fight", partner_id="tomas", using=True)

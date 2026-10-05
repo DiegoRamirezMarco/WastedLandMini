@@ -8,6 +8,7 @@ import pygame
 
 from save.save_manager import SaveManager
 from scenes.hud import SAVE_INTENT, URBANISM_INTENT
+from settings import SCALE
 from simulation.commands import (
     MoveBuildingCommand,
     MoveObjectCommand,
@@ -69,6 +70,38 @@ class UrbanismDomainTests(unittest.TestCase):
         self.assertTrue(removed.ok)
         self.assertNotIn(room.room_id, self.world.rooms)
 
+    def test_a_move_is_judged_without_touching_the_settlement(self) -> None:
+        start = self._building_spot("shack")
+        room_id = self.world.apply_command(PlaceBuildingCommand("shack", start)).entity_id
+        terrain = [list(row) for row in self.world.tile_map.tiles]
+        underlays = {key: dict(value) for key, value in self.world.urbanism.underlays.items()}
+
+        verdicts = {
+            (x, y): self.world.urbanism.move_building_error(self.world, room_id, (x, y))
+            for y in range(self.world.tile_map.height)
+            for x in range(self.world.tile_map.width)
+        }
+        self.assertEqual(self.world.tile_map.tiles, terrain)
+        self.assertEqual(self.world.urbanism.underlays, underlays)
+
+        # One step aside overlaps its own walls, which must not count as an obstacle.
+        self.assertIsNone(verdicts[start])
+        beside = next(
+            tile
+            for tile, error in verdicts.items()
+            if error is None and abs(tile[0] - start[0]) + abs(tile[1] - start[1]) == 1
+        )
+        refused = next(tile for tile, error in verdicts.items() if error is not None)
+        rejected = self.world.apply_command(MoveBuildingCommand(room_id, refused))
+        self.assertFalse(rejected.ok)
+        self.assertEqual(rejected.message, verdicts[refused])
+        self.assertEqual(self.world.tile_map.tiles, terrain)
+        self.assertTrue(self.world.apply_command(MoveBuildingCommand(room_id, beside)).ok)
+
+        crate = self.world.apply_command(PlaceObjectCommand("crate", (1, 1))).entity_id
+        self.assertIsNone(self.world.urbanism.move_object_error(self.world, crate, (2, 1)))
+        self.assertEqual((self.world.interactables[crate].x, self.world.interactables[crate].y), (1, 1))
+
     def test_edited_layout_round_trips_in_the_save(self) -> None:
         building = self.world.apply_command(PlaceBuildingCommand("shack", self._building_spot("shack")))
         furniture = self.world.apply_command(PlaceObjectCommand("stool", (1, 1)))
@@ -115,6 +148,81 @@ class UrbanismShellTests(unittest.TestCase):
             os.environ.pop(variable, None)
         else:
             os.environ[variable] = previous
+
+    def _editor(self):
+        self.game.global_view._apply(URBANISM_INTENT)
+        self.game.sync_scenes()
+        return self.game.active_scene
+
+    @staticmethod
+    def _window(position: tuple[int, int]) -> tuple[int, int]:
+        return (position[0] * SCALE, position[1] * SCALE)
+
+    def _tile_position(self, editor, tile: tuple[int, int]) -> tuple[int, int]:
+        return self._window(
+            (
+                editor.map_rect.x + tile[0] * editor.tile_px + editor.tile_px // 2,
+                editor.map_rect.y + tile[1] * editor.tile_px + editor.tile_px // 2,
+            )
+        )
+
+    def _drag(self, editor, start: tuple[int, int], end: tuple[int, int]) -> None:
+        editor.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start, button=1))
+        editor.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, 0), buttons=(1, 0, 0)))
+        editor.render()
+        editor.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=end, button=1))
+
+    def _free_tiles(self, kind: str) -> list[tuple[int, int]]:
+        world = self.game.world
+        return [
+            (x, y)
+            for y in range(world.tile_map.height)
+            for x in range(world.tile_map.width)
+            if world.urbanism.object_error(world, kind, (x, y)) is None
+        ]
+
+    def test_dragging_out_of_the_catalogue_places_and_dragging_on_the_map_moves(self) -> None:
+        editor = self._editor()
+        world = self.game.world
+        furniture = next(button for button in editor.buttons if button.intent == ("category", "furniture"))
+        editor.handle_event(
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=self._window(furniture.rect.center), button=1)
+        )
+        editor.handle_event(
+            pygame.event.Event(pygame.MOUSEBUTTONUP, pos=self._window(furniture.rect.center), button=1)
+        )
+        entry = next(button for button in editor.buttons if button.intent == ("catalog", "stool"))
+        first, second = self._free_tiles("stool")[:2]
+        before = set(world.interactables)
+
+        self._drag(editor, self._window(entry.rect.center), self._tile_position(editor, first))
+        (stool_id,) = set(world.interactables) - before
+        stool = world.interactables[stool_id]
+        self.assertEqual((stool.kind, stool.x, stool.y), ("stool", *first))
+        self.assertEqual(editor.selection, ("object", stool_id))
+
+        self._drag(editor, self._tile_position(editor, first), self._tile_position(editor, second))
+        self.assertEqual((stool.x, stool.y), second)
+        self.assertEqual(set(world.interactables) - before, {stool_id})
+
+    def test_a_click_only_selects_and_a_drop_off_the_map_changes_nothing(self) -> None:
+        editor = self._editor()
+        world = self.game.world
+        stool_id = world.apply_command(PlaceObjectCommand("stool", self._free_tiles("stool")[0])).entity_id
+        stool = world.interactables[stool_id]
+        home = (stool.x, stool.y)
+        layout = {key: (placed.x, placed.y) for key, placed in world.interactables.items()}
+        rooms = set(world.rooms)
+
+        self._drag(editor, self._tile_position(editor, home), self._tile_position(editor, home))
+        self.assertEqual(editor.selection, ("object", stool_id))
+        self._drag(editor, self._tile_position(editor, home), self._window(editor.close_button.rect.center))
+        self.assertFalse(editor.closed)
+        entry = next(button for button in editor.buttons if button.intent[0] == "catalog")
+        self._drag(editor, self._window(entry.rect.center), self._window((4, 4)))
+
+        self.assertEqual({key: (placed.x, placed.y) for key, placed in world.interactables.items()}, layout)
+        self.assertEqual(set(world.rooms), rooms)
 
     def test_visible_buttons_save_and_open_urbanism_while_time_stands_still(self) -> None:
         view = self.game.global_view

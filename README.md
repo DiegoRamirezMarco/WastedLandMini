@@ -114,9 +114,12 @@ python -m simulation.headless --days 7 --seed 7
 - `Edificios` in the menu, or `F4`: draw a roofed place in four aligned parts: its empty
   interior, walls, roof and door. The preview exchanges the roof for the inside; `Guardar` writes
   the four PNGs under `illustrations/buildings/`. `Esc` goes back without saving
-- `Urbanismo` in the menu, or `U`: add buildings, furniture and scenery. Select anything already
-  placed to move it, remove it after confirmation, or open a building in the art editor. Time
-  stops while the editor is open and the changed layout is part of the save
+- `Urbanismo` in the menu, or `U`: add buildings, furniture and scenery by dragging them out of
+  the catalogue onto the map, and move anything already placed by dragging it. The outline under
+  the pointer is green where it fits and red where it does not; a click on the map sets down
+  another of the last thing taken, and a right click puts it away. Click something placed to
+  remove it after confirmation or to open a building in the art editor. Time stops while the
+  editor is open and the changed layout is part of the save
 - `Guardar` in the menu, or `F5`, saves the game to `saves/quicksave.json`; `F9` loads it
 - `M`: sound on / off, voices and all
 - `Esc`: quit

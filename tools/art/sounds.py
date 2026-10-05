@@ -21,6 +21,7 @@ SOUNDS: dict[str, list[Note]] = {
     "missing": [(440, 120, "triangle"), (0, 40, "triangle"), (370, 220, "triangle")],
     "supplies": [(392, 70, "square"), (523, 110, "square")],
     "click": [(1047, 25, "square")],
+    "eat": [(90, 65, "noise"), (0, 45, "noise"), (75, 75, "noise"), (0, 35, "noise"), (110, 80, "noise")],
 }
 
 
@@ -42,7 +43,10 @@ def _note(frequency: float, milliseconds: int, shape: str) -> list[int]:
         phase = (index * frequency / SAMPLE_RATE) % 1.0
         # Fade out over the note, with a short fade in, so notes do not click.
         envelope = min(1.0, index / 40.0) * (1.0 - index / count)
-        samples.append(int(32767 * AMPLITUDE * envelope * _wave(shape, phase)))
+        # A deterministic rough waveform makes a short dry crunch without adding a recorded asset.
+        noise = (((index * 1103515245 + 12345) >> 16) & 32767) / 16384.0 - 1.0
+        sample = noise if shape == "noise" else _wave(shape, phase)
+        samples.append(int(32767 * AMPLITUDE * envelope * sample))
     return samples
 
 

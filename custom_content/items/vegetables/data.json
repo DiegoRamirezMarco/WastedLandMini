@@ -1,0 +1,16 @@
+{
+  "id": "vegetables",
+  "name": "verduras del huerto",
+  "article": "unas",
+  "category": "food",
+  "base_value": 8,
+  "description": "",
+  "tags": [
+    "food",
+    "fresh"
+  ],
+  "effects": {
+    "hunger": -20.0
+  },
+  "properties": {}
+}

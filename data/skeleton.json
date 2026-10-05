@@ -82,6 +82,10 @@
     "foot_right": {"ref": "shin_right", "side": [30, 150], "front": [-40, 40]}
   },
   "follows": {"hand_left": "forearm_left", "hand_right": "forearm_right"},
+  "anchors": {
+    "held_item": "fingertip_right",
+    "mouth": "head"
+  },
   "views": {
     "front": {
       "rest": {
@@ -265,6 +269,20 @@
     "carry": {
       "front": [{"forearm_left": [-25, 0.5], "forearm_right": [25, 0.5]}],
       "side": [{"upper_arm_left": 30, "forearm_left": 95, "upper_arm_right": 30, "forearm_right": 95}]
+    },
+    "eat": {
+      "front": [
+        {"upper_arm_right": 10, "forearm_right": 55},
+        {"upper_arm_right": 30, "forearm_right": 145},
+        {"upper_arm_right": 34, "forearm_right": 150},
+        {"upper_arm_right": 10, "forearm_right": 55}
+      ],
+      "side": [
+        {"upper_arm_right": 25, "forearm_right": 65},
+        {"upper_arm_right": 72, "forearm_right": 132},
+        {"upper_arm_right": 76, "forearm_right": 138},
+        {"upper_arm_right": 25, "forearm_right": 65}
+      ]
     }
   },
   "doll": {

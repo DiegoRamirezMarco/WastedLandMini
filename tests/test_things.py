@@ -283,6 +283,9 @@ class FoodTests(unittest.TestCase):
             if self.marta.current_action == "eat":
                 break
         self.assertEqual(self.pantry.count("canned_beans"), before - 1)
+        meal = next(event for event in reversed(self.world.events.pending) if event.event_type == "meal_started")
+        self.assertEqual(meal.participants, ["marta"])
+        self.assertEqual(meal.data, {"action": "eat", "item_id": "canned_beans"})
         hunger = self.marta.needs.hunger
         self.world.step(20)
         self.assertLess(self.marta.needs.hunger, hunger - 20)

@@ -154,11 +154,12 @@ class ActivitySystem:
         room = world.room_at(resident.tile)
         world.emit_event(
             DomainEvent(
-                event_type="activity_started",
+                event_type="meal_started" if activity.action == "eat" else "activity_started",
                 importance=ROUTINE_EVENT_IMPORTANCE,
                 text=f"{resident.name} {text}",
                 participants=[resident.resident_id],
                 location_id=room.room_id if room is not None else None,
+                data={"action": activity.action, "item_id": activity.item_id},
             )
         )
         return True

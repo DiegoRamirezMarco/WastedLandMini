@@ -87,6 +87,25 @@ class PlanTests(unittest.TestCase):
         self.assertNotEqual(plain["hand_right"], carrying["hand_right"])
         self.assertEqual(plain["foot_right"], carrying["foot_right"])
 
+    def test_eating_lifts_the_held_item_anchor_towards_the_mouth(self) -> None:
+        low = self.plan.pose("right", "eat", 0.0)
+        bite = self.plan.pose("right", "eat", 0.5)
+        mouth = self.plan.anchor("mouth", "right", bite)
+        low_hand = self.plan.anchor("held_item", "right", low)
+        bite_hand = self.plan.anchor("held_item", "right", bite)
+        self.assertIsNotNone(mouth)
+        self.assertIsNotNone(low_hand)
+        self.assertIsNotNone(bite_hand)
+        self.assertLess(math.dist(bite_hand, mouth), math.dist(low_hand, mouth))
+
+    def test_semantic_anchors_follow_the_near_hand_when_the_body_is_mirrored(self) -> None:
+        right = self.plan.pose("right", "eat", 0.5)
+        left = self.plan.pose("left", "eat", 0.5)
+        right_hand = self.plan.anchor("held_item", "right", right)
+        left_hand = self.plan.anchor("held_item", "left", left)
+        self.assertAlmostEqual(left_hand[0], -right_hand[0])
+        self.assertAlmostEqual(left_hand[1], right_hand[1])
+
     def test_an_unknown_clip_stands_still_and_bad_data_is_refused(self) -> None:
         self.assertEqual(self.plan.pose("down", "moonwalk", 0.4), self.plan.pose("down"))
         data = {

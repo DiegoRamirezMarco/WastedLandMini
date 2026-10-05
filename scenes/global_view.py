@@ -70,7 +70,18 @@ WORK_CLIP = "work"
 ARGUE_CLIP = "argue"
 FIGHT_CLIP = "fight"
 CARRY_CLIP = "carry"
-CLIP_RATES = {WORK_CLIP: 1.0, ARGUE_CLIP: 1.2, FIGHT_CLIP: 1.5}
+EAT_CLIP = "eat"
+CLIP_RATES = {WORK_CLIP: 1.0, ARGUE_CLIP: 1.2, FIGHT_CLIP: 1.5, EAT_CLIP: 1.15}
+# The semantic anchors live in the body plan; these only place the mouth a little below and in
+# front of the head joint for each view.
+MOUTH_OFFSETS = {
+    "down": (0, 2), "up": (0, 1), "right": (2, 2), "left": (-2, 2),
+    "doll_right": (2, 2), "doll_left": (-2, 2),
+}
+# A portion of each eating cycle in which crumbs spring away from the bite.
+BITE_START, BITE_END = 0.28, 0.62
+CRUMB_OFFSETS = ((-3, -2), (2, -3), (4, 0), (-2, 2))
+CRUMB_COLORS = ("sand", "glow", "lichen", "paper")
 # Rows of a head left visible when a resident lies in a bed: hair and eyes above the blanket.
 LYING_HEAD_ROWS = 10
 # Where the corner of that head goes on the bed, so that it rests on the pillow.
@@ -1000,6 +1011,12 @@ class GlobalView:
                 self._blit(self.icons.small(load), (body.left + dx, body.top + dy))
             hitbox = self._canvas_rect(body)
             self.hitboxes[resident.resident_id] = hitbox
+            meal = self._meal_in_hand(resident)
+            if meal is not None and not character.physical:
+                pose, phase = character.pose(), turn % 1.0
+                self._overlays.append(
+                    lambda: self._draw_meal(meal, facing, pose, phase)
+                )
             self._overlays.append(lambda: self._draw_overhead(resident, hitbox.midtop, with_name=True))
 
         return (top + TILE_SIZE, 1, draw)
@@ -1056,7 +1073,45 @@ class GlobalView:
             if interaction is None or not interaction.hostile:
                 return IDLE_CLIP
             return FIGHT_CLIP if interaction.damage is not None else ARGUE_CLIP
+        if activity.action == EAT_CLIP:
+            return EAT_CLIP
         return WORK_CLIP if activity.action == WORK_ACTION else IDLE_CLIP
+
+    def _meal_in_hand(self, resident: Resident) -> str | None:
+        """Definition ID of the food in a resident's hand during an active meal."""
+        activity = resident.activity
+        if activity is None or activity.action != EAT_CLIP:
+            return None
+        return self._item_in_hand(resident)
+
+    def _draw_meal(self, item_id: str, facing: str, pose: dict[str, tuple[float, float]], phase: float) -> None:
+        """Draw food at the body-plan hand anchor and crumbs at its mouth during a bite."""
+        plan = self.bodies.plan
+        hand = plan.anchor("held_item", facing, pose)
+        mouth = plan.anchor("mouth", facing, pose)
+        if hand is None or mouth is None:
+            return
+        mouth_offset = MOUTH_OFFSETS.get(facing, (0, 2))
+        mouth = (mouth[0] + mouth_offset[0], mouth[1] + mouth_offset[1])
+        hand_on_canvas = self._canvas_point(*hand)
+        size = max(3, self._scaled(self.icons.small(item_id).get_width()))
+        icon = self.icons.small(item_id)
+        if icon.get_size() != (size, size):
+            icon = pygame.transform.scale(icon, (size, size))
+        self.canvas.blit(icon, icon.get_rect(center=hand_on_canvas))
+
+        if not BITE_START <= phase <= BITE_END:
+            return
+        bite = (phase - BITE_START) / (BITE_END - BITE_START)
+        spread = math.sin(math.pi * bite)
+        fall = bite * 2.0
+        mouth_on_canvas = self._canvas_point(*mouth)
+        crumb_size = max(1, self.tile_px // TILE_SIZE)
+        zoom = self.tile_px / TILE_SIZE
+        for (dx, dy), color in zip(CRUMB_OFFSETS, CRUMB_COLORS):
+            x = mouth_on_canvas[0] + round(dx * spread * zoom)
+            y = mouth_on_canvas[1] + round((dy * spread + fall) * zoom)
+            pygame.draw.rect(self.canvas, PALETTE[color], (x, y, crumb_size, crumb_size))
 
     def _marker_draw(self, resident: Resident) -> Draw:
         """From afar a resident is only their face, over the tile they are on, roof or no roof."""
@@ -1203,7 +1258,8 @@ class GlobalView:
         else:
             icons.append(self._bond_icon(resident))
         # From afar there is only room for what calls for attention.
-        in_hand = None if self.overview else self._item_in_hand(resident)
+        # Meals are visible in the hand itself; the overhead item remains for other item uses.
+        in_hand = None if self.overview or self._meal_in_hand(resident) is not None else self._item_in_hand(resident)
         if in_hand is not None:
             image = self.icons.icon(in_hand)
             y -= image.get_height() + 1

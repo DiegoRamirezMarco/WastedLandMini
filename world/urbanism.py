@@ -81,10 +81,7 @@ class UrbanismSystem:
         placed = world.interactables.get(object_id)
         if placed is None:
             return UrbanismResult(False, "Ese objeto ya no existe")
-        busy = self._object_busy_reason(world, object_id)
-        if busy is not None:
-            return UrbanismResult(False, busy, object_id)
-        error = self.object_error(world, placed.kind, tile, ignore_object=object_id)
+        error = self.move_object_error(world, object_id, tile)
         if error is not None:
             return UrbanismResult(False, error, object_id)
         placed.x, placed.y = tile
@@ -95,6 +92,15 @@ class UrbanismSystem:
         )
         self._announce(world, f"Se mueve {world.definition_of(placed).name}", tile, object_id)
         return UrbanismResult(True, "Objeto movido", object_id)
+
+    def move_object_error(self, world: SimulationWorld, object_id: str, tile: Tile) -> str | None:
+        """Why this object cannot go there, without moving it. None means it can."""
+        placed = world.interactables.get(object_id)
+        if placed is None:
+            return "Ese objeto ya no existe"
+        return self._object_busy_reason(world, object_id) or self.object_error(
+            world, placed.kind, tile, ignore_object=object_id
+        )
 
     def remove_object(self, world: SimulationWorld, object_id: str) -> UrbanismResult:
         placed = world.interactables.get(object_id)
@@ -174,25 +180,26 @@ class UrbanismSystem:
         room = world.rooms.get(room_id)
         if room is None or not room.roofed:
             return UrbanismResult(False, "Ese edificio ya no existe")
-        blocked = self._building_contents(world, room)
-        if blocked is not None:
-            return UrbanismResult(False, blocked, room_id)
-        floor = self._floor_for(world, room)
-        old_tiles = {point: world.tile_map.terrain_at(point) for point in self._building_tiles(room)}
-        old_underlay = self.underlays.get(room_id)
-        self._restore_underlay(world, room)
-        error = self.building_error(world, room.width, room.height, tile, ignore_room=room_id)
+        error = self.move_building_error(world, room_id, tile)
         if error is not None:
-            for point, terrain in old_tiles.items():
-                world.tile_map.tiles[point[1]][point[0]] = terrain
-            if old_underlay is not None:
-                self.underlays[room_id] = old_underlay
             return UrbanismResult(False, error, room_id)
+        floor = self._floor_for(world, room)
+        old_tiles = set(self._building_tiles(room))
+        self._restore_underlay(world, room)
         room.x, room.y = tile
         self._construct(world, room, floor)
-        self._invalidate_routes(world, set(old_tiles) | set(self._building_tiles(room)))
+        self._invalidate_routes(world, old_tiles | set(self._building_tiles(room)))
         self._announce(world, f"Se traslada {room.name}", tile, room_id)
         return UrbanismResult(True, "Edificio movido", room_id)
+
+    def move_building_error(self, world: SimulationWorld, room_id: str, tile: Tile) -> str | None:
+        """Why this building cannot go there, without lifting it. None means it can."""
+        room = world.rooms.get(room_id)
+        if room is None or not room.roofed:
+            return "Ese edificio ya no existe"
+        return self._building_contents(world, room) or self.building_error(
+            world, room.width, room.height, tile, ignore_room=room_id
+        )
 
     def remove_building(self, world: SimulationWorld, room_id: str) -> UrbanismResult:
         room = world.rooms.get(room_id)
@@ -231,7 +238,13 @@ class UrbanismSystem:
             return "Hay muebles u objetos en ese espacio"
         if any(not resident.away and resident.tile in footprint for resident in world.residents.values()):
             return "Hay un residente en ese espacio"
-        if any(world.tile_map.terrain_at(point) not in BUILDABLE_TERRAIN for point in footprint):
+        # A building being moved stands on its own walls and floor; what counts is the ground below.
+        ignored = world.rooms.get(ignore_room) if ignore_room is not None else None
+        ground = self._ground_below(ignored) if ignored is not None else {}
+        if any(
+            ground.get(point, world.tile_map.terrain_at(point)) not in BUILDABLE_TERRAIN
+            for point in footprint
+        ):
             return "Solo se puede construir sobre terreno libre"
         return None
 
@@ -251,10 +264,14 @@ class UrbanismSystem:
         world.rooms[room.room_id] = room
 
     def _restore_underlay(self, world: SimulationWorld, room: Room) -> None:
-        underlay = self.underlays.pop(room.room_id, None)
-        for point in self._building_tiles(room):
-            terrain = underlay.get(point, "dirt") if underlay is not None else "dirt"
+        for point, terrain in self._ground_below(room).items():
             world.tile_map.tiles[point[1]][point[0]] = terrain
+        self.underlays.pop(room.room_id, None)
+
+    def _ground_below(self, room: Room) -> dict[Tile, str]:
+        """The terrain a building hides. Buildings that came with the map are taken to stand on dirt."""
+        underlay = self.underlays.get(room.room_id, {})
+        return {point: underlay.get(point, "dirt") for point in self._building_tiles(room)}
 
     def _building_contents(self, world: SimulationWorld, room: Room) -> str | None:
         area = set(self._building_tiles(room))

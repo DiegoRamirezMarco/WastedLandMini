@@ -12,6 +12,7 @@
     "theft_committed": "theft",
     "theft_noticed": "missing",
     "no_food": "missing",
+    "meal_started": "eat",
     "supplies_arrived": "supplies",
     "fight_brewing": "alert",
     "fight_started": "theft",

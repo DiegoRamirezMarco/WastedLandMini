@@ -40,7 +40,8 @@ The simulation runs without Pygame. Important state changes emit domain events. 
    that one need reaches zero: sleep eases stress too, but only tiredness decides when to wake.
    Any other bodily need reaching 85 cuts a long restful use short: hunger or thirst wakes a sleeper.
 
-Starting a use emits an `activity_started` event with low importance.
+Starting a use emits an `activity_started` event with low importance. Eating emits the more
+specific `meal_started` event so presentation can animate and sound the meal without owning it.
 
 ## Social life
 

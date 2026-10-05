@@ -144,6 +144,9 @@ class SkeletonPlan:
     likes: dict[str, str] = field(default_factory=dict)
     # Bones that turn as another does where a clip does not say otherwise: a hand with its forearm.
     follows: dict[str, str] = field(default_factory=dict)
+    # Semantic places presentation may attach things to, kept in the body-plan data so callers do
+    # not need to know any particular joint name.
+    anchors: dict[str, str] = field(default_factory=dict)
     # Per pose view and bone, how long it is and which way it points while the body stands at rest.
     _at_rest: dict[str, dict[str, tuple[float, float]]] = field(init=False, repr=False, compare=False)
 
@@ -171,6 +174,15 @@ class SkeletonPlan:
         for name in found:
             found.extend(other.name for other in self.bones.values() if other.start == self.bones[name].end)
         return tuple(found)
+
+    def anchor(self, name: str, facing: str, pose: dict[str, Point]) -> Point | None:
+        """A semantic point in an already sampled pose, accounting for mirrored side views."""
+        joint = self.anchors.get(name)
+        if joint is None:
+            return None
+        if FACINGS[facing][3]:
+            joint = other_side(joint)
+        return pose.get(joint)
 
     def frames(self, clip: str, view: str) -> int:
         return len(self._keyframes(clip, view))
@@ -298,6 +310,9 @@ def plan_from_data(data: dict[str, Any]) -> SkeletonPlan:
     follows = {str(bone): str(other) for bone, other in data.get("follows", {}).items()}
     if not set(follows) | set(follows.values()) <= bones.keys():
         raise ValueError(f"Bones follow unknown bones: {follows}")
+    anchors = {str(name): str(joint) for name, joint in data.get("anchors", {}).items()}
+    if not set(anchors.values()) <= joints.keys():
+        raise ValueError(f"Anchors name unknown joints: {anchors}")
     orders = {}
     for view in (*SKIN_VIEWS, *(str(name) for name in data["orders"] if name not in SKIN_VIEWS)):
         order = tuple(str(bone) for bone in data["orders"][view])
@@ -321,7 +336,10 @@ def plan_from_data(data: dict[str, Any]) -> SkeletonPlan:
     physics = PhysicsSettings(
         **{name: type(getattr(known, name))(value) for name, value in data.get("physics", {}).items() if hasattr(known, name)}
     )
-    return SkeletonPlan(root, joints, bones, braces, parts, limits, rests, orders, skins, clips, physics, likes, follows)
+    return SkeletonPlan(
+        root, joints, bones, braces, parts, limits, rests, orders, skins, clips,
+        physics=physics, likes=likes, follows=follows, anchors=anchors,
+    )
 
 
 def load_plan(path: Path = PLAN_PATH) -> SkeletonPlan:

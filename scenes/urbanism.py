@@ -1,8 +1,12 @@
-"""Settlement layout editor. Input becomes simulation commands; pygame owns only the UI."""
+"""Settlement layout editor, worked by dragging: out of the catalogue to add, across the map to move.
+
+Input becomes simulation commands; pygame owns only the UI.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Hashable
+from dataclasses import dataclass
 
 import pygame
 
@@ -23,6 +27,8 @@ from simulation.commands import (
 from simulation.world import SimulationWorld
 from ui.button import Button
 from ui.panel import draw_panel
+from world.interactable import InteractableDefinition
+from world.map import Tile
 from world.room import Room
 from world.urbanism import UrbanismResult
 
@@ -48,7 +54,31 @@ TERRAIN_COLORS = {
     "gate": "ochre",
 }
 
+GHOST_ALPHA = 150
+DEFAULT_MESSAGE = "Arrastra algo del catálogo al mapa"
+
 Selection = tuple[str, str]
+
+
+@dataclass(frozen=True)
+class Held:
+    """What the pointer carries: a catalogue entry not yet placed, or something lifted off the map."""
+
+    kind: str
+    width: int
+    height: int
+    # From the pointer's tile back to the tile the thing is placed by, so it does not jump when grabbed.
+    grip: Tile
+    catalog_id: str | None = None
+    entity_id: str | None = None
+
+    @property
+    def margin(self) -> int:
+        """Buildings are placed by their inside; their walls stand one tile out all round."""
+        return 1 if self.kind == "building" else 0
+
+    def origin(self, pointer: Tile) -> Tile:
+        return (pointer[0] - self.grip[0], pointer[1] - self.grip[1])
 
 
 class UrbanismEditor:
@@ -68,12 +98,15 @@ class UrbanismEditor:
         self.sprites = ObjectSprites(assets, custom)
         self.closed = False
         self.category = "buildings"
-        self.catalog_id: str | None = next(iter(world.registries.buildings), None)
-        self.tool = "place"
+        # The catalogue entry in hand. It stays there after a drop, so a click sets down another.
+        self.catalog_id: str | None = None
+        # What the pressed button is dragging, from the press until the release.
+        self.drag: Held | None = None
         self.selection: Selection | None = None
         self.confirm_delete = False
-        self.message = "Elige algo del catálogo y colócalo en el mapa"
-        self.pointer_tile: tuple[int, int] | None = None
+        self.message = DEFAULT_MESSAGE
+        self.pointer: tuple[int, int] = (0, 0)
+        self.pointer_tile: Tile | None = None
         self.catalog_offset = 0
         self.requested_art_room: str | None = None
         self._layout()
@@ -104,12 +137,12 @@ class UrbanismEditor:
             button = Button.at(self.font, x, 31, label, ("category", category))
             self.category_buttons.append(button)
             x = button.rect.right + 3
-        self.select_button = Button.at(self.font, PANEL_WIDTH + MARGIN, 8, "Seleccionar", ("tool", "select"))
         self.close_button = Button.at(self.font, self.canvas.get_width() - 54, 8, "Volver", ("close",))
 
     def open(self) -> None:
         self.closed = False
         self.requested_art_room = None
+        self.drag = None
 
     def _catalog(self) -> list[tuple[str, str]]:
         if self.category == "buildings":
@@ -138,10 +171,8 @@ class UrbanismEditor:
     def _action_buttons(self) -> list[Button]:
         if self.selection is None:
             return []
-        buttons = [Button.at(self.font, MARGIN, 382, "Mover", ("move",))]
-        x = buttons[-1].rect.right + 4
         label = "Confirmar" if self.confirm_delete else "Retirar"
-        buttons.append(Button.at(self.font, x, 382, label, ("remove",)))
+        buttons = [Button.at(self.font, MARGIN, 382, label, ("remove",))]
         if self.selection[0] == "building":
             x = buttons[-1].rect.right + 4
             buttons.append(Button.at(self.font, x, 382, "Arte", ("art",)))
@@ -151,7 +182,6 @@ class UrbanismEditor:
     def buttons(self) -> list[Button]:
         return [
             *self.category_buttons,
-            self.select_button,
             self.close_button,
             *self._catalog_buttons(),
             *self._action_buttons(),
@@ -159,10 +189,10 @@ class UrbanismEditor:
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            self.closed = True
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_m and self.selection is not None:
-            self.tool, self.confirm_delete = "move", False
-            self.message = "Elige la nueva posición"
+            if self.drag is not None:
+                self._let_go()
+            else:
+                self.closed = True
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_DELETE and self.selection is not None:
             self._remove_selected()
         elif event.type == pygame.MOUSEWHEEL:
@@ -171,15 +201,25 @@ class UrbanismEditor:
                 maximum = max(0, len(self._catalog()) - (CATALOG_BOTTOM - CATALOG_TOP) // ROW_HEIGHT)
                 self.catalog_offset = min(maximum, max(0, self.catalog_offset - event.y))
         elif event.type == pygame.MOUSEMOTION:
-            self.pointer_tile = self._tile_at(canvas_position(event.pos))
+            self._point(canvas_position(event.pos))
+            if self.drag is not None and self.pointer_tile is not None:
+                self.message = self._held_error(self.drag, self.pointer_tile) or "Suelta para dejarlo aquí"
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            position = canvas_position(event.pos)
-            self.pointer_tile = self._tile_at(position)
-            intent = next((button.intent for button in self.buttons if button.contains(position)), None)
+            self._point(canvas_position(event.pos))
+            intent = next((button.intent for button in self.buttons if button.contains(self.pointer)), None)
             if intent is not None:
                 self._apply_intent(intent)
             elif self.pointer_tile is not None:
-                self._use_map(self.pointer_tile)
+                self._press_map(self.pointer_tile)
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self._point(canvas_position(event.pos))
+            self._drop()
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+            self._let_go()
+
+    def _point(self, position: tuple[int, int]) -> None:
+        self.pointer = position
+        self.pointer_tile = self._tile_at(position)
 
     def _apply_intent(self, intent: Hashable) -> None:
         if intent == ("close",):
@@ -190,56 +230,117 @@ class UrbanismEditor:
         if intent[0] == "category":
             self.category = str(intent[1])
             self.catalog_offset = 0
-            entries = self._catalog()
-            self.catalog_id = entries[0][0] if entries else None
-            self.tool, self.selection, self.confirm_delete = "place", None, False
-            return
-        if intent[0] == "catalog":
+            self.catalog_id, self.selection, self.confirm_delete = None, None, False
+            self.message = DEFAULT_MESSAGE
+        elif intent[0] == "catalog":
             self.catalog_id = str(intent[1])
-            self.tool, self.selection, self.confirm_delete = "place", None, False
-            return
-        if intent == ("tool", "select"):
-            self.tool, self.confirm_delete = "select", False
-            self.message = "Selecciona un edificio u objeto del mapa"
-        elif intent == ("move",):
-            self.tool, self.confirm_delete = "move", False
-            self.message = "Elige la nueva posición"
+            self.selection, self.confirm_delete = None, False
+            self.drag = self._catalog_held()
+            self.message = "Suéltalo en el mapa; un clic coloca otro igual"
         elif intent == ("remove",):
             self._remove_selected()
         elif intent == ("art",) and self.selection is not None and self.selection[0] == "building":
             self.requested_art_room = self.selection[1]
 
-    def _use_map(self, tile: tuple[int, int]) -> None:
-        if self.tool == "select":
-            self.selection = self._pick(tile)
-            self.confirm_delete = False
-            self.message = self._selection_name() if self.selection is not None else "No hay nada en esa casilla"
+    def _press_map(self, tile: Tile) -> None:
+        picked = self._pick(tile)
+        if picked is not None:
+            # Taking hold of something on the map puts down whatever came from the catalogue.
+            self.selection, self.catalog_id, self.confirm_delete = picked, None, False
+            self.drag = self._entity_held(picked, tile)
+            self.message = self._selection_name()
             return
-        if self.tool == "move" and self.selection is not None:
-            kind, entity_id = self.selection
-            command = (
-                MoveObjectCommand(entity_id, tile)
-                if kind == "object"
-                else MoveBuildingCommand(entity_id, tile)
-            )
-            self._accept(self.world.apply_command(command))
-            if self.message.endswith("movido"):
-                self.tool = "select"
+        held = self._catalog_held()
+        if held is not None:
+            self._place(held, tile)
+        else:
+            self.selection, self.confirm_delete = None, False
+            self.message = DEFAULT_MESSAGE
+
+    def _drop(self) -> None:
+        held, self.drag = self.drag, None
+        if held is None or self.pointer_tile is None:
             return
-        if self.tool != "place" or self.catalog_id is None:
+        if held.entity_id is None:
+            self._place(held, self.pointer_tile)
+            return
+        target = held.origin(self.pointer_tile)
+        if target == self._entity_origin((held.kind, held.entity_id)):
+            # Pressed and released in place: a click, which only selects.
+            self.message = self._selection_name()
             return
         command = (
-            PlaceBuildingCommand(self.catalog_id, tile)
-            if self.category == "buildings"
-            else PlaceObjectCommand(self.catalog_id, tile)
+            MoveObjectCommand(held.entity_id, target)
+            if held.kind == "object"
+            else MoveBuildingCommand(held.entity_id, target)
+        )
+        self._accept(self.world.apply_command(command))
+
+    def _place(self, held: Held, tile: Tile) -> None:
+        if held.catalog_id is None:
+            return
+        target = held.origin(tile)
+        command = (
+            PlaceBuildingCommand(held.catalog_id, target)
+            if held.kind == "building"
+            else PlaceObjectCommand(held.catalog_id, target)
         )
         result = self.world.apply_command(command)
         self._accept(result)
         if result.ok and result.entity_id is not None:
-            self.selection = (
-                "building" if self.category == "buildings" else "object",
-                result.entity_id,
-            )
+            self.selection = (held.kind, result.entity_id)
+
+    def _let_go(self) -> None:
+        """Put down whatever is in hand without changing the settlement."""
+        self.drag, self.catalog_id, self.confirm_delete = None, None, False
+        self.message = self._selection_name() or DEFAULT_MESSAGE
+
+    def _catalog_held(self) -> Held | None:
+        if self.catalog_id is None:
+            return None
+        if self.category == "buildings":
+            blueprint = self.world.registries.buildings.get(self.catalog_id)
+            if blueprint is None:
+                return None
+            size = (blueprint.width, blueprint.height)
+        else:
+            definition = self.world.registries.interactables.find(self.catalog_id)
+            if definition is None:
+                return None
+            size = (definition.width, definition.height)
+        kind = "building" if self.category == "buildings" else "object"
+        # Held by its middle, where the hand expects it.
+        return Held(kind, *size, (size[0] // 2, size[1] // 2), catalog_id=self.catalog_id)
+
+    def _entity_held(self, selection: Selection, pointer: Tile) -> Held | None:
+        origin = self._entity_origin(selection)
+        if origin is None:
+            return None
+        kind, entity_id = selection
+        if kind == "building":
+            room = self.world.rooms[entity_id]
+            size = (room.width, room.height)
+        else:
+            definition = self.world.definition_of(self.world.interactables[entity_id])
+            size = (definition.width, definition.height)
+        grip = (pointer[0] - origin[0], pointer[1] - origin[1])
+        return Held(kind, *size, grip, entity_id=entity_id)
+
+    def _entity_origin(self, selection: Selection) -> Tile | None:
+        kind, entity_id = selection
+        entity = (self.world.rooms if kind == "building" else self.world.interactables).get(entity_id)
+        return (entity.x, entity.y) if entity is not None else None
+
+    def _held_error(self, held: Held, pointer: Tile) -> str | None:
+        """Ask the simulation why the held thing cannot go under the pointer. None means it can."""
+        target = held.origin(pointer)
+        urbanism = self.world.urbanism
+        if held.entity_id is not None:
+            check = urbanism.move_object_error if held.kind == "object" else urbanism.move_building_error
+            return check(self.world, held.entity_id, target)
+        if held.kind == "building":
+            return urbanism.building_error(self.world, held.width, held.height, target)
+        return urbanism.object_error(self.world, held.catalog_id or "", target)
 
     def _remove_selected(self) -> None:
         if self.selection is None:
@@ -255,7 +356,6 @@ class UrbanismEditor:
         if result.ok:
             self.selection = None
             self.confirm_delete = False
-            self.tool = "select"
 
     def _accept(self, result: object) -> None:
         if isinstance(result, UrbanismResult):
@@ -313,11 +413,11 @@ class UrbanismEditor:
         for button in self.buttons:
             active = (
                 (isinstance(button.intent, tuple) and button.intent[:1] == ("category",) and button.intent[1] == self.category)
-                or (button.intent == ("tool", "select") and self.tool == "select")
                 or (isinstance(button.intent, tuple) and button.intent[:1] == ("catalog",) and button.intent[1] == self.catalog_id)
             )
             button.draw(self.canvas, self.font, active=active)
         self._render_map()
+        self._render_held()
         selected = self._selection_name()
         if selected:
             self.font.draw(self.canvas, f"Seleccionado: {selected}", (MARGIN, 346), PALETTE["paper"])
@@ -325,7 +425,7 @@ class UrbanismEditor:
         self.font.draw(self.canvas, hint, (MARGIN, 365), PALETTE["glow"])
         self.font.draw(
             self.canvas,
-            "Esc: volver   M: mover   Supr: retirar",
+            "Arrastra para colocar o mover   Clic derecho: soltar   Supr: retirar   Esc: volver",
             (PANEL_WIDTH + MARGIN, self.canvas.get_height() - LINE_HEIGHT - 4),
             PALETTE["dust"],
         )
@@ -343,10 +443,7 @@ class UrbanismEditor:
         for placed in self.world.interactables.values():
             definition = self.world.definition_of(placed)
             rect = self._tiles_rect(placed.x, placed.y, definition.width, definition.height)
-            sheet = self.sprites.sheet(definition)
-            frame_width = definition.width * 16
-            image = sheet.subsurface((0, 0, min(frame_width, sheet.get_width()), sheet.get_height()))
-            self.canvas.blit(pygame.transform.scale(image, rect.size), rect)
+            self.canvas.blit(self._object_image(definition, rect.size), rect)
         for resident in self.world.residents.values():
             if not resident.away:
                 pygame.draw.circle(self.canvas, PALETTE["glow"], self._tile_rect(resident.tile).center, max(2, self.tile_px // 3))
@@ -368,6 +465,50 @@ class UrbanismEditor:
         if self.pointer_tile is not None:
             pygame.draw.rect(self.canvas, PALETTE["paper"], self._tile_rect(self.pointer_tile), 1)
         pygame.draw.rect(self.canvas, PALETTE["iron"], self.map_rect, 1)
+
+    def _render_held(self) -> None:
+        """Show where the held thing would land, and whether the settlement has room for it there."""
+        held = self.drag or self._catalog_held()
+        if held is None:
+            return
+        size = ((held.width + held.margin * 2) * self.tile_px, (held.height + held.margin * 2) * self.tile_px)
+        if self.pointer_tile is None:
+            if self.drag is not None:
+                # On its way across the panel: it follows the hand until it reaches the map.
+                rect = pygame.Rect((0, 0), size)
+                rect.center = self.pointer
+                self._draw_ghost(held, rect, "dust")
+            return
+        origin = held.origin(self.pointer_tile)
+        rect = pygame.Rect(self._tile_rect((origin[0] - held.margin, origin[1] - held.margin)).topleft, size)
+        fits = self._held_error(held, self.pointer_tile) is None
+        self.canvas.set_clip(self.map_rect)
+        self._draw_ghost(held, rect, "lichen" if fits else "ember")
+        self.canvas.set_clip(None)
+
+    def _draw_ghost(self, held: Held, rect: pygame.Rect, color: str) -> None:
+        ghost = pygame.Surface(rect.size, pygame.SRCALPHA)
+        ghost.fill((*PALETTE[color], GHOST_ALPHA // 2))
+        definition = self._held_object_definition(held)
+        if definition is not None:
+            ghost.blit(self._object_image(definition, rect.size), (0, 0))
+            ghost.set_alpha(GHOST_ALPHA)
+        self.canvas.blit(ghost, rect)
+        pygame.draw.rect(self.canvas, PALETTE[color], rect, 2 if held.kind == "building" else 1)
+
+    def _held_object_definition(self, held: Held) -> InteractableDefinition | None:
+        if held.kind != "object":
+            return None
+        if held.catalog_id is not None:
+            return self.world.registries.interactables.find(held.catalog_id)
+        placed = self.world.interactables.get(held.entity_id or "")
+        return self.world.definition_of(placed) if placed is not None else None
+
+    def _object_image(self, definition: InteractableDefinition, size: tuple[int, int]) -> pygame.Surface:
+        sheet = self.sprites.sheet(definition)
+        frame_width = definition.width * 16
+        image = sheet.subsurface((0, 0, min(frame_width, sheet.get_width()), sheet.get_height()))
+        return pygame.transform.scale(image, size)
 
     def _tile_rect(self, tile: tuple[int, int]) -> pygame.Rect:
         return pygame.Rect(

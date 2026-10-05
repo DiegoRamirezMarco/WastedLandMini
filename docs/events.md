@@ -13,6 +13,7 @@ Event types emitted so far:
 | Type | When | Importance |
 |---|---|---|
 | `activity_started` | A resident starts using an object | 5 |
+| `meal_started` | A resident starts eating, with the food ID in `data.item_id` | 5 |
 | `work_started` | A resident takes up their post | 5 |
 | `goods_hauled` | A worker leaves a load in a container, or fetches one from it | 5 |
 | `item_bought` | A resident buys something over the counter | 15 |
