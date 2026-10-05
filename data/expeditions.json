@@ -10,11 +10,11 @@
     },
     {
       "item": "water",
-      "weight": 6
+      "weight": 1
     },
     {
       "item": "fuel",
-      "weight": 1
+      "weight": 3
     },
     {
       "item": "pizza_radioactiva",

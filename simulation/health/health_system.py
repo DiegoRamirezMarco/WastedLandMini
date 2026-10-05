@@ -27,6 +27,9 @@ BED_REST_BONUS = 2.0
 FRACTURE_DAMAGE = 28.0
 INJURY_IMPORTANCE = 45
 LIMB_LOSS_IMPORTANCE = 85
+# A need counts as left at its worst from here, and falling ill of it is worth a look from the player.
+WORST_NEED = 99.5
+PRIVATION_IMPORTANCE = 60
 DEATH_IMPORTANCE = 95
 GRAVE_KIND = "grave"
 DEFAULT_INJURY = "bruise"
@@ -68,13 +71,20 @@ class HealthSystem:
         return (100.0 - resident.health) / 100.0 * CARE_APPEAL
 
     def tick(self, world: "SimulationWorld", resident: Resident) -> None:
-        """Let a resident's injuries mend for one minute."""
-        if not resident.injuries:
+        """Let a resident's injuries mend for one minute, or grow if they come of going without.
+
+        Whoever is left with nothing to drink or eat sickens of it, and in the end dies.
+        """
+        wasting = self._go_without(world, resident)
+        if resident.resident_id not in world.residents or not resident.injuries:
             return
         care = self.care_use(world, resident)
         treated = care is not None and (care.care_job is None or world.work.is_staffed(world, care.care_job))
         resting = care is not None or not world.is_aware(resident)
         for injury in resident.injuries:
+            if injury.kind in wasting:
+                # Nothing mends while what brought it on goes on.
+                continue
             definition = world.registries.injuries.get(injury.kind)
             if definition is None:
                 # An injury of a kind that is no longer defined simply fades.
@@ -85,6 +95,35 @@ class HealthSystem:
                 rate = definition.heal_per_day * (BED_REST_BONUS if resting else 1.0)
             injury.severity -= rate / MINUTES_PER_DAY
         resident.injuries = [injury for injury in resident.injuries if injury.severity > 0]
+
+    def _go_without(self, world: "SimulationWorld", resident: Resident) -> set[str]:
+        """Worsen what a resident suffers from a need left at its worst. Returns the kinds that grew."""
+        wasting: set[str] = set()
+        for kind, definition in world.registries.injuries.items():
+            if definition.from_need is None or getattr(resident.needs, definition.from_need, 0.0) < WORST_NEED:
+                continue
+            wasting.add(kind)
+            injury = next((injury for injury in resident.injuries if injury.kind == kind), None)
+            if injury is None:
+                injury = Injury(kind, 0.0)
+                resident.injuries.append(injury)
+                room = world.room_at(resident.tile)
+                world.emit_event(
+                    DomainEvent(
+                        "privation",
+                        PRIVATION_IMPORTANCE,
+                        f"{resident.name} empieza a sufrir {definition.name}",
+                        [resident.resident_id],
+                        location_id=room.room_id if room is not None else None,
+                        data={"kind": kind, "need": definition.from_need},
+                    ),
+                    at=None if resident.away else resident.tile,
+                )
+            injury.severity += definition.worsens_per_day / MINUTES_PER_DAY
+            if resident.health <= 0:
+                self.die(world, resident, f"sufrir {definition.name}")
+                break
+        return wasting
 
     def weapon_item(self, world: "SimulationWorld", resident: Resident) -> ItemInstance | None:
         """The best weapon a resident carries that is in a state to be used, if they have one."""

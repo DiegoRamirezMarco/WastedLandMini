@@ -1,5 +1,6 @@
 """Advances residents through their activities one game minute at a time."""
 
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -42,7 +43,12 @@ class ActivitySystem:
         resident.needs.step(1, resting=resident.away or not world.is_aware(resident))
         self._settle_mood(resident)
         world.health.tick(world, resident)
+        if resident.resident_id not in world.residents:
+            # Going without took them.
+            return
         resident.trail = [resident.tile]
+        for need in self.unanswerable(world, resident):
+            world.items.report_nothing_for(world, resident, need)
         if resident.activity is None:
             world.items.notice_missing(world, resident)
             crisis = (
@@ -63,7 +69,7 @@ class ActivitySystem:
             if activity.intent is not None:
                 # Chasing someone counts against the time they will keep at it.
                 activity.minutes_left -= 1
-                if activity.minutes_left <= 0 or self._has_urgent_need(resident, ignoring={}):
+                if activity.minutes_left <= 0 or self.urgent_needs(world, resident):
                     resident.activity = None
                     resident.current_action = "idle"
             return
@@ -157,8 +163,31 @@ class ActivitySystem:
         )
         return True
 
-    def _has_urgent_need(self, resident: Resident, ignoring: dict[str, float]) -> bool:
-        return any(getattr(resident.needs, need) >= URGENT_NEED for need in BODILY_NEEDS if need not in ignoring)
+    def urgent_needs(
+        self, world: "SimulationWorld", resident: Resident, level: float = URGENT_NEED, ignoring: Collection[str] = ()
+    ) -> list[str]:
+        """Needs of the body high enough to come before whatever a resident is doing.
+
+        One that nothing can be done about does not count: with no water anywhere, thirst keeps
+        nobody from their bed or their post. It takes its toll on their health instead.
+        """
+        return [
+            need
+            for need in BODILY_NEEDS
+            if need not in ignoring
+            and getattr(resident.needs, need) >= level
+            and self.routine.can_relieve(world, resident, need)
+        ]
+
+    def unanswerable(self, world: "SimulationWorld", resident: Resident) -> list[str]:
+        """Needs of the body that are urgent and that nothing in the settlement can answer."""
+        if resident.away:
+            return []
+        return [
+            need
+            for need in BODILY_NEEDS
+            if getattr(resident.needs, need) >= URGENT_NEED and not self.routine.can_relieve(world, resident, need)
+        ]
 
     def _spend_minute(
         self, world: "SimulationWorld", resident: Resident, activity: Activity, use: UseDefinition | None
@@ -169,7 +198,7 @@ class ActivitySystem:
             resident.needs.apply(use.per_minute)
             lowered = [use.until] if use.until else [need for need, delta in use.per_minute.items() if delta < 0]
             relieved = bool(lowered) and all(getattr(resident.needs, need, 0.0) <= 0.0 for need in lowered)
-            if (use.per_minute or use.heals) and self._has_urgent_need(resident, ignoring=use.per_minute):
+            if (use.per_minute or use.heals) and self.urgent_needs(world, resident, ignoring=use.per_minute):
                 relieved = True
             if use.heals and resident.health >= RECOVERED_HEALTH:
                 relieved = True

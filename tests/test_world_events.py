@@ -159,10 +159,10 @@ class StrangerTests(unittest.TestCase):
             self.world.step(1)
             actions.add(newcomer.current_action)
         self.assertLessEqual({"eat", "sleep"}, actions)
-        # And they look for something to do without being asked: the garden always has room.
-        self.assertEqual(newcomer.job_id, "farmer")
+        # And they look for something to do without being asked: they take the post most missed.
+        self.assertEqual(newcomer.job_id, "water_carrier")
         self.assertFalse(newcomer.seeks_work)
-        self.assertTrue(any(f"{visitor.name} se hace cargo de un puesto: Huerto" in line for line in self.world.event_log))
+        self.assertTrue(any(f"{visitor.name} se hace cargo de un puesto: Agua" in line for line in self.world.event_log))
 
     def test_turned_away_they_are_gone_for_good(self) -> None:
         decision = self._arrive()

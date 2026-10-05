@@ -109,7 +109,7 @@ class WorkSystem:
             return None
         leaving = job.expedition is not None and resident.last_expedition_day != world.clock.day
         pressing = SETTING_OUT_NEED if leaving else PRESSING_NEED
-        if any(getattr(resident.needs, need) >= pressing for need in BODILY_NEEDS):
+        if world.activities.urgent_needs(world, resident, pressing):
             return None
         if not world.health.is_fit_for_work(resident):
             return None
@@ -192,7 +192,7 @@ class WorkSystem:
             # Hands full, or nothing left to work with: off on an errand.
             self._leave(resident)
             return
-        if activity.minutes_left <= 0 or any(getattr(resident.needs, need) >= URGENT_NEED for need in BODILY_NEEDS):
+        if activity.minutes_left <= 0 or world.activities.urgent_needs(world, resident):
             self._leave(resident)
 
     def haul_tick(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> None:

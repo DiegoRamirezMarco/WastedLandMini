@@ -34,6 +34,10 @@ BAR_ROW = 10
 NEED_COLORS = {"hunger": "sand", "thirst": "teal", "tiredness": "dust", "social": "rose", "stress": "ember"}
 HEALTH_LABEL = "Salud"
 HEALTH_COLOR = "lichen"
+MOOD_LABEL = "Ánimo"
+MOOD_COLOR = "lamp"
+# Health above the needs and mood below them.
+OTHER_BARS = 2
 MAX_RELATIONSHIPS = 5
 RELATIONSHIP_ROW = MARKER_SIZE[1] + 2
 # The inventory as a grid: an icon at twice its size, how many, and its name underneath.
@@ -98,7 +102,7 @@ def relationship_hitboxes(panel: pygame.Rect, world: SimulationWorld, resident: 
 
 
 def _relationships_top(panel: pygame.Rect, world: SimulationWorld, resident: Resident) -> int:
-    top = panel.y + PADDING + FACE_SIZE[1] + 6 + BAR_ROW * (len(NEED_NAMES) + 1) + 4
+    top = panel.y + PADDING + FACE_SIZE[1] + 6 + BAR_ROW * (len(NEED_NAMES) + OTHER_BARS) + 4
     if resident.traits:
         top += LINE_HEIGHT + 3 + LINE_HEIGHT + 6
     return top + LINE_HEIGHT + 3
@@ -140,9 +144,10 @@ def draw_resident_panel(
             line_y += LINE_HEIGHT
     y = portrait.bottom + 6
 
+    # Health and mood are better full; the needs between them are better empty.
     bars = [(HEALTH_LABEL, resident.health, HEALTH_COLOR)] + [
         (NEED_LABELS[need], getattr(resident.needs, need), NEED_COLORS[need]) for need in NEED_NAMES
-    ]
+    ] + [(MOOD_LABEL, resident.mood, MOOD_COLOR)]
     bar_width = inner - BAR_LEFT - 22
     for label, value, color in bars:
         font.draw(target, label, (x, y - 1), PALETTE["bone"])

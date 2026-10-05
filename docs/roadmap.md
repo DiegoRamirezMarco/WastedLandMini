@@ -353,6 +353,26 @@ water and generator fuel back through the same hauling rules as other finds, lam
 warnings depend on fuel, and low mood makes work slower and arguments likelier without breaking a
 four-week headless run.
 
+Added once it had been run for longer than that:
+- **Drawing water is a post.** Left to what trips outside bring, the tank ran dry in five weeks.
+  Now someone works it, as someone works the garden; the post stands empty when a settlement
+  starts, and is offered round like any other
+- **Going without sickens, and in the end kills.** A thirst or a hunger that nothing in the
+  settlement can answer no longer keeps anyone from their bed or their post, which had brought
+  everything to a stop. Left at its worst it wears their health down instead, and notice is given
+- Trips outside bring more fuel and less water, the garden yields a quarter more, and nobody who
+  gets out of bed in the south house is walled in by the other beds
+
+Done when: ten weeks pass, with three different seeds, in which someone takes up the water, the
+tank and the generator never run out, the pantries never empty and nobody dies; and a settlement
+with no water at all goes on working and sleeping, is told so every day, and loses people to it
+only after days.
+
+Still open here:
+- Whoever takes up the water leaves the bar, and nobody takes the bar after them.
+- Nobody feeds the generator as a job: it lives on what trips outside happen to bring.
+- A save from before keeps the south house as it was, with the beds that wall people in.
+
 Still to settle:
 - Medicine: used up by the clinic's care, and brought in from outside
 - Materials: the scrap there already is, later spent on building

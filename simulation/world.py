@@ -254,15 +254,19 @@ class SimulationWorld:
         opaque = self.opaque()
         powered = self.has_power()
         for placed in self.interactables.values():
-            definition = self.definition_of(placed)
-            if definition.light <= 0:
-                continue
-            if placed.kind in POWERED_LIGHTS and not powered:
+            reach = self.light_of(placed, powered)
+            if reach <= 0:
                 continue
             source = (placed.x, placed.y)
-            if within_range(source, tile, definition.light) and line_of_sight(source, tile, opaque):
+            if within_range(source, tile, reach) and line_of_sight(source, tile, opaque):
                 return True
         return False
+
+    def light_of(self, placed: Interactable, powered: bool | None = None) -> int:
+        """How many tiles round it an object lights right now. A lamp gives none while the power is out."""
+        if placed.kind in POWERED_LIGHTS and not (self.has_power() if powered is None else powered):
+            return 0
+        return self.definition_of(placed).light
 
     def power_units(self) -> int:
         """Fuel units in generators that can keep lamps and the radio alive."""

@@ -26,6 +26,9 @@ Event types emitted so far:
 | `rumor_told` | A resident tells another about a fact | 15 |
 | `supplies_arrived` | The day's supplies reach a container | 10 |
 | `no_food` | Someone finds nothing to eat, there or anywhere else (once a day) | 40 |
+| `no_water` | The same, with nothing to drink | 40 |
+| `privation` | A resident falls ill of a need left at its worst: thirst or hunger | 60 |
+| `power_failed` | Night falls and the generator has no fuel (once a day) | 25 |
 | `gift_given`, `trade_made` | Something changes hands after a friendly exchange | 20, 15 |
 | `theft_committed` | A resident takes someone else's thing | 45 |
 | `theft_noticed` | An owner sees that something of theirs is gone | 40 |
@@ -82,3 +85,4 @@ them back, and they are saved with the event.
 | `injured` | `amount` (the severity of the injury), `kind`, and `by` (who dealt it, or null) |
 | `limb_lost` | The same, and `limb` (the ID of the limb) |
 | `death` | `resident_id`, `tile` (where the body fell, or null beyond the fence), `by` and `lost_limbs` |
+| `privation` | `kind` (the injury it is) and `need` (what brought it on) |

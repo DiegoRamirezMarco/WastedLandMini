@@ -80,6 +80,39 @@ class RoutineSystem:
         scored.append(ScoredAction(WANDER_ACTION, WANDER_SCORE + self._noise(world)))
         return scored
 
+    def can_relieve(self, world: "SimulationWorld", resident: Resident, need: str) -> bool:
+        """Whether there is anything a resident could do about a need: something they carry, or somewhere to go."""
+        for item in resident.inventory.items:
+            definition = world.registries.items.resolve(item.definition_id)
+            if not item.broken and self.items.use_effects(world, resident, definition).get(need, 0.0) < 0:
+                return True
+        return any(
+            self._offers(world, resident, placed, use, need)
+            for placed in world.interactables.values()
+            if (use := world.definition_of(placed).use) is not None
+        )
+
+    def _offers(
+        self, world: "SimulationWorld", resident: Resident, placed: Interactable, use: UseDefinition, need: str
+    ) -> bool:
+        """Whether a use would lower a need, as things stand: open, within their means and not empty."""
+        if use.staffed_by is not None and not world.work.is_staffed(world, use.staffed_by):
+            return False
+        if use.price > resident.credits:
+            return False
+        if use.per_minute.get(need, 0.0) < 0:
+            return True
+        item_id = use.item_id
+        if use.consumes is not None:
+            food = self.items.best_food(world, resident, placed.object_id, use.consumes)
+            if food is None:
+                return False
+            item_id = food.definition_id
+        if item_id is None:
+            return False
+        item = world.registries.items.resolve(item_id)
+        return self.items.use_effects(world, resident, item).get(need, 0.0) < 0
+
     def plan(self, world: "SimulationWorld", resident: Resident) -> Activity:
         """Return the best activity the resident can actually reach."""
         for candidate in ranked(self.candidates(world, resident)):

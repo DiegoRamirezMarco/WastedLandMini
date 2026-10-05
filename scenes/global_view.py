@@ -517,7 +517,9 @@ class GlobalView:
         lights = []
         for placed in self.world.interactables.values():
             definition = self.world.definition_of(placed)
-            if definition.light <= 0 or (placed.x, placed.y) in self._hidden:
+            # A lamp with the power out is as dark on screen as it is for whoever stands by it.
+            reach = self.world.light_of(placed)
+            if reach <= 0 or (placed.x, placed.y) in self._hidden:
                 continue
             centre = (
                 round((placed.x + definition.width / 2) * TILE_SIZE) - region.x,
@@ -525,7 +527,7 @@ class GlobalView:
             )
             # A flame wavers; a lamp burns steady.
             wavers = self._frames(placed.kind, definition.width) > 1
-            lights.append((centre, definition.light * TILE_SIZE - (BLOCK * flicker if wavers else 0)))
+            lights.append((centre, reach * TILE_SIZE - (BLOCK * flicker if wavers else 0)))
         shade(self._scene, self.lights.render(region.size, level, lights))
 
     def _frames(self, kind: str, width_in_tiles: int) -> int:

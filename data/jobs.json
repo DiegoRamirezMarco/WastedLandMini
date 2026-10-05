@@ -20,7 +20,7 @@
     },
     "produces": {
       "item": "vegetables",
-      "every_minutes": 30,
+      "every_minutes": 24,
       "into": "pantry",
       "max_stock": 40,
       "carry": 6
@@ -184,6 +184,29 @@
       ],
       "danger": 0.12
     },
+    "outdoors": true
+  },
+  "water_carrier": {
+    "name": "Agua",
+    "station": "water_tank",
+    "shifts": [
+      [
+        7,
+        13
+      ]
+    ],
+    "text": "se pone a sacar agua",
+    "interruptible": true,
+    "per_minute": {
+      "tiredness": 0.03
+    },
+    "produces": {
+      "item": "water",
+      "every_minutes": 30,
+      "into": "station",
+      "max_stock": 240
+    },
+    "priority": 6,
     "outdoors": true
   }
 }

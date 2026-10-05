@@ -719,11 +719,13 @@ class GameShellTests(unittest.TestCase):
         rows = {row.job_id: row for row in post_rows(world, None)}
         self.assertEqual(
             list(rows),
-            ["farmer", "cook", "medic", "guard", "scavenger", "mechanic", "shopkeeper", "bartender"],
+            ["water_carrier", "farmer", "cook", "medic", "guard", "scavenger", "mechanic", "shopkeeper", "bartender"],
             "most missed first",
         )
         self.assertEqual((rows["farmer"].title, rows["farmer"].holders), ("Huerto (8-13, 15-18)", "Raúl, Inés"))
-        self.assertFalse(any(row.vacant or row.can_suggest for row in rows.values()))
+        # Every post is held but the water, which nobody draws when a settlement starts.
+        self.assertEqual([job_id for job_id, row in rows.items() if row.vacant], ["water_carrier"])
+        self.assertFalse(any(row.can_suggest for row in rows.values()), "with nobody selected there is nobody to ask")
 
         world.health.die(world, world.residents["marta"], "una prueba")
         world.step(3 * 60)
@@ -731,7 +733,7 @@ class GameShellTests(unittest.TestCase):
         self.assertTrue(rows["cook"].vacant)
         self.assertEqual(rows["cook"].holders, "nadie · vacante hace 2 h")
         can = {job_id for job_id, row in rows.items() if row.can_suggest}
-        self.assertEqual(can, {"farmer", "cook"}, "only where a post is free, and never her own")
+        self.assertEqual(can, {"water_carrier", "farmer", "cook"}, "only where a post is free, and never her own")
         world.clock.day = 2
         self.assertEqual(post_rows(world, None)[-1].holders, "Lucía (libra)")
         hud.select_resident("lucia")
@@ -747,7 +749,8 @@ class GameShellTests(unittest.TestCase):
         hud.select_resident("lucia")
         view.render()
         buttons = {button.intent: button for button in suggest_buttons(view.font, hud.jobs_rect(), world, "lucia")}
-        self.assertEqual(list(buttons), [suggest_intent("farmer")])
+        # Two posts stand free: the water nobody draws yet, and the second plot of the garden.
+        self.assertEqual(list(buttons), [suggest_intent("water_carrier"), suggest_intent("farmer")])
         self._click(buttons[suggest_intent("farmer")].rect.center)
         self.assertEqual((lucia.job_id, lucia.post_id), ("farmer", "crop_2"))
         self.assertEqual(hud.notice, "Lucía decide hacerse cargo del puesto: Huerto")

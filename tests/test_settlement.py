@@ -53,6 +53,32 @@ class SettlementMapTests(unittest.TestCase):
             for placed in usable:
                 self.assertIsNotNone(routine._use(world, resident, placed), placed.object_id)
 
+    def test_nobody_who_gets_up_from_a_bed_can_end_up_walled_in(self) -> None:
+        """Whoever lies on something steps off it onto any free tile beside it. From there the way out must be open.
+
+        A row of beds once closed off a strip of floor in the south house: whoever got up on the
+        wrong side could never leave it again.
+        """
+        world = SimulationWorld.demo_world()
+        passable = world.passable()
+        spawn = world.registries.maps[world.map_id].spawns[0]
+        checked = 0
+        for placed in world.interactables.values():
+            definition = world.definition_of(placed)
+            if definition.use is None or definition.use.position != "on":
+                continue
+            beside = [
+                (x + dx, y + dy)
+                for x, y in placed.footprint(definition)
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                if passable((x + dx, y + dy))
+            ]
+            self.assertTrue(beside, f"{placed.object_id} cannot be got off")
+            for tile in beside:
+                self.assertIsNotNone(find_path(tile, spawn, passable), f"{tile} beside {placed.object_id} is walled in")
+                checked += 1
+        self.assertGreater(checked, 20)
+
     def test_blocking_objects_cannot_be_walked_through(self) -> None:
         world = SimulationWorld.demo_world()
         passable = world.passable()

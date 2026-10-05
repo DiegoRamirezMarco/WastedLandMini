@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 
+from simulation.residents.needs import NEED_NAMES
+
 
 @dataclass(frozen=True)
 class InjuryDefinition:
@@ -13,6 +15,9 @@ class InjuryDefinition:
     # A single injury of this kind at least this severe may take a limb off, with this chance.
     severs_from: float | None = None
     severs_chance: float = 0.0
+    # The need that brings this on while it is at its worst, and how fast it then grows.
+    from_need: str | None = None
+    worsens_per_day: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -59,7 +64,11 @@ def injury_definition_from_data(kind: str, data: dict[str, Any]) -> InjuryDefini
     severs_chance = float(data.get("severs_chance", 0.0))
     if not 0.0 <= severs_chance <= 1.0:
         raise ValueError(f"Injury {kind} takes a limb off with a chance outside 0 to 1")
-    return InjuryDefinition(kind, str(data["name"]), heal, treated, severs_from, severs_chance)
+    from_need = str(data["from_need"]) if data.get("from_need") is not None else None
+    worsens = float(data.get("worsens_per_day", 0.0))
+    if from_need is not None and (from_need not in NEED_NAMES or worsens <= 0):
+        raise ValueError(f"Injury {kind} must come of a need that exists and grow at a positive rate")
+    return InjuryDefinition(kind, str(data["name"]), heal, treated, severs_from, severs_chance, from_need, worsens)
 
 
 def limb_definition_from_data(limb_id: str, data: dict[str, Any]) -> LimbDefinition:

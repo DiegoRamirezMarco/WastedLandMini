@@ -156,6 +156,13 @@ class ItemSystem:
             at=resident.tile,
         )
 
+    def report_nothing_for(self, world: "SimulationWorld", resident: Resident, need: str) -> None:
+        """Give notice, once a day, that there is nothing left to answer a need with."""
+        if need == "thirst":
+            self._report_no_water(world, resident)
+        elif need == "hunger":
+            self._report_no_food(world, resident)
+
     def _report_no_water(self, world: "SimulationWorld", resident: Resident) -> None:
         if world.notices.get(NO_WATER_NOTICE) == world.clock.day:
             return

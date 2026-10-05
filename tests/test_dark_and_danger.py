@@ -456,7 +456,8 @@ class DangerDataAndSaveTests(unittest.TestCase):
 
 class DarkWeeksTests(unittest.TestCase):
     def test_four_weeks_of_storms_and_raiders_leave_the_settlement_standing(self) -> None:
-        world = SimulationWorld.demo_world(seed=3)
+        # A seed with which raiders come within the four weeks.
+        world = SimulationWorld.demo_world(seed=5)
         sheltered = 0
         for _ in range(28 * MINUTES_PER_DAY):
             world.step(1)

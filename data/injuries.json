@@ -15,5 +15,19 @@
     "name": "una fractura",
     "heal_per_day": 3,
     "treated_per_day": 12
+  },
+  "dehydration": {
+    "name": "deshidratación",
+    "heal_per_day": 40,
+    "treated_per_day": 60,
+    "from_need": "thirst",
+    "worsens_per_day": 30
+  },
+  "starvation": {
+    "name": "desnutrición",
+    "heal_per_day": 15,
+    "treated_per_day": 30,
+    "from_need": "hunger",
+    "worsens_per_day": 12
   }
 }

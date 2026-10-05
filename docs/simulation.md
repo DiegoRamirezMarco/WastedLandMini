@@ -122,8 +122,16 @@ room. An argument's importance rises with the resentment between the two.
 ## What the settlement lives on
 
 - **Water.** `thirst` is a bodily need like hunger. Residents drink from the water tank, consuming
-  shared `water` items. The scavenger can bring water back and hauls it to the tank by the same
-  delivery rules as every other find.
+  shared `water` items. Drawing it is a job, `water_carrier`, worked at the tank as the garden is
+  worked at its plots; a morning's shift is about a day's water for everybody. The post stands
+  empty when a settlement starts and is offered round like any vacancy. The scavenger may bring
+  a little more back, hauled to the tank by the same delivery rules as every other find.
+- **Going without.** A need of the body only comes before sleep and work if something can be
+  done about it: something the resident carries, or somewhere open, within their means and not
+  empty. With no water anywhere, thirst keeps nobody from their bed or their post, and the
+  settlement is told once a day (`no_water`, `no_food`). An injury kind with `from_need` then
+  sets in for whoever has that need at its worst: it grows for as long as the need stays there,
+  mends once it is answered, and kills in the end. Thirst does it in a few days, hunger in a week.
 - **Energy.** Generator fuel is kept in a generator container. When night begins, the generator
   burns one unit. Lamps of kind `lamp` only light the map while fuel remains, and radios give no
   warning without power.

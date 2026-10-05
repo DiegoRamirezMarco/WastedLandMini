@@ -116,14 +116,15 @@ custom_content/
 
 | Part | Where | What it holds |
 |---|---|---|
-| Bar | Across the top, 26 high | The day on a plaque, sun or moon and the hour, pause and speed, what the settlement has (people and beds, food, scrap) as an icon and a figure each, the weather, and zoom. Under them one line: a word from the game, whoever waits for advice, or the latest news |
+| Bar | Across the top, 26 high | The day on a plaque, sun or moon and the hour, pause and speed, what the settlement has (people and beds, food, water, fuel, scrap) as an icon and a figure each, the weather, and zoom. Under them one line: a word from the game, whoever waits for advice, or the latest news |
 | Menu | Down the left, 58 wide | An icon at ×2 over a word for each entry: residents, posts, stores, events, map. The open one is framed in `lamp` |
 | Map | The middle | The settlement. What the menu opens floats over its top right corner, one thing at a time; the minimap keeps to its bottom left |
 | Panel | Down the right, 196 wide | Whoever is selected, in full; a container's contents; or, with nothing selected, everybody at a glance |
 | Dock | Under the map, 136 high | A scene between two faces, or else what has been going on |
 
 - **A resident in the panel**: their face at 64×64, wearing how things stand with them; the name
-  at ×2; credits, what they are doing and their post; a bar for health and one for each need;
+  at ×2; credits, what they are doing and their post; a bar for health, one for each need and
+  one for mood;
   their traits as chips; the five people they feel most about, each with a small face, an icon,
   a score (affection less resentment, green or red) and a word for what they are; what they carry
   as a grid of icons at ×2 with a count and a name; and what ails them or what they last remember.
@@ -178,6 +179,7 @@ custom_content/
 - After dark the picture of the map is multiplied by a light map: a dim blue everywhere, and a warm
   pool around every object whose kind gives `light`, as many tiles wide as it says. This is the
   only place where colours outside the palette reach the screen.
+- A lamp gives no pool of light while the generator is out of fuel. A fire always does.
 - A pool of light is made of 4×4 blocks of map pixels in four rings, so its edge is stepped, and it
   grows with the zoom like the rest of the map. A flame, which is an animated object, wavers by
   one block; a lamp burns steady.

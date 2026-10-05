@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from save.save_manager import SaveManager
@@ -80,6 +81,14 @@ def _others(world: SimulationWorld, resident_id: str) -> list[str]:
 
 def _owned(world: SimulationWorld, resident_id: str, definition_id: str):
     return world.residents[resident_id].inventory.stack_of(definition_id, resident_id)
+
+
+def _without_water_post(world: SimulationWorld) -> SimulationWorld:
+    """Leave out the post that nobody holds when a settlement starts, for tests about one vacancy at a time."""
+    jobs = {job_id: job for job_id, job in world.registries.jobs.items() if job_id != "water_carrier"}
+    world.registries = replace(world.registries, jobs=jobs)
+    world.vacancies.pop("water_carrier", None)
+    return world
 
 
 def _registries_with(file_name: str, old: str, new: str) -> BuiltInRegistries:
@@ -420,7 +429,7 @@ class TradeTests(unittest.TestCase):
 
 class ChangingJobsTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.world = _settled()
+        self.world = _without_water_post(_settled())
         self.lucia = self.world.residents["lucia"]
 
     def _job_decisions(self) -> list:
@@ -613,11 +622,11 @@ class EconomyDataAndSaveTests(unittest.TestCase):
             _registries_with("jobs.json", '"tag": "hoe"', '"tag": "scythe"')
 
     def test_saving_in_the_middle_of_a_vacancy_continues_exactly_like_not_saving(self) -> None:
-        original = SimulationWorld.demo_world(seed=5)
+        original = _without_water_post(SimulationWorld.demo_world(seed=5))
         original.health.die(original, original.residents["marta"], "una prueba")
         while not any(decision.job_id for decision in original.decisions.values()):
             original.step(1)
-        loaded = self.manager.from_data(json.loads(json.dumps(self.manager.to_data(original))))
+        loaded = self.manager.from_data(json.loads(json.dumps(self.manager.to_data(original))), original.registries)
         self.assertEqual(self.manager.to_data(loaded), self.manager.to_data(original))
         self.assertEqual([d.job_id for d in loaded.decisions.values()], ["cook"])
         self.assertEqual(loaded.vacancies, original.vacancies)
@@ -630,7 +639,7 @@ class EconomyDataAndSaveTests(unittest.TestCase):
         self.assertEqual(self.manager.to_data(loaded), self.manager.to_data(original))
 
     def test_a_decision_about_a_job_that_no_longer_exists_is_dropped(self) -> None:
-        world = SimulationWorld.demo_world(seed=5)
+        world = _without_water_post(SimulationWorld.demo_world(seed=5))
         world.health.die(world, world.residents["marta"], "una prueba")
         while not any(decision.job_id for decision in world.decisions.values()):
             world.step(1)
