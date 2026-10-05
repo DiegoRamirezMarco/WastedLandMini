@@ -102,11 +102,13 @@
   },
   "crop_bed": {
     "name": "bancal",
-    "article": "un"
+    "article": "un",
+    "category": "decor"
   },
   "guard_post": {
     "name": "puesto de guardia",
-    "article": "un"
+    "article": "un",
+    "category": "decor"
   },
   "workbench": {
     "name": "banco de trabajo",
@@ -196,7 +198,8 @@
   },
   "grave": {
     "name": "tumba",
-    "article": "una"
+    "article": "una",
+    "category": "decor"
   },
   "lamp": {
     "name": "farol",
@@ -207,16 +210,19 @@
     "name": "coche oxidado",
     "article": "un",
     "width": 3,
-    "height": 2
+    "height": 2,
+    "category": "decor"
   },
   "tyres": {
     "name": "pila de neumáticos",
-    "article": "una"
+    "article": "una",
+    "category": "decor"
   },
   "junk": {
     "name": "trastos",
     "article": "unos",
-    "blocks": false
+    "blocks": false,
+    "category": "decor"
   },
   "handcart": {
     "name": "carro",

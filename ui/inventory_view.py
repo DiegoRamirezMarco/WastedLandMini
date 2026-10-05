@@ -70,6 +70,20 @@ def container_panel_height(inventory: Inventory) -> int:
     return PADDING * 2 + LINE_HEIGHT + 2 + ROW_HEIGHT * max(1, len(inventory.items))
 
 
+def container_item_hitboxes(
+    position: tuple[int, int], world: SimulationWorld, container_id: str, width: int = PANEL_WIDTH
+) -> list[tuple[pygame.Rect, str]]:
+    """Rows occupied by the items in a container, paired with their stable definition IDs."""
+    inventory = world.containers.get(container_id)
+    if inventory is None:
+        return []
+    x, y = position[0] + PADDING, position[1] + PADDING + LINE_HEIGHT + 2
+    return [
+        (pygame.Rect(x, y + index * ROW_HEIGHT, width - PADDING * 2, ROW_HEIGHT), item.definition_id)
+        for index, item in enumerate(inventory.items)
+    ]
+
+
 def draw_container_panel(
     target: pygame.Surface,
     font: BitmapFont,

@@ -34,6 +34,7 @@ from world.map import Tile, TileMap
 from world.pathfinding import manhattan
 from world.visibility import line_of_sight, within_range
 from world.room import Room
+from world.urbanism import UrbanismResult, UrbanismSystem
 
 POWER_ITEM = "fuel"
 POWERED_LIGHTS = {"lamp"}
@@ -98,6 +99,7 @@ class SimulationWorld:
     theft_cooldowns: dict[str, int] = field(default_factory=dict)
     # Day on which each once-a-day notice was last given.
     notices: dict[str, int] = field(default_factory=dict)
+    urbanism: UrbanismSystem = field(default_factory=UrbanismSystem)
 
     def step(self, minutes: int | None = None) -> None:
         if self.clock.paused:
@@ -133,6 +135,24 @@ class SimulationWorld:
     def suggest_job(self, resident_id: str, job_id: str, option_id: str) -> str | None:
         """Put it to a resident that they take up a job. They weigh it and decide for themselves."""
         return self.interventions.suggest_job(self, resident_id, job_id, option_id)
+
+    def place_object(self, kind: str, tile: Tile) -> UrbanismResult:
+        return self.urbanism.place_object(self, kind, tile)
+
+    def move_object(self, object_id: str, tile: Tile) -> UrbanismResult:
+        return self.urbanism.move_object(self, object_id, tile)
+
+    def remove_object(self, object_id: str) -> UrbanismResult:
+        return self.urbanism.remove_object(self, object_id)
+
+    def place_building(self, blueprint_id: str, tile: Tile) -> UrbanismResult:
+        return self.urbanism.place_building(self, blueprint_id, tile)
+
+    def move_building(self, room_id: str, tile: Tile) -> UrbanismResult:
+        return self.urbanism.move_building(self, room_id, tile)
+
+    def remove_building(self, room_id: str) -> UrbanismResult:
+        return self.urbanism.remove_building(self, room_id)
 
     def set_speed(self, speed: int) -> None:
         if speed < 1:
@@ -197,8 +217,13 @@ class SimulationWorld:
         """Take terrain, rooms and placed objects from a registered map."""
         layout = self.registries.maps[map_id]
         self.map_id = layout.map_id
-        self.tile_map = layout.tile_map
-        self.rooms = dict(layout.rooms)
+        # Layout definitions are shared by worlds; live urbanism must never mutate the registry.
+        self.tile_map = TileMap(
+            layout.tile_map.width,
+            layout.tile_map.height,
+            [list(row) for row in layout.tile_map.tiles],
+        )
+        self.rooms = {room_id: replace(room) for room_id, room in layout.rooms.items()}
         self.interactables = {
             object_id: replace(placed) for object_id, placed in layout.interactables.items()
         }

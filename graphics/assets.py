@@ -52,6 +52,25 @@ class AssetStore:
             return []
         return sorted(child.name for child in path.iterdir() if child.is_file() and child.suffix.lower() == ".png")
 
+    def forget(self, relative_path: str) -> None:
+        """Discard cached variants of one asset after an in-game editor overwrites it."""
+        for key in [key for key in self._cache if key[0] == relative_path]:
+            self._cache.pop(key, None)
+
+    def optional_image(self, relative_path: str) -> pygame.Surface | None:
+        """Load an unconstrained image, returning None instead of a placeholder when it is invalid."""
+        path = (self._root / relative_path).resolve()
+        if not path.is_relative_to(self._root) or not path.is_file():
+            return None
+        try:
+            surface = pygame.image.load(str(path))
+        except (pygame.error, OSError) as error:
+            logger.warning("Asset could not be loaded: %s (%s)", relative_path, error)
+            return None
+        if pygame.display.get_init() and pygame.display.get_surface() is not None:
+            surface = surface.convert_alpha()
+        return surface
+
     def _load(self, relative_path: str, size: Size | None) -> pygame.Surface:
         fallback_size = size or (TILE_SIZE, TILE_SIZE)
         path = (self._root / relative_path).resolve()

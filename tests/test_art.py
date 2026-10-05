@@ -28,6 +28,7 @@ from graphics.font import SHEET_SIZE as FONT_SHEET_SIZE
 from graphics.icons import ICON_SIZE
 from graphics.item_icons import ICON_SIZE as ITEM_ICON_SIZE
 from graphics.item_icons import ItemIcons
+from graphics.object_sprites import ObjectSprites
 from graphics.map_renderer import render_roofs, render_terrain, roof_names, tile_names
 from graphics.tileset import (
     CLOSE_ROOF_SHEET,
@@ -554,8 +555,48 @@ class ItemIconTests(unittest.TestCase):
         self.assertEqual(icon.get_size(), ITEM_ICON_SIZE)
         self.assertEqual(tuple(icon.get_at((8, 8)))[:3], PALETTE["rose"])
 
+    def test_a_pack_icon_takes_the_place_of_builtin_item_art(self) -> None:
+        self._pack_icon("items", "canned_beans", (64, 48))
+        icon = self.icons.icon("canned_beans")
+        self.assertEqual(icon.get_size(), ITEM_ICON_SIZE)
+        self.assertEqual(tuple(icon.get_at((8, 8)))[:3], PALETTE["rose"])
+
     def test_an_item_without_an_icon_gets_the_placeholder(self) -> None:
         self.assertIn(PLACEHOLDER_COLORS[0], {tuple(p)[:3] for p in _pixels(self.icons.icon("mystery"))})
+
+
+class ObjectSpriteTests(unittest.TestCase):
+    def setUp(self) -> None:
+        logging.disable(logging.WARNING)
+        self.addCleanup(logging.disable, logging.NOTSET)
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.custom_root = Path(self._tmp.name)
+        self.sprites = ObjectSprites(AssetStore(ASSETS_DIR), AssetStore(self.custom_root))
+        self.bed = SimulationWorld.demo_world().registries.interactables.get("bed")
+
+    def _sprite(self, size: tuple[int, int]) -> None:
+        path = self.custom_root / "objects" / "bed"
+        path.mkdir(parents=True)
+        surface = pygame.Surface(size, pygame.SRCALPHA)
+        surface.fill(PALETTE["rose"])
+        pygame.image.save(surface, str(path / "sprite.png"))
+
+    def test_custom_object_art_replaces_the_builtin_and_may_be_taller(self) -> None:
+        self._sprite((16, 48))
+        sheet = self.sprites.sheet(self.bed)
+        self.assertEqual(sheet.get_size(), (16, 48))
+        self.assertEqual(tuple(sheet.get_at((8, 8)))[:3], PALETTE["rose"])
+
+    def test_a_sprite_may_hold_animation_frames_side_by_side(self) -> None:
+        self._sprite((48, 32))
+        self.assertEqual(self.sprites.frames(self.bed), 3)
+
+    def test_a_custom_sprite_with_the_wrong_frame_width_falls_back(self) -> None:
+        self._sprite((15, 32))
+        sheet = self.sprites.sheet(self.bed)
+        self.assertEqual(sheet.get_size(), (16, 32))
+        self.assertNotEqual(tuple(sheet.get_at((8, 8)))[:3], PALETTE["rose"])
 
 
 class SoundTests(unittest.TestCase):

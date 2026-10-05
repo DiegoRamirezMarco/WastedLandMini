@@ -16,9 +16,12 @@ from graphics.illustrations import ILLUSTRATIONS_DIR, Illustrations
 from graphics.item_icons import ItemIcons
 from graphics.screen_layers import ScreenLayers
 from save.save_manager import SaveManager
+from scenes.building_editor import BuildingEditor
 from scenes.doll_editor import DollEditor
 from scenes.global_view import GlobalView
 from scenes.interaction_view import InteractionView
+from scenes.item_editor import ItemEditor
+from scenes.urbanism import UrbanismEditor
 from scenes.voice_editor import VoiceEditor
 from settings import (
     FPS,
@@ -31,7 +34,7 @@ from settings import (
     SPEEDS,
 )
 from simulation.commands import AdvanceTimeCommand, SetPausedCommand, SetSpeedCommand
-from simulation.registries import DATA_DIR
+from simulation.registries import DATA_DIR, BuiltInRegistries
 from simulation.world import SimulationWorld
 from skeleton.plan import builtin_plan
 
@@ -42,12 +45,23 @@ SAVE_PATH = ASSETS_DIR.parent / "saves" / "quicksave.json"
 logger = logging.getLogger(__name__)
 # Upper bound on catching up after a long frame, so a stall never snowballs.
 MAX_MINUTES_PER_FRAME = 60
-# The scenes where a resident is made, in which time stands still and Escape goes back to the map.
-EDITOR_SCENE, VOICE_SCENE = "editor", "voice"
+# Editors in which simulation time stands still and Escape goes back to the map.
+EDITOR_SCENE, BUILDING_SCENE, ITEM_SCENE, VOICE_SCENE, URBANISM_SCENE = (
+    "editor",
+    "building_editor",
+    "item_editor",
+    "voice",
+    "urbanism",
+)
 
 
 class Game:
-    def __init__(self, illustrations_dir: Path | None = ILLUSTRATIONS_DIR, voices_dir: Path | None = VOICES_DIR) -> None:
+    def __init__(
+        self,
+        illustrations_dir: Path | None = ILLUSTRATIONS_DIR,
+        voices_dir: Path | None = VOICES_DIR,
+        custom_content_dir: Path = CUSTOM_CONTENT_DIR,
+    ) -> None:
         pygame.init()
         pygame.display.set_caption("Wasteland Minis")
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -59,13 +73,17 @@ class Game:
         flags = pygame.SRCALPHA if self.illustrations.root is not None else 0
         self.canvas = pygame.Surface((INTERNAL_WIDTH, INTERNAL_HEIGHT), flags)
         self.clock = pygame.time.Clock()
-        self.world = SimulationWorld.demo_world()
+        self.custom_content_dir = Path(custom_content_dir).resolve()
+        # The editor replaces live definitions, so each running game owns its registries instead
+        # of mutating the process-wide read-only built-ins shared by headless simulations.
+        registries = BuiltInRegistries.load(DATA_DIR, self.custom_content_dir)
+        self.world = SimulationWorld.demo_world(registries=registries)
         self.running = True
         self.scene_name = "global"
         # Game minutes that real time has earned but the simulation has not played yet.
         self.minutes_owed = 0.0
         self.assets = AssetStore(ASSETS_DIR)
-        self.custom = AssetStore(CUSTOM_CONTENT_DIR)
+        self.custom = AssetStore(self.custom_content_dir)
         self.font = BitmapFont(self.assets.image(FONT_SHEET, size=SHEET_SIZE))
         self.icons = ItemIcons(self.assets, self.custom)
         self.faces = FaceRenderer(self.assets, self.custom, self.illustrations)
@@ -132,6 +150,37 @@ class Game:
             if self.illustrations.root is not None
             else None
         )
+        # Buildings use the same illustrations folder, but keep four aligned drawings of their own.
+        self.building_editor = (
+            BuildingEditor(
+                self.canvas,
+                self.world,
+                self.font,
+                self.layers,
+                self.illustrations.root,
+                self.global_view.building_art,
+            )
+            if self.illustrations.root is not None
+            else None
+        )
+        # Items can always be edited: their overrides live in custom_content, independently of
+        # the optional high-resolution illustrations folder.
+        self.item_editor = ItemEditor(
+            self.canvas,
+            self.world,
+            self.font,
+            self.custom_content_dir,
+            self.icons,
+            self.layers,
+        )
+        self.urbanism_editor = UrbanismEditor(
+            self.canvas,
+            self.world,
+            self.font,
+            self.assets,
+            self.custom,
+            self.layers,
+        )
 
     def save_game(self, path: Path = SAVE_PATH) -> bool:
         """Write the settlement to disk. Returns whether it worked."""
@@ -151,7 +200,7 @@ class Game:
             self.global_view.hud.notify("No hay partida guardada")
             return False
         try:
-            world = self.saves.load(path)
+            world = self.saves.load(path, self.world.registries)
         except (OSError, ValueError, KeyError, TypeError) as error:
             logger.warning("Could not load %s: %s", path, error)
             self.global_view.hud.notify("No se pudo cargar la partida")
@@ -165,17 +214,35 @@ class Game:
     def active_scene(self):
         if self.scene_name == EDITOR_SCENE and self.doll_editor is not None:
             return self.doll_editor
+        if self.scene_name == BUILDING_SCENE and self.building_editor is not None:
+            return self.building_editor
+        if self.scene_name == ITEM_SCENE:
+            return self.item_editor
+        if self.scene_name == URBANISM_SCENE:
+            return self.urbanism_editor
         if self.scene_name == VOICE_SCENE and self.voice_editor is not None:
             return self.voice_editor
         return self.global_view if self.scene_name == "global" else self.interaction_view
 
     def handle_key(self, key: int) -> None:
-        if key == pygame.K_ESCAPE and self.scene_name in (EDITOR_SCENE, VOICE_SCENE):
+        if key == pygame.K_ESCAPE and self.scene_name in (
+            EDITOR_SCENE,
+            BUILDING_SCENE,
+            ITEM_SCENE,
+            VOICE_SCENE,
+            URBANISM_SCENE,
+        ):
             # Out of the drawing or the voice, not out of the game. The editor closes itself on the same key.
             return
         if key == pygame.K_ESCAPE:
             self.running = False
         elif key == pygame.K_TAB:
+            if self.scene_name == ITEM_SCENE:
+                # The item editor uses Tab to move between text fields.
+                return
+            if self.scene_name == URBANISM_SCENE:
+                self.urbanism_editor.closed = True
+                return
             if self.scene_name == "global":
                 self.open_interaction(next(iter(self.world.decisions), None))
             else:
@@ -207,11 +274,46 @@ class Game:
         """Follow requests from the scenes to switch between them."""
         if self.scene_name == EDITOR_SCENE and (self.doll_editor is None or self.doll_editor.closed):
             self.scene_name = "global"
+        elif self.scene_name == BUILDING_SCENE and (self.building_editor is None or self.building_editor.closed):
+            self.scene_name = "global"
+        elif self.scene_name == ITEM_SCENE and self.item_editor.closed:
+            self.scene_name = "global"
+        elif self.scene_name == URBANISM_SCENE and self.urbanism_editor.requested_art_room is not None:
+            room_id = self.urbanism_editor.requested_art_room
+            if self.building_editor is None:
+                self.urbanism_editor.requested_art_room = None
+                self.urbanism_editor.message = "No hay carpeta de ilustraciones disponible"
+                return
+            # Rebuild render caches first; the drawing editor must guide from the edited terrain.
+            self._build_scenes()
+            if room_id in self.world.rooms:
+                self.building_editor.open(room_id)
+                self.scene_name = BUILDING_SCENE
+        elif self.scene_name == URBANISM_SCENE and self.urbanism_editor.closed:
+            notice = self.urbanism_editor.message
+            # Terrain and room render caches are rebuilt from the authoritative edited world.
+            self._build_scenes()
+            self.global_view.hud.notify(notice)
         elif self.scene_name == VOICE_SCENE and (self.voice_editor is None or self.voice_editor.closed):
             self.scene_name = "global"
         elif self.scene_name == "global" and self.global_view.requested_editor is not None and self.doll_editor is not None:
             self.doll_editor.open(self.global_view.requested_editor)
             self.scene_name = EDITOR_SCENE
+        elif (
+            self.scene_name == "global"
+            and self.global_view.requested_building_editor is not None
+            and self.building_editor is not None
+        ):
+            self.building_editor.open(self.global_view.requested_building_editor)
+            self.scene_name = BUILDING_SCENE
+        elif self.scene_name == "global" and self.global_view.requested_item_editor is not None:
+            self.item_editor.open(self.global_view.requested_item_editor)
+            self.scene_name = ITEM_SCENE
+        elif self.scene_name == "global" and self.global_view.requested_save:
+            self.save_game()
+        elif self.scene_name == "global" and self.global_view.requested_urbanism:
+            self.urbanism_editor.open()
+            self.scene_name = URBANISM_SCENE
         elif self.scene_name == "global" and self.global_view.requested_voice is not None and self.voice_editor is not None:
             self.voice_editor.open(self.global_view.requested_voice)
             self.scene_name = VOICE_SCENE
@@ -221,6 +323,10 @@ class Game:
             self.scene_name = "global"
         self.global_view.requested_decision = None
         self.global_view.requested_editor = None
+        self.global_view.requested_building_editor = None
+        self.global_view.requested_item_editor = None
+        self.global_view.requested_save = False
+        self.global_view.requested_urbanism = False
         self.global_view.requested_voice = None
 
     def update_music(self) -> None:

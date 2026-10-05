@@ -4,6 +4,7 @@ from typing import Any
 from world.map import Tile
 
 USE_POSITIONS = ("adjacent", "on")
+URBANISM_CATEGORIES = ("furniture", "decor")
 
 
 @dataclass(frozen=True)
@@ -60,6 +61,9 @@ class InteractableDefinition:
     display_of: str | None = None
     # How many tiles around it this object lights after dark. 0 for something that gives no light.
     light: int = 0
+    # Where this kind appears in the urbanism catalogue. This is presentation metadata stored
+    # with the domain definition so built-in and custom objects follow the same rules.
+    urbanism_category: str = "furniture"
 
 
 @dataclass
@@ -89,12 +93,17 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         height=int(data.get("height", 1)),
         blocks=bool(data.get("blocks", True)),
         container=bool(data.get("container", False)),
-        use=_use_from_data(kind, data["use"]) if "use" in data else None,
-        display_of=str(data["display_of"]) if "display_of" in data else None,
+        use=_use_from_data(kind, data["use"]) if data.get("use") is not None else None,
+        display_of=str(data["display_of"]) if data.get("display_of") is not None else None,
         light=int(data.get("light", 0)),
+        urbanism_category=str(data.get("category", "furniture")),
     )
     if definition.light < 0:
         raise ValueError(f"Interactable {kind} gives a negative amount of light")
+    if definition.urbanism_category not in URBANISM_CATEGORIES:
+        raise ValueError(
+            f"Unknown urbanism category for interactable {kind}: {definition.urbanism_category}"
+        )
     if definition.use is not None and definition.use.sells and not definition.container:
         raise ValueError(f"Interactable {kind} sells things, so it must be a container")
     return definition
@@ -116,21 +125,21 @@ def _use_from_data(kind: str, data: dict[str, Any]) -> UseDefinition:
         text=str(data["text"]),
         minutes=int(data["minutes"]),
         per_minute={str(need): float(delta) for need, delta in data.get("per_minute", {}).items()},
-        item_id=str(data["item"]) if "item" in data else None,
-        consumes=str(data["consumes"]) if "consumes" in data else None,
+        item_id=str(data["item"]) if data.get("item") is not None else None,
+        consumes=str(data["consumes"]) if data.get("consumes") is not None else None,
         position=position,
         capacity=int(data.get("capacity", 1)),
         preferred_hours=(int(hours[0]), int(hours[1])) if hours else None,
         interruptible=bool(data.get("interruptible", False)),
         unaware=bool(data.get("unaware", False)),
-        until=str(data["until"]) if "until" in data else None,
-        staffed_by=str(data["staffed_by"]) if "staffed_by" in data else None,
+        until=str(data["until"]) if data.get("until") is not None else None,
+        staffed_by=str(data["staffed_by"]) if data.get("staffed_by") is not None else None,
         heals=bool(data.get("heals", False)),
-        care_job=str(data["care_job"]) if "care_job" in data else None,
+        care_job=str(data["care_job"]) if data.get("care_job") is not None else None,
         price=price,
         sells=bool(data.get("sells", False)),
         repairs=repairs,
-        material=str(data["material"]) if "material" in data else None,
-        material_from=str(data["material_from"]) if "material_from" in data else None,
+        material=str(data["material"]) if data.get("material") is not None else None,
+        material_from=str(data["material_from"]) if data.get("material_from") is not None else None,
         radio=bool(data.get("radio", False)),
     )

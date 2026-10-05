@@ -18,9 +18,11 @@ from simulation.items.item_system import (
 from simulation.items.registry import UNKNOWN_CATEGORY, ItemRegistry
 from simulation.knowledge.knowledge_system import share_rumor
 from simulation.registries import DATA_DIR, BuiltInRegistries, builtin_registries
+from simulation.registries import InteractableRegistry
 from simulation.residents.activity import Activity
 from simulation.residents.needs import Needs
 from simulation.world import SimulationWorld
+from world.custom_content import load_custom_interactables, validate_interactable_data
 
 MINUTES_PER_DAY = 24 * 60
 VALID = {"id": "x", "name": "X", "article": "un", "category": "gift"}
@@ -144,7 +146,7 @@ class CustomContentTests(unittest.TestCase):
             "bad_effects": {**VALID, "id": "bad_effects", "effects": {"hunger": "lots"}},
             "a_list": [1, 2, 3],
             "not_json": "{ this is not json",
-            "canned_beans": {**VALID, "id": "canned_beans"},
+            "canned_beans": {"id": "canned_beans", "base_value": -5},
         }
         for name, content in bad.items():
             self._pack("items", name, content)
@@ -156,7 +158,37 @@ class CustomContentTests(unittest.TestCase):
         registry = ItemRegistry()
         registry.load_collection_json_file(DATA_DIR / "items.json")
         self.assertEqual(load_custom_items(registry, self.root), ["fine"])
-        self.assertEqual(registry.get("canned_beans").category, "food", "a pack must not replace a built-in item")
+        self.assertEqual(
+            registry.get("canned_beans").name,
+            "judías en conserva",
+            "an invalid patch must leave the built-in definition intact",
+        )
+
+    def test_a_pack_can_modify_any_field_of_a_builtin_without_copying_the_rest(self) -> None:
+        registry = ItemRegistry()
+        registry.load_collection_json_file(DATA_DIR / "items.json")
+        original = registry.get("canned_beans")
+        self._pack(
+            "items",
+            "canned_beans",
+            {
+                "id": "canned_beans",
+                "name": "lata misteriosa",
+                "description": "La etiqueta se perdió hace años.",
+                "base_value": 14,
+            },
+        )
+
+        self.assertEqual(load_custom_items(registry, self.root), ["canned_beans"])
+        changed = registry.get("canned_beans")
+        self.assertEqual(
+            (changed.name, changed.description, changed.base_value),
+            ("lata misteriosa", "La etiqueta se perdió hace años.", 14),
+        )
+        self.assertEqual(changed.article, original.article)
+        self.assertEqual(changed.category, original.category)
+        self.assertEqual(changed.tags, original.tags)
+        self.assertEqual(changed.effects, original.effects)
 
     def test_validation_names_what_is_wrong(self) -> None:
         with self.assertRaisesRegex(ValueError, "folder name"):
@@ -175,6 +207,65 @@ class CustomContentTests(unittest.TestCase):
         world = SimulationWorld.demo_world()
         world.step(2 * MINUTES_PER_DAY)
         self.assertTrue(any("pizza radiactiva" in line for line in world.event_log))
+
+
+class CustomObjectContentTests(unittest.TestCase):
+    def setUp(self) -> None:
+        logging.disable(logging.WARNING)
+        self.addCleanup(logging.disable, logging.NOTSET)
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+        self.registry = InteractableRegistry()
+        self.registry.load_json_file(DATA_DIR / "interactables.json")
+
+    def _pack(self, kind: str, data: object) -> None:
+        path = self.root / "objects" / kind
+        path.mkdir(parents=True, exist_ok=True)
+        (path / "data.json").write_text(json.dumps(data), encoding="utf-8")
+
+    def test_a_builtin_object_can_be_partially_changed_including_its_use(self) -> None:
+        original = self.registry.get("bed")
+        self._pack(
+            "bed",
+            {
+                "id": "bed",
+                "name": "catre remendado",
+                "blocks": False,
+                "use": {"minutes": 480, "per_minute": {"tiredness": -0.3}},
+            },
+        )
+
+        self.assertEqual(load_custom_interactables(self.registry, self.root), ["bed"])
+        changed = self.registry.get("bed")
+        self.assertEqual(changed.name, "catre remendado")
+        self.assertFalse(changed.blocks)
+        self.assertEqual((changed.width, changed.height, changed.article), (1, 2, original.article))
+        self.assertEqual(changed.use.action, original.use.action)
+        self.assertEqual(changed.use.minutes, 480)
+        self.assertEqual(changed.use.per_minute, {"tiredness": -0.3})
+
+    def test_use_can_be_removed_explicitly_and_omitted_data_is_inherited(self) -> None:
+        self._pack("radio_set", {"id": "radio_set", "use": None, "light": 1})
+        self.assertEqual(load_custom_interactables(self.registry, self.root), ["radio_set"])
+        changed = self.registry.get("radio_set")
+        self.assertIsNone(changed.use)
+        self.assertEqual(changed.light, 1)
+        self.assertEqual(changed.name, "radio del asentamiento")
+
+    def test_bad_object_packs_are_skipped_without_changing_the_builtin(self) -> None:
+        self._pack("bed", {"id": "bed", "width": 0})
+        self._pack("wrong_folder", {"id": "another", "name": "X", "article": "un"})
+        self.assertEqual(load_custom_interactables(self.registry, self.root), [])
+        self.assertEqual((self.registry.get("bed").width, self.registry.get("bed").name), (1, "cama"))
+        with self.assertRaisesRegex(ValueError, "blocks"):
+            validate_interactable_data({"id": "bed", "blocks": "no"}, "bed", self.registry.get("bed"))
+
+    def test_object_patches_load_through_the_whole_registry_without_pygame(self) -> None:
+        self._pack("crate", {"id": "crate", "name": "baúl de viaje", "light": 2})
+        registries = BuiltInRegistries.load(DATA_DIR, self.root)
+        changed = registries.interactables.get("crate")
+        self.assertEqual((changed.name, changed.light, changed.container), ("baúl de viaje", 2, True))
 
 
 class FoodTests(unittest.TestCase):

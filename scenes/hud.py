@@ -20,7 +20,7 @@ from simulation.world import SimulationWorld
 from ui.button import Button
 from ui.dock import draw_scene
 from ui.event_log import EventFeed
-from ui.inventory_view import container_panel_height, draw_container_panel
+from ui.inventory_view import container_item_hitboxes, container_panel_height, draw_container_panel
 from ui.job_board import PANEL_WIDTH as BOARD_WIDTH
 from ui.job_board import draw_job_board, job_board_height, suggest_buttons
 from ui.labels import (
@@ -35,15 +35,15 @@ from ui.labels import (
 )
 from ui.layout import Layout, layout_for
 from ui.panel import draw_panel, set_skin
-from ui.resident_panel import draw_resident_panel, draw_roster, relationship_hitboxes, roster_rows
+from ui.resident_panel import draw_resident_panel, draw_roster, inventory_hitboxes, relationship_hitboxes, roster_rows
 
 MARGIN = 6
 LOG_SIZE = (250, 168)
 STORES_WIDTH = 184
 OUTLOOK_WIDTH = 300
 OUTLOOK_PADDING = 4
-# Rows of the menu on the left: an icon at twice its size with a word under it.
-MENU_ROW = 34
+# Rows of the menu on the left: compact enough for the game and editor controls together.
+MENU_ROW = 28
 MENU_ICON_SCALE = 2
 
 PAUSE_INTENT = ("pause",)
@@ -52,7 +52,10 @@ JOBS_INTENT = ("jobs",)
 STORES_INTENT = ("stores",)
 ROSTER_INTENT = ("roster",)
 MINIMAP_INTENT = ("minimap",)
+SAVE_INTENT = ("save",)
+URBANISM_INTENT = ("urbanism",)
 DRAW_INTENT = ("draw",)
+BUILD_INTENT = ("draw_building",)
 VOICE_INTENT = ("voice",)
 ZOOM_OUT_INTENT = ("zoom", -1)
 ZOOM_IN_INTENT = ("zoom", 1)
@@ -71,6 +74,10 @@ def speed_intent(speed: int) -> tuple[str, int]:
 
 def select_intent(resident_id: str) -> tuple[str, str]:
     return ("select", resident_id)
+
+
+def edit_item_intent(definition_id: str) -> tuple[str, str]:
+    return ("edit_item", definition_id)
 
 
 @dataclass
@@ -169,10 +176,13 @@ class Hud:
             ("scrap", "Almacén", STORES_INTENT),
             ("log", "Eventos", LOG_INTENT),
             ("map", "Mapa", MINIMAP_INTENT),
+            ("log", "Guardar", SAVE_INTENT),
+            ("map", "Urbanismo", URBANISM_INTENT),
         ]
         if drawable:
             # Where there is somewhere to keep drawings, residents can be drawn.
             entries.append(("brush", "Dibujar", DRAW_INTENT))
+            entries.append(("brush", "Edificios", BUILD_INTENT))
         if voiced:
             # And where there are voices to choose from, they can be given one.
             entries.append(("voice", "Voz", VOICE_INTENT))
@@ -235,11 +245,24 @@ class Hud:
         self.selected_id, self.selected_container = None, container_id
 
     def click(self, position: tuple[int, int]) -> Hashable | None:
-        """Return the intent of whatever is under `position`: a button, or a resident listed in the panel."""
+        """Return the intent of the button, item or resident under `position`."""
         for button in self.buttons:
             if button.contains(position):
                 return button.intent
+        for rect, definition_id in self._inventory_items():
+            if rect.collidepoint(position):
+                return edit_item_intent(definition_id)
         return next((select_intent(resident_id) for row, resident_id in self._listed() if row.collidepoint(position)), None)
+
+    def _inventory_items(self) -> list[tuple[pygame.Rect, str]]:
+        resident = self.world.residents.get(self.selected_id or "")
+        if resident is not None:
+            return inventory_hitboxes(self.layout.panel, self.world, resident)
+        if self.selected_container in self.world.containers:
+            return container_item_hitboxes(
+                self.layout.panel.topleft, self.world, self.selected_container or "", self.layout.panel.width
+            )
+        return []
 
     def _listed(self) -> list[tuple[pygame.Rect, str]]:
         """Residents named in the panel on the right, each of whom a click there selects."""

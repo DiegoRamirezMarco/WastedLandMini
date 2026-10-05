@@ -1,0 +1,16 @@
+{
+  "id": "hoe",
+  "name": "azada",
+  "article": "una",
+  "category": "tool",
+  "base_value": 12,
+  "description": "",
+  "tags": [
+    "tool",
+    "hoe"
+  ],
+  "effects": {},
+  "properties": {
+    "wear": 2.0
+  }
+}

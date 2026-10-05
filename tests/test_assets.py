@@ -45,6 +45,12 @@ class AssetStoreTests(unittest.TestCase):
     def test_corrupt_png_gives_placeholder(self) -> None:
         (self.root / "broken.png").write_bytes(b"not a png")
         self._assert_placeholder(self.store.image("broken.png", size=(16, 16)), (16, 16))
+        self.assertIsNone(self.store.optional_image("broken.png"))
+
+    def test_an_optional_image_is_none_when_missing_and_the_surface_when_present(self) -> None:
+        self.assertIsNone(self.store.optional_image("missing.png"))
+        self._write_png(self.root / "optional.png", (27, 19))
+        self.assertEqual(self.store.optional_image("optional.png").get_size(), (27, 19))
 
     def test_wrong_size_gives_placeholder(self) -> None:
         self._write_png(self.root / "big.png", (32, 32))

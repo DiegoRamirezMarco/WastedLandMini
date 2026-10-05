@@ -21,8 +21,10 @@ from simulation.social.interaction import InteractionDefinition, interaction_def
 from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
 from world.interactable import InteractableDefinition, interactable_definition_from_data
+from world.custom_content import load_custom_buildings, load_custom_interactables
 from world.map import TerrainDefinition
 from world.settlement import SettlementLayout, layout_from_data
+from world.urbanism import BuildingDefinition, building_definition_from_data
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CUSTOM_CONTENT_DIR = DATA_DIR.parent / "custom_content"
@@ -95,6 +97,12 @@ class InteractableRegistry:
             raise ValueError(f"Duplicate interactable kind: {definition.kind}")
         self._definitions[definition.kind] = definition
 
+    def replace(self, definition: InteractableDefinition) -> None:
+        """Replace a known kind while every placed object keeps referring to its stable ID."""
+        if definition.kind not in self._definitions:
+            raise KeyError(f"Unknown interactable kind: {definition.kind}")
+        self._definitions[definition.kind] = definition
+
     def get(self, kind: str) -> InteractableDefinition:
         return self._definitions[kind]
 
@@ -120,6 +128,7 @@ class BuiltInRegistries:
     personalities: PersonalityRegistry = field(default_factory=PersonalityRegistry)
     traits: JsonDefinitionRegistry = field(default_factory=JsonDefinitionRegistry)
     interactables: InteractableRegistry = field(default_factory=InteractableRegistry)
+    buildings: dict[str, BuildingDefinition] = field(default_factory=dict)
     terrain: dict[str, TerrainDefinition] = field(default_factory=dict)
     maps: dict[str, SettlementLayout] = field(default_factory=dict)
     interactions: dict[str, InteractionDefinition] = field(default_factory=dict)
@@ -149,6 +158,16 @@ class BuiltInRegistries:
         registries.personalities.load_json_file(root / "personalities.json")
         registries.traits.load_json_file(root / "traits.json")
         registries.interactables.load_json_file(root / "interactables.json")
+        if custom_dir is not None:
+            load_custom_interactables(registries.interactables, Path(custom_dir))
+        urbanism_path = root / "urbanism.json"
+        if urbanism_path.is_file():
+            registries.buildings = {
+                str(blueprint_id): building_definition_from_data(str(blueprint_id), values)
+                for blueprint_id, values in _read_object(urbanism_path).items()
+            }
+        if custom_dir is not None:
+            load_custom_buildings(registries.buildings, Path(custom_dir))
         registries.terrain = {
             str(terrain_id): TerrainDefinition(
                 str(terrain_id), bool(values.get("walkable", True)), bool(values.get("opaque", False))
@@ -213,6 +232,9 @@ class BuiltInRegistries:
             holder = self.interactables.find(shown) if shown is not None else None
             if shown is not None and (holder is None or not holder.container):
                 raise ValueError(f"Interactable {kind} displays what is in {shown}, which is not a container kind")
+        for blueprint_id, building in self.buildings.items():
+            if building.floor not in self.terrain:
+                raise ValueError(f"Building {blueprint_id} uses unknown floor terrain: {building.floor}")
         for interaction_id, interaction in self.interactions.items():
             if interaction.dialogue is not None and interaction.dialogue not in self.dialogue:
                 raise ValueError(f"Interaction {interaction_id} uses unknown dialogue: {interaction.dialogue}")

@@ -396,7 +396,7 @@ Still open here:
 - A line is said in the same way whatever the mood of whoever says it
 - At x4 and x16 lines change faster than they can be said, and most go unsaid
 
-### P15 — Houses drawn by hand — planned
+### P15 — Houses drawn by hand — done
 Every house and premises is to be drawable in the game as residents are: in parts, each over a
 guide, and put together by the game.
 
@@ -409,12 +409,21 @@ guide, and put together by the game.
   building nobody has drawn looks as it does now
 - An editor for them in the game, after the pattern of the one for residents
 
-Not part of this: furniture and objects. They are to be drawn separately, later, and how is still
-to be seen.
+Not part of the building drawing itself: furniture and objects remain separate layers. Their
+definitions and sprites can now be overridden under `custom_content/objects/`, while inventory
+items open their own data-and-icon editor when clicked.
 
-To be settled when it is built: the size of each canvas for buildings of different sizes, where
-the door is hung and the sign goes on a drawing, whether the door is seen to open, and how the
-parts are told apart on the guide.
+Settled in the editor:
+- The four parts share a canvas at two pixels for every pixel of the map art. Its size follows the
+  room, so it is also the exact resolution shown in the window at the default zoom
+- The door's frame comes from the door tile authored in the map. The name sign remains game text,
+  positioned by the room rather than baked into any drawing
+- The door is a separate foreground part but does not animate open. The roof is the part exchanged:
+  with it off, the empty inside lies below furniture and residents and the walls and door lie above
+- Tabs and a distinct guide show one part at a time. All four keep the same origin, and the preview
+  switches between the assembled outside and inside
+- Old one-piece building illustrations remain valid. New drawings also work when the map ground
+  itself has not been illustrated, and every undrawn building keeps the old pixel art
 
 ### S15 — What the settlement lives on — done
 

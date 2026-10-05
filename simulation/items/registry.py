@@ -18,6 +18,13 @@ class ItemRegistry:
             raise ValueError(f"Duplicate item id: {definition.item_id}")
         self._definitions[definition.item_id] = definition
 
+    def replace(self, definition: ItemDefinition) -> None:
+        """Replace a known definition while preserving its stable ID in every live instance."""
+        if definition.item_id not in self._definitions:
+            raise KeyError(f"Unknown item id: {definition.item_id}")
+        self._definitions[definition.item_id] = definition
+        self._placeholders.pop(definition.item_id, None)
+
     def get(self, item_id: str) -> ItemDefinition:
         return self._definitions[item_id]
 
@@ -39,7 +46,12 @@ class ItemRegistry:
     def ids(self) -> list[str]:
         return list(self._definitions)
 
-    def load_mapping(self, data: dict[str, Any], source: str = "<data>") -> ItemDefinition:
+    def load_mapping(
+        self,
+        data: dict[str, Any],
+        source: str = "<data>",
+        replace_existing: bool = False,
+    ) -> ItemDefinition:
         required = {"id", "name", "article", "category"}
         missing = required - data.keys()
         if missing:
@@ -55,7 +67,10 @@ class ItemRegistry:
             effects={str(k): float(v) for k, v in data.get("effects", {}).items()},
             properties={str(k): float(v) for k, v in data.get("properties", {}).items()},
         )
-        self.register(definition)
+        if replace_existing:
+            self.replace(definition)
+        else:
+            self.register(definition)
         return definition
 
     def load_json_file(self, path: Path) -> ItemDefinition:

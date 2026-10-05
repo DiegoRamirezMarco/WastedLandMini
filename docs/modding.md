@@ -1,6 +1,7 @@
 # Modding / Custom Content
 
-Each custom item or food lives in its own directory:
+Each new or modified item or food lives in its own directory. The folder name and stable `id`
+decide which item it is:
 
 ```text
 custom_content/foods/my_food/
@@ -22,27 +23,88 @@ Minimal `data.json`:
 Optional fields include `description`, `base_value`, `tags` and `effects`. `effects` maps a need
 (`hunger`, `thirst`, `tiredness`, `social`, `stress`) to the change from using or eating the item.
 
+Every built-in item can be modified in exactly the same place. For an existing ID, `data.json` is
+a partial patch: omitted fields keep their built-in value. This changes only the name and value of
+the canned beans, for example, while preserving their article, category, tags and effects:
+
+```text
+custom_content/items/canned_beans/
+    data.json
+    icon.png
+```
+
+```json
+{
+  "id": "canned_beans",
+  "name": "lata misteriosa",
+  "base_value": 14
+}
+```
+
+`icon.png` replaces the built-in drawing when the IDs match. To replace only the drawing, keep a
+minimal `data.json` containing just `{"id": "canned_beans"}`. The editable definition fields are
+`name`, `article`, `category`, `description`, `base_value`, `tags`, `effects` and `properties`.
+Lists and mappings supplied by a patch replace that whole field; omitted fields are inherited.
+
+The same files can be made from inside the game. Select a resident or a container placed on the
+map, then click an object in the inventory panel. Its editor changes every field above and its
+icon; `effects` and `properties` use comma-separated `name=number` pairs. Saving writes
+`custom_content/items/<id>/data.json` and `icon.png` and refreshes every occurrence immediately.
+The stable ID is deliberately read-only, so existing inventories and saved games keep referring
+to the same object.
+
 Packs are loaded at start-up through the same registry as built-in items. A pack is skipped, with
 a warning in the log and without stopping the game, if:
 
 - `data.json` is missing, is not valid JSON, is not an object or is larger than 64 KB;
 - `id` is not lowercase letters, digits and single underscores, or differs from the folder name;
-- `name`, `article` or `category` is missing or empty, or a food's `category` is not `food`;
+- `name`, `article` or `category` is missing or empty for a new item, or a food's effective
+  `category` is not `food`;
 - `base_value` is negative, `tags` is not a list of strings, or `effects` has non-numeric values;
-- the `id` is already taken by a built-in item or an earlier pack.
+- the same `id` has already been modified by an earlier pack. A built-in ID itself is allowed and
+  means that the pack modifies it.
 
 Fields the game does not know are ignored, so a pack made for a newer version still loads.
 Removing a pack never breaks a save: its items stay as inert unknown objects.
 
-`icon.png` is ideally 16×16; any other size is scaled down to it. A pack without an icon shows the
-magenta checker placeholder. Face PNGs must be 64×64. See `docs/visual-style.md` for the art rules
-and palette.
+`icon.png` is ideally 16×16; any other size is scaled down to it. A new item without an icon shows
+the magenta checker placeholder; a modified built-in item without one keeps its original drawing.
+Face PNGs must be 64×64. See `docs/visual-style.md` for the art rules and palette.
 
 Use stable lowercase IDs with underscores. Display names may contain spaces and accents. Gameplay must use IDs/tags/categories, never the display name.
 
 ## Maps, terrain and objects
 
-These live in `data/` for now; loading them from `custom_content/` comes later.
+Maps and terrain live in `data/` for now. Furniture and other kinds of object placed by those maps
+can be modified under `custom_content/objects/` with the same stable-ID patch model as items:
+
+```text
+custom_content/objects/bed/
+    data.json
+    sprite.png
+```
+
+A minimal patch can change only the displayed name:
+
+```json
+{
+  "id": "bed",
+  "name": "catre remendado"
+}
+```
+
+Editable fields are `name`, `article`, `width`, `height`, `blocks`, `container`, `display_of`,
+`light`, `category` and `use`. `category` is `furniture` or `decor` and decides where the kind
+appears in the Urbanismo catalogue. A `use` object is itself patched field by field, so
+`{"id":"bed", "use":{"minutes":480}}` keeps the sleeping action and changes only its duration.
+Set `"use": null` to remove the use entirely. Every placed object of that kind receives the
+modified definition; object instances and saved games continue to store only their stable IDs.
+
+`sprite.png` replaces `assets/sprites/objects/<id>.png`. Each animation frame is `width × 16`
+pixels wide, frames are laid side by side, and the picture must be at least `height × 16` pixels
+high. It may be taller so that lamps, shelves and other upright objects rise above their footprint.
+To replace only the drawing, use a minimal `data.json` containing the ID. Invalid or oversized
+data is skipped without stopping the game, and missing custom art falls back to the built-in sprite.
 
 A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
 
@@ -64,7 +126,8 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
 
 - Every row must have the same length, and every character must be in the legend.
 - Legend values are terrain IDs from `data/terrain.json`; `kind` values are object kinds from
-  `data/interactables.json`. Unknown IDs are rejected when the game loads its data.
+  `data/interactables.json` or `custom_content/objects/`. Unknown IDs are rejected when the game
+  loads its data.
 - Spawns must be on walkable terrain.
 - A room with `"roofed": true` is a building: seen from afar it is drawn with its roof on. Its
   rectangle is the floor inside, with walls one tile thick around it and the door in the wall
@@ -73,7 +136,8 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
   `{"container": "pantry_1", "item": "canned_beans", "count": 8, "hour": 7}`. The container must be
   an object whose kind is marked `"container": true`. An item that is not defined is left out.
 - Terrain is drawn with the tile of the same name in the tileset; a terrain without a tile shows
-  the placeholder. An object kind is drawn with `assets/sprites/objects/<kind>.png`.
+  the placeholder. An object kind uses `custom_content/objects/<kind>/sprite.png` when present,
+  otherwise `assets/sprites/objects/<kind>.png`.
 - `"light": 5` on an object kind makes it light that many tiles around it after dark. The built-in
   `lamp` kind needs generator fuel to shine; fires and other light kinds do not. A kind with no
   `use` is scenery; give it `"blocks": false` if it can be walked over.
@@ -98,6 +162,12 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
 - A map's `graves` lists the tiles where the dead are buried, in the order they are used.
 
 ## Buildings
+
+Urbanismo gets its built-in building blueprints from `data/urbanism.json`. A content pack can add
+one with `custom_content/buildings/<id>/data.json`; it uses `id`, display `name`, interior `width`
+and `height`, `floor`, and optional `privacy`. Put its art in `sprite.png` in the same folder. If
+art is absent, the game supplies a procedural wasteland building that can then be opened in the
+building art editor.
 
 Every roofed room of a map is drawn, while its roof is on, as one picture. To give a building a
 look of your own, put a PNG named after the room's ID in `custom_content/buildings/`, for example

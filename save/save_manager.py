@@ -25,6 +25,8 @@ from simulation.work.expedition import Expedition
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.world import SimulationWorld
 from world.interactable import Interactable
+from world.map import TileMap
+from world.room import Room
 
 # Version 1 stored resident positions in pixels and had no map, facing or activities.
 # Version 3 added memories and conversation partners; older saves simply have none.
@@ -47,12 +49,14 @@ FIRST_ECONOMY_VERSION = 8
 # Version 14 added raids. A save from before simply has never had one.
 # Version 15 added lost limbs, none by default, and the particulars of events, empty by default.
 # Version 16 added thirst, mood, water and generator fuel.
+# Version 17 stores changes made in urbanism mode: terrain, rooms and construction underlays.
 LAST_MAP_CHANGE_VERSION = 16
+FIRST_URBANISM_VERSION = 17
 FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 16
+    CURRENT_VERSION = 17
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -76,6 +80,32 @@ class SaveManager:
             "under_raid": world.under_raid,
             "newcomers_seen": list(world.newcomers_seen),
             "map_id": world.map_id,
+            "terrain": [list(row) for row in world.tile_map.tiles],
+            "rooms": [
+                {
+                    "id": room.room_id,
+                    "name": room.name,
+                    "privacy": room.privacy,
+                    "x": room.x,
+                    "y": room.y,
+                    "width": room.width,
+                    "height": room.height,
+                    "roofed": room.roofed,
+                    "blueprint_id": room.blueprint_id,
+                }
+                for room in world.rooms.values()
+            ],
+            "urbanism": {
+                "next_object": world.urbanism.next_object,
+                "next_building": world.urbanism.next_building,
+                "underlays": {
+                    room_id: [
+                        {"x": tile[0], "y": tile[1], "terrain": terrain}
+                        for tile, terrain in underlay.items()
+                    ]
+                    for room_id, underlay in world.urbanism.underlays.items()
+                },
+            },
             "interactables": [
                 {"id": placed.object_id, "kind": placed.kind, "x": placed.x, "y": placed.y}
                 for placed in world.interactables.values()
@@ -498,6 +528,8 @@ class SaveManager:
         """Load the saved map, falling back to the default one if it no longer exists."""
         map_id = str(data.get("map_id", DEFAULT_MAP_ID))
         world.load_layout(map_id if map_id in world.registries.maps else DEFAULT_MAP_ID)
+        if map_id == world.map_id and version >= FIRST_URBANISM_VERSION:
+            self._restore_urbanism(world, data)
         saved = data.get("interactables")
         if map_id != world.map_id or not isinstance(saved, list) or version < FIRST_JOB_VERSION:
             return
@@ -522,6 +554,67 @@ class SaveManager:
             for object_id, placed in world.interactables.items()
             if world.definition_of(placed).container
         }
+
+    def _restore_urbanism(self, world: SimulationWorld, data: dict[str, Any]) -> None:
+        """Restore an edited map, ignoring malformed optional layout entries safely."""
+        terrain = data.get("terrain")
+        if (
+            isinstance(terrain, list)
+            and len(terrain) == world.tile_map.height
+            and all(isinstance(row, list) and len(row) == world.tile_map.width for row in terrain)
+        ):
+            known = world.registries.terrain
+            if all(isinstance(cell, str) and cell in known for row in terrain for cell in row):
+                world.tile_map = TileMap(
+                    world.tile_map.width,
+                    world.tile_map.height,
+                    [[str(cell) for cell in row] for row in terrain],
+                )
+
+        rooms = data.get("rooms")
+        if isinstance(rooms, list):
+            restored: dict[str, Room] = {}
+            for saved in rooms:
+                if not isinstance(saved, dict) or "id" not in saved:
+                    continue
+                room = Room(
+                    room_id=str(saved["id"]),
+                    name=str(saved.get("name", saved["id"])),
+                    privacy=float(saved.get("privacy", 0.0)),
+                    x=int(saved.get("x", 0)),
+                    y=int(saved.get("y", 0)),
+                    width=int(saved.get("width", 0)),
+                    height=int(saved.get("height", 0)),
+                    roofed=bool(saved.get("roofed", False)),
+                    blueprint_id=_text_or_none(saved.get("blueprint_id")),
+                )
+                corners = (
+                    (room.x, room.y),
+                    (room.x + room.width - 1, room.y + room.height - 1),
+                )
+                if room.width > 0 and room.height > 0 and all(
+                    world.tile_map.in_bounds(corner) for corner in corners
+                ):
+                    restored[room.room_id] = room
+            world.rooms = restored
+
+        urbanism = _object_or_empty(data.get("urbanism"))
+        world.urbanism.next_object = max(1, int(urbanism.get("next_object", 1)))
+        world.urbanism.next_building = max(1, int(urbanism.get("next_building", 1)))
+        underlays = _object_or_empty(urbanism.get("underlays"))
+        world.urbanism.underlays = {}
+        for room_id, entries in underlays.items():
+            if room_id not in world.rooms or not isinstance(entries, list):
+                continue
+            restored_underlay: dict[tuple[int, int], str] = {}
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                tile = (int(entry.get("x", -1)), int(entry.get("y", -1)))
+                terrain_id = str(entry.get("terrain", ""))
+                if world.tile_map.in_bounds(tile) and terrain_id in world.registries.terrain:
+                    restored_underlay[tile] = terrain_id
+            world.urbanism.underlays[str(room_id)] = restored_underlay
 
 
 def _activity_to_data(activity: Activity | None) -> dict[str, Any] | None:

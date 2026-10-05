@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+
+from world.map import Tile
+from world.urbanism import UrbanismResult
 from typing import Protocol
 
 
@@ -16,6 +19,24 @@ class CommandTarget(Protocol):
         ...
 
     def suggest_job(self, resident_id: str, job_id: str, option_id: str) -> str | None:
+        ...
+
+    def place_object(self, kind: str, tile: Tile) -> UrbanismResult:
+        ...
+
+    def move_object(self, object_id: str, tile: Tile) -> UrbanismResult:
+        ...
+
+    def remove_object(self, object_id: str) -> UrbanismResult:
+        ...
+
+    def place_building(self, blueprint_id: str, tile: Tile) -> UrbanismResult:
+        ...
+
+    def move_building(self, room_id: str, tile: Tile) -> UrbanismResult:
+        ...
+
+    def remove_building(self, room_id: str) -> UrbanismResult:
         ...
 
 
@@ -72,3 +93,55 @@ class SuggestJobCommand:
     def apply(self, world: CommandTarget) -> str | None:
         """Returns the ID of what the resident decided, or None if they could not be asked."""
         return world.suggest_job(self.resident_id, self.job_id, self.option_id)
+
+
+@dataclass(frozen=True)
+class PlaceObjectCommand:
+    kind: str
+    tile: Tile
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.place_object(self.kind, self.tile)
+
+
+@dataclass(frozen=True)
+class MoveObjectCommand:
+    object_id: str
+    tile: Tile
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.move_object(self.object_id, self.tile)
+
+
+@dataclass(frozen=True)
+class RemoveObjectCommand:
+    object_id: str
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.remove_object(self.object_id)
+
+
+@dataclass(frozen=True)
+class PlaceBuildingCommand:
+    blueprint_id: str
+    tile: Tile
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.place_building(self.blueprint_id, self.tile)
+
+
+@dataclass(frozen=True)
+class MoveBuildingCommand:
+    room_id: str
+    tile: Tile
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.move_building(self.room_id, self.tile)
+
+
+@dataclass(frozen=True)
+class RemoveBuildingCommand:
+    room_id: str
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.remove_building(self.room_id)

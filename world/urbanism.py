@@ -1,0 +1,339 @@
+"""Domain rules for changing the settlement layout without depending on pygame."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
+
+from simulation.events.event import DomainEvent
+from simulation.items.inventory import Inventory
+from world.interactable import Interactable
+from world.map import Tile
+from world.room import Room
+
+if TYPE_CHECKING:
+    from simulation.world import SimulationWorld
+
+BUILDING_EVENT_IMPORTANCE = 20
+BUILDABLE_TERRAIN = {"dirt", "grass", "soil"}
+
+
+@dataclass(frozen=True)
+class BuildingDefinition:
+    blueprint_id: str
+    name: str
+    width: int
+    height: int
+    floor: str = "floor_wood"
+    privacy: float = 0.4
+
+
+def building_definition_from_data(blueprint_id: str, data: dict[str, Any]) -> BuildingDefinition:
+    missing = {"name", "width", "height"} - data.keys()
+    if missing:
+        raise ValueError(f"Missing fields in building {blueprint_id}: {sorted(missing)}")
+    definition = BuildingDefinition(
+        blueprint_id=blueprint_id,
+        name=str(data["name"]),
+        width=int(data["width"]),
+        height=int(data["height"]),
+        floor=str(data.get("floor", "floor_wood")),
+        privacy=float(data.get("privacy", 0.4)),
+    )
+    if definition.width < 2 or definition.height < 2:
+        raise ValueError(f"Building {blueprint_id} must be at least 2 by 2 tiles inside")
+    if not 0.0 <= definition.privacy <= 1.0:
+        raise ValueError(f"Building {blueprint_id} privacy must be between 0 and 1")
+    return definition
+
+
+@dataclass(frozen=True)
+class UrbanismResult:
+    ok: bool
+    message: str
+    entity_id: str | None = None
+
+
+@dataclass
+class UrbanismSystem:
+    """Placement state and operations owned by the simulation world."""
+
+    # Terrain hidden below each constructed building, needed to remove or move it later.
+    underlays: dict[str, dict[Tile, str]] = field(default_factory=dict)
+    next_object: int = 1
+    next_building: int = 1
+
+    def place_object(self, world: SimulationWorld, kind: str, tile: Tile) -> UrbanismResult:
+        error = self.object_error(world, kind, tile)
+        if error is not None:
+            return UrbanismResult(False, error)
+        object_id = self._fresh_object_id(world, kind)
+        placed = Interactable(object_id, kind, tile[0], tile[1])
+        world.interactables[object_id] = placed
+        if world.definition_of(placed).container:
+            world.containers[object_id] = Inventory()
+        definition = world.definition_of(placed)
+        self._invalidate_routes(world, set(placed.footprint(definition)))
+        self._announce(world, f"Se coloca {definition.article} {definition.name}", tile, object_id)
+        return UrbanismResult(True, f"{definition.name.capitalize()} colocado", object_id)
+
+    def move_object(self, world: SimulationWorld, object_id: str, tile: Tile) -> UrbanismResult:
+        placed = world.interactables.get(object_id)
+        if placed is None:
+            return UrbanismResult(False, "Ese objeto ya no existe")
+        busy = self._object_busy_reason(world, object_id)
+        if busy is not None:
+            return UrbanismResult(False, busy, object_id)
+        error = self.object_error(world, placed.kind, tile, ignore_object=object_id)
+        if error is not None:
+            return UrbanismResult(False, error, object_id)
+        placed.x, placed.y = tile
+        self._invalidate_routes(
+            world,
+            set(placed.footprint(world.definition_of(placed))),
+            target_ids={object_id},
+        )
+        self._announce(world, f"Se mueve {world.definition_of(placed).name}", tile, object_id)
+        return UrbanismResult(True, "Objeto movido", object_id)
+
+    def remove_object(self, world: SimulationWorld, object_id: str) -> UrbanismResult:
+        placed = world.interactables.get(object_id)
+        if placed is None:
+            return UrbanismResult(False, "Ese objeto ya no existe")
+        busy = self._object_busy_reason(world, object_id)
+        if busy is not None:
+            return UrbanismResult(False, busy, object_id)
+        inventory = world.containers.get(object_id)
+        if inventory is not None and inventory.items:
+            return UrbanismResult(False, "Vacía el mueble antes de retirarlo", object_id)
+        definition = world.definition_of(placed)
+        del world.interactables[object_id]
+        world.containers.pop(object_id, None)
+        self._invalidate_routes(world, set(), target_ids={object_id})
+        self._announce(world, f"Se retira {definition.name}", (placed.x, placed.y), object_id)
+        return UrbanismResult(True, f"{definition.name.capitalize()} retirado")
+
+    def object_error(
+        self,
+        world: SimulationWorld,
+        kind: str,
+        tile: Tile,
+        ignore_object: str | None = None,
+    ) -> str | None:
+        definition = world.registries.interactables.find(kind)
+        if definition is None:
+            return "Ese tipo de objeto no está disponible"
+        candidate = Interactable("preview", kind, tile[0], tile[1])
+        footprint = set(candidate.footprint(definition))
+        if not footprint or not all(world.tile_map.in_bounds(point) for point in footprint):
+            return "No cabe dentro del mapa"
+        if any(
+            not world.registries.terrain[world.tile_map.terrain_at(point)].walkable
+            for point in footprint
+        ):
+            return "Necesita suelo transitable"
+        occupied = {
+            point
+            for placed in world.interactables.values()
+            if placed.object_id != ignore_object
+            for point in placed.footprint(world.definition_of(placed))
+        }
+        if footprint & occupied:
+            return "Ese espacio ya está ocupado"
+        if any(not resident.away and resident.tile in footprint for resident in world.residents.values()):
+            return "Hay un residente en ese espacio"
+        return None
+
+    def place_building(
+        self, world: SimulationWorld, blueprint_id: str, tile: Tile
+    ) -> UrbanismResult:
+        definition = world.registries.buildings.get(blueprint_id)
+        if definition is None:
+            return UrbanismResult(False, "Ese edificio no está disponible")
+        error = self.building_error(world, definition.width, definition.height, tile)
+        if error is not None:
+            return UrbanismResult(False, error)
+        room_id = self._fresh_building_id(world, blueprint_id)
+        room = Room(
+            room_id,
+            definition.name,
+            definition.privacy,
+            tile[0],
+            tile[1],
+            definition.width,
+            definition.height,
+            True,
+            blueprint_id,
+        )
+        self._construct(world, room, definition.floor)
+        self._invalidate_routes(world, set(self._building_tiles(room)))
+        self._announce(world, f"Se construye {definition.name}", tile, room_id)
+        return UrbanismResult(True, f"{definition.name.capitalize()} construido", room_id)
+
+    def move_building(self, world: SimulationWorld, room_id: str, tile: Tile) -> UrbanismResult:
+        room = world.rooms.get(room_id)
+        if room is None or not room.roofed:
+            return UrbanismResult(False, "Ese edificio ya no existe")
+        blocked = self._building_contents(world, room)
+        if blocked is not None:
+            return UrbanismResult(False, blocked, room_id)
+        floor = self._floor_for(world, room)
+        old_tiles = {point: world.tile_map.terrain_at(point) for point in self._building_tiles(room)}
+        old_underlay = self.underlays.get(room_id)
+        self._restore_underlay(world, room)
+        error = self.building_error(world, room.width, room.height, tile, ignore_room=room_id)
+        if error is not None:
+            for point, terrain in old_tiles.items():
+                world.tile_map.tiles[point[1]][point[0]] = terrain
+            if old_underlay is not None:
+                self.underlays[room_id] = old_underlay
+            return UrbanismResult(False, error, room_id)
+        room.x, room.y = tile
+        self._construct(world, room, floor)
+        self._invalidate_routes(world, set(old_tiles) | set(self._building_tiles(room)))
+        self._announce(world, f"Se traslada {room.name}", tile, room_id)
+        return UrbanismResult(True, "Edificio movido", room_id)
+
+    def remove_building(self, world: SimulationWorld, room_id: str) -> UrbanismResult:
+        room = world.rooms.get(room_id)
+        if room is None or not room.roofed:
+            return UrbanismResult(False, "Ese edificio ya no existe")
+        blocked = self._building_contents(world, room)
+        if blocked is not None:
+            return UrbanismResult(False, blocked, room_id)
+        self._restore_underlay(world, room)
+        del world.rooms[room_id]
+        self._invalidate_routes(world, set(self._building_tiles(room)))
+        self._announce(world, f"Se derriba {room.name}", (room.x, room.y), room_id)
+        return UrbanismResult(True, f"{room.name.capitalize()} retirado")
+
+    def building_error(
+        self,
+        world: SimulationWorld,
+        width: int,
+        height: int,
+        tile: Tile,
+        ignore_room: str | None = None,
+    ) -> str | None:
+        preview = Room("preview", "", x=tile[0], y=tile[1], width=width, height=height, roofed=True)
+        footprint = set(self._building_tiles(preview))
+        if not footprint or not all(world.tile_map.in_bounds(point) for point in footprint):
+            return "El edificio no cabe dentro del mapa"
+        rooms = [room for room in world.rooms.values() if room.room_id != ignore_room]
+        if any(footprint & set(self._building_tiles(room)) for room in rooms if room.roofed):
+            return "Se solapa con otro edificio"
+        occupied = {
+            point
+            for placed in world.interactables.values()
+            for point in placed.footprint(world.definition_of(placed))
+        }
+        if footprint & occupied:
+            return "Hay muebles u objetos en ese espacio"
+        if any(not resident.away and resident.tile in footprint for resident in world.residents.values()):
+            return "Hay un residente en ese espacio"
+        if any(world.tile_map.terrain_at(point) not in BUILDABLE_TERRAIN for point in footprint):
+            return "Solo se puede construir sobre terreno libre"
+        return None
+
+    def _construct(self, world: SimulationWorld, room: Room, floor: str) -> None:
+        footprint = self._building_tiles(room)
+        self.underlays[room.room_id] = {
+            point: world.tile_map.terrain_at(point) for point in footprint
+        }
+        for x, y in footprint:
+            border = x in (room.x - 1, room.x + room.width) or y in (
+                room.y - 1,
+                room.y + room.height,
+            )
+            world.tile_map.tiles[y][x] = "wall" if border else floor
+        door = (room.x + room.width // 2, room.y + room.height)
+        world.tile_map.tiles[door[1]][door[0]] = "door"
+        world.rooms[room.room_id] = room
+
+    def _restore_underlay(self, world: SimulationWorld, room: Room) -> None:
+        underlay = self.underlays.pop(room.room_id, None)
+        for point in self._building_tiles(room):
+            terrain = underlay.get(point, "dirt") if underlay is not None else "dirt"
+            world.tile_map.tiles[point[1]][point[0]] = terrain
+
+    def _building_contents(self, world: SimulationWorld, room: Room) -> str | None:
+        area = set(self._building_tiles(room))
+        if any(
+            set(placed.footprint(world.definition_of(placed))) & area
+            for placed in world.interactables.values()
+        ):
+            return "Retira primero los muebles y objetos del edificio"
+        if any(not resident.away and resident.tile in area for resident in world.residents.values()):
+            return "No se puede editar mientras haya alguien dentro"
+        return None
+
+    def _object_busy_reason(self, world: SimulationWorld, object_id: str) -> str | None:
+        for resident in world.residents.values():
+            if resident.activity is not None and resident.activity.target_id == object_id:
+                return "Ese objeto está siendo utilizado"
+            if resident.post_id == object_id:
+                return "Ese objeto es un puesto de trabajo asignado"
+        return None
+
+    @staticmethod
+    def _invalidate_routes(
+        world: SimulationWorld,
+        changed: set[Tile],
+        target_ids: set[str] | None = None,
+    ) -> None:
+        """Stop plans made against geometry that no longer exists so they are replanned next tick."""
+        targets = target_ids or set()
+        for resident in world.residents.values():
+            activity = resident.activity
+            if activity is not None and (
+                activity.target_id in targets or any(tile in changed for tile in activity.path)
+            ):
+                resident.activity = None
+                resident.current_action = "idle"
+
+    @staticmethod
+    def _building_tiles(room: Room) -> list[Tile]:
+        return [
+            (x, y)
+            for y in range(room.y - 1, room.y + room.height + 1)
+            for x in range(room.x - 1, room.x + room.width + 1)
+        ]
+
+    @staticmethod
+    def _floor_for(world: SimulationWorld, room: Room) -> str:
+        definition = world.registries.buildings.get(room.blueprint_id or "")
+        if definition is not None:
+            return definition.floor
+        counts: dict[str, int] = {}
+        for y in range(room.y, room.y + room.height):
+            for x in range(room.x, room.x + room.width):
+                terrain = world.tile_map.terrain_at((x, y))
+                counts[terrain] = counts.get(terrain, 0) + 1
+        return max(counts, key=counts.get) if counts else "floor_wood"
+
+    def _fresh_object_id(self, world: SimulationWorld, kind: str) -> str:
+        while f"{kind}_{self.next_object}" in world.interactables:
+            self.next_object += 1
+        object_id = f"{kind}_{self.next_object}"
+        self.next_object += 1
+        return object_id
+
+    def _fresh_building_id(self, world: SimulationWorld, blueprint_id: str) -> str:
+        while f"{blueprint_id}_{self.next_building}" in world.rooms:
+            self.next_building += 1
+        room_id = f"{blueprint_id}_{self.next_building}"
+        self.next_building += 1
+        return room_id
+
+    @staticmethod
+    def _announce(world: SimulationWorld, text: str, tile: Tile, entity_id: str) -> None:
+        world.emit_event(
+            DomainEvent(
+                "urbanism_changed",
+                BUILDING_EVENT_IMPORTANCE,
+                text,
+                location_id=world.room_at(tile).room_id if world.room_at(tile) is not None else None,
+                data={"entity_id": entity_id},
+            ),
+            at=tile,
+        )

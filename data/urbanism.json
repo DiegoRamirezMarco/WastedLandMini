@@ -1,0 +1,23 @@
+{
+  "shack": {
+    "name": "chabola",
+    "width": 4,
+    "height": 3,
+    "floor": "floor_wood",
+    "privacy": 0.5
+  },
+  "house": {
+    "name": "vivienda",
+    "width": 6,
+    "height": 4,
+    "floor": "floor_wood",
+    "privacy": 0.7
+  },
+  "work_shed": {
+    "name": "cobertizo",
+    "width": 7,
+    "height": 4,
+    "floor": "floor_concrete",
+    "privacy": 0.2
+  }
+}

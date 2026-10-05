@@ -103,6 +103,29 @@ def relationship_hitboxes(panel: pygame.Rect, world: SimulationWorld, resident: 
     ]
 
 
+def inventory_hitboxes(panel: pygame.Rect, world: SimulationWorld, resident: Resident) -> list[tuple[pygame.Rect, str]]:
+    """The visible inventory cells and the stable item definition shown in each one."""
+    top = _relationships_top(panel, world, resident)
+    top += len(relationship_rows(world, resident, MAX_RELATIONSHIPS)) * RELATIONSHIP_ROW + 4
+    top += LINE_HEIGHT + 3
+    left = panel.x + PADDING
+    width = panel.width - PADDING * 2
+    cell = width // ITEM_COLUMNS
+    shown = resident.inventory.items[: ITEM_COLUMNS * MAX_ITEM_ROWS]
+    return [
+        (
+            pygame.Rect(
+                left + (index % ITEM_COLUMNS) * cell,
+                top + (index // ITEM_COLUMNS) * ITEM_CELL_HEIGHT,
+                cell - 2,
+                ITEM_CELL_HEIGHT - 2,
+            ),
+            item.definition_id,
+        )
+        for index, item in enumerate(shown)
+    ]
+
+
 def _relationships_top(panel: pygame.Rect, world: SimulationWorld, resident: Resident) -> int:
     top = panel.y + PADDING + FACE_SIZE[1] + 6 + BAR_ROW * (len(NEED_NAMES) + OTHER_BARS) + 4
     if resident.traits:

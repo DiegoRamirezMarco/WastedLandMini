@@ -199,7 +199,7 @@ class LimbSaveTests(unittest.TestCase):
         raul.lost_limbs = ["leg_right"]
         world.health.hurt(world, raul, 12, "bruise", "una pelea con Tomás", tomas)
         data = json.loads(json.dumps(self.manager.to_data(world)))
-        self.assertEqual(data["version"], 16)
+        self.assertEqual(data["version"], SaveManager.CURRENT_VERSION)
         loaded = self.manager.from_data(data)
         self.assertEqual(loaded.residents["raul"].lost_limbs, ["leg_right"])
         self.assertEqual(loaded.history[-1].data, {"amount": 12, "kind": "bruise", "by": "tomas"})

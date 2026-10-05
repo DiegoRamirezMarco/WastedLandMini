@@ -7,6 +7,7 @@ from numbers import Real
 from pathlib import Path
 from typing import Any
 
+from simulation.items.item import ItemDefinition
 from simulation.items.registry import ItemRegistry
 
 logger = logging.getLogger(__name__)
@@ -18,31 +19,63 @@ MAX_DATA_BYTES = 64 * 1024
 FOLDERS: dict[str, str | None] = {"items": None, "foods": "food"}
 
 
-def validate_item_data(data: Any, folder_name: str, required_category: str | None) -> None:
+def _definition_data(definition: ItemDefinition) -> dict[str, Any]:
+    """Editable data of a definition, ready for a custom patch to be laid over it."""
+    return {
+        "id": definition.item_id,
+        "name": definition.name,
+        "article": definition.article,
+        "category": definition.category,
+        "base_value": definition.base_value,
+        "description": definition.description,
+        "tags": list(definition.tags),
+        "effects": dict(definition.effects),
+        "properties": dict(definition.properties),
+    }
+
+
+def merged_item_data(data: Any, base: ItemDefinition | None = None) -> dict[str, Any]:
+    """Return a complete definition from new data or a partial patch of an existing item."""
+    if not isinstance(data, dict):
+        raise ValueError("data.json must hold an object")
+    merged = _definition_data(base) if base is not None else {}
+    merged.update(data)
+    return merged
+
+
+def validate_item_data(
+    data: Any,
+    folder_name: str,
+    required_category: str | None,
+    base: ItemDefinition | None = None,
+) -> None:
     """Raise ValueError unless `data` is a well-formed item definition for that folder.
 
     Unknown extra fields are allowed, so packs made for a newer version still load.
     """
-    if not isinstance(data, dict):
-        raise ValueError("data.json must hold an object")
+    merged = merged_item_data(data, base)
+    # Even a patch names its stable ID explicitly. This catches a copied folder whose data still
+    # points at another item instead of silently editing the wrong definition.
+    if not isinstance(data.get("id"), str) or not data["id"].strip():
+        raise ValueError("'id' must be a non-empty string")
     for name in ("id", "name", "article", "category"):
-        if not isinstance(data.get(name), str) or not data[name].strip():
+        if not isinstance(merged.get(name), str) or not merged[name].strip():
             raise ValueError(f"'{name}' must be a non-empty string")
-    if not ID_PATTERN.match(data["id"]):
+    if not ID_PATTERN.match(merged["id"]):
         raise ValueError("'id' must be lowercase letters, digits and single underscores")
-    if data["id"] != folder_name:
+    if merged["id"] != folder_name:
         raise ValueError(f"'id' must match its folder name '{folder_name}'")
-    if required_category is not None and data["category"] != required_category:
+    if required_category is not None and merged["category"] != required_category:
         raise ValueError(f"'category' must be '{required_category}' in this folder")
-    if not _is_number(data.get("base_value", 0)) or data.get("base_value", 0) < 0:
+    if not _is_number(merged.get("base_value", 0)) or merged.get("base_value", 0) < 0:
         raise ValueError("'base_value' must be a number that is not negative")
-    if not isinstance(data.get("description", ""), str):
+    if not isinstance(merged.get("description", ""), str):
         raise ValueError("'description' must be a string")
-    tags = data.get("tags", [])
+    tags = merged.get("tags", [])
     if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
         raise ValueError("'tags' must be a list of strings")
     for field_name in ("effects", "properties"):
-        numbers = data.get(field_name, {})
+        numbers = merged.get(field_name, {})
         if not isinstance(numbers, dict) or not all(
             isinstance(name, str) and _is_number(value) for name, value in numbers.items()
         ):
@@ -56,8 +89,8 @@ def _is_number(value: Any) -> bool:
 def load_custom_items(registry: ItemRegistry, root: Path) -> list[str]:
     """Register every valid item under `root`. Returns the IDs that loaded.
 
-    A pack that is malformed, or that reuses an ID already taken, is skipped with a warning
-    and never stops the game from starting.
+    A malformed pack, or a second pack for the same ID, is skipped with a warning and never
+    stops the game from starting. A first pack may patch a built-in definition with the same ID.
     """
     loaded: list[str] = []
     for folder, required_category in FOLDERS.items():
@@ -72,8 +105,12 @@ def load_custom_items(registry: ItemRegistry, root: Path) -> list[str]:
                 if path.stat().st_size > MAX_DATA_BYTES:
                     raise ValueError(f"{DATA_FILE} is too large")
                 data = json.loads(path.read_text(encoding="utf-8"))
-                validate_item_data(data, pack.name, required_category)
-                registry.load_mapping(data, str(path))
+                if pack.name in loaded:
+                    raise ValueError(f"item id already modified by another pack: {pack.name}")
+                base = registry.find(pack.name)
+                validate_item_data(data, pack.name, required_category, base)
+                complete = merged_item_data(data, base)
+                registry.load_mapping(complete, str(path), replace_existing=base is not None)
             except (OSError, ValueError) as error:
                 logger.warning("Skipped custom content %s/%s: %s", folder, pack.name, error)
                 continue

@@ -1,4 +1,4 @@
-"""Finds the icon of an item: built-in art first, then a content pack's own icon."""
+"""Finds the icon of an item: a content pack may add one or replace built-in art."""
 
 import pygame
 
@@ -33,13 +33,21 @@ class ItemIcons:
             self._small[item_id] = pygame.transform.scale(self.icon(item_id), half)
         return self._small[item_id]
 
+    def forget(self, item_id: str) -> None:
+        """Reload an icon after the in-game item editor has saved it."""
+        self._cache.pop(item_id, None)
+        self._small.pop(item_id, None)
+        if self._custom is not None:
+            for folder in PACK_FOLDERS:
+                self._custom.forget(f"{folder}/{item_id}/icon.png")
+
     def _find(self, item_id: str) -> pygame.Surface:
-        if f"{item_id}.png" in self._assets.files("sprites/items"):
-            return self._assets.image(builtin_icon_path(item_id), size=ICON_SIZE)
         if self._custom is not None:
             for folder in PACK_FOLDERS:
                 if "icon.png" in self._custom.files(f"{folder}/{item_id}"):
                     # Pack authors draw icons at any size; they are brought down to ours.
                     icon = self._custom.image(f"{folder}/{item_id}/icon.png")
                     return icon if icon.get_size() == ICON_SIZE else pygame.transform.scale(icon, ICON_SIZE)
+        if f"{item_id}.png" in self._assets.files("sprites/items"):
+            return self._assets.image(builtin_icon_path(item_id), size=ICON_SIZE)
         return make_placeholder(ICON_SIZE)

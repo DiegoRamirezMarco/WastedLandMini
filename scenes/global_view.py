@@ -5,6 +5,7 @@ import pygame
 
 from graphics.assets import AssetStore
 from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE, BodyRenderer
+from graphics.building_art import BuildingArtStore
 from graphics.building_renderer import FACADE_ROWS, BuildingRenderer, building_area
 from graphics.doll import DOLL_FACINGS, Doll, DollStore, draw_doll
 from graphics.face_renderer import FaceRenderer
@@ -13,6 +14,7 @@ from graphics.icons import ICON_SIZE, icon_path
 from graphics.illustrations import Illustrations
 from graphics.item_icons import ItemIcons
 from graphics.lighting import BLOCK, LightMap, daylight, shade
+from graphics.object_sprites import ObjectSprites
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from graphics.map_renderer import GROUND_TILES, render_roofs, render_terrain, roof_names
 from graphics.palette import PALETTE
@@ -29,6 +31,7 @@ from graphics.tileset import (
 from scenes.body_stage import BodyStage, Remains, ground_spot
 from audio.voice_player import VoicePlayer
 from scenes.hud import (
+    BUILD_INTENT,
     VOICE_INTENT,
     DRAW_INTENT,
     JOBS_INTENT,
@@ -36,7 +39,9 @@ from scenes.hud import (
     MINIMAP_INTENT,
     PAUSE_INTENT,
     ROSTER_INTENT,
+    SAVE_INTENT,
     STORES_INTENT,
+    URBANISM_INTENT,
     Hud,
 )
 from scenes.scene import canvas_position
@@ -161,6 +166,13 @@ class GlobalView:
         self._posed: dict[tuple, Skeleton] = {}
         # Resident the player asked to draw. The game shell picks it up.
         self.requested_editor: str | None = None
+        # Building the player asked to draw. Kept separate from resident drawings.
+        self.requested_building_editor: str | None = None
+        # Item definition picked in a resident's or container's inventory.
+        self.requested_item_editor: str | None = None
+        # Infrastructure requests are picked up by the game shell after event handling.
+        self.requested_save = False
+        self.requested_urbanism = False
         # Pictures made outside the game, and where they are put to go straight on the window.
         self.illustrations = illustrations if layers is not None else None
         self.layers = layers
@@ -168,6 +180,7 @@ class GlobalView:
         self.assets = assets
         self.font = font
         self.icons = icons
+        self.object_sprites = ObjectSprites(assets, custom)
         self.faces = faces
         # Everyone's body, and what a blow leaves lying about. Presentation only: nothing of it is saved.
         self.bodies = BodyStage(BodyRenderer(assets, builtin_plan()))
@@ -194,6 +207,7 @@ class GlobalView:
         self.roofed_terrain = render_roofs(self.terrain, self.roofs, roof_tiles)
         # On the map itself a building with its roof on is one picture, standing on the terrain.
         self.buildings = BuildingRenderer(assets, custom)
+        self.building_art = BuildingArtStore(self.illustrations, self.buildings, world.tile_map)
         self.roof_tiles: dict[str, set[Tile]] = {
             room.room_id: set(roof_names(world.tile_map, [room])) for room in world.rooms.values() if room.roofed
         }
@@ -253,8 +267,12 @@ class GlobalView:
             self.hud.notify(ROOFS_ON if self.roofs_on else ROOFS_OFF)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_n:
             self._apply(MINIMAP_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_u:
+            self._apply(URBANISM_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_F2:
             self._apply(DRAW_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_F4:
+            self._apply(BUILD_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
             self._apply(VOICE_INTENT)
         elif event.type == pygame.KEYDOWN and event.key in ZOOM_KEYS:
@@ -482,9 +500,15 @@ class GlobalView:
             self.hud.toggle_jobs()
         elif intent == STORES_INTENT:
             self.hud.toggle_stores()
+        elif intent == SAVE_INTENT:
+            self.requested_save = True
+        elif intent == URBANISM_INTENT:
+            self.requested_urbanism = True
         elif intent == DRAW_INTENT and self.dolls is not None:
             # Whoever is selected, or else the first resident there is.
             self.requested_editor = self.hud.selected_id or next(iter(self.world.residents), None)
+        elif intent == BUILD_INTENT and self.illustrations is not None and self.illustrations.root is not None:
+            self.requested_building_editor = self._building_to_draw()
         elif intent == VOICE_INTENT and self.voices is not None:
             self.requested_voice = self.hud.selected_id or next(iter(self.world.residents), None)
         elif intent == ROSTER_INTENT:
@@ -499,12 +523,30 @@ class GlobalView:
             decision = self._decision_of(intent[1])
             if decision is not None:
                 self.requested_decision = decision
+        elif isinstance(intent, tuple) and intent[0] == "edit_item":
+            self.requested_item_editor = intent[1]
         elif isinstance(intent, tuple) and intent[0] == "suggest":
             self._suggest_job(intent[1])
         elif isinstance(intent, tuple) and intent[0] == "speed":
             self.world.apply_command(SetSpeedCommand(intent[1]))
         elif isinstance(intent, tuple) and intent[0] == "zoom":
             self.set_zoom(self.zoom + intent[1])
+
+    def _building_to_draw(self) -> str | None:
+        """The roofed building currently in context, or the first one on the map."""
+        candidates: list[tuple[int, int]] = []
+        selected = self.world.residents.get(self.hud.selected_id or "")
+        if selected is not None and not selected.away:
+            candidates.append(selected.tile)
+        if self.pointer is not None and self.viewport.collidepoint(self.pointer):
+            x, y = self._map_point(self.pointer)
+            candidates.append((int(x // TILE_SIZE), int(y // TILE_SIZE)))
+        roofed = [room for room in self.world.rooms.values() if room.roofed]
+        for tile in candidates:
+            for room in roofed:
+                if self._is_at(room.room_id, tile):
+                    return room.room_id
+        return roofed[0].room_id if roofed else None
 
     def _suggest_job(self, job_id: str) -> None:
         """Put a job to the selected resident and say what came of it. The choice is theirs."""
@@ -526,34 +568,60 @@ class GlobalView:
         self.canvas.fill(PALETTE["ink"])
         region = self._visible_region()
         ground = self._ground()
-        self._scene = self._buffer(region.size, clear=ground is not None)
+        # Decide the state of buildings before making the scene: a freehand building needs an
+        # alpha-capable buffer even when nobody has drawn the ground below it.
+        open_rooms = self.looked_into()
+        self._closed = set(self.roof_tiles) - open_rooms
+        closed_pictures = {
+            room_id: self.building_art.closed(self.world.rooms[room_id]) for room_id in self._closed
+        }
+        open_backgrounds = {
+            room_id: self.building_art.opened(self.world.rooms[room_id], foreground=False) for room_id in open_rooms
+        }
+        open_foregrounds = {
+            room_id: self.building_art.opened(self.world.rooms[room_id], foreground=True) for room_id in open_rooms
+        }
+        has_building_pictures = any(
+            (*closed_pictures.values(), *open_backgrounds.values(), *open_foregrounds.values())
+        )
+        self._scene = self._buffer(region.size, clear=ground is not None or has_building_pictures)
         self._scene_origin = region.topleft
         if ground is None:
             self._scene.blit(self.terrain, (0, 0), region)
         else:
             self._scene.fill(TRANSPARENT)
             self._scene.blit(self.raised_terrain, (0, 0), region)
-        # Buildings that someone has drawn, to go on the window rather than in among the pixel art.
-        pictures: list[tuple[pygame.Rect, str]] = []
+        # Freehand parts go straight on the window: backgrounds below the old map art, foregrounds
+        # after residents, so the front wall and door can hide their feet.
+        pictures: list[tuple[pygame.Rect, pygame.Surface]] = []
+        foreground_pictures: list[tuple[pygame.Rect, pygame.Surface]] = []
         # Objects, residents and buildings share one list so that whatever stands lower on screen is in front.
         draws: list[Draw] = []
-        # A building stands whole, roof and all, until it is looked into. Then it is not drawn, and the inside shows.
-        open_rooms = self.looked_into()
-        self._closed = set(self.roof_tiles) - open_rooms
         self._hidden = set()
         for room_id in self._closed:
             self._hidden |= self.roof_tiles[room_id]
             room = self.world.rooms[room_id]
             if not building_area(room).colliderect(region):
                 continue
-            path = f"buildings/{room_id}.png"
-            if ground is not None and self.illustrations.find(path) is not None:
-                pictures.append((building_area(room), path))
+            picture = closed_pictures[room_id]
+            if picture is not None:
+                pictures.append((building_area(room), picture))
             else:
                 draws.append(self._building_draw(room))
-        for area, _ in pictures:
-            # A drawn building is on the window, under all this: its walls and floors are not put over it.
-            self._scene.fill(TRANSPARENT, area.move(-region.x, -region.y))
+        for room_id in open_rooms:
+            room = self.world.rooms[room_id]
+            area = building_area(room)
+            if not area.colliderect(region):
+                continue
+            background = open_backgrounds[room_id]
+            foreground = open_foregrounds[room_id]
+            if background is not None:
+                pictures.append((area, background))
+            if foreground is not None:
+                foreground_pictures.append((area, foreground))
+        for area, picture in pictures:
+            # Remove only where a drawing has paint. Clear corners continue to show the ground.
+            self._erase_for_picture(area, picture)
         for placed in self.world.interactables.values():
             # A roof hides what is under it.
             if (placed.x, placed.y) not in self._hidden:
@@ -581,8 +649,8 @@ class GlobalView:
         # Nothing of the map is drawn outside its part of the canvas.
         self.canvas.set_clip(self.viewport)
         size = (self._scaled(region.width), self._scaled(region.height))
-        if ground is not None or self._doll_draws:
-            self._show_illustrated(region, size, ground, pictures, stormy, light)
+        if ground is not None or self._doll_draws or pictures or foreground_pictures:
+            self._show_illustrated(region, size, ground, pictures, foreground_pictures, stormy, light)
         else:
             if stormy:
                 self._scene.fill(STORM_TINT, special_flags=pygame.BLEND_RGB_MULT)
@@ -656,7 +724,8 @@ class GlobalView:
         region: pygame.Rect,
         size: tuple[int, int],
         ground: pygame.Surface | None,
-        pictures: list[tuple[pygame.Rect, str]],
+        pictures: list[tuple[pygame.Rect, pygame.Surface]],
+        foreground_pictures: list[tuple[pygame.Rect, pygame.Surface]],
         stormy: bool,
         light: pygame.Surface | None,
     ) -> None:
@@ -665,7 +734,7 @@ class GlobalView:
 
         The canvas is left clear over the map, so that only names, bubbles and signs are drawn there.
         """
-        layers, illustrations, scene = self.layers, self.illustrations, self._scene
+        layers, scene = self.layers, self._scene
         plan = self.bodies.plan
         # Whoever stands lower on the map is in front.
         dolls = sorted(self._doll_draws, key=lambda entry: entry[0])
@@ -684,14 +753,19 @@ class GlobalView:
             if ground is not None:
                 piece = ground.subsurface(source)
                 screen.blit(piece if piece.get_size() == place.size else pygame.transform.smoothscale(piece, place.size), place)
-            for area, path in pictures:
+            for area, picture in pictures:
                 spot = pygame.Rect(
                     place.x + round((area.x - region.x) * detail),
                     place.y + round((area.y - region.y) * detail),
                     round(area.width * detail),
                     round(area.height * detail),
                 )
-                screen.blit(illustrations.fitted(path, spot.size), spot)
+                fitted = (
+                    picture
+                    if picture.get_size() == spot.size
+                    else pygame.transform.smoothscale(picture, spot.size)
+                )
+                screen.blit(fitted, spot)
             # The pixel art keeps its hard edges however large it is shown.
             screen.blit(scene if scene.get_size() == place.size else pygame.transform.scale(scene, place.size), place)
             origin = (place.x - region.x * detail, place.y - region.y * detail)
@@ -704,6 +778,19 @@ class GlobalView:
                 if head is not None:
                     image, joint = head
                     screen.blit(image, (round(origin[0] + neck[0] * detail - joint[0]), round(origin[1] + neck[1] * detail - joint[1])))
+            for area, picture in foreground_pictures:
+                spot = pygame.Rect(
+                    place.x + round((area.x - region.x) * detail),
+                    place.y + round((area.y - region.y) * detail),
+                    round(area.width * detail),
+                    round(area.height * detail),
+                )
+                fitted = (
+                    picture
+                    if picture.get_size() == spot.size
+                    else pygame.transform.smoothscale(picture, spot.size)
+                )
+                screen.blit(fitted, spot)
             if stormy:
                 screen.fill(STORM_TINT, place, special_flags=pygame.BLEND_RGB_MULT)
             if light is not None:
@@ -712,6 +799,20 @@ class GlobalView:
 
         layers.under(draw)
         self.canvas.fill(TRANSPARENT, self.viewport)
+
+    def _erase_for_picture(self, area: pygame.Rect, picture: pygame.Surface) -> None:
+        """Make the scene clear under the painted pixels of a window-resolution picture."""
+        local = area.move(-self._scene_origin[0], -self._scene_origin[1])
+        clipped = local.clip(self._scene.get_rect())
+        if clipped.width <= 0 or clipped.height <= 0:
+            return
+        # Work at map-art resolution. A hard alpha edge is deliberate: the high-resolution source
+        # itself is what supplies the smooth edge on the window.
+        small = pygame.transform.scale(picture, area.size)
+        source = pygame.Rect(clipped.x - local.x, clipped.y - local.y, clipped.width, clipped.height)
+        mask = pygame.mask.from_surface(small.subsurface(source))
+        eraser = mask.to_surface(setcolor=(0, 0, 0, 255), unsetcolor=(0, 0, 0, 0))
+        self._scene.blit(eraser, clipped, special_flags=pygame.BLEND_RGBA_SUB)
 
     def _storm(self, region: pygame.Rect) -> bool:
         """Under bad weather, blow streaks of dust across the scene. Returns whether there is a storm to tint it."""
@@ -743,14 +844,9 @@ class GlobalView:
                 round((placed.y + definition.height / 2) * TILE_SIZE) - region.y,
             )
             # A flame wavers; a lamp burns steady.
-            wavers = self._frames(placed.kind, definition.width) > 1
+            wavers = self.object_sprites.frames(definition) > 1
             lights.append((centre, reach * TILE_SIZE - (BLOCK * flicker if wavers else 0)))
         return self.lights.render(region.size, level, lights)
-
-    def _frames(self, kind: str, width_in_tiles: int) -> int:
-        """How many animation frames an object's sheet holds, side by side."""
-        sheet = self.assets.image(f"sprites/objects/{kind}.png")
-        return max(1, sheet.get_width() // (width_in_tiles * TILE_SIZE))
 
     def _draw_minimap(self, region: pygame.Rect) -> None:
         rect = self.hud.minimap_rect
@@ -836,10 +932,10 @@ class GlobalView:
 
     def _object_draw(self, placed: Interactable) -> Draw:
         definition = self.world.definition_of(placed)
-        sheet = self.assets.image(f"sprites/objects/{placed.kind}.png")
+        sheet = self.object_sprites.sheet(definition)
         # A sheet wider than the object holds animation frames side by side.
         width = definition.width * TILE_SIZE
-        frame = int(self.time * ANIMATION_FPS) % self._frames(placed.kind, definition.width)
+        frame = int(self.time * ANIMATION_FPS) % self.object_sprites.frames(definition)
         image = sheet.subsurface((frame * width, 0, min(width, sheet.get_width()), sheet.get_height()))
         bottom = (placed.y + definition.height) * TILE_SIZE
         area = pygame.Rect((placed.x * TILE_SIZE, bottom - image.get_height()), image.get_size())

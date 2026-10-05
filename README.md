@@ -111,7 +111,13 @@ python -m simulation.headless --days 7 --seed 7
 - `Dibujar` in the menu, or `F2`: draw the selected resident. Paint their body and their head
   over the guide, watch them move as you go, and save: from then on that is how they look, in the
   settlement and in their portrait. `Esc` goes back without saving
-- `F5` saves the game to `saves/quicksave.json`; `F9` loads it
+- `Edificios` in the menu, or `F4`: draw a roofed place in four aligned parts: its empty
+  interior, walls, roof and door. The preview exchanges the roof for the inside; `Guardar` writes
+  the four PNGs under `illustrations/buildings/`. `Esc` goes back without saving
+- `Urbanismo` in the menu, or `U`: add buildings, furniture and scenery. Select anything already
+  placed to move it, remove it after confirmation, or open a building in the art editor. Time
+  stops while the editor is open and the changed layout is part of the save
+- `Guardar` in the menu, or `F5`, saves the game to `saves/quicksave.json`; `F9` loads it
 - `M`: sound on / off, voices and all
 - `Esc`: quit
 
@@ -136,3 +142,9 @@ the game's own pixel art. `illustrations/README.md` lists the files and how to f
 `python -m tools.art.buildings` gives the proportions of each building.
 
 See `docs/modding.md` and the examples in `custom_content/`.
+Every built-in item can be overridden there too: its icon, displayed name, article, category,
+description, value, tags, effects and gameplay properties all remain keyed by the same stable ID.
+Select a resident or a piece of storage furniture and click an item in its inventory to edit all
+of those fields and draw its icon without leaving the game. Saving creates the same mod files.
+Furniture and map objects follow the same rule under `custom_content/objects/<kind>/`: their
+sprite, name, footprint, blocking, storage, light and complete use behaviour can all be patched.
