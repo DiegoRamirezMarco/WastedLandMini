@@ -74,7 +74,14 @@ class DollTemplateTests(unittest.TestCase):
         self.assertLess(order.index("thigh_left"), order.index("spine"))
         self.assertLess(order.index("hips"), order.index("thigh_right"), "the near leg is drawn over the hips")
         self.assertLess(order.index("spine"), order.index("thigh_right"))
-        self.assertLess(rest["hip_right"][1], rest["groin"][1], "and starts above where the hips end")
+        # It starts low in the hips: well below the waist, so that its top does not show up in the belly,
+        # and no lower than the hips may be drawn, so that it does not hang loose under them.
+        hips = self.template.parts["hips"]
+        drawn_to = (math.dist(hips.start, hips.end) + hips.ends[1]) / self.template.unit
+        for side in ("left", "right"):
+            below_waist = rest[f"hip_{side}"][1] - rest["pelvis"][1]
+            self.assertGreater(below_waist, drawn_to * 0.75, side)
+            self.assertLess(below_waist, drawn_to, side)
 
     def test_zones_only_overlap_where_two_parts_are_jointed(self) -> None:
         masks = {bone: pygame.mask.from_surface(self.template.mask(bone)) for bone, spec in self.template.parts.items() if not spec.whole}
@@ -483,6 +490,16 @@ class DollEditorTests(unittest.TestCase):
         hitbox = view.hitboxes["raul"]
         chest = (hitbox.centerx * SCALE, (hitbox.bottom - 11) * SCALE)
         self.assertNotEqual(tuple(window.get_at(chest))[:3], tuple(window.get_at((chest[0] + 80, chest[1])))[:3])
+        # What is picked with the mouse, and what his name goes over, is the doll as tall as it was drawn.
+        column = [tuple(window.get_at((hitbox.centerx * SCALE, y)))[:3] for y in range((hitbox.top - 8) * SCALE, (hitbox.top + 3) * SCALE)]
+        skin = column[-1]
+        self.assertNotEqual(skin, tuple(window.get_at((chest[0] + 80, chest[1])))[:3], "just below its top is his head")
+        self.assertNotIn(skin, column[: 7 * SCALE], "and above it only his name")
+        left, high, right, low = doll.standing(view.bodies.plan)
+        crown = view.bodies.plan.rests["doll"]["head"][1] + 0.5 - editor.template.parts["skull"].radius / editor.template.unit
+        self.assertAlmostEqual(high, crown, delta=0.5, msg="the plain head of the mannequin, and no hair")
+        self.assertEqual(-left, right)
+        self.assertAlmostEqual(low, 0.0, delta=1.0)
         # Seen from the side, he keeps facing the way he last walked across.
         self.assertEqual(view.bodies.characters["raul"].facing, "doll_right")
         raul.trail = [(21, 14), (20, 14)]

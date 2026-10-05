@@ -159,8 +159,9 @@ cut apart where the body bends, each part laid along its bone and turned as the 
   every zone is left out. Everything on the head's canvas is the head, hair and all.
 - **Put together.** The doll has a build of its own, apart from the pixel bodies. The arm of the
   near side hangs from a little behind the middle of the trunk and the far one from a little in
-  front, so that both show. The near leg starts above the bottom of the hips and is laid over
-  them and over the trunk; the far leg goes behind. Arms and legs are somewhat longer than they
+  front, so that both show. The legs start low in the hips, so that the top of a thigh comes to
+  just below the waist and not up into the belly; the near leg is laid over the hips and the
+  far one goes behind. Arms and legs are somewhat longer than they
   are drawn: each is drawn out between its joints, so its width and its round ends stay as they
   were. A hand turns with its forearm, and a foot stays level whatever the leg does.
 - **Moving.** The doll is posed from the side by the same clips as any body. Facing left it is
@@ -169,6 +170,8 @@ cut apart where the body bends, each part laid along its bone and turned as the 
   same skeleton underneath.
 - **Showing.** Dolls go on the window itself, at its full resolution and with smooth edges, over
   everything else that stands on the map, the one lower down in front. In a bed only the head shows.
+  A doll is as tall and as wide as it was drawn, hair and hat and all: its name and marks go over
+  its own head, and that is the box it is picked by.
 - **The head is also the face.** Where no face has been drawn for a resident, the head of their
   doll is used in the panel, in the dock and for the markers on the map.
 

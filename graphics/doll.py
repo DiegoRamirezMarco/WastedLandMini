@@ -42,6 +42,8 @@ JOINT_BAND = 2
 # How solid the inside of a zone is on the guide, out of 255, and how thick its edge.
 ZONE_FILL = 60
 ZONE_EDGE = 2
+# Pixels to one of the skeleton's at which a doll is laid out to see how much room it takes.
+BOX_DETAIL = 4.0
 
 
 def doll_path(body_id: str, canvas: str) -> str:
@@ -326,6 +328,23 @@ class Doll:
         self.drawn = {bone: math.dist(spec.start, spec.end) / template.unit for bone, spec in template.parts.items()}
         self._sized: dict[tuple, DollPart] = {}
         self._turned: dict[tuple, tuple[pygame.Surface, Point]] = {}
+        self._standing: tuple[float, float, float, float] | None = None
+
+    def standing(self, plan: SkeletonPlan) -> tuple[float, float, float, float]:
+        """How far the doll reaches standing at rest, from the spot between its feet.
+
+        Left, top, right and bottom in the skeleton's own measure, the same to either side so that
+        it holds whichever way the doll faces. A doll is as tall as it was drawn, hair and hat and
+        all, which is not the height of the game's own bodies.
+        """
+        if self._standing is None:
+            facing = DOLL_FACINGS["right"]
+            skeleton = Skeleton(plan, facing)
+            skeleton.set_pose(plan.pose(facing))
+            left, top, right, bottom = doll_box(self, plan, skeleton)
+            half = max(-left, right)
+            self._standing = (-half, top, half, bottom)
+        return self._standing
 
     def _drawn_out(self, part: DollPart, stretch: int) -> DollPart:
         """A part made longer between its joints, to `stretch` hundredths of what was drawn.
@@ -441,6 +460,24 @@ class DollStore:
         if self._illustrations is not None:
             for canvas in self.template.canvases:
                 self._illustrations.forget(doll_path(body_id, canvas))
+
+
+def doll_box(doll: Doll, plan: SkeletonPlan, skeleton: Skeleton) -> tuple[float, float, float, float]:
+    """How far a doll laid over a skeleton reaches: left, top, right and bottom, in the skeleton's own measure."""
+    left = top = math.inf
+    right = bottom = -math.inf
+    for name in plan.orders[DOLL_VIEW]:
+        bone = skeleton.bones.get(skeleton.as_posed(name))
+        placed = doll.placed(name, skeleton.mirrored, BOX_DETAIL, bone.angle, bone.length) if bone is not None else None
+        if placed is None:
+            continue
+        image, joint = placed
+        painted = image.get_bounding_rect()
+        x = bone.a.x + 0.5 + (painted.x - joint[0]) / BOX_DETAIL
+        y = bone.a.y + 0.5 + (painted.y - joint[1]) / BOX_DETAIL
+        left, top = min(left, x), min(top, y)
+        right, bottom = max(right, x + painted.width / BOX_DETAIL), max(bottom, y + painted.height / BOX_DETAIL)
+    return (left, top, right, bottom) if left < right else (0.0, 0.0, 0.0, 0.0)
 
 
 def draw_doll(

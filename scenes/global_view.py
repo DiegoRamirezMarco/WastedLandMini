@@ -782,6 +782,12 @@ class GlobalView:
         spot = ground_spot(x, y)
         # Where a body stands at rest, which is what is picked with the mouse whatever it is doing.
         body = pygame.Rect(spot[0] - FRAME_ORIGIN[0], spot[1] - FRAME_ORIGIN[1], *FRAME_SIZE)
+        if doll is not None:
+            # A doll is as tall and as wide as it was drawn: its name goes over its own head.
+            left, high, right, low = doll.standing(self.bodies.plan)
+            body = pygame.Rect(
+                spot[0] + math.floor(left), spot[1] + math.floor(high), math.ceil(right - left), math.ceil(low) - math.floor(high)
+            )
 
         load = self._load_of(resident)
         overlay = CARRY_CLIP if load is not None else None
