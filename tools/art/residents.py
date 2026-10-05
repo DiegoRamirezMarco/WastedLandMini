@@ -1,159 +1,148 @@
-"""Resident body sheets: 3 columns (idle, step A, step B) by 4 rows (down, left, right, up)."""
+"""Resident bodies in parts: per view a head, a trunk and the strips of colour laid along the limbs."""
 
 from dataclasses import dataclass
 
 import pygame
 
-from graphics.character_renderer import FACINGS, FRAME_SIZE, FRAMES_PER_FACING, SHEET_SIZE
-from tools.art.grid import mirror, overlay, paint
+from graphics.body_renderer import SHEET_SIZE, SPRITE_CELLS, STRIP_CELLS, STRIP_SPACING, STRIP_TOP, VIEW_WIDTH
+from skeleton.plan import SKIN_VIEWS
+from tools.art.grid import overlay, paint
 
 # o outline, e eye, h/H hair, s/S skin, c/C shirt, p/P trousers, b boots. Capitals are shade.
 
+_BLANK = "................"
+
+# A head sits on its bone at column 7 of row 8: the eyes.
 HEAD = {
-    "down": [
-        "................",
-        "....oooooooo....",
-        "...ohhhhhhhho...",
-        "..ohhhhhhhhhho..",
-        "..ohhhhhhhhhho..",
-        "..ohhhsssshhho..",
-        "..ohssssssssho..",
-        "..ohsessssesho..",
-        "..ohsessssesho..",
-        "..osssssssssso..",
-        "...osssSSssso...",
-        "....osssssso....",
-        ".....oooooo.....",
+    "front": [
+        _BLANK,
+        _BLANK,
+        _BLANK,
+        _BLANK,
+        ".....ooooo......",
+        "....ohhhhho.....",
+        "...ohhhhhhho....",
+        "...ohsssssho....",
+        "...osessseso....",
+        "...ossssssso....",
+        "....osssSso.....",
+        ".....ooooo......",
+        _BLANK,
+        _BLANK,
+        _BLANK,
+        _BLANK,
     ],
-    "up": [
-        "................",
-        "....oooooooo....",
-        "...ohhhhhhhho...",
-        "..ohhhhhhhhhho..",
-        "..ohhhhhhhhhho..",
-        "..ohhhhhhhhhho..",
-        "..ohhhhhhhhhho..",
-        "..ohhhhhhhhhho..",
-        "..ohhhhhhhhhho..",
-        "..oHhhhhhhhhHo..",
-        "...oHHHHHHHHo...",
-        "....osssssso....",
-        ".....oooooo.....",
+    "side": [
+        _BLANK,
+        _BLANK,
+        _BLANK,
+        _BLANK,
+        ".....ooooo......",
+        "....ohhhhho.....",
+        "...ohhhhhhho....",
+        "...ohhhhssso....",
+        "...ohhhsseso....",
+        "...oHhssssso....",
+        "....oHsssso.....",
+        ".....ooooo......",
+        _BLANK,
+        _BLANK,
+        _BLANK,
+        _BLANK,
     ],
-    "right": [
-        "................",
-        "....oooooooo....",
-        "...ohhhhhhhho...",
-        "..ohhhhhhhhhho..",
-        "..ohhhhhhhhhho..",
-        "..ohhhhhhhssso..",
-        "..ohhhhhhsssso..",
-        "..ohhhhhssseso..",
-        "..ohhhhsssseso..",
-        "..oHhhssssssso..",
-        "...oHsssssSso...",
-        "....osssssso....",
-        ".....oooooo.....",
+    "back": [
+        _BLANK,
+        _BLANK,
+        _BLANK,
+        _BLANK,
+        ".....ooooo......",
+        "....ohhhhho.....",
+        "...ohhhhhhho....",
+        "...ohhhhhhho....",
+        "...ohhhhhhho....",
+        "...oHhhhhhHo....",
+        "....oHHHHHo.....",
+        ".....ooooo......",
+        _BLANK,
+        _BLANK,
+        _BLANK,
+        _BLANK,
     ],
 }
 
-TORSO_FRONT = [
-    "...occcccccco...",
-    "..osccccccccso..",
-    "..osccccccccso..",
-    "..osCccccccCso..",
-    "...oCCCCCCCCo...",
-    "...oppppppppo...",
-    "...oppppppppo...",
-]
+# A trunk sits on the spine at column 7 of row 6, half-way between the shoulders and the hips.
 TORSO = {
-    "down": TORSO_FRONT,
-    "up": TORSO_FRONT,
-    "right": [
-        "....occcccco....",
-        "....occCCcco....",
-        "....occCCcco....",
-        "....oCcsscCo....",
-        "....oCCCCCCo....",
-        "....oppppppo....",
-        "....oppppppo....",
+    "front": [
+        _BLANK,
+        _BLANK,
+        ".....ooooo......",
+        "....occccco.....",
+        "....occccco.....",
+        "....occccco.....",
+        "....oCcccCo.....",
+        "....oCCCCCo.....",
+        "....opppppo.....",
+        "....opppppo.....",
+        _BLANK,
+        _BLANK,
+    ],
+    "side": [
+        _BLANK,
+        _BLANK,
+        ".....ooooo......",
+        "....occccco.....",
+        "....oCcccco.....",
+        "....oCcccco.....",
+        "....oCCccco.....",
+        "....oCCCCCo.....",
+        "....opppppo.....",
+        "....oPppppo.....",
+        _BLANK,
+        _BLANK,
     ],
 }
+TORSO["back"] = TORSO["front"]
 
-LEGS_FRONT_IDLE = [
-    "...opppoopppo...",
-    "...opPpoopPpo...",
-    "...obbboobbbo...",
-    "....ooo..ooo....",
-]
-LEGS_FRONT_STEP = [
-    "...opppoopppo...",
-    "...opPpoobbbo...",
-    "...obbbo.ooo....",
-    "....ooo.........",
-]
-LEGS_FRONT = [LEGS_FRONT_IDLE, LEGS_FRONT_STEP, mirror(LEGS_FRONT_STEP)]
-LEGS = {
-    "down": LEGS_FRONT,
-    "up": LEGS_FRONT,
-    "right": [
-        [
-            ".....oppppo.....",
-            ".....opPppo.....",
-            ".....obbbbbo....",
-            "......ooooo.....",
-        ],
-        [
-            "....oppoppo.....",
-            "...oppo.oppo....",
-            "...obbo.obbbo...",
-            "....oo...ooo....",
-        ],
-        [
-            ".....oppppo.....",
-            "......oPpo......",
-            "......obbbo.....",
-            ".......ooo......",
-        ],
-    ],
+# What is laid along each limb bone, from the end nearer the body, as wide as the limb is thick.
+STRIPS = {
+    "front": {"upper_arm": ["c", "c", "C"], "forearm": ["c", "s", "s"], "thigh": ["pp"] * 3, "shin": ["pp", "bb", "bb"]},
+    "side": {"upper_arm": ["c", "c", "C"], "forearm": ["c", "s", "s"], "thigh": ["pp"] * 3, "shin": ["pp", "bb", "bb"]},
 }
+STRIPS["back"] = STRIPS["front"]
 
-# Rows drawn over the assembled frame, keyed by row index.
+# Rows drawn over the head, keyed by row index.
 HAIR = {
-    "short": {"down": {}, "up": {}, "right": {}},
+    "short": {"front": {}, "back": {}, "side": {}},
     "long": {
-        "down": {
-            9: "..oh........ho..",
-            10: "..oh........ho..",
-            11: "..ohh......hho..",
-            12: "..ohh......hho..",
-            13: "..oHh......hHo..",
+        "front": {
+            9: "...ohsssssho....",
+            10: "...ohsssSsho....",
+            11: "...ohoooooho....",
+            12: "...oho...oho....",
+            13: "....o.....o.....",
         },
-        "up": {
-            9: "..ohhhhhhhhhho..",
-            10: "..ohhhhhhhhhho..",
-            11: "..ohhHhhhhHhho..",
-            12: "..ohhHhhhhHhho..",
-            13: "..ohhHhhhhHhho..",
-            14: "...hhHhhhhHhh...",
-            15: "....HHHHHHHH....",
+        "back": {
+            10: "...ohhhhhhho....",
+            11: "...ohhHhHhho....",
+            12: "...ohhHhHhho....",
+            13: "....oHHHHHo.....",
+            14: ".....ooooo......",
         },
-        "right": {
-            10: "..ohh...........",
-            11: "..ohh...........",
-            12: "..ohhh..........",
-            13: "..oHh...........",
-            14: "...oo...........",
+        "side": {
+            10: "...ohh..........",
+            11: "...ohho.........",
+            12: "...ohho.........",
+            13: "....oo..........",
         },
     },
     "bun": {
-        "down": {0: "......oooo......", 1: ".....ohhhho....."},
-        "up": {0: "......oooo......", 1: ".....ohhhho....."},
-        "right": {
-            3: ".o..............",
-            4: "ohh.............",
-            5: "ohh.............",
-            6: ".o..............",
+        "front": {2: "......ooo.......", 3: ".....ohhho......", 4: ".....ohhho......"},
+        "back": {2: "......ooo.......", 3: ".....ohhho......", 4: ".....ohhho......"},
+        "side": {
+            5: ".oo.............",
+            6: "ohho............",
+            7: "ohho............",
+            8: ".oo.............",
         },
     },
 }
@@ -201,22 +190,20 @@ LOOKS = {
 }
 
 
-def _frame(look: Look, facing: str, step: int) -> pygame.Surface:
-    side = "right" if facing == "left" else facing
-    rows = overlay(HEAD[side] + TORSO[side] + LEGS[side][step], HAIR[look.hair_style][side])
-    surface = paint(rows, look.legend())
-    if surface.get_size() != FRAME_SIZE:
-        raise ValueError(f"Frame is {surface.get_size()}, expected {FRAME_SIZE}")
-    return pygame.transform.flip(surface, True, False) if facing == "left" else surface
-
-
 def _sheet(look: Look) -> pygame.Surface:
     sheet = pygame.Surface(SHEET_SIZE, pygame.SRCALPHA)
-    for row, facing in enumerate(FACINGS):
-        for step in range(FRAMES_PER_FACING):
-            sheet.blit(_frame(look, facing, step), (step * FRAME_SIZE[0], row * FRAME_SIZE[1]))
+    legend = look.legend()
+    for column, view in enumerate(SKIN_VIEWS):
+        left = column * VIEW_WIDTH
+        head = paint(overlay(HEAD[view], HAIR[look.hair_style][view]), legend)
+        for cell, rows in (("head", head), ("torso", paint(TORSO[view], legend))):
+            if rows.get_size() != SPRITE_CELLS[cell].size:
+                raise ValueError(f"The {view} {cell} is {rows.get_size()}, expected {SPRITE_CELLS[cell].size}")
+            sheet.blit(rows, SPRITE_CELLS[cell].move(left, 0))
+        for index, cell in enumerate(STRIP_CELLS):
+            sheet.blit(paint(STRIPS[view][cell], legend), (left + index * STRIP_SPACING, STRIP_TOP))
     return sheet
 
 
 def build() -> dict[str, pygame.Surface]:
-    return {f"sprites/residents/{body_id}.png": _sheet(look) for body_id, look in LOOKS.items()}
+    return {f"sprites/bodies/{body_id}.png": _sheet(look) for body_id, look in LOOKS.items()}

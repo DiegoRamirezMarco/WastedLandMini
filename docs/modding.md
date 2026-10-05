@@ -93,6 +93,39 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
 - An exchange in `data/social.json` is a fight if it has a `damage` range, e.g. `[8, 18]`.
 - A map's `graves` lists the tiles where the dead are buried, in the order they are used.
 
+## Bodies
+
+`data/skeleton.json` is the body every resident has. Distances are in art pixels from the spot
+between the feet, with `y` growing downwards. Angles are in degrees.
+
+- `joints`: each with a `mass` (the heavier, the less a blow moves it) and a `radius` (how far
+  above the ground it comes to rest).
+- `bones`: each a pair of joints, listed from `root` outwards, so that every bone starts at a
+  joint that an earlier one already reached.
+- `braces`: pairs of joints kept a fixed distance apart without a bone, which is what keeps the
+  trunk in shape.
+- `parts`: the bone each part hangs from. Cutting that bone loose takes it and everything beyond
+  it off. A limb in `data/body.json` is seen coming off only if it is a part here.
+- `limits`: how far a bone may turn against another (`ref`), from the `side` and from the
+  `front`. From the side a positive angle is towards where the body faces. From the front it is
+  away from the middle of the body for a bone with a side. `ref_reversed` measures against the
+  other bone pointing the other way, as for a limb that hangs from the trunk.
+- `views`: where each joint is at rest, seen from the `front` and from the right `side`.
+- `orders`: for the `front`, `side` and `back`, the bones from the furthest to the nearest.
+- `skins`: what is drawn over a bone, a `sprite` or a `strip` from the parts sheet. A sprite's
+  `anchor` is the `start`, `middle` or `end` of its bone.
+- `clips`: for each view, a list of keyframes that are run through in a loop. A keyframe gives
+  bones an angle from rest, or `[angle, scale]` to make one look shorter as well, and may shift
+  the whole body with `root`. A positive angle swings a hanging limb to the right of the screen.
+  The game uses `idle`, `walk`, `work`, `argue`, `fight` and, over any of them, `carry`. A clip
+  that is missing stands still.
+- `physics`: gravity in pixels per second squared, how much speed is kept each step (`damping`),
+  lost along the ground (`friction`) and given back on landing (`bounce`), how hard limits push
+  back, and when a body that lies still goes to sleep.
+
+A resident's look is `assets/sprites/bodies/<resident_id>.png`, laid out as in
+`docs/visual-style.md`. One that is missing is drawn in placeholder parts.
+
 ## Jobs
 
 `data/jobs.json` defines the settlement's posts:

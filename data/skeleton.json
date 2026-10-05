@@ -1,0 +1,223 @@
+{
+  "root": "pelvis",
+  "joints": {
+    "pelvis": {"mass": 4.0, "radius": 1.5},
+    "chest": {"mass": 4.0, "radius": 1.5},
+    "neck": {"mass": 1.0, "radius": 1.5},
+    "head": {"mass": 3.0, "radius": 3.0},
+    "shoulder_left": {"mass": 1.0, "radius": 1.5},
+    "elbow_left": {"mass": 1.0, "radius": 1.5},
+    "hand_left": {"mass": 0.7, "radius": 1.5},
+    "shoulder_right": {"mass": 1.0, "radius": 1.5},
+    "elbow_right": {"mass": 1.0, "radius": 1.5},
+    "hand_right": {"mass": 0.7, "radius": 1.5},
+    "hip_left": {"mass": 1.5, "radius": 1.5},
+    "knee_left": {"mass": 1.5, "radius": 1.5},
+    "foot_left": {"mass": 1.0, "radius": 1.5},
+    "hip_right": {"mass": 1.5, "radius": 1.5},
+    "knee_right": {"mass": 1.5, "radius": 1.5},
+    "foot_right": {"mass": 1.0, "radius": 1.5}
+  },
+  "bones": {
+    "spine": ["pelvis", "chest"],
+    "neck": ["chest", "neck"],
+    "skull": ["neck", "head"],
+    "clavicle_left": ["chest", "shoulder_left"],
+    "upper_arm_left": ["shoulder_left", "elbow_left"],
+    "forearm_left": ["elbow_left", "hand_left"],
+    "clavicle_right": ["chest", "shoulder_right"],
+    "upper_arm_right": ["shoulder_right", "elbow_right"],
+    "forearm_right": ["elbow_right", "hand_right"],
+    "pelvis_left": ["pelvis", "hip_left"],
+    "thigh_left": ["hip_left", "knee_left"],
+    "shin_left": ["knee_left", "foot_left"],
+    "pelvis_right": ["pelvis", "hip_right"],
+    "thigh_right": ["hip_right", "knee_right"],
+    "shin_right": ["knee_right", "foot_right"]
+  },
+  "braces": [
+    ["shoulder_left", "shoulder_right"],
+    ["shoulder_left", "pelvis"],
+    ["shoulder_right", "pelvis"],
+    ["hip_left", "hip_right"],
+    ["hip_left", "chest"],
+    ["hip_right", "chest"]
+  ],
+  "parts": {
+    "head": "skull",
+    "arm_left": "upper_arm_left",
+    "arm_right": "upper_arm_right",
+    "forearm_left": "forearm_left",
+    "forearm_right": "forearm_right",
+    "leg_left": "thigh_left",
+    "leg_right": "thigh_right",
+    "shin_left": "shin_left",
+    "shin_right": "shin_right"
+  },
+  "limits": {
+    "neck": {"ref": "spine", "side": [-30, 30], "front": [-25, 25]},
+    "skull": {"ref": "neck", "side": [-35, 45], "front": [-35, 35]},
+    "upper_arm_left": {"ref": "spine", "ref_reversed": true, "side": [-70, 175], "front": [-20, 160]},
+    "upper_arm_right": {"ref": "spine", "ref_reversed": true, "side": [-70, 175], "front": [-20, 160]},
+    "forearm_left": {"ref": "upper_arm_left", "side": [-15, 150], "front": [-70, 70]},
+    "forearm_right": {"ref": "upper_arm_right", "side": [-15, 150], "front": [-70, 70]},
+    "thigh_left": {"ref": "spine", "ref_reversed": true, "side": [-35, 120], "front": [-15, 55]},
+    "thigh_right": {"ref": "spine", "ref_reversed": true, "side": [-35, 120], "front": [-15, 55]},
+    "shin_left": {"ref": "thigh_left", "side": [-150, 15], "front": [-25, 25]},
+    "shin_right": {"ref": "thigh_right", "side": [-150, 15], "front": [-25, 25]}
+  },
+  "views": {
+    "front": {
+      "rest": {
+        "pelvis": [0, -9],
+        "chest": [0, -13],
+        "neck": [0, -15],
+        "head": [0, -18],
+        "shoulder_left": [4, -13],
+        "elbow_left": [4, -10],
+        "hand_left": [4, -7],
+        "shoulder_right": [-4, -13],
+        "elbow_right": [-4, -10],
+        "hand_right": [-4, -7],
+        "hip_left": [1.5, -7],
+        "knee_left": [1.5, -4],
+        "foot_left": [1.5, -1],
+        "hip_right": [-1.5, -7],
+        "knee_right": [-1.5, -4],
+        "foot_right": [-1.5, -1]
+      }
+    },
+    "side": {
+      "rest": {
+        "pelvis": [0, -9],
+        "chest": [0, -13],
+        "neck": [0, -15],
+        "head": [0, -18],
+        "shoulder_left": [0, -13],
+        "elbow_left": [0, -10],
+        "hand_left": [0, -7],
+        "shoulder_right": [0, -13],
+        "elbow_right": [0, -10],
+        "hand_right": [0, -7],
+        "hip_left": [-1, -7],
+        "knee_left": [-1, -4],
+        "foot_left": [-1, -1],
+        "hip_right": [0.5, -7],
+        "knee_right": [0.5, -4],
+        "foot_right": [0.5, -1]
+      }
+    }
+  },
+  "orders": {
+    "front": [
+      "thigh_left", "shin_left", "thigh_right", "shin_right",
+      "upper_arm_left", "forearm_left", "upper_arm_right", "forearm_right",
+      "spine", "skull"
+    ],
+    "back": [
+      "thigh_left", "shin_left", "thigh_right", "shin_right",
+      "upper_arm_left", "forearm_left", "upper_arm_right", "forearm_right",
+      "spine", "skull"
+    ],
+    "side": [
+      "upper_arm_left", "forearm_left", "thigh_left", "shin_left",
+      "thigh_right", "shin_right", "spine", "skull",
+      "upper_arm_right", "forearm_right"
+    ]
+  },
+  "skins": {
+    "skull": {"sprite": "head", "anchor": "end"},
+    "spine": {"sprite": "torso", "anchor": "middle"},
+    "upper_arm_left": {"strip": "upper_arm"},
+    "upper_arm_right": {"strip": "upper_arm"},
+    "forearm_left": {"strip": "forearm"},
+    "forearm_right": {"strip": "forearm"},
+    "thigh_left": {"strip": "thigh"},
+    "thigh_right": {"strip": "thigh"},
+    "shin_left": {"strip": "shin"},
+    "shin_right": {"strip": "shin"}
+  },
+  "clips": {
+    "idle": {
+      "front": [{}],
+      "side": [{}]
+    },
+    "walk": {
+      "front": [
+        {"upper_arm_left": [0, 0.85], "upper_arm_right": [0, 1.0]},
+        {"root": [0, -1], "thigh_left": [0, 0.7], "shin_left": [0, 0.6]},
+        {"upper_arm_left": [0, 1.0], "upper_arm_right": [0, 0.85]},
+        {"root": [0, -1], "thigh_right": [0, 0.7], "shin_right": [0, 0.6]}
+      ],
+      "side": [
+        {
+          "thigh_right": 28, "shin_right": 8, "thigh_left": -22, "shin_left": -45,
+          "upper_arm_left": 30, "forearm_left": 50, "upper_arm_right": -28, "forearm_right": -8
+        },
+        {
+          "root": [0, -1], "thigh_left": 15, "shin_left": -40,
+          "upper_arm_left": 5, "forearm_left": 15, "upper_arm_right": -5, "forearm_right": 5
+        },
+        {
+          "thigh_left": 28, "shin_left": 8, "thigh_right": -22, "shin_right": -45,
+          "upper_arm_right": 30, "forearm_right": 50, "upper_arm_left": -28, "forearm_left": -8
+        },
+        {
+          "root": [0, -1], "thigh_right": 15, "shin_right": -40,
+          "upper_arm_right": 5, "forearm_right": 15, "upper_arm_left": -5, "forearm_left": 5
+        }
+      ]
+    },
+    "work": {
+      "front": [
+        {"forearm_left": [-20, 0.5], "forearm_right": [20, 0.5]},
+        {"upper_arm_left": [0, 0.8], "forearm_left": [-20, 0.5], "upper_arm_right": [0, 0.8], "forearm_right": [20, 0.5]}
+      ],
+      "side": [
+        {"upper_arm_right": 60, "forearm_right": 115, "upper_arm_left": 40, "forearm_left": 85},
+        {"upper_arm_right": 35, "forearm_right": 65, "upper_arm_left": 40, "forearm_left": 85}
+      ]
+    },
+    "argue": {
+      "front": [
+        {"upper_arm_left": 40, "forearm_left": 150},
+        {"upper_arm_left": 60, "forearm_left": 125}
+      ],
+      "side": [
+        {"upper_arm_right": 60, "forearm_right": 125},
+        {"upper_arm_right": 80, "forearm_right": 100}
+      ]
+    },
+    "fight": {
+      "front": [
+        {"upper_arm_left": 35, "forearm_left": 160, "upper_arm_right": -35, "forearm_right": -160},
+        {"upper_arm_left": 35, "forearm_left": [160, 0.4], "upper_arm_right": -35, "forearm_right": -160},
+        {"upper_arm_left": 35, "forearm_left": 160, "upper_arm_right": -35, "forearm_right": -160},
+        {"upper_arm_left": 35, "forearm_left": 160, "upper_arm_right": -35, "forearm_right": [-160, 0.4]}
+      ],
+      "side": [
+        {"thigh_right": 18, "thigh_left": -18, "upper_arm_right": 50, "forearm_right": 150, "upper_arm_left": 40, "forearm_left": 140},
+        {"thigh_right": 18, "thigh_left": -18, "spine": -8, "upper_arm_right": 88, "forearm_right": 92, "upper_arm_left": 40, "forearm_left": 140},
+        {"thigh_right": 18, "thigh_left": -18, "upper_arm_right": 50, "forearm_right": 150, "upper_arm_left": 40, "forearm_left": 140},
+        {"thigh_right": 18, "thigh_left": -18, "spine": -8, "upper_arm_right": 50, "forearm_right": 150, "upper_arm_left": 88, "forearm_left": 92}
+      ]
+    },
+    "carry": {
+      "front": [{"forearm_left": [-25, 0.5], "forearm_right": [25, 0.5]}],
+      "side": [{"upper_arm_left": 30, "forearm_left": 95, "upper_arm_right": 30, "forearm_right": 95}]
+    }
+  },
+  "physics": {
+    "gravity": 320.0,
+    "damping": 0.985,
+    "friction": 0.5,
+    "bounce": 0.15,
+    "iterations": 4,
+    "step": 0.016666667,
+    "max_steps": 4,
+    "limit_stiffness": 0.3,
+    "sleep_speed": 4.0,
+    "sleep_after": 0.6,
+    "rest_after": 6.0
+  }
+}

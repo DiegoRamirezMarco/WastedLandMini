@@ -9,7 +9,15 @@ from pathlib import Path
 import pygame
 
 from graphics.assets import ASSETS_DIR, PLACEHOLDER_COLORS, AssetStore
-from graphics.character_renderer import FACINGS, FRAME_SIZE, SHEET_SIZE, CharacterRenderer
+from graphics.body_renderer import (
+    CANVAS_ORIGIN,
+    CANVAS_SIZE,
+    FRAME_ORIGIN,
+    FRAME_SIZE,
+    SHEET_SIZE,
+    SPRITE_CELLS,
+    BodyRenderer,
+)
 from graphics.palette import PALETTE
 from graphics.face_renderer import EXPRESSIONS, FACE_SIZE, MARKER_SIZE, FaceRenderer
 from audio.audio_manager import load_sound_map
@@ -33,6 +41,8 @@ from settings import TILE_SIZE
 from simulation.items.registry import ItemRegistry
 from simulation.registries import DATA_DIR
 from simulation.world import SimulationWorld
+from skeleton.character import Character
+from skeleton.plan import FACINGS, builtin_plan
 from tools.art.sounds import SOUNDS, duration_ms
 from tools.make_art import build_all, main as make_art
 
@@ -61,7 +71,7 @@ class ArtContractTests(unittest.TestCase):
             relative = path.relative_to(ASSETS_DIR)
             size = pygame.image.load(str(path)).get_size()
             folder = relative.parts[:2] if relative.parts[0] == "sprites" else relative.parts[:1]
-            if folder == ("sprites", "residents"):
+            if folder == ("sprites", "bodies"):
                 self.assertEqual(size, SHEET_SIZE, relative)
             elif folder == ("sprites", "items"):
                 self.assertEqual(size, (TILE_SIZE, TILE_SIZE), relative)
@@ -193,32 +203,115 @@ class SettlementArtCoverageTests(unittest.TestCase):
             self.assertEqual(width % (definition.width * TILE_SIZE), 0, kind)
             self.assertGreaterEqual(height, definition.height * TILE_SIZE, kind)
         for resident_id in self.world.residents:
-            self.assertTrue((ASSETS_DIR / f"sprites/residents/{resident_id}.png").exists(), resident_id)
+            self.assertTrue((ASSETS_DIR / f"sprites/bodies/{resident_id}.png").exists(), resident_id)
         # Whoever may come to the gate one day is drawn already.
         for newcomer in self.world.registries.world_events.newcomers:
-            for folder in ("sprites/residents", "faces/base", "faces/hair"):
+            for folder in ("sprites/bodies", "faces/base", "faces/hair"):
                 self.assertTrue((ASSETS_DIR / folder / f"{newcomer.newcomer_id}.png").exists(), newcomer.newcomer_id)
 
 
-class CharacterRendererTests(unittest.TestCase):
-    def test_every_facing_has_a_frame(self) -> None:
-        renderer = CharacterRenderer(AssetStore(ASSETS_DIR))
+class BodyRendererTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.plan = builtin_plan()
+        self.renderer = BodyRenderer(AssetStore(ASSETS_DIR), self.plan)
+        self.allowed = {(*color, 255) for color in PALETTE.values()} | {(0, 0, 0, 0)}
+
+    def _colours(self, surface: pygame.Surface) -> set[tuple[int, ...]]:
+        return {pixel if pixel[3] else (0, 0, 0, 0) for pixel in _pixels(surface)}
+
+    def test_every_facing_and_clip_draws_a_body_in_the_palette(self) -> None:
         for facing in FACINGS:
-            self.assertEqual(renderer.frame("marta", facing, step=1).get_size(), FRAME_SIZE)
+            for clip in self.plan.clips:
+                for index in range(self.renderer.frames(clip, facing)):
+                    picture, origin = self.renderer.frame("marta", facing, clip, index)
+                    self.assertEqual(picture.get_size(), CANVAS_SIZE)
+                    self.assertEqual(origin, CANVAS_ORIGIN)
+                    self.assertLessEqual(self._colours(picture), self.allowed, (facing, clip, index))
+                    # Nothing is cut off by the edge of the picture.
+                    box = picture.get_bounding_rect()
+                    self.assertTrue(picture.get_rect().inflate(-2, -2).contains(box), (facing, clip, index))
 
-    def test_left_frame_mirrors_right_frame(self) -> None:
-        renderer = CharacterRenderer(AssetStore(ASSETS_DIR))
-        left, right = renderer.frame("raul", "left"), renderer.frame("raul", "right")
-        for x in range(FRAME_SIZE[0]):
-            self.assertEqual(left.get_at((x, 8)), right.get_at((FRAME_SIZE[0] - 1 - x, 8)))
+    def test_a_body_at_rest_fits_its_frame_with_its_feet_at_the_bottom(self) -> None:
+        for facing in FACINGS:
+            picture, origin = self.renderer.frame("raul", facing, "idle")
+            box = picture.get_bounding_rect()
+            frame = pygame.Rect(origin[0] - FRAME_ORIGIN[0], origin[1] - FRAME_ORIGIN[1], *FRAME_SIZE)
+            self.assertTrue(frame.contains(box), facing)
+            self.assertEqual(box.bottom, frame.bottom, facing)
 
-    def test_unknown_body_draws_a_placeholder_frame(self) -> None:
+    def test_facing_left_mirrors_facing_right(self) -> None:
+        left, _ = self.renderer.frame("raul", "left", "walk", 1)
+        right, origin = self.renderer.frame("raul", "right", "walk", 1)
+        for y in range(CANVAS_SIZE[1]):
+            for dx in range(-10, 11):
+                self.assertEqual(left.get_at((origin[0] + dx, y)), right.get_at((origin[0] - dx, y)), (dx, y))
+
+    def test_a_posed_body_is_drawn_once_and_kept(self) -> None:
+        self.assertIs(self.renderer.frame("marta", "down", "walk", 3)[0], self.renderer.frame("marta", "down", "walk", 3)[0])
+        count = self.renderer.frames("walk", "down")
+        self.assertIs(self.renderer.frame("marta", "down", "walk", count + 3)[0], self.renderer.frame("marta", "down", "walk", 3)[0])
+        self.assertEqual(self.renderer.frames("idle", "down"), 1)
+
+    def test_walking_moves_the_body_and_residents_do_not_look_alike(self) -> None:
+        frames = {tuple(_pixels(self.renderer.frame("marta", "right", "walk", index)[0])) for index in range(8)}
+        self.assertGreater(len(frames), 3)
+        looks = {tuple(_pixels(self.renderer.frame(body_id, "down", "idle")[0])) for body_id in SimulationWorld.demo_world().residents}
+        self.assertEqual(len(looks), len(SimulationWorld.demo_world().residents))
+
+    def test_a_lost_part_is_not_drawn_on_whichever_side_it_was(self) -> None:
+        def painted(surface: pygame.Surface, columns: range) -> int:
+            return sum(1 for x in columns for y in range(surface.get_height()) if surface.get_at((x, y))[3])
+
+        whole, origin = self.renderer.frame("raul", "down", "idle")
+        maimed, _ = self.renderer.frame("raul", "down", "idle", lost=("arm_left",))
+        # Facing the viewer, a left arm is on the right of the picture.
+        right_of_body = range(origin[0] + 3, CANVAS_SIZE[0])
+        left_of_body = range(0, origin[0] - 2)
+        self.assertLess(painted(maimed, right_of_body), painted(whole, right_of_body))
+        self.assertEqual(painted(maimed, left_of_body), painted(whole, left_of_body))
+        # Seen from behind it is on the left.
+        whole, _ = self.renderer.frame("raul", "up", "idle")
+        maimed, _ = self.renderer.frame("raul", "up", "idle", lost=("arm_left",))
+        self.assertLess(painted(maimed, left_of_body), painted(whole, left_of_body))
+        self.assertEqual(painted(maimed, right_of_body), painted(whole, right_of_body))
+        legless, _ = self.renderer.frame("raul", "down", "idle", lost=("leg_left", "leg_right"))
+        self.assertLess(legless.get_bounding_rect().bottom, whole.get_bounding_rect().bottom - 3)
+
+    def test_a_limp_body_is_drawn_wherever_its_joints_are_and_stays_in_the_palette(self) -> None:
+        character = Character(self.plan)
+        character.stand(40, 40, "right", "walk", 0.2)
+        body = character.kill(90, -40)
+        part = character.sever("arm_right", -60, -80, spin=6.0)
+        seen = set()
+        for _ in range(40):
+            for _ in range(6):
+                character.update(1 / 60)
+                part.update(1 / 60)
+            canvas = pygame.Surface((80, 60), pygame.SRCALPHA)
+            self.renderer.draw(canvas, body, "lucia")
+            self.renderer.draw(canvas, part.skeleton, "lucia")
+            self.assertLessEqual(self._colours(canvas), self.allowed)
+            seen.add(tuple(canvas.get_bounding_rect()))
+        self.assertGreater(len(seen), 3, "it should be seen to fall")
+        self.assertTrue(body.asleep)
+        # Lying down it is wider than it is tall.
+        lying = pygame.Surface((80, 60), pygame.SRCALPHA)
+        self.renderer.draw(lying, body, "lucia")
+        box = lying.get_bounding_rect()
+        self.assertGreater(box.width, box.height)
+
+    def test_an_unknown_body_is_drawn_with_placeholder_parts(self) -> None:
         logging.disable(logging.WARNING)
         self.addCleanup(logging.disable, logging.NOTSET)
-        renderer = CharacterRenderer(AssetStore(ASSETS_DIR))
-        frame = renderer.frame("nobody")
-        self.assertEqual(frame.get_size(), FRAME_SIZE)
-        self.assertIn(tuple(frame.get_at((0, 0)))[:3], PLACEHOLDER_COLORS)
+        picture, _ = self.renderer.frame("nobody", "down", "idle")
+        self.assertIn(PLACEHOLDER_COLORS[0], {tuple(pixel)[:3] for pixel in _pixels(picture) if pixel[3]})
+        self.assertEqual(self.renderer.head("nobody").get_size(), SPRITE_CELLS["head"].size)
+
+    def test_the_head_alone_is_the_head_of_the_sheet(self) -> None:
+        head = self.renderer.head("marta")
+        self.assertEqual(head.get_size(), SPRITE_CELLS["head"].size)
+        self.assertLessEqual(self._colours(head), self.allowed)
+        self.assertNotEqual(_pixels(head), _pixels(self.renderer.head("marta", "up")))
 
 
 def _pixels(surface: pygame.Surface) -> list[tuple[int, ...]]:

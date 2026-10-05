@@ -22,7 +22,8 @@ watches, advises and intervenes, but does not control them.
 - Day and night over a place that looks salvaged: fires in barrels, lamps by the doors, wrecks
   and scrap. What happens in the dark, away from them, is seen by almost nobody.
 - Close-up interaction view for important conversations and crises.
-- Pixel art: simple bodies with modular faces or optional custom PNG faces.
+- Pixel art: bodies drawn over a skeleton, which reel from a blow, fall when they die and can
+  lose a limb for good, with modular faces or optional custom PNG faces.
 - Autonomous residents with needs, personalities, memories and directional relationships.
 - Player influence rather than direct control.
 - Data-driven items, food, maps and moddable custom content.
@@ -95,6 +96,13 @@ python -m simulation.headless --days 7 --seed 7
 `python -m tools.make_art` generates any missing starter image, sound or music track under `assets/`. It never
 overwrites an existing file, so anything edited by hand is safe. The rules for sizes, palette and naming are in
 `docs/visual-style.md`.
+
+Residents' bodies are drawn over a skeleton. To try it away from the game, with blows, falls and
+limbs coming off at a key press:
+
+```bash
+python -m tools.skeleton_lab
+```
 
 ## Custom content
 

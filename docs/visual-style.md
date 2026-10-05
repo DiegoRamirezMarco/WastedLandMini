@@ -24,7 +24,8 @@
 | Tile | 16×16 | The canvas is 40 tiles wide and 22.5 tall |
 | Roof tile, from afar | 16×16 | `sprites/tiles/roofs.png`. Only ever shown at half size, so it is drawn in blocks of 2×2 pixels |
 | Roof tile, from close | 16×16 | `sprites/tiles/roofs_close.png`. The same tiles in the same cells, drawn pixel by pixel |
-| Resident body frame | 16×24 | Feet at the bottom centre of the frame |
+| Resident body | 16×24 standing at rest | Feet at the bottom centre. Drawn from parts over a skeleton: see Bodies below |
+| Resident parts sheet | 48×36 | `sprites/bodies/<body>.png`: a head, a trunk and limb strips for each of three views |
 | Object | Whole tiles | One PNG per object kind, as wide as its footprint. A taller image rises above the footprint, e.g. the pantry is 16×32 on a 1×1 footprint. A wider one holds animation frames side by side, e.g. the campfire is 48×16 |
 | Item or food icon | 16×16 | |
 | Face layer | 64×64 | Drawn at ×2 on the canvas in the interaction view. The game shrinks the finished face to a 16×16 marker for the overview |
@@ -35,8 +36,13 @@
 - Frames sit on a plain grid with no margin and no spacing.
 - Tilesets: 16×16 cells, any number of columns and rows.
   The cell of each named tile is listed in `graphics/tileset.py`.
-- Resident body: 3 columns × 4 rows of 16×24 frames (48×96).
-  Rows are facing down, left, right, up. Columns are idle, step A, step B.
+- Resident parts: three columns of 16 pixels, for the body seen from the front, from its right
+  side and from behind. Seen from the left it is the right side in a mirror. Each column holds:
+  - rows 0 to 15, the head, hair and all. Column 7 of row 8 sits on the head joint: the eyes.
+  - rows 16 to 27, the trunk. Column 7 of row 22 sits half-way between the shoulders and the hips.
+  - rows 28 to 35, four strips at columns 0, 4, 8 and 12: upper arm, forearm, thigh and shin. A
+    strip is read down its first column, from the end of the limb nearer the body: one colour per
+    row, as many rows as it has colours. It is as many pixels wide as the limb is thick, up to 3.
 - Face layers are full 64×64 images that stack at the same origin, in this order:
   base, mouth, eyes, brows, hair. A layer never needs an offset.
   `base` and `hair` are one file per resident ID; `mouth`, `eyes` and `brows` are one file per
@@ -70,7 +76,7 @@ assets/
     palette.gpl
     sprites/
         tiles/<tileset>.png
-        residents/<body>.png
+        bodies/<body>.png
         objects/<kind>.png
         items/<item_id>.png
     faces/
@@ -110,7 +116,7 @@ custom_content/
   door, stays in view below the eave.
 - Walls and fences show their front where they end towards the viewer and their top elsewhere.
 - Objects and residents are drawn back to front, so whatever stands lower on screen is in front.
-- Simple readable bodies.
+- Simple readable bodies, drawn over a skeleton. See Bodies below.
 - Name, status icon (talking, arguing, asleep, hurt, at work, `!`) and selection arrow stacked over each resident.
 - Animated objects and bobbing icons run on real time and stop while the game is paused.
 - While someone eats or uses an item, its icon floats over their head.
@@ -158,4 +164,32 @@ custom_content/
 - Large expressive faces.
 - Modular faces by default, shown at ×2 in a framed portrait.
 - Custom PNG faces from `custom_content/faces/<resident_id>/` take their place when present.
-- Do not spend early development budget on complex body animation.
+- Bodies are not shown here. The moment belongs to the faces.
+
+## Bodies
+
+A body is not a sheet of frames. It is a skeleton, `data/skeleton.json`, with a part drawn over
+each bone, and the game draws it in whatever pose it is in.
+
+- The head and the trunk are sprites. They turn with their bone, in sixteen steps, without
+  smoothing. Standing they are never turned, so they stay exactly as drawn.
+- A limb is a strip of colour laid along its bone, pixel by pixel, with an `ink` outline round
+  it. That keeps a two-pixel arm clean at any angle, which a turned sprite of that size is not.
+- Bones are drawn from the furthest to the nearest, in the order `orders` gives for each view,
+  so that the arm on the viewer's side passes in front of the trunk.
+- Poses are clips of keyframes in the same file: how far each bone is turned from rest and,
+  seen from the front, how much shorter it looks when it points at the viewer. Standing, walking,
+  working, arguing, fighting and carrying are clips. Walking keeps step with the ground covered.
+- A posed body is drawn once for each frame of each clip and kept. While nothing happens to it,
+  showing it is one blit and no physics runs.
+- **A blow** throws the body off its pose and it reels back to it. **A hard one** knocks it
+  down: it goes limp, falls, and gets up after a moment. **Death** leaves it limp for good,
+  lying where it fell until it is taken away an hour and a half of game time later.
+- **A lost limb** is cut loose from the skeleton and flies off as a body of its own. The
+  resident is drawn without it from then on, in every pose and from every side.
+- Limp bodies and loose parts fall under gravity, land, and go to sleep once they lie still:
+  from then on they are one kept picture each. Joints have limits, so that knees and elbows
+  only bend the way they should.
+- All of this runs on real time and stops while the game is paused. None of it is saved: after
+  loading, the maimed are simply drawn without what they had lost.
+- `python -m tools.skeleton_lab` opens a room to try it in.

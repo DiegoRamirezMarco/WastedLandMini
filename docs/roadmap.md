@@ -286,6 +286,27 @@ Still open here:
 - A stranger at the gate and raiders are words and a decision. Nobody is drawn at the gate.
 - A couple shows only while one of the two is selected, or while they are alone together.
 
+### P10 — Bodies with bones (needs S14) — done
+- A skeleton for every resident: sixteen joints, bones between them, parts drawn over the bones
+- New proportions, with arms and legs to speak of, in the same 16×24 space
+- Poses as data: standing, walking, working, arguing, fighting, carrying
+- Blows that stagger, hard ones that knock down, and the dead falling where they stood
+- Limbs that are cut loose from the skeleton and fly off as bodies of their own
+- No physics for anyone who is merely going about their day, and sleep for whatever lies still
+- A room to try it in: `python -m tools.skeleton_lab`
+
+Done when: a hundred residents walking about cost no physics at all; a blow, a lost limb and a
+death each show on the bodies they happen to; whatever falls comes to rest and stops being worked
+out; and a resident who has lost a limb is drawn without it after saving and loading.
+
+Still open here:
+- Bodies only collide with the ground. A falling body passes through walls, furniture and others.
+- A body lies in the plane of the screen: it falls to one side, never towards the viewer or away.
+- A one-legged resident walks as before, on the leg that is left, with no crutch and no limp.
+- Nothing is worn or held: a weapon is still an icon over the head, and clothes are the look.
+- Nobody carries the dead to their grave. The body lies a while and is gone.
+- The interaction view still shows faces only.
+
 ## Later
 - Voice/TTS modulation
 - SQLite persistence

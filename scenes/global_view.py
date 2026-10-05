@@ -3,7 +3,7 @@ from collections.abc import Callable, Hashable, Iterable
 import pygame
 
 from graphics.assets import AssetStore
-from graphics.character_renderer import FRAME_SIZE, CharacterRenderer
+from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE, BodyRenderer
 from graphics.face_renderer import FaceRenderer
 from graphics.font import CELL_SIZE, BitmapFont
 from graphics.icons import ICON_SIZE, icon_path
@@ -22,6 +22,7 @@ from graphics.tileset import (
     SETTLEMENT_SHEET_SIZE,
     Tileset,
 )
+from scenes.body_stage import BodyStage, Remains, ground_spot
 from scenes.hud import JOBS_INTENT, LOG_INTENT, PAUSE_INTENT, Hud
 from scenes.scene import canvas_position
 from settings import SCALE, TILE_SIZE
@@ -31,6 +32,7 @@ from simulation.items.item_system import USE_ITEM_ACTION
 from simulation.work.work_system import WORK_ACTION
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
+from skeleton.plan import IDLE_CLIP, builtin_plan
 from ui.labels import away_residents
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
 from ui.panel import draw_panel
@@ -38,17 +40,26 @@ from world.interactable import Interactable
 from world.map import Tile
 
 MAP_ORIGIN = (0, 32)
-# Walk cycle over one tile: step A, idle, step B, idle.
-WALK_CYCLE = (1, 0, 2, 0)
-# Rows of a body frame left visible when a resident lies in a bed: hair and eyes above the blanket.
+# Tiles walked in one turn of the walk clip: a step with each foot.
+TILES_PER_STRIDE = 2
+# What a body does besides standing and walking, and how many times a second its clip goes round.
+WALK_CLIP = "walk"
+WORK_CLIP = "work"
+ARGUE_CLIP = "argue"
+FIGHT_CLIP = "fight"
+CARRY_CLIP = "carry"
+CLIP_RATES = {WORK_CLIP: 1.0, ARGUE_CLIP: 1.2, FIGHT_CLIP: 1.5}
+# Rows of a head left visible when a resident lies in a bed: hair and eyes above the blanket.
 LYING_HEAD_ROWS = 10
+# Where the corner of that head goes on the bed, so that it rests on the pillow.
+LYING_HEAD_OFFSET = (1, -2)
 # Frames per second of animated objects and bobbing icons.
 ANIMATION_FPS = 5
 BOBBING_ICONS = ("alert", "sleep")
 # Health below which a resident is shown as hurt.
 HURT_HEALTH = 70.0
 # Where a load is drawn on a body frame, by the way the resident faces: in their arms, or on their back.
-LOAD_OFFSETS = {"down": (4, 13), "up": (4, 12), "left": (0, 13), "right": (8, 13)}
+LOAD_OFFSETS = {"down": (4, 12), "up": (4, 10), "left": (0, 12), "right": (8, 12)}
 SUGGESTION_REFUSED = "Ahora no se le puede proponer ese puesto"
 NOBODY_NEEDS_ATTENTION = "Nadie necesita atención ahora"
 ROOFS_ON = "Tejados puestos: se quitan al mirar dentro"
@@ -101,7 +112,8 @@ class GlobalView:
         self.font = font
         self.icons = icons
         self.faces = faces
-        self.characters = CharacterRenderer(assets)
+        # Everyone's body, and what a blow leaves lying about. Presentation only: nothing of it is saved.
+        self.bodies = BodyStage(BodyRenderer(assets, builtin_plan()))
         self.hud = Hud(canvas, world, font, icons)
         # Real seconds of unpaused play, driving animations that have nothing to do with game state.
         self.time = 0.0
@@ -190,6 +202,7 @@ class GlobalView:
     def update(self, dt: float) -> None:
         if not self.world.clock.paused:
             self.time += dt
+            self.bodies.update(dt, self.world)
         self.hud.update(dt)
         pressed = pygame.key.get_pressed()
         for (dx, dy), keys in SCROLL_KEYS.items():
@@ -245,6 +258,7 @@ class GlobalView:
         """React to what the simulation just emitted."""
         events = list(events)
         self.hud.on_events(events)
+        self.bodies.on_events(self.world, events)
         for event in events:
             if event.importance >= self.hud.intervention_from:
                 self.alerts.update(event.participants)
@@ -394,6 +408,10 @@ class GlobalView:
             # Someone under a roof is still found: their face is shown on it, as from afar.
             unseen = self.overview or resident.tile in self._hidden
             draws.append(self._marker_draw(resident) if unseen else self._resident_draw(resident))
+        for remains in self.bodies.remains:
+            # The dead are not picked out from afar, and a roof hides them like anything else.
+            if not self.overview and remains.tile not in self._hidden:
+                draws.append(self._remains_draw(remains))
         self.hitboxes = {}
         self.container_hitboxes = {}
         self._overlays = []
@@ -587,15 +605,33 @@ class GlobalView:
         lying_in = self._lying_in(resident)
         if lying_in is not None:
             return self._lying_draw(resident, lying_in)
-        x, y, facing, step = self._walk_state(resident)
-        left, top = round(x * TILE_SIZE), round(y * TILE_SIZE)
-        feet = (left + TILE_SIZE // 2, top + TILE_SIZE - 2)
-        body = pygame.Rect(feet[0] - FRAME_SIZE[0] // 2, feet[1] - FRAME_SIZE[1], *FRAME_SIZE)
+        x, y, facing, stride = self._walk_state(resident)
+        top = round(y * TILE_SIZE)
+        spot = ground_spot(x, y)
+        # Where a body stands at rest, which is what is picked with the mouse whatever it is doing.
+        body = pygame.Rect(spot[0] - FRAME_ORIGIN[0], spot[1] - FRAME_ORIGIN[1], *FRAME_SIZE)
 
         load = self._load_of(resident)
+        overlay = CARRY_CLIP if load is not None else None
+        clip = WALK_CLIP if stride is not None else self._clip_of(resident)
+        renderer = self.bodies.renderer
+        frames = renderer.frames(clip, facing)
+        turn = stride if stride is not None else self.time * CLIP_RATES.get(clip, 0.0)
+        index = int(turn * frames) % frames
+        character = self.bodies.character(resident)
+        character.stand(spot[0], spot[1], facing, clip, index / frames, overlay)
 
         def draw() -> None:
-            self._blit(self.characters.frame(resident.resident_id, facing, step), body.topleft)
+            if character.physical:
+                # Reeling from a blow or knocked down: drawn joint by joint, wherever physics has them.
+                renderer.draw_limp(
+                    self._scene, character.skeleton, resident.resident_id, (-self._scene_origin[0], -self._scene_origin[1])
+                )
+            else:
+                picture, origin = renderer.frame(
+                    resident.resident_id, facing, clip, index, tuple(character.lost), overlay
+                )
+                self._blit(picture, (spot[0] - origin[0], spot[1] - origin[1]))
             if load is not None:
                 dx, dy = LOAD_OFFSETS[facing]
                 self._blit(self.icons.small(load), (body.left + dx, body.top + dy))
@@ -604,6 +640,26 @@ class GlobalView:
             self._overlays.append(lambda: self._draw_overhead(resident, hitbox.midtop, with_name=True))
 
         return (top + TILE_SIZE, 1, draw)
+
+    def _remains_draw(self, remains: Remains) -> Draw:
+        """A dead body or a part of one, in among the living by how far down the map it lies."""
+
+        def draw() -> None:
+            self.bodies.draw_remains(self._scene, remains, self._scene_origin)
+
+        return (remains.skeleton.ground, 1, draw)
+
+    def _clip_of(self, resident: Resident) -> str:
+        """What the body of someone standing still is doing."""
+        activity = resident.activity
+        if activity is None or not activity.using:
+            return IDLE_CLIP
+        if activity.partner_id is not None:
+            interaction = self.world.registries.interactions.get(activity.action)
+            if interaction is None or not interaction.hostile:
+                return IDLE_CLIP
+            return FIGHT_CLIP if interaction.damage is not None else ARGUE_CLIP
+        return WORK_CLIP if activity.action == WORK_ACTION else IDLE_CLIP
 
     def _marker_draw(self, resident: Resident) -> Draw:
         """From afar a resident is only their face, over the tile they are on, roof or no roof."""
@@ -625,11 +681,14 @@ class GlobalView:
 
         return ((y + 1) * TILE_SIZE, 1, draw)
 
-    def _walk_state(self, resident: Resident) -> tuple[float, float, str, int]:
-        """Position in tiles, facing and animation frame, part-way through the current minute."""
+    def _walk_state(self, resident: Resident) -> tuple[float, float, str, float | None]:
+        """Position in tiles, facing and how far into a stride, part-way through the current minute.
+
+        The stride goes from 0 to 1 over a step with each foot. It is None for someone standing still.
+        """
         trail = resident.trail
         if len(trail) < 2:
-            return (resident.x, resident.y, resident.facing, 0)
+            return (resident.x, resident.y, resident.facing, None)
         distance = min(self.tick_progress, 1.0) * (len(trail) - 1)
         index = min(int(distance), len(trail) - 2)
         fraction = distance - index
@@ -638,8 +697,8 @@ class GlobalView:
             facing = "right" if to_x > from_x else "left"
         else:
             facing = "down" if to_y > from_y else "up"
-        step = WALK_CYCLE[int(distance * 2) % len(WALK_CYCLE)]
-        return (from_x + (to_x - from_x) * fraction, from_y + (to_y - from_y) * fraction, facing, step)
+        stride = distance / TILES_PER_STRIDE % 1.0
+        return (from_x + (to_x - from_x) * fraction, from_y + (to_y - from_y) * fraction, facing, stride)
 
     def _lying_in(self, resident: Resident) -> Interactable | None:
         """The object a resident is lying in, if they are using one from on top of it."""
@@ -657,11 +716,11 @@ class GlobalView:
         bed = pygame.Rect(
             placed.x * TILE_SIZE, placed.y * TILE_SIZE, TILE_SIZE, definition.height * TILE_SIZE
         )
-        frame = self.characters.frame(resident.resident_id, "down")
-        head = frame.subsurface((0, 0, FRAME_SIZE[0], LYING_HEAD_ROWS))
+        face = self.bodies.renderer.head(resident.resident_id)
+        head = face.subsurface((0, 0, face.get_width(), LYING_HEAD_ROWS))
 
         def draw() -> None:
-            self._blit(head, (bed.left, bed.top + 1))
+            self._blit(head, (bed.left + LYING_HEAD_OFFSET[0], bed.top + LYING_HEAD_OFFSET[1]))
             hitbox = self._canvas_rect(bed)
             self.hitboxes[resident.resident_id] = hitbox
             self._overlays.append(

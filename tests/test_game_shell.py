@@ -1,14 +1,16 @@
 import os
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 import pygame
 
-from graphics.character_renderer import FRAME_SIZE
+from graphics.body_renderer import FRAME_SIZE, BodyRenderer
 from graphics.face_renderer import MARKER_SIZE
 from graphics.lighting import NIGHT, STEPS, ambient, daylight
 from graphics.shelf_display import displayed_goods
+from scenes.body_stage import REMAINS_MINUTES
 from scenes.global_view import (
     MINIMAP_OFF,
     MINIMAP_ON,
@@ -22,6 +24,8 @@ from simulation.events.event import DomainEvent
 from simulation.events.world_event import Upcoming, Weather
 from simulation.health.injury import Injury
 from simulation.residents.activity import Activity
+from simulation.work.expedition import Expedition
+from skeleton.character import Mode
 from ui.inventory_view import condition_color
 from ui.resident_card import card_height
 from ui.job_board import post_rows, suggest_buttons, suggest_intent
@@ -1185,6 +1189,175 @@ class GameShellTests(unittest.TestCase):
         texts = [event.text for event in view.hud.feed.recent(10)]
         self.assertTrue(any("Lucía ha muerto" in text for text in texts))
         self.assertEqual(self.game.world.clock.speed, 1)
+
+    # --- Bodies with bones ---
+
+    def _stand_together(self, *names: str) -> None:
+        """Put residents side by side on open ground with nothing to do, and draw them."""
+        view, world = self.game.global_view, self.game.world
+        for index, name in enumerate(names):
+            resident = world.residents[name]
+            resident.x, resident.y, resident.trail, resident.activity = 20 + index, 14, [], None
+        view.centre_on((20, 14))
+        view.render()
+
+    def _frames(self, seconds: float) -> None:
+        """Let real time pass for the scene alone, a frame at a time, drawing each one."""
+        view = self.game.global_view
+        for _ in range(round(seconds * 60)):
+            view.update(1 / 60)
+            with self.assertNoLogs("graphics.assets", level="WARNING"):
+                view.render()
+
+    def test_everyday_life_runs_no_physics_at_all(self) -> None:
+        view = self.game.global_view
+        self._play(90)
+        view.update(0.1)
+        view.render()
+        self.assertGreaterEqual(len(view.bodies.characters), 1)
+        self.assertTrue(all(character.skeleton is None for character in view.bodies.characters.values()))
+        self.assertEqual(view.bodies.awake(), 0)
+        self.assertEqual(view.bodies.remains, [])
+
+    def test_a_body_does_what_its_resident_is_doing(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        self._stand_together("raul", "tomas")
+        raul = world.residents["raul"]
+        self.assertEqual(view._clip_of(raul), "idle")
+        raul.activity = Activity("work", using=True)
+        self.assertEqual(view._clip_of(raul), "work")
+        raul.activity = Activity("fight", partner_id="tomas", using=True)
+        self.assertEqual(view._clip_of(raul), "fight")
+        raul.activity = Activity("argument", partner_id="tomas", using=True)
+        self.assertEqual(view._clip_of(raul), "argue")
+        raul.activity = Activity("chat", partner_id="tomas", using=True)
+        self.assertEqual(view._clip_of(raul), "idle")
+        raul.activity = None
+        raul.trail = [(raul.x - 1, raul.y), raul.tile]
+        view.tick_progress = 0.5
+        view.render()
+        self.assertEqual(view.bodies.characters["raul"].clip, "walk")
+        self.assertEqual(view.bodies.characters["raul"].facing, "right")
+        self.assertEqual(view.bodies.characters["tomas"].clip, "idle")
+
+    def test_a_blow_staggers_whoever_takes_it_and_a_hard_one_knocks_them_down(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        self._stand_together("raul", "tomas", "lucia")
+        raul, tomas, lucia = (world.residents[name] for name in ("raul", "tomas", "lucia"))
+        world.health.hurt(world, tomas, 8, "bruise", "una prueba", raul)
+        world.health.hurt(world, lucia, 22, "fracture", "una prueba", tomas)
+        view.on_events(world.events.drain())
+        bodies = view.bodies.characters
+        self.assertFalse(bodies["raul"].physical)
+        self.assertIs(bodies["tomas"].mode, Mode.STAGGER)
+        self.assertIs(bodies["lucia"].mode, Mode.RAGDOLL)
+        self.assertEqual(view.bodies.awake(), 2)
+        hitbox = view.hitboxes["lucia"].copy()
+        self._frames(1.0)
+        # Struck from the left, she goes down to the right. She can still be picked where she stands.
+        down = bodies["lucia"].skeleton
+        self.assertGreater(down.joints["head"].y, bodies["lucia"].pose()["head"][1] + 8)
+        self.assertGreater(down.joints["head"].x, bodies["lucia"].x)
+        self.assertEqual(view.hitboxes["lucia"], hitbox)
+        self.assertFalse(bodies["tomas"].physical, "he has steadied himself")
+        self._frames(3.0)
+        self.assertFalse(bodies["lucia"].physical, "she is back on her feet")
+        self.assertEqual(view.bodies.awake(), 0)
+
+    def test_nothing_moves_while_the_game_is_paused(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        self._stand_together("raul", "tomas")
+        world.health.hurt(world, world.residents["tomas"], 22, "fracture", "una prueba", world.residents["raul"])
+        view.on_events(world.events.drain())
+        self._frames(0.1)
+        world.set_paused(True)
+        head = view.bodies.characters["tomas"].skeleton.joints["head"]
+        before = (head.x, head.y)
+        self._frames(0.5)
+        self.assertEqual((head.x, head.y), before)
+
+    def test_a_lost_limb_flies_off_lies_there_and_stays_off_the_body(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        self._stand_together("raul", "tomas")
+        raul, tomas = world.residents["raul"], world.residents["tomas"]
+        sure = replace(world.registries.injuries["cut"], severs_chance=1.0)
+        world.registries = replace(world.registries, injuries={**world.registries.injuries, "cut": sure})
+        world.health.hurt(world, tomas, 30, "cut", "una pelea", raul)
+        limb = tomas.lost_limbs[0]
+        view.on_events(world.events.drain())
+        body = view.bodies.characters["tomas"]
+        self.assertEqual(body.lost, [limb])
+        self.assertEqual(len(view.bodies.remains), 1)
+        part = view.bodies.remains[0]
+        self.assertEqual(part.body_id, "tomas")
+        self.assertFalse(set(part.skeleton.bones) & set(body.skeleton.bones))
+        self.assertIn("tomas", view.alerts, "it calls for the attention of the player")
+        self._frames(7.0)
+        self.assertTrue(part.skeleton.asleep)
+        self.assertTrue(view.bodies.renderer.is_settled(part.skeleton), "lying still, it is drawn from one picture")
+        self.assertEqual(view.bodies.awake(), 0)
+        self.assertIn(f"sin {world.registries.limbs[limb].name}", describe_injuries(world, tomas))
+        # He goes on without it, and what is left of it is cleared away in time.
+        self._play(REMAINS_MINUTES + 1)
+        view.update(1 / 60)
+        view.render()
+        self.assertEqual(view.bodies.remains, [])
+        self.assertEqual(view.bodies.characters["tomas"].lost, [limb])
+
+    def test_the_dead_fall_where_they_stood_and_are_taken_away_later(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        self._stand_together("raul", "lucia")
+        raul, lucia = world.residents["raul"], world.residents["lucia"]
+        standing = view.bodies.characters["lucia"]
+        lucia.injuries = [Injury("cut", 99)]
+        world.health.fight_damage(world, lucia, raul, world.registries.interactions["fight"])
+        view.on_events(world.events.drain())
+        self.assertNotIn("lucia", view.bodies.characters)
+        self.assertEqual([remains.body_id for remains in view.bodies.remains], ["lucia"])
+        body = view.bodies.remains[0]
+        self.assertIs(body.skeleton, standing.skeleton, "the very body that stood there")
+        self.assertEqual(body.tile, (21, 14))
+        self._frames(7.0)
+        self.assertTrue(body.skeleton.asleep)
+        left, top, right, bottom = body.skeleton.bounds()
+        self.assertGreater(right - left, bottom - top, "she lies on the ground")
+        self.assertNotIn("lucia", view.hitboxes)
+        self._play(REMAINS_MINUTES + 1)
+        view.update(1 / 60)
+        self.assertEqual(view.bodies.remains, [])
+
+    def test_someone_who_dies_unseen_or_beyond_the_fence_is_handled_all_the_same(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        # Nobody has been drawn yet: there is no body on the stage to take over.
+        self.assertEqual(view.bodies.characters, {})
+        marta = world.residents["marta"]
+        tile = marta.tile
+        world.health.die(world, marta, "una prueba")
+        sergio = world.residents["sergio"]
+        sergio.expedition = Expedition(returns_at=world.clock.total_minutes + 60, finds=0, danger=0.0)
+        world.health.die(world, sergio, "una prueba")
+        view.on_events(world.events.drain())
+        self.assertEqual([remains.body_id for remains in view.bodies.remains], ["marta"])
+        self.assertEqual(view.bodies.remains[0].tile[1], tile[1])
+        view.centre_on(tile)
+        self._frames(0.5)
+        view.set_zoom(0)
+        view.render()
+
+    def test_a_loaded_game_shows_who_was_already_maimed(self) -> None:
+        self.game.world.residents["raul"].lost_limbs = ["arm_left", "leg_right"]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "save.json"
+            self.assertTrue(self.game.save_game(path))
+            self.assertTrue(self.game.load_game(path))
+        view = self.game.global_view
+        self._stand_together("raul")
+        self.assertEqual(view.bodies.characters["raul"].lost, ["arm_left", "leg_right"])
+        self.assertEqual(view.bodies.remains, [], "nothing came off just now")
+        view.render()
+        whole = BodyRenderer(self.game.assets, view.bodies.plan).frame("raul", "down", "idle")[0]
+        maimed = view.bodies.renderer.frame("raul", "down", "idle", 0, ("arm_left", "leg_right"))[0]
+        self.assertLess(pygame.mask.from_surface(maimed).count(), pygame.mask.from_surface(whole).count())
 
 
 if __name__ == "__main__":
