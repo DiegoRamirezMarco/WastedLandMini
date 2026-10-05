@@ -1,8 +1,17 @@
 {
   "models": {
-    "hombre": {"name": "Hombre", "file": "es_ES-sharvard-medium", "speaker": 0},
-    "mujer": {"name": "Mujer", "file": "es_ES-sharvard-medium", "speaker": 1},
-    "hombre_2": {"name": "Hombre 2", "file": "es_ES-davefx-medium", "speaker": 0}
+    "hombre": {"name": "Español", "file": "es_ES-sharvard-medium", "speaker": 0},
+    "mujer": {"name": "Española", "file": "es_ES-sharvard-medium", "speaker": 1},
+    "hombre_2": {"name": "Español 2", "file": "es_ES-davefx-medium", "speaker": 0},
+    "argentina": {"name": "Argentina", "file": "es_AR-daniela-high", "speaker": 0},
+    "mexicano": {"name": "Mexicano", "file": "es_MX-ald-medium", "speaker": 0},
+    "mexicana": {"name": "Mexicana", "file": "es_MX-claude-high", "speaker": 0},
+    "aleman": {"name": "Alemán", "file": "de_DE-thorsten-medium", "speaker": 0},
+    "alemana": {"name": "Alemana", "file": "de_DE-kerstin-low", "speaker": 0},
+    "frances": {"name": "Francés", "file": "fr_FR-upmc-medium", "speaker": 1},
+    "francesa": {"name": "Francesa", "file": "fr_FR-upmc-medium", "speaker": 0},
+    "americano": {"name": "Americano", "file": "en_US-joe-medium", "speaker": 0},
+    "americana": {"name": "Americana", "file": "en_US-kristin-medium", "speaker": 0}
   },
   "controls": {
     "pitch": {"name": "Tono", "min": -12, "max": 12, "default": 0, "step": 0.5, "unit": " st", "decimals": 1},

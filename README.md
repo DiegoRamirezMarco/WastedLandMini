@@ -56,8 +56,8 @@ pip install -r requirements-voices.txt
 python -m tools.make_voices
 ```
 
-The second line fetches two Spanish voice models, about 140 MB, and has them speak every written
-line. `voices/README.md` says what goes where.
+The second line fetches ten voice models, about 680 MB, and has them speak every written line:
+it takes a quarter of an hour. `voices/README.md` says what goes where, and how to do with fewer.
 
 Run the simulation without a window and print what happened:
 

@@ -373,9 +373,11 @@ Still open here:
 ### P14 — Voices — done
 - What is said in the dock is said out loud: whoever starts a line in an exchange says it, and
   whoever asks for advice asks it, over anything else
-- Lines are spoken by Piper, a neural voice that runs on the machine, with a man, a woman and a
-  second man in Spanish. A line is spoken once and kept; the game asks for the ones it has not
-  heard, on the side, and a tool speaks them all beforehand
+- Lines are spoken by Piper, a neural voice that runs on the machine. Twelve voices to choose
+  from: two men and a woman from Spain, a woman from Argentina, a man and a woman from Mexico,
+  and a man and a woman each from Germany, France and America, who read Spanish by the rules of
+  their own language and so with its accent. A line is spoken once and kept; the game asks for
+  the ones it has not heard, on the side, and a tool speaks them all beforehand
 - A voice is a model and six controls applied to what it said: tone, speed, tremble, roughness,
   metal and scramble. Nine kinds come ready made: young man and woman, old man and woman, boy,
   girl, monster, robot and one that cannot be understood

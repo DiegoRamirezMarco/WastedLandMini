@@ -16,8 +16,8 @@ from ui.slider import Slider
 LEFT = 8
 WIDTH = 330
 MODELS_Y = 62
-PRESETS_Y = 96
-SLIDERS_Y = 128
+# Room between one group of buttons and the heading of the next, and between the kinds and the sliders.
+GROUP_GAP = 6
 SLIDER_ROW = 30
 SLIDER_HEIGHT = 8
 FACE_AT = (430, 58)
@@ -63,9 +63,11 @@ class VoiceEditor:
         self._held: str | None = None
 
         self.model_buttons = self._rows(MODELS_Y, [(model.label, ("model", model_id)) for model_id, model in self.catalog.models.items()])
-        self.preset_buttons = self._rows(PRESETS_Y, [(label, ("preset", name)) for name, (label, _) in self.catalog.presets.items()])
+        # However many voices there are to choose from, what comes after goes under them.
+        self.presets_y = (self.model_buttons[-1].rect.bottom if self.model_buttons else MODELS_Y) + GROUP_GAP + LINE_HEIGHT + 1
+        self.preset_buttons = self._rows(self.presets_y, [(label, ("preset", name)) for name, (label, _) in self.catalog.presets.items()])
         self.sliders: dict[str, Slider] = {}
-        y = max(SLIDERS_Y, (self.preset_buttons[-1].rect.bottom if self.preset_buttons else PRESETS_Y) + 14)
+        y = (self.preset_buttons[-1].rect.bottom if self.preset_buttons else self.presets_y) + GROUP_GAP
         for control_id, control in self.catalog.controls.items():
             self.sliders[control_id] = Slider(pygame.Rect(LEFT + 3, y + LINE_HEIGHT + 4, WIDTH - 6, SLIDER_HEIGHT), control.low, control.high)
             y += SLIDER_ROW
@@ -211,7 +213,7 @@ class VoiceEditor:
         font.draw(canvas, "Quién habla", (LEFT, MODELS_Y - LINE_HEIGHT - 1), PALETTE["dust"])
         for button in self.model_buttons:
             button.draw(canvas, font, active=button.intent == ("model", profile.model))
-        font.draw(canvas, "Tipo de voz", (LEFT, PRESETS_Y - LINE_HEIGHT - 1), PALETTE["dust"])
+        font.draw(canvas, "Tipo de voz", (LEFT, self.presets_y - LINE_HEIGHT - 1), PALETTE["dust"])
         like = self.catalog.preset_like(profile)
         for button in self.preset_buttons:
             button.draw(canvas, font, active=button.intent == ("preset", like))

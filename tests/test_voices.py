@@ -107,6 +107,23 @@ class VoiceCatalogTests(unittest.TestCase):
         self.assertEqual(value("ininteligible", GARBLE), 1.0)
         self.assertNotEqual(self.catalog.presets["chico"][1].model, self.catalog.presets["chica"][1].model)
 
+    def test_there_are_voices_from_spain_and_from_far_away_each_a_speaker_of_its_own(self) -> None:
+        models = self.catalog.models
+        self.assertEqual(
+            list(models),
+            ["hombre", "mujer", "hombre_2", "argentina", "mexicano", "mexicana", "aleman", "alemana", "frances", "francesa", "americano", "americana"],
+        )
+        self.assertEqual(len({(model.file, model.speaker) for model in models.values()}), len(models))
+        self.assertEqual(len({model.label for model in models.values()}), len(models))
+        # A man and a woman from each country asked for, speaking with the voice of that country.
+        for man, woman, language in (("aleman", "alemana", "de_DE"), ("frances", "francesa", "fr_FR"), ("americano", "americana", "en_US")):
+            for model_id in (man, woman):
+                self.assertTrue(models[model_id].file.startswith(language), model_id)
+            self.assertNotEqual((models[man].file, models[man].speaker), (models[woman].file, models[woman].speaker))
+        # Whoever is in the settlement from the start speaks Spanish as it is spoken somewhere.
+        for resident_id, profile in self.catalog.cast.items():
+            self.assertTrue(models[profile.model].file.startswith("es_"), resident_id)
+
     def test_everyone_who_starts_in_the_settlement_starts_with_a_voice_and_no_two_are_the_same(self) -> None:
         world = SimulationWorld.demo_world()
         self.assertEqual(set(self.catalog.cast), set(world.residents))
@@ -525,6 +542,22 @@ class VoiceEditorTests(_SoundTestCase):
         self.game.global_view.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_F3, mod=0))
         self.game.sync_scenes()
         self.assertEqual(self.game.scene_name, "voice")
+
+    def test_however_many_voices_there_are_nothing_in_the_editor_lies_over_anything_else(self) -> None:
+        editor = self._open("raul")
+        self.assertEqual(len(editor.model_buttons), len(self.catalog.models))
+        boxes = [button.rect for button in editor.buttons] + [slider.rect.inflate(0, 10) for slider in editor.sliders.values()]
+        for index, box in enumerate(boxes):
+            self.assertTrue(self.game.canvas.get_rect().contains(box), box)
+            self.assertEqual(box.collidelist(boxes[index + 1 :]), -1, box)
+        lowest_button = max(button.rect.bottom for button in (*editor.model_buttons, *editor.preset_buttons))
+        self.assertGreater(min(slider.rect.top for slider in editor.sliders.values()), lowest_button)
+        self.assertGreater(editor.preset_buttons[0].rect.top, max(button.rect.bottom for button in editor.model_buttons))
+        # Every voice there is can be chosen, and is heard.
+        for model_id in self.catalog.models:
+            self._click(self._button(editor, ("model", model_id)).rect.center)
+            self.assertEqual(editor.profile.model, model_id)
+            self.assertEqual(self.voices.last[0].model, model_id)
 
     def test_a_kind_of_voice_is_chosen_with_a_click_and_heard_at_once(self) -> None:
         editor = self._open("raul")
