@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pygame
 
+from audio.music import MOODS, MusicSettings
 from graphics.body_renderer import FRAME_SIZE, BodyRenderer
 from graphics.face_renderer import MARKER_SIZE
 from graphics.lighting import NIGHT, STEPS, ambient, daylight
@@ -368,6 +369,10 @@ class GameShellTests(unittest.TestCase):
         self._make_everyone_get_along()
         audio, world = self.game.audio, self.game.world
         self.assertIsNone(audio.track)
+        self.game.update_music()
+        self.assertIsNone(audio.track, "the game comes with no music")
+        # Given a track for each mood, it follows what is going on.
+        self.game.music = MusicSettings(tracks={mood: mood for mood in MOODS})
         self.game.update_music()
         self.assertEqual(audio.track, "day")
         self.assertFalse(audio.set_music("day"), "the same track is not started again")
@@ -980,6 +985,7 @@ class GameShellTests(unittest.TestCase):
         world.upcoming.append(Upcoming("raid", world.clock.total_minutes + 1))
         world.step(1)
         self.assertEqual([decision.kind for decision in world.decisions.values()], ["raid"])
+        self.game.music = MusicSettings(tracks={mood: mood for mood in MOODS})
         self.game.update_music()
         self.assertEqual(self.game.audio.track, "tension")
         self._key(pygame.K_TAB)

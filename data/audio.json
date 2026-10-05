@@ -50,12 +50,7 @@
     "night_watch": "click"
   },
   "music": {
-    "tracks": {
-      "day": "day",
-      "night": "night",
-      "storm": "storm",
-      "tension": "tension"
-    },
+    "tracks": {},
     "night_hours": [
       21,
       6

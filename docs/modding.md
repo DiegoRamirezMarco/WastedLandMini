@@ -270,10 +270,9 @@ settlement is created, in `SimulationWorld.demo_world`.
 
 Its `music` section says which track plays in each mood: `tracks` maps `day`, `night`, `storm`
 and `tension` to WAV files in `assets/music/`, and `night_hours` says when night falls and ends.
-A mood left out plays nothing. Trouble (a fight, or someone waiting for advice on something
-urgent) is heard over a storm, and a storm over the hour. A track must be written to loop: it
-should end where it begins. The built-in ones are written out by `python -m tools.make_art` from
-the notes in `tools/art/music.py`.
+A mood left out plays nothing, and the game comes with none: `tracks` is empty. Trouble (a fight,
+or someone waiting for advice on something urgent) is heard over a storm, and a storm over the
+hour. A track must be written to loop: it should end where it begins.
 
 ## Social exchanges
 

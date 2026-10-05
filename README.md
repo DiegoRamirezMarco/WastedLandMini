@@ -97,12 +97,12 @@ python -m simulation.headless --days 7 --seed 7
   over the guide, watch them move as you go, and save: from then on that is how they look, in the
   settlement and in their portrait. `Esc` goes back without saving
 - `F5` saves the game to `saves/quicksave.json`; `F9` loads it
-- `M`: sound and music on / off
+- `M`: sound on / off
 - `Esc`: quit
 
 ## Art
 
-`python -m tools.make_art` generates any missing starter image, sound or music track under `assets/`. It never
+`python -m tools.make_art` generates any missing starter image or sound under `assets/`. It never
 overwrites an existing file, so anything edited by hand is safe. The rules for sizes, palette and naming are in
 `docs/visual-style.md`.
 

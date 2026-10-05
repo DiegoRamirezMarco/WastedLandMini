@@ -271,8 +271,9 @@ simulation would take any of the three advices. (P9 made the board say why someo
 - A track for the day, the night, a storm and trouble, chosen from what is going on
 - One track fading into the next, under the sound effects, and silenced with them
 
-Still open here: nobody but the tool has composed anything, and nobody has listened to it with a
-critical ear. The tracks are short and there is one per mood, so they repeat soon.
+Taken out since: once listened to, the synthesised loops were a torment, and the game now comes
+with no music at all. What chooses a track for the mood and fades one into the next is still
+there, waiting for music worth playing: a WAV in `assets/music/` and its name in `data/audio.json`.
 
 ### P9 — At a glance (needs S9 to S13) — done
 - What the settlement knows is coming, on screen: each forecast and how many have heard it
