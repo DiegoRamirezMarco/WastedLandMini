@@ -11,6 +11,8 @@ from graphics.palette import PALETTE
 from skeleton.plan import FACINGS, SKIN_VIEWS, SkeletonPlan, wrapped
 from skeleton.rig import Bone, Skeleton
 
+# The ways the game's own pixel bodies can face. A paper doll has ways of its own, and is not drawn here.
+BODY_FACINGS = ("down", "left", "right", "up")
 # The space a body takes standing at rest, with its feet at the bottom centre.
 FRAME_SIZE = (16, 24)
 # A parts sheet: one column per skin view, each with a head, a trunk and the strips for the limbs.

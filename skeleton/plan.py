@@ -30,6 +30,9 @@ FACINGS: dict[str, tuple[str, str, bool, bool]] = {
     "up": ("front", "back", True, False),
     "right": ("side", "side", False, False),
     "left": ("side", "side", True, True),
+    # A paper doll is only ever seen from the side, with the build of its own that its drawing has.
+    "doll_right": ("doll", "side", False, False),
+    "doll_left": ("doll", "side", True, True),
 }
 SIDES = ("_left", "_right")
 ROOT_KEY = "root"
@@ -137,6 +140,10 @@ class SkeletonPlan:
     skins: dict[str, SkinSpec]
     clips: dict[str, dict[str, tuple[Keyframe, ...]]]
     physics: PhysicsSettings = field(default_factory=PhysicsSettings)
+    # Views that are another view with a rest of their own: they take its clips and its limits.
+    likes: dict[str, str] = field(default_factory=dict)
+    # Bones that turn as another does where a clip does not say otherwise: a hand with its forearm.
+    follows: dict[str, str] = field(default_factory=dict)
     # Per pose view and bone, how long it is and which way it points while the body stands at rest.
     _at_rest: dict[str, dict[str, tuple[float, float]]] = field(init=False, repr=False, compare=False)
 
@@ -168,9 +175,13 @@ class SkeletonPlan:
     def frames(self, clip: str, view: str) -> int:
         return len(self._keyframes(clip, view))
 
+    def like(self, view: str) -> str:
+        """The view whose clips and limits a view goes by: itself, unless it is another with a rest of its own."""
+        return self.likes.get(view, view)
+
     def _keyframes(self, clip: str, view: str) -> tuple[Keyframe, ...]:
         views = self.clips.get(clip) or self.clips.get(IDLE_CLIP) or {}
-        return views.get(view) or (Keyframe(),)
+        return views.get(self.like(view)) or (Keyframe(),)
 
     def sample(self, clip: str, view: str, phase: float) -> Keyframe:
         """A clip part-way through, `phase` going from 0 to 1 over one turn of it."""
@@ -210,7 +221,7 @@ class SkeletonPlan:
         # Bones are listed from the root outwards, so a bone's start is always placed before it.
         at_rest = self._at_rest[view]
         for bone in self.bones.values():
-            angle, scale = turned.get(bone.name, (0.0, 1.0))
+            angle, scale = turned.get(bone.name) or (turned.get(self.follows.get(bone.name, ""), (0.0, 1.0))[0], 1.0)
             length, rest_angle = at_rest[bone.name]
             angle += rest_angle
             reach = length * scale
@@ -274,14 +285,21 @@ def plan_from_data(data: dict[str, Any]) -> SkeletonPlan:
             raise ValueError(f"Limit on {bone} against {ref} names an unknown bone")
         ranges = {view: _pair(values[view], f"limit {bone} {view}") for view in VIEWS}
         limits[str(bone)] = LimitSpec(str(bone), ref, bool(values.get("ref_reversed", False)), ranges)
-    rests = {}
-    for view in VIEWS:
+    rests, likes = {}, {}
+    for view in (*VIEWS, *(str(name) for name in data["views"] if name not in VIEWS)):
         rest = {str(joint): _pair(point, f"{view} {joint}") for joint, point in data["views"][view]["rest"].items()}
         if rest.keys() != joints.keys():
             raise ValueError(f"The {view} view must place every joint: {sorted(rest.keys() ^ joints.keys())}")
         rests[view] = rest
+        if view not in VIEWS:
+            likes[view] = str(data["views"][view].get("like", ""))
+            if likes[view] not in VIEWS:
+                raise ValueError(f"The {view} view must be like one of {VIEWS}, not {likes[view]!r}")
+    follows = {str(bone): str(other) for bone, other in data.get("follows", {}).items()}
+    if not set(follows) | set(follows.values()) <= bones.keys():
+        raise ValueError(f"Bones follow unknown bones: {follows}")
     orders = {}
-    for view in SKIN_VIEWS:
+    for view in (*SKIN_VIEWS, *(str(name) for name in data["orders"] if name not in SKIN_VIEWS)):
         order = tuple(str(bone) for bone in data["orders"][view])
         if not set(order) <= bones.keys():
             raise ValueError(f"The {view} order names unknown bones: {sorted(set(order) - bones.keys())}")
@@ -303,7 +321,7 @@ def plan_from_data(data: dict[str, Any]) -> SkeletonPlan:
     physics = PhysicsSettings(
         **{name: type(getattr(known, name))(value) for name, value in data.get("physics", {}).items() if hasattr(known, name)}
     )
-    return SkeletonPlan(root, joints, bones, braces, parts, limits, rests, orders, skins, clips, physics)
+    return SkeletonPlan(root, joints, bones, braces, parts, limits, rests, orders, skins, clips, physics, likes, follows)
 
 
 def load_plan(path: Path = PLAN_PATH) -> SkeletonPlan:

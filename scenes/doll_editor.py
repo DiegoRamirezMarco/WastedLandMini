@@ -6,7 +6,7 @@ from pathlib import Path
 import pygame
 
 from graphics.body_renderer import BodyRenderer
-from graphics.doll import BODY_CANVAS, HEAD_CANVAS, Doll, DollStore, doll_path, draw_doll
+from graphics.doll import BODY_CANVAS, DOLL_FACINGS, HEAD_CANVAS, Doll, DollStore, doll_path, draw_doll
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
@@ -174,12 +174,14 @@ class DollEditor:
             sprite = skin.sprites[("side", cell, False)]
             return tuple(sprite.image.get_at(sprite.anchor))[:3]
 
-        colors = {"spine": middle("torso"), "skull": middle("head"), "neck": middle("head")}
+        colors = {"spine": middle("torso"), "skull": middle("head"), "neck": middle("head"), "hips": strip("thigh", 0)}
         for side in ("_left", "_right"):
             colors[f"upper_arm{side}"] = strip("upper_arm", 0)
             colors[f"forearm{side}"] = strip("forearm", -1)
+            colors[f"hand{side}"] = strip("forearm", -1)
             colors[f"thigh{side}"] = strip("thigh", 0)
-            colors[f"shin{side}"] = strip("shin", -1)
+            colors[f"shin{side}"] = strip("thigh", 0)
+            colors[f"foot{side}"] = strip("shin", -1)
         for name, figure in self.template.mannequin(colors).items():
             self._remember(name)
             self.drawings[name] = figure
@@ -374,7 +376,7 @@ class DollEditor:
             return
         turn = int(self.time / PREVIEW_SECONDS)
         clip = PREVIEW_CLIPS[turn % len(PREVIEW_CLIPS)]
-        facing = "right" if (turn // len(PREVIEW_CLIPS)) % 2 == 0 else "left"
+        facing = DOLL_FACINGS["right" if (turn // len(PREVIEW_CLIPS)) % 2 == 0 else "left"]
         skeleton = Skeleton(self.plan, facing)
         skeleton.set_pose(self.plan.pose(facing, clip, self.time * PREVIEW_RATE))
         before = screen.get_clip()

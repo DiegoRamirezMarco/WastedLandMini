@@ -142,9 +142,10 @@ cut apart where the body bends, each part laid along its bone and turned as the 
 
 - **Two canvases of a fixed size.** The body is 320×384 and the head 192×192, sixteen pixels of
   drawing to one of the skeleton's. The figure is seen from the side, facing right.
-- **A guide to draw over.** Each part has a place on the body's canvas: trunk, neck, upper arms,
-  forearms with the hands, thighs, shins with the feet. The trunk stops at the shoulders and the
-  neck comes out of it, a part of its own, so that the head does not sit on the body. The guide shows two things for each. A
+- **A guide to draw over.** Each part has a place on the body's canvas: trunk, hips, neck, upper
+  arms, forearms, hands, thighs, shins and feet. The trunk stops at the shoulders and the neck
+  comes out of it, a part of its own, so that the head does not sit on the body. Below the waist
+  the hips are a part too, which the legs are jointed to. The guide shows two things for each. A
   slim **example**, a rounded strip from one joint to the next, with a dot at each joint. And the
   frame of its **zone**, which is how far the part may be drawn: about twice as wide as the
   example and longer at both ends, so that a body can be made stout, or any odd shape. The limbs
@@ -153,9 +154,15 @@ cut apart where the body bends, each part laid along its bone and turned as the 
 - **Cutting.** Between its two joints a part takes everything painted in its zone. Past a joint
   it turns about, it takes only a round end, centred on the joint and as wide as the limb was
   painted there. Two parts that meet at a joint so end in the same circle: bent, they show no gap
-  and no corner of either sticks out, however squarely the limb was drawn. A hand or a foot is
-  left as drawn, and so is the trunk. What is painted outside every zone is left out. Everything
-  on the head's canvas is the head, hair and all.
+  and no corner of either sticks out, however squarely the limb was drawn. The far end of a hand
+  or a foot is left as drawn, and so are the shoulders of the trunk. What is painted outside
+  every zone is left out. Everything on the head's canvas is the head, hair and all.
+- **Put together.** The doll has a build of its own, apart from the pixel bodies. The arm of the
+  near side hangs from a little behind the middle of the trunk and the far one from a little in
+  front, so that both show. The near leg starts above the bottom of the hips and is laid over
+  them and over the trunk; the far leg goes behind. Arms and legs are somewhat longer than they
+  are drawn: each is drawn out between its joints, so its width and its round ends stay as they
+  were. A hand turns with its forearm, and a foot stays level whatever the leg does.
 - **Moving.** The doll is posed from the side by the same clips as any body. Facing left it is
   the same drawing in a mirror, and walking up or down the map it keeps the side it last faced.
   It reels, falls, loses limbs and lies still exactly as the game's own bodies do, since it is the

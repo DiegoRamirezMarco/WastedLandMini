@@ -10,6 +10,7 @@ import pygame
 
 from graphics.assets import ASSETS_DIR, PLACEHOLDER_COLORS, AssetStore
 from graphics.body_renderer import (
+    BODY_FACINGS,
     CANVAS_ORIGIN,
     CANVAS_SIZE,
     FRAME_ORIGIN,
@@ -43,7 +44,7 @@ from simulation.items.registry import ItemRegistry
 from simulation.registries import DATA_DIR
 from simulation.world import SimulationWorld
 from skeleton.character import Character
-from skeleton.plan import FACINGS, builtin_plan
+from skeleton.plan import builtin_plan
 from tools.art import buildings
 from tools.art.sounds import SOUNDS, duration_ms
 from tools.make_art import build_all, main as make_art
@@ -287,7 +288,7 @@ class BodyRendererTests(unittest.TestCase):
         return {pixel if pixel[3] else (0, 0, 0, 0) for pixel in _pixels(surface)}
 
     def test_every_facing_and_clip_draws_a_body_in_the_palette(self) -> None:
-        for facing in FACINGS:
+        for facing in BODY_FACINGS:
             for clip in self.plan.clips:
                 for index in range(self.renderer.frames(clip, facing)):
                     picture, origin = self.renderer.frame("marta", facing, clip, index)
@@ -299,7 +300,7 @@ class BodyRendererTests(unittest.TestCase):
                     self.assertTrue(picture.get_rect().inflate(-2, -2).contains(box), (facing, clip, index))
 
     def test_a_body_at_rest_fits_its_frame_with_its_feet_at_the_bottom(self) -> None:
-        for facing in FACINGS:
+        for facing in BODY_FACINGS:
             picture, origin = self.renderer.frame("raul", facing, "idle")
             box = picture.get_bounding_rect()
             frame = pygame.Rect(origin[0] - FRAME_ORIGIN[0], origin[1] - FRAME_ORIGIN[1], *FRAME_SIZE)

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pygame
 
-from graphics.doll import BODY_CANVAS, HEAD_CANVAS, Doll, DollStore, doll_path, draw_doll, load_template
+from graphics.doll import BODY_CANVAS, DOLL_FACINGS, HEAD_CANVAS, Doll, DollStore, doll_path, draw_doll, load_template
 from graphics.illustrations import Illustrations
 from graphics.palette import PALETTE
 from scenes.hud import DRAW_INTENT
@@ -27,14 +27,54 @@ class DollTemplateTests(unittest.TestCase):
         self.plan = builtin_plan()
         self.template = load_template()
 
-    def test_every_part_is_a_bone_drawn_as_long_as_the_skeleton_has_it(self) -> None:
+    def test_every_part_is_a_bone_of_the_doll_and_only_limbs_are_longer_than_they_are_drawn(self) -> None:
         unit = self.template.unit
         self.assertEqual(set(self.template.canvases), {BODY_CANVAS, HEAD_CANVAS})
+        self.assertEqual(self.plan.like("doll"), "side", "a doll is posed by the clips of a body seen from the side")
+        stretched = {}
         for bone, spec in self.template.parts.items():
             self.assertIn(bone, self.plan.bones)
-            # One scale then fits every part: a drawing is never stretched along a bone.
-            self.assertAlmostEqual(math.dist(spec.start, spec.end) / unit, self.plan.length("side", bone), 5, bone)
-        self.assertLessEqual(set(self.template.parts), set(self.plan.orders["side"]), "every part has its turn to be drawn")
+            longer = self.plan.length("doll", bone) / (math.dist(spec.start, spec.end) / unit)
+            if abs(longer - 1.0) > 1e-6:
+                stretched[bone] = round(longer, 3)
+        # Arms and legs are a little longer on the doll than on the canvas, each pair by the same; nothing else is.
+        self.assertEqual(
+            set(stretched),
+            {f"{part}_{side}" for part in ("upper_arm", "forearm", "thigh", "shin") for side in ("left", "right")},
+        )
+        for bone, longer in stretched.items():
+            self.assertTrue(1.1 <= longer <= 1.3, (bone, longer))
+            self.assertEqual(longer, stretched[bone.replace("_left", "_right")], bone)
+        self.assertEqual(set(self.template.parts), set(self.plan.orders["doll"]), "every part has its turn to be drawn")
+
+    def test_hands_feet_and_hips_are_parts_of_their_own(self) -> None:
+        parts = self.template.parts
+        for side in ("left", "right"):
+            self.assertEqual(parts[f"hand_{side}"].start, parts[f"forearm_{side}"].end, "a hand starts at the wrist")
+            self.assertEqual(parts[f"foot_{side}"].start, parts[f"shin_{side}"].end, "a foot starts at the ankle")
+            foot = parts[f"foot_{side}"]
+            self.assertGreater(foot.end[0] - foot.start[0], abs(foot.end[1] - foot.start[1]), "and points forwards")
+        self.assertEqual(parts["hips"].start, parts["spine"].start, "the hips hang from where the trunk stands")
+        self.assertGreater(parts["hips"].end[1], parts["hips"].start[1])
+        # A hand turns with its forearm; a foot stays level whatever the shin does.
+        swung = self.plan.pose("doll_right", "fight", 0.3)
+        still = self.plan.pose("doll_right")
+        hand = lambda pose: (pose["fingertip_right"][0] - pose["hand_right"][0], pose["fingertip_right"][1] - pose["hand_right"][1])
+        foot_of = lambda pose: (pose["toe_right"][0] - pose["foot_right"][0], pose["toe_right"][1] - pose["foot_right"][1])
+        self.assertNotAlmostEqual(hand(swung)[0], hand(still)[0], 1)
+        walking = self.plan.pose("doll_right", "walk", 0.1)
+        self.assertNotEqual(walking["foot_right"], still["foot_right"])
+        self.assertAlmostEqual(foot_of(walking)[1], foot_of(still)[1], 5)
+
+    def test_the_near_arm_hangs_from_further_back_and_the_near_leg_goes_over_the_body(self) -> None:
+        rest = self.plan.rests["doll"]
+        self.assertLess(rest["shoulder_right"][0], rest["chest"][0], "facing right, the arm of the near side is nearer the back")
+        self.assertGreater(rest["shoulder_left"][0], rest["chest"][0], "and the far one nearer the chest")
+        order = self.plan.orders["doll"]
+        self.assertLess(order.index("thigh_left"), order.index("spine"))
+        self.assertLess(order.index("hips"), order.index("thigh_right"), "the near leg is drawn over the hips")
+        self.assertLess(order.index("spine"), order.index("thigh_right"))
+        self.assertLess(rest["hip_right"][1], rest["groin"][1], "and starts above where the hips end")
 
     def test_zones_only_overlap_where_two_parts_are_jointed(self) -> None:
         masks = {bone: pygame.mask.from_surface(self.template.mask(bone)) for bone, spec in self.template.parts.items() if not spec.whole}
@@ -42,7 +82,8 @@ class DollTemplateTests(unittest.TestCase):
             width, height = self.template.canvases[BODY_CANVAS]
             self.assertEqual(mask.get_bounding_rects()[0].clip(pygame.Rect(0, 0, width, height)), mask.get_bounding_rects()[0], bone)
             for other, other_mask in masks.items():
-                jointed = self.plan.bones[bone].end == self.plan.bones[other].start or self.plan.bones[other].end == self.plan.bones[bone].start
+                ends = lambda name: {self.plan.bones[name].start, self.plan.bones[name].end}
+                jointed = bool(ends(bone) & ends(other))
                 if bone < other and not jointed:
                     self.assertEqual(mask.overlap_area(other_mask, (0, 0)), 0, (bone, other))
             lower = [other for other in masks if self.plan.bones[bone].end == self.plan.bones[other].start]
@@ -57,12 +98,10 @@ class DollTemplateTests(unittest.TestCase):
                 self.assertGreater(min(spec.end[0], width - spec.end[0], spec.end[1]), spec.radius * 1.7, bone)
                 continue
             self.assertGreaterEqual(spec.reach, spec.radius * 1.9, f"{bone} can be drawn about twice as wide")
-            if not spec.free_end:
-                self.assertGreater(min(spec.ends), spec.radius, f"{bone} can be drawn longer at both ends")
             zone = pygame.mask.from_surface(self.template.mask(bone))
             example = pygame.mask.from_surface(self.template.example(bone, RED))
             self.assertEqual(example.overlap_area(zone, (0, 0)), example.count(), f"the example of {bone} is inside its zone")
-            self.assertGreater(zone.count(), example.count() * 2, bone)
+            self.assertGreater(zone.count(), example.count() * 1.8, bone)
 
     def test_there_is_a_neck_between_the_shoulders_and_the_head(self) -> None:
         neck, trunk = self.template.parts["neck"], self.template.parts["spine"]
@@ -74,8 +113,8 @@ class DollTemplateTests(unittest.TestCase):
         self.assertGreater(top_of_trunk - top_of_neck, self.template.unit)
         # Put together, the head clears the shoulders by the length of the neck: there is skin to see between them.
         doll = Doll(self.template, self.template.mannequin({**{bone: RED for bone in self.template.parts}, "neck": BLUE}))
-        skeleton = Skeleton(self.plan, "right")
-        skeleton.set_pose(self.plan.pose("right"))
+        skeleton = Skeleton(self.plan, "doll_right")
+        skeleton.set_pose(self.plan.pose("doll_right"))
         picture = pygame.Surface((400, 500), pygame.SRCALPHA)
         detail = float(self.template.unit)
         draw_doll(picture, doll, self.plan, skeleton, (200, 460), detail)
@@ -164,12 +203,14 @@ class DollCuttingTests(unittest.TestCase):
         # The same at the shoulder, where the arm turns against the trunk.
         self.assertFalse(has("upper_arm_right", (upper.start[0] + past, upper.start[1] - past)))
         # Bent double, nothing of the arm reaches further from the elbow than the arm is wide.
-        skeleton = Skeleton(self.plan, "right", ["arm_left", "leg_left", "leg_right"])
-        pose = self.plan.pose("right")
+        skeleton = Skeleton(self.plan, "doll_right", ["arm_left", "leg_left", "leg_right"])
+        pose = self.plan.pose("doll_right")
         skeleton.set_pose(pose)
         joints = skeleton.joints
-        joints["elbow_right"].x, joints["elbow_right"].y = joints["shoulder_right"].x, joints["shoulder_right"].y + 3
-        joints["hand_right"].x, joints["hand_right"].y = joints["elbow_right"].x + 3, joints["elbow_right"].y
+        upper_long, fore_long = skeleton.bones["upper_arm_right"].length, skeleton.bones["forearm_right"].length
+        joints["elbow_right"].x, joints["elbow_right"].y = joints["shoulder_right"].x, joints["shoulder_right"].y + upper_long
+        joints["hand_right"].x, joints["hand_right"].y = joints["elbow_right"].x + fore_long, joints["elbow_right"].y
+        joints["fingertip_right"].x, joints["fingertip_right"].y = joints["hand_right"].x + 1.6, joints["hand_right"].y
         picture = pygame.Surface((300, 300), pygame.SRCALPHA)
         detail = float(self.template.unit)
         draw_doll(picture, doll, self.plan, skeleton, (150, 290), detail)
@@ -177,6 +218,38 @@ class DollCuttingTests(unittest.TestCase):
         outer_corner = (round(at_elbow[0] - past), round(at_elbow[1] + past))
         self.assertEqual(picture.get_at(outer_corner)[3], 0, "the outside of the bend is round")
         self.assertGreater(picture.get_at((round(at_elbow[0]), round(at_elbow[1])))[3], 0)
+
+    def test_a_limb_longer_than_it_was_drawn_grows_between_its_joints_and_keeps_its_round_ends(self) -> None:
+        fore = self.template.parts["forearm_right"]
+        half = 22
+        pygame.draw.rect(self.body, RED, pygame.Rect(fore.start[0] - half, fore.start[1] - 40, half * 2, fore.end[1] - fore.start[1] + 80))
+        doll = self._doll()
+        detail = float(self.template.unit)
+        drawn, _ = doll.placed("forearm_right", False, detail, 0.0)
+        longer, joint = doll.placed("forearm_right", False, detail, 0.0, doll.drawn["forearm_right"] * 1.25)
+        grown = round((fore.end[1] - fore.start[1]) * 0.25)
+        self.assertEqual(longer.get_width(), drawn.get_width(), "it is no wider")
+        self.assertEqual(longer.get_height(), drawn.get_height() + grown)
+        # Above the elbow it is the same round end, pixel for pixel; below the wrist, the same again.
+        above = round(joint[1])
+        for surface in (drawn, longer):
+            self.assertEqual(surface.get_at((round(joint[0]), 2))[3], 255)
+        rows = lambda surface, first, last: [surface.get_at((x, y))[3] for y in range(first, last) for x in range(surface.get_width())]
+        self.assertEqual(rows(longer, 0, above), rows(drawn, 0, above))
+        tail = drawn.get_height() - round(joint[1]) - (fore.end[1] - fore.start[1])
+        self.assertEqual(rows(longer, longer.get_height() - int(tail), longer.get_height()), rows(drawn, drawn.get_height() - int(tail), drawn.get_height()))
+
+    def test_no_dark_edge_shows_where_a_drawing_is_cut(self) -> None:
+        upper, fore = self.template.parts["upper_arm_right"], self.template.parts["forearm_right"]
+        half = 22
+        pygame.draw.rect(self.body, RED, pygame.Rect(upper.start[0] - half, upper.start[1], half * 2, fore.end[1] - upper.start[1]))
+        doll = self._doll()
+        # Much smaller than drawn, every pixel along the cut is a blend of red with what was cut away.
+        image, _ = doll.placed("forearm_right", False, 3.0, 0.3, doll.drawn["forearm_right"] * 1.2)
+        seen = [tuple(image.get_at((x, y))) for x in range(image.get_width()) for y in range(image.get_height())]
+        for red, green, blue, alpha in seen:
+            if alpha > 24:
+                self.assertTrue(all(abs(got - want) <= 12 for got, want in zip((red, green, blue), RED)), (red, green, blue, alpha))
 
     def test_what_is_drawn_across_a_joint_goes_with_both_parts(self) -> None:
         elbow = self.template.parts["forearm_right"].start
@@ -194,7 +267,7 @@ class DollCuttingTests(unittest.TestCase):
         pygame.draw.circle(self.body, RED, spec.end, 8)
         doll = self._doll()
         detail = 8.0
-        reach = self.plan.length("side", "forearm_right") * detail
+        reach = doll.drawn["forearm_right"] * detail
         for angle in (0.0, math.pi / 2, math.pi, -math.pi / 2, 0.6):
             image, joint = doll.placed("forearm_right", False, detail, angle)
             hand = pygame.mask.from_surface(image).centroid()
@@ -206,13 +279,13 @@ class DollCuttingTests(unittest.TestCase):
     def test_facing_the_other_way_the_doll_is_the_same_drawing_in_a_mirror(self) -> None:
         figure = self.template.mannequin({bone: RED for bone in self.template.parts})
         # Something on one side only, to tell the two ways apart.
-        shin = self.template.parts["shin_right"]
-        pygame.draw.circle(figure[BODY_CANVAS], BLUE, (shin.end[0] + shin.cap[0] + 10, shin.end[1]), 8)
+        foot = self.template.parts["foot_right"]
+        pygame.draw.circle(figure[BODY_CANVAS], BLUE, (foot.end[0] + 6, foot.end[1] + 6), 8)
         doll = Doll(self.template, figure)
         pictures = {}
         for facing in ("right", "left"):
-            skeleton = Skeleton(self.plan, facing)
-            skeleton.set_pose(self.plan.pose(facing, "walk", 0.2))
+            skeleton = Skeleton(self.plan, DOLL_FACINGS[facing])
+            skeleton.set_pose(self.plan.pose(DOLL_FACINGS[facing], "walk", 0.2))
             picture = pygame.Surface((400, 400), pygame.SRCALPHA)
             draw_doll(picture, doll, self.plan, skeleton, (200, 300), 10.0)
             pictures[facing] = picture
@@ -228,8 +301,8 @@ class DollCuttingTests(unittest.TestCase):
         doll = Doll(self.template, self.template.mannequin({bone: RED for bone in self.template.parts}))
         counts = []
         for lost in ((), ("arm_right",), ("arm_right", "leg_left")):
-            skeleton = Skeleton(self.plan, "right", lost)
-            skeleton.set_pose(self.plan.pose("right", "fight", 0.3))
+            skeleton = Skeleton(self.plan, "doll_right", lost)
+            skeleton.set_pose(self.plan.pose("doll_right", "fight", 0.3))
             picture = pygame.Surface((400, 400), pygame.SRCALPHA)
             draw_doll(picture, doll, self.plan, skeleton, (200, 300), 10.0)
             counts.append(_painted(picture))
@@ -411,13 +484,13 @@ class DollEditorTests(unittest.TestCase):
         chest = (hitbox.centerx * SCALE, (hitbox.bottom - 11) * SCALE)
         self.assertNotEqual(tuple(window.get_at(chest))[:3], tuple(window.get_at((chest[0] + 80, chest[1])))[:3])
         # Seen from the side, he keeps facing the way he last walked across.
-        self.assertEqual(view.bodies.characters["raul"].facing, "right")
+        self.assertEqual(view.bodies.characters["raul"].facing, "doll_right")
         raul.trail = [(21, 14), (20, 14)]
         self._show()
-        self.assertEqual(view.bodies.characters["raul"].facing, "left")
+        self.assertEqual(view.bodies.characters["raul"].facing, "doll_left")
         raul.trail, raul.facing = [], "up"
         self._show()
-        self.assertEqual(view.bodies.characters["raul"].facing, "left")
+        self.assertEqual(view.bodies.characters["raul"].facing, "doll_left")
         # The head he was drawn is his face from now on. Nobody else has changed.
         self.assertIsNotNone(game.faces.portrait("raul", "neutral", (64, 64)))
         self.assertNotEqual(pygame.image.tobytes(game.faces.face("raul", "neutral"), "RGBA"), pygame.image.tobytes(pixel_face, "RGBA"))

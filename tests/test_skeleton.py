@@ -109,8 +109,8 @@ class SkeletonTests(unittest.TestCase):
         upper_arm, forearm = body.bones["upper_arm_left"], body.bones["forearm_left"]
         before = set(body.bones)
         arm = body.sever("upper_arm_left")
-        self.assertEqual(set(arm.bones), {"upper_arm_left", "forearm_left"})
-        self.assertEqual(set(body.bones), before - {"upper_arm_left", "forearm_left"})
+        self.assertEqual(set(arm.bones), {"upper_arm_left", "forearm_left", "hand_left"})
+        self.assertEqual(set(body.bones), before - {"upper_arm_left", "forearm_left", "hand_left"})
         # The very same bones and joints, not copies of them.
         self.assertIs(arm.bones["upper_arm_left"], upper_arm)
         self.assertIs(arm.bones["forearm_left"], forearm)
@@ -138,7 +138,9 @@ class SkeletonTests(unittest.TestCase):
         _settle(leg)
         self.assertTrue(leg.asleep)
         for joint in leg.joints.values():
-            self.assertAlmostEqual(joint.y, 140 - joint.radius, delta=0.01)
+            # On the ground, but for a toe that the ankle will not let lie quite flat.
+            self.assertLessEqual(joint.y, 140 - joint.radius + 0.01)
+            self.assertGreater(joint.y, 140 - joint.radius - 1.5)
         self.assertEqual((body.joints["chest"].x, body.joints["chest"].y), chest)
 
     def test_a_skeleton_can_be_built_already_short_of_parts(self) -> None:
@@ -289,7 +291,7 @@ class CharacterTests(unittest.TestCase):
     def test_a_part_comes_off_as_a_body_of_its_own_and_is_gone_for_good(self) -> None:
         part = self.character.sever("arm_left", 80, -90, spin=5.0)
         self.assertEqual(part.part_id, "arm_left")
-        self.assertEqual(set(part.skeleton.bones), {"upper_arm_left", "forearm_left"})
+        self.assertEqual(set(part.skeleton.bones), {"upper_arm_left", "forearm_left", "hand_left"})
         self.assertNotIn("upper_arm_left", self.character.skeleton.bones)
         self.assertEqual(self.character.lost, ["arm_left"])
         self.assertFalse(self.character.has("arm_left"))
@@ -313,7 +315,7 @@ class CharacterTests(unittest.TestCase):
         whole = set(Skeleton(self.plan, "right").bones)
         self.character.sever("leg_right")
         self.character.sever("forearm_left")
-        gone = {"thigh_right", "shin_right", "forearm_left"}
+        gone = {"thigh_right", "shin_right", "foot_right", "forearm_left", "hand_left"}
         self.assertEqual(set(self.character.skeleton.bones), whole - gone)
 
     def test_a_body_made_without_a_part_never_had_it(self) -> None:

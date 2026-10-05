@@ -131,8 +131,16 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   `front`. From the side a positive angle is towards where the body faces. From the front it is
   away from the middle of the body for a bone with a side. `ref_reversed` measures against the
   other bone pointing the other way, as for a limb that hangs from the trunk.
-- `views`: where each joint is at rest, seen from the `front` and from the right `side`.
-- `orders`: for the `front`, `side` and `back`, the bones from the furthest to the nearest.
+- `follows`: a bone that turns with another whenever a clip turns that one and says nothing of
+  its own, as a hand with its forearm. A bone that follows nothing keeps the way it points at
+  rest, as a foot stays level.
+- `views`: where each joint is at rest, seen from the `front` and from the right `side`. A third,
+  `doll`, is the build of a body drawn by hand: it is `like` the side view, which is to say it is
+  posed by that view's clips and held by its limits, but has its own places for the joints. That
+  is where a paper doll's limbs are made longer or shorter, and its shoulders and hips set
+  forwards or back.
+- `orders`: for the `front`, `side` and `back`, the bones from the furthest to the nearest, and
+  for the `doll` the parts of a drawing in the same way.
 - `skins`: what is drawn over a bone, a `sprite` or a `strip` from the parts sheet. A sprite's
   `anchor` is the `start`, `middle` or `end` of its bone.
 - `clips`: for each view, a list of keyframes that are run through in a loop. A keyframe gives
@@ -143,13 +151,15 @@ between the feet, with `y` growing downwards. Angles are in degrees.
 - `doll`: how a body is drawn by hand. `unit` is the pixels of a drawing to one of the skeleton's;
   `canvases` gives the size of the body's and the head's in those units; and each entry of `parts`
   is a bone with the canvas it is drawn on and the two points it runs `from` and `to`. `radius`
-  is half the width of the slim example the guide shows, with an optional `cap` (offset and radius
-  of a rounder end, for a hand or a foot). `reach` is half the width of the zone the part may be
-  drawn in and `ends` how far that zone goes beyond each joint, with `cap_reach` for a rounder
-  end to it; give them room, so that people can draw other builds than the example. `whole` is
-  for a part that is everything on its canvas, and `free_start` for one that does not turn about
-  its first joint, such as the trunk: every other part is cut round there. A part must be as long as its bone is in the
-  `side` view, and zones may only overlap where two parts are jointed.
+  is half the width of the slim example the guide shows. `reach` is half the width of the zone
+  the part may be drawn in and `ends` how far that zone goes beyond each joint; give them room,
+  so that people can draw other builds than the example. `whole` is for a part that is
+  everything on its canvas. Every other part is cut round at the joints it shares, but for
+  `free_start`, a part that does not turn about its first joint, and `free_end`, one left as
+  drawn at its second though another starts there, as the trunk at the shoulders. A part need
+  not be as long as its bone is in the `doll` view: it is drawn out between its two joints to
+  fit, and keeps its width and its ends. Every part must have its turn in the `doll` order, and
+  zones may only overlap where two parts share a joint.
 - `physics`: gravity in pixels per second squared, how much speed is kept each step (`damping`),
   lost along the ground (`friction`) and given back on landing (`bounce`), how hard limits push
   back, and when a body that lies still goes to sleep.

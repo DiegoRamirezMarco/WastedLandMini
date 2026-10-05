@@ -6,7 +6,7 @@ import pygame
 from graphics.assets import AssetStore
 from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE, BodyRenderer
 from graphics.building_renderer import FACADE_ROWS, BuildingRenderer, building_area
-from graphics.doll import Doll, DollStore, draw_doll
+from graphics.doll import DOLL_FACINGS, Doll, DollStore, draw_doll
 from graphics.face_renderer import FaceRenderer
 from graphics.font import CELL_SIZE, BitmapFont
 from graphics.icons import ICON_SIZE, icon_path
@@ -118,7 +118,7 @@ Draw = tuple[float, int, Callable[[], None]]
 # the skeleton it is laid over or, for someone lying under a blanket, where their neck is.
 DollDraw = tuple[float, Doll, Skeleton | None, tuple[float, float] | None]
 # Which way a doll faces until its resident has walked to one side or the other.
-DOLL_FACING = "right"
+DOLL_FACING = DOLL_FACINGS["right"]
 HEAD_BONE = "skull"
 # Where the neck of a doll lying in a bed is, from the bed's top left corner, in map pixels.
 LYING_NECK = (7.5, 10.0)
@@ -833,8 +833,8 @@ class GlobalView:
 
     def _side_facing(self, resident_id: str, facing: str) -> str:
         """Which way a doll faces: it is drawn from the side, so walking up or down it keeps the side it last had."""
-        if facing in ("left", "right"):
-            self._doll_facing[resident_id] = facing
+        if facing in DOLL_FACINGS:
+            self._doll_facing[resident_id] = DOLL_FACINGS[facing]
         return self._doll_facing.get(resident_id, DOLL_FACING)
 
     def _posed_skeleton(self, resident_id: str, character) -> Skeleton:

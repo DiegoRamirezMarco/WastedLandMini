@@ -353,7 +353,8 @@ Done:
 - All of it optional, file by file: `illustrations/README.md` says what goes where
 - **Paper dolls**: a resident's body and head drawn once over a guide, cut apart at the joints
   and moved by the skeleton, as smooth pictures on the window. One drawing from the side does
-  for every pose and both ways of facing
+  for every pose and both ways of facing. Hands, feet and hips are parts of their own, and the
+  doll has its own build: longer limbs, the near arm set back and the near leg over the hips
 - **An editor in the game** to draw them: two canvases over the guide, brushes, a rubber, a
   bucket, undo, a mannequin to start from, and the doll moving beside the drawing
 

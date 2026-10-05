@@ -26,8 +26,12 @@ BODY_CANVAS = "body"
 HEAD_CANVAS = "head"
 # Parts are kept turned in this many steps of a full turn.
 TURN_STEPS = 96
-# The view of the skeleton that a doll is posed in, and its order of drawing.
-DOLL_VIEW = "side"
+# The view of the skeleton that a doll is posed in, with its own build and order of drawing, and
+# the way a doll faces for each side it can walk to.
+DOLL_VIEW = "doll"
+DOLL_FACINGS = {"right": "doll_right", "left": "doll_left"}
+# Reaching this far, a half of the canvas is all of it.
+FAR = 4096
 # Parts on the far side of the body are tinted on the guide in one colour, the near side in another.
 GUIDE_NEAR = PALETTE["sand"]
 GUIDE_FAR = PALETTE["teal"]
@@ -63,10 +67,6 @@ class PartSpec:
     # Half the width of the zone, and how far it goes beyond the first joint and beyond the second.
     reach: float = 0.0
     ends: tuple[float, float] = (0.0, 0.0)
-    # A rounder end to the example, for a hand or a foot: its offset from the far joint and its radius.
-    cap: tuple[float, float, float] | None = None
-    # The radius of the zone round that end, where it needs more room than the rest of the zone gives.
-    cap_reach: float = 0.0
     # The part is everything drawn on its canvas, such as a head with its hair.
     whole: bool = False
     # The part does not turn about its first joint against another: the trunk, which the rest hangs from.
@@ -112,43 +112,69 @@ class DollTemplate:
     def cut_mask(self, bone: str, drawing: pygame.Surface) -> pygame.Surface:
         """What of a drawing goes with a part: white and solid there, clear elsewhere.
 
-        Between its two joints a part takes all of its zone. Past a joint it turns about, it only
-        takes a round end centred on that joint, as wide as the limb was drawn there. Two parts
-        that meet at a joint so end in the same circle, and however the joint bends no corner of
-        either sticks out.
+        A part takes what is drawn in its zone, up to each joint it turns about. There the drawing
+        is cut straight across, and both parts that meet keep the same round end past the cut,
+        centred on the joint and as wide as the limb was drawn there. However the joint bends, no
+        corner of either sticks out and no gap opens.
         """
         spec = self.parts[bone]
         if spec.whole:
             return self.mask(bone)
         mask = pygame.Surface(self.canvases[spec.canvas], pygame.SRCALPHA)
         solid = (255, 255, 255, 255)
-        followed = not spec.free_end and any(
-            other is not spec and other.canvas == spec.canvas and other.start == spec.end for other in self.parts.values()
-        )
-        shaft = replace(
-            spec,
-            ends=(spec.ends[0] if spec.free_start else 0.0, 0.0 if followed else spec.ends[1]),
-            cap_reach=0.0 if followed else spec.cap_reach,
-        )
-        self._zone(mask, shaft, solid)
-        joints = ([] if spec.free_start else [spec.start]) + ([spec.end] if followed else [])
-        for joint in joints:
-            width = self._width_at(drawing, spec, joint)
+        self._zone(mask, spec, solid)
+        cuts = [(joint, keep) for joint, keep in ((spec.start, self._kept(spec, True)), (spec.end, self._kept(spec, False))) if keep]
+        for joint, keep in cuts:
+            # Everything on the far side of the cut is somebody else's.
+            across = (-keep[1] * FAR, keep[0] * FAR)
+            away = (-keep[0] * FAR, -keep[1] * FAR)
+            pygame.draw.polygon(mask, (0, 0, 0, 0), [
+                (joint[0] + across[0], joint[1] + across[1]),
+                (joint[0] - across[0], joint[1] - across[1]),
+                (joint[0] - across[0] + away[0], joint[1] - across[1] + away[1]),
+                (joint[0] + across[0] + away[0], joint[1] + across[1] + away[1]),
+            ])
+        for joint, keep in cuts:
+            width = self._width_at(drawing, joint, keep, self._reach_at(spec, joint))
             if width > 0:
                 pygame.draw.circle(mask, solid, joint, width + 1)
         return mask
 
-    def _width_at(self, drawing: pygame.Surface, spec: PartSpec, joint: Point) -> int:
-        """Half the width of what is drawn across a part at one of its joints, in pixels."""
-        dx, dy = spec.end[0] - spec.start[0], spec.end[1] - spec.start[1]
-        length = math.hypot(dx, dy) or 1.0
-        along, across = (dx / length, dy / length), (-dy / length, dx / length)
+    def _sharing(self, spec: PartSpec, joint: Point) -> list[PartSpec]:
+        """The other parts of the same canvas that have a joint at the same place."""
+        return [
+            other for other in self.parts.values()
+            if other is not spec and other.canvas == spec.canvas and not other.whole and joint in (other.start, other.end)
+        ]
+
+    def _reach_at(self, spec: PartSpec, joint: Point) -> float:
+        """How far from a joint a limb is measured: no further than the narrowest zone that meets there."""
+        return min([spec.reach, *(other.reach for other in self._sharing(spec, joint))])
+
+    def _kept(self, spec: PartSpec, at_start: bool) -> Point | None:
+        """Which side of the cut through one of its joints a part keeps, as a direction. None if it is not cut there."""
+        joint = spec.start if at_start else spec.end
+        own = _direction(spec)
+        others = self._sharing(spec, joint)
+        if not at_start:
+            # At its far end a part is only cut if another goes on from there.
+            starting = [other for other in others if other.start == joint]
+            return (-own[0], -own[1]) if starting and not spec.free_end else None
+        ending = [other for other in others if other.end == joint and not other.free_end]
+        if ending:
+            # It goes on from where another ends: the cut is square to that one, whichever way this one points.
+            return _direction(ending[0])
+        return None if spec.free_start else own
+
+    def _width_at(self, drawing: pygame.Surface, joint: Point, keep: Point, reach: float) -> int:
+        """Half the width of what is drawn along the cut through a joint, in pixels."""
+        across = (-keep[1], keep[0])
         size = drawing.get_size()
         widest = 0
         for step in range(-JOINT_BAND, JOINT_BAND + 1):
-            for offset in range(-int(spec.reach), int(spec.reach) + 1):
-                x = round(joint[0] + along[0] * step + across[0] * offset)
-                y = round(joint[1] + along[1] * step + across[1] * offset)
+            for offset in range(-int(reach), int(reach) + 1):
+                x = round(joint[0] + keep[0] * step + across[0] * offset)
+                y = round(joint[1] + keep[1] * step + across[1] * offset)
                 if 0 <= x < size[0] and 0 <= y < size[1] and drawing.get_at((x, y))[3]:
                     widest = max(widest, abs(offset))
         return widest
@@ -156,9 +182,6 @@ class DollTemplate:
     def _zone(self, target: pygame.Surface, spec: PartSpec, color: tuple[int, ...], width: int = 0) -> None:
         """Paint the zone of a part, or with `width` only its edge."""
         pygame.draw.polygon(target, color, spec.zone(), width)
-        if spec.cap is not None and spec.cap_reach > 0:
-            centre = (spec.end[0] + spec.cap[0], spec.end[1] + spec.cap[1])
-            pygame.draw.circle(target, color, centre, round(spec.cap_reach), width)
 
     def _capsule(self, target: pygame.Surface, spec: PartSpec, color: tuple[int, ...]) -> None:
         """Paint the example of a part: a rounded strip from one joint to the next."""
@@ -166,8 +189,6 @@ class DollTemplate:
         pygame.draw.line(target, color, spec.start, spec.end, radius * 2 + 1)
         pygame.draw.circle(target, color, spec.start, radius)
         pygame.draw.circle(target, color, spec.end, radius)
-        if spec.cap is not None:
-            pygame.draw.circle(target, color, (spec.end[0] + spec.cap[0], spec.end[1] + spec.cap[1]), round(spec.cap[2]))
 
     def guide(self, canvas: str) -> pygame.Surface:
         """What is shown under a canvas to draw over.
@@ -211,8 +232,7 @@ class DollTemplate:
             return surface
         if outline is not None:
             self._capsule(surface, spec, (*outline, 255))
-        inner = (spec.cap[0], spec.cap[1], spec.cap[2] - edge) if spec.cap is not None else None
-        self._capsule(surface, replace(spec, radius=spec.radius - edge, cap=inner), (*color, 255))
+        self._capsule(surface, replace(spec, radius=spec.radius - edge), (*color, 255))
         surface.blit(self.mask(bone), (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
         return surface
 
@@ -229,6 +249,13 @@ class DollTemplate:
         return drawings
 
 
+def _direction(spec: PartSpec) -> Point:
+    """Which way a part runs on its canvas, from its first joint to its second."""
+    dx, dy = spec.end[0] - spec.start[0], spec.end[1] - spec.start[1]
+    length = math.hypot(dx, dy) or 1.0
+    return (dx / length, dy / length)
+
+
 def template_from_data(data: dict[str, Any]) -> DollTemplate:
     unit = int(data["unit"])
     canvases = {str(name): (int(size[0] * unit), int(size[1] * unit)) for name, size in data["canvases"].items()}
@@ -237,7 +264,6 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
         canvas = str(values["canvas"])
         if canvas not in canvases:
             raise ValueError(f"Doll part {bone} is drawn on unknown canvas: {canvas}")
-        cap = values.get("cap")
         radius = float(values["radius"])
         ends = values.get("ends", (radius, radius))
         parts[str(bone)] = PartSpec(
@@ -249,8 +275,6 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
             # Without a reach of its own, a part may be drawn no wider than its example.
             float(values.get("reach", radius)) * unit,
             (float(ends[0]) * unit, float(ends[1]) * unit),
-            (cap[0] * unit, cap[1] * unit, cap[2] * unit) if cap is not None else None,
-            float(values.get("cap_reach", 0.0)) * unit,
             bool(values.get("whole", False)),
             bool(values.get("free_start", False)),
             bool(values.get("free_end", False)),
@@ -284,8 +308,12 @@ class Doll:
             if drawing.get_size() != template.canvases[spec.canvas]:
                 drawing = pygame.transform.smoothscale(drawing, template.canvases[spec.canvas])
             cut = drawing.convert_alpha() if pygame.display.get_surface() is not None else drawing.copy()
-            # Whatever of the drawing falls outside the part's zone belongs to another part.
-            cut.blit(template.cut_mask(bone, drawing), (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            # Whatever of the drawing falls outside the part's zone belongs to another part. It is made
+            # clear and keeps its colour, so that no dark edge shows along a cut when the part is resized.
+            keep = pygame.Surface(cut.get_size(), pygame.SRCALPHA)
+            keep.fill((255, 255, 255, 0))
+            keep.blit(template.cut_mask(bone, drawing), (0, 0), special_flags=pygame.BLEND_RGBA_MAX)
+            cut.blit(keep, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             box = cut.get_bounding_rect()
             if box.width == 0:
                 continue
@@ -294,14 +322,56 @@ class Doll:
                 (spec.start[0] - box.x, spec.start[1] - box.y),
                 (spec.end[0] - box.x, spec.end[1] - box.y),
             )
-        self._sized: dict[tuple[str, bool, int], DollPart] = {}
-        self._turned: dict[tuple[str, bool, int, int], tuple[pygame.Surface, Point]] = {}
+        # How long each part is drawn, in the skeleton's own measure.
+        self.drawn = {bone: math.dist(spec.start, spec.end) / template.unit for bone, spec in template.parts.items()}
+        self._sized: dict[tuple, DollPart] = {}
+        self._turned: dict[tuple, tuple[pygame.Surface, Point]] = {}
 
-    def _sized_part(self, bone: str, mirrored: bool, detail: float) -> DollPart:
-        """A part at the size it is shown, and in a mirror if the body faces the other way."""
-        key = (bone, mirrored, round(detail * 1000))
+    def _drawn_out(self, part: DollPart, stretch: int) -> DollPart:
+        """A part made longer between its joints, to `stretch` hundredths of what was drawn.
+
+        Only what lies between the two joints is drawn out. What goes past either joint stays as
+        it was, so the round ends parts meet in stay round, and the part keeps its width.
+        """
+        axis = 1 if abs(part.end[1] - part.start[1]) >= abs(part.end[0] - part.start[0]) else 0
+        size = part.image.get_size()
+        low, high = sorted((part.start[axis], part.end[axis]))
+        low, high = min(size[axis], max(0, round(low))), min(size[axis], max(0, round(high)))
+        grown = round((high - low) * stretch / 100) - (high - low)
+        if stretch == 100 or high <= low or grown <= -(high - low):
+            return part
+
+        def strip(first: int, last: int) -> pygame.Rect:
+            return pygame.Rect(0, first, size[0], last - first) if axis else pygame.Rect(first, 0, last - first, size[1])
+
+        longer = [size[0], size[1]]
+        longer[axis] += grown
+        image = pygame.Surface(longer, pygame.SRCALPHA)
+        pieces = [(strip(0, low), 0, 0), (strip(low, high), low, grown), (strip(high, size[axis]), high + grown, 0)]
+        for box, at, more in pieces:
+            if box.width <= 0 or box.height <= 0:
+                continue
+            piece = part.image.subsurface(box)
+            if more:
+                piece = pygame.transform.smoothscale(piece, (box.width + more, box.height) if axis == 0 else (box.width, box.height + more))
+            # Added to nothing, a piece is copied as it is, the colour of its clear pixels and all.
+            image.blit(piece, (0, at) if axis else (at, 0), special_flags=pygame.BLEND_RGBA_ADD)
+        middle = (low + high) / 2
+
+        def moved(point: Point) -> Point:
+            along = point[axis] + (grown if point[axis] > middle else 0)
+            return (point[0], along) if axis else (along, point[1])
+
+        return DollPart(image, moved(part.start), moved(part.end))
+
+    def _sized_part(self, bone: str, mirrored: bool, detail: float, stretch: int) -> DollPart:
+        """A part at the size it is shown, and in a mirror if the body faces the other way.
+
+        `stretch` is how much longer than drawn its bone is, in hundredths.
+        """
+        key = (bone, mirrored, round(detail * 1000), stretch)
         if key not in self._sized:
-            part = self.parts[bone]
+            part = self._drawn_out(self.parts[bone], stretch)
             factor = detail / self.unit
             size = (max(1, round(part.image.get_width() * factor)), max(1, round(part.image.get_height() * factor)))
             image = pygame.transform.smoothscale(part.image, size)
@@ -313,18 +383,22 @@ class Doll:
             self._sized[key] = DollPart(image, start, end)
         return self._sized[key]
 
-    def placed(self, bone: str, mirrored: bool, detail: float, angle: float) -> tuple[pygame.Surface, Point] | None:
+    def placed(
+        self, bone: str, mirrored: bool, detail: float, angle: float, length: float | None = None
+    ) -> tuple[pygame.Surface, Point] | None:
         """A part turned to point along `angle`, and where on that picture its first joint is.
 
-        `detail` is how many pixels of the target go to one of the skeleton's. None if the drawing
-        left that part empty.
+        `detail` is how many pixels of the target go to one of the skeleton's, and `length` how
+        long the bone it is laid on is, if that is not the length it was drawn at. None if the
+        drawing left that part empty.
         """
         if bone not in self.parts:
             return None
-        part = self._sized_part(bone, mirrored, detail)
+        stretch = round(100 * length / self.drawn[bone]) if length and self.drawn[bone] else 100
+        part = self._sized_part(bone, mirrored, detail, stretch)
         drawn = math.atan2(part.end[0] - part.start[0], part.end[1] - part.start[1])
         steps = round(wrapped(angle - drawn) / math.tau * TURN_STEPS) % TURN_STEPS
-        key = (bone, mirrored, round(detail * 1000), steps)
+        key = (bone, mirrored, round(detail * 1000), stretch, steps)
         if key not in self._turned:
             turn = steps * math.tau / TURN_STEPS
             image = pygame.transform.rotozoom(part.image, math.degrees(turn), 1.0) if steps else part.image
@@ -386,7 +460,8 @@ def draw_doll(
         bone = skeleton.bones.get(skeleton.as_posed(name))
         if bone is None:
             continue
-        placed = doll.placed(name, skeleton.mirrored, detail, bone.angle)
+        # A limb may be longer on the skeleton than it was drawn: it is drawn out to fit.
+        placed = doll.placed(name, skeleton.mirrored, detail, bone.angle, bone.length)
         if placed is None:
             continue
         image, joint = placed

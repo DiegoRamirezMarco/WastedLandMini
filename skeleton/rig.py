@@ -111,10 +111,11 @@ class Skeleton:
 
     def _limit(self, name: str) -> Limit:
         spec = self.plan.limits[name]
-        low, high = (math.radians(degrees) for degrees in spec.ranges[self.view])
+        like = self.plan.like(self.view)
+        low, high = (math.radians(degrees) for degrees in spec.ranges[like])
         # Limits are written for a body facing right, or for its left side when seen from the front.
         forwards = not self.mirrored
-        if self.view == "front" and name.endswith("_right"):
+        if like == "front" and name.endswith("_right"):
             forwards = not forwards
         if not forwards:
             low, high = -high, -low
