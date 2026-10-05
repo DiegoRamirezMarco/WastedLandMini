@@ -7,7 +7,7 @@ from simulation.ai.routine_system import RoutineSystem
 from simulation.events.event import DomainEvent
 from simulation.health.health_system import RECOVERED_HEALTH
 from simulation.items.item_system import ITEM_ACTIONS
-from simulation.residents.activity import MOVE_TILES_PER_MINUTE, Activity
+from simulation.residents.activity import MOVE_TILES_PER_MINUTE, SHELTER_ACTION, Activity
 from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
 from simulation.residents.resident import Resident
 from simulation.social.social_system import SocialSystem
@@ -50,6 +50,11 @@ class ActivitySystem:
             )
             resident.activity = crisis or self.routine.plan(world, resident)
         activity = resident.activity
+        if activity.action == SHELTER_ACTION and not world.happenings.is_stormy(world):
+            # It has passed: there is nothing left to shelter from.
+            resident.activity = None
+            resident.current_action = "idle"
+            return
 
         if activity.path:
             self._walk(resident, activity)
@@ -103,7 +108,7 @@ class ActivitySystem:
     ) -> bool:
         """Start the use the resident walked over for. False if it turns out to be impossible."""
         if use is None or activity.target_id is None:
-            resident.current_action = "idle"
+            resident.current_action = SHELTER_ACTION if activity.action == SHELTER_ACTION else "idle"
             return True
         if use.staffed_by is not None and not world.work.is_staffed(world, use.staffed_by):
             return False

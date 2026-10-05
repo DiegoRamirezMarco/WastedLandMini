@@ -5,6 +5,8 @@ from world.map import Tile
 MOVE_TILES_PER_MINUTE = 2
 # Strolling to a random spot and standing there: what residents do when nothing presses.
 WANDER_ACTION = "wander"
+# Waiting under a roof for bad weather to pass.
+SHELTER_ACTION = "shelter"
 
 
 @dataclass

@@ -384,7 +384,7 @@ class InterventionSystem:
                 feelings.adjust(feeling, delta)
         room = world.room_at(resident.tile)
         location_id = room.room_id if room is not None else None
-        if chosen.memory is not None and (target is not None or decision.job_id is not None):
+        if chosen.memory is not None:
             world.memories.remember(
                 resident.resident_id,
                 Memory(
@@ -405,6 +405,8 @@ class InterventionSystem:
         answer = self.fill(world, chosen.text, resident, target, decision.job_id)
         if chosen.gate is not None:
             world.happenings.answer_gate(world, chosen.gate)
+        if chosen.raid is not None:
+            world.happenings.answer_raid(world, resident, chosen.raid)
         if chosen.interaction is not None and target is not None:
             resident.activity = self.social.pursue(world, resident, target, chosen.interaction)
             resident.current_action = "walking"

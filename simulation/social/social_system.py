@@ -6,7 +6,7 @@ from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency
 from simulation.events.event import DomainEvent
 from simulation.knowledge.knowledge_system import share_rumor
 from simulation.memory.memory import Memory
-from simulation.residents.activity import MOVE_TILES_PER_MINUTE, WANDER_ACTION, Activity
+from simulation.residents.activity import MOVE_TILES_PER_MINUTE, SHELTER_ACTION, WANDER_ACTION, Activity
 from simulation.residents.resident import Resident
 from simulation.social.bonds import AFFAIR_EVENT, AFFAIR_IMPORTANCE, TRYST
 from simulation.social.interaction import InteractionDefinition
@@ -192,7 +192,8 @@ class SocialSystem:
             job = world.work.job_of(world, partner)
             return job is not None and job.interruptible
         if activity.target_id is None:
-            return activity.action == WANDER_ACTION
+            # Strolling, or waiting out the weather: either way, free to talk.
+            return activity.action in (WANDER_ACTION, SHELTER_ACTION)
         placed = world.interactables.get(activity.target_id)
         use = world.definition_of(placed).use if placed is not None else None
         return use is not None and use.interruptible

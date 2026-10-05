@@ -302,7 +302,8 @@ class StormTests(unittest.TestCase):
             self.world.step(1)
             _keep_content(self.world)
         self.assertFalse(sergio.away)
-        for _ in range(60):
+        self.assertTrue(self.world.under_roof(sergio.tile), "he waits it out in the dry")
+        for _ in range(120):
             self.world.step(1)
             _keep_content(self.world)
         self.assertTrue(sergio.away)

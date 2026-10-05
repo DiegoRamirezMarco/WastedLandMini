@@ -32,6 +32,7 @@ from simulation.work.work_system import WORK_ACTION, WorkSystem
 from world.interactable import Interactable, InteractableDefinition
 from world.map import Tile, TileMap
 from world.pathfinding import manhattan
+from world.visibility import line_of_sight, within_range
 from world.room import Room
 
 
@@ -75,6 +76,8 @@ class SimulationWorld:
     upcoming: list[Upcoming] = field(default_factory=list)
     # ID of the newcomer waiting at the gate for an answer, and of everyone who has come before.
     at_the_gate: str | None = None
+    # ID of the raid that is at the gate while whoever is on watch makes up their mind.
+    under_raid: str | None = None
     newcomers_seen: list[str] = field(default_factory=list)
     health: HealthSystem = field(default_factory=HealthSystem)
     # Game minute since which each job has been short of people, by job ID.
@@ -229,6 +232,31 @@ class SimulationWorld:
         placed = self.interactables.get(activity.target_id)
         use = self.definition_of(placed).use if placed is not None else None
         return use is None or not use.unaware
+
+    def is_dark(self) -> bool:
+        """Whether it is night enough that only what is close or lit can be seen."""
+        hours = self.registries.event_settings.get("perception", {}).get("dark_hours")
+        if not hours:
+            return False
+        start, end = int(hours[0]), int(hours[1])
+        hour = self.clock.hour
+        return start <= hour < end if start <= end else hour >= start or hour < end
+
+    def is_lit(self, tile: Tile) -> bool:
+        """Whether a tile is within reach of something that gives light, with nothing in between."""
+        opaque = self.opaque()
+        for placed in self.interactables.values():
+            definition = self.definition_of(placed)
+            if definition.light <= 0:
+                continue
+            source = (placed.x, placed.y)
+            if within_range(source, tile, definition.light) and line_of_sight(source, tile, opaque):
+                return True
+        return False
+
+    def under_roof(self, tile: Tile) -> bool:
+        room = self.room_at(tile)
+        return room is not None and room.roofed
 
     def opaque(self) -> Callable[[Tile], bool]:
         """Return a test for tiles that block line of sight. Outside the map counts as opaque."""

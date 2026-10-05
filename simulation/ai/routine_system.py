@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from simulation.ai.navigation import adjacent_spots
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency, ranked
 from simulation.items.item_system import ITEM_ACTIONS, ItemSystem
-from simulation.residents.activity import WANDER_ACTION, Activity
+from simulation.residents.activity import SHELTER_ACTION, WANDER_ACTION, Activity
 from simulation.residents.needs import NEED_NAMES
 from simulation.residents.resident import Resident
 from simulation.social.bonds import TRYST, TRYST_ACTION
@@ -34,6 +34,9 @@ PLAIN_MEAL_RELIEF = 25.0
 SUPPER_HUNGER = 40.0
 # Hunger beyond that at which bed has no appeal left at all.
 SUPPER_RANGE = 30.0
+# Getting under a roof in bad weather comes before anything that is not work or a real need.
+SHELTER_SCORE = 0.5
+SHELTER_MINUTES = 90
 
 
 def in_hours(hour: int, window: tuple[int, int]) -> bool:
@@ -70,6 +73,10 @@ class RoutineSystem:
         work = world.work.candidate(world, resident)
         if work is not None:
             scored.append(ScoredAction(work.name, work.score + self._noise(world), work.target_id))
+        if world.happenings.is_stormy(world) and not world.under_roof(resident.tile):
+            # The worse their nerves, the sooner they get out of it.
+            wish = SHELTER_SCORE + 0.5 * need_urgency(resident, "stress")
+            scored.append(ScoredAction(SHELTER_ACTION, wish + self._noise(world)))
         scored.append(ScoredAction(WANDER_ACTION, WANDER_SCORE + self._noise(world)))
         return scored
 
@@ -84,6 +91,8 @@ class RoutineSystem:
                 activity = self.items.plan(world, resident, candidate)
             elif candidate.name in WORK_ACTIONS:
                 activity = world.work.plan(world, resident, candidate)
+            elif candidate.name == SHELTER_ACTION:
+                activity = self._shelter(world, resident)
             elif candidate.target_id is None:
                 return self._wander(world, resident)
             else:
@@ -165,15 +174,43 @@ class RoutineSystem:
                 return Activity(use.action, placed.object_id, path, use.minutes)
         return None
 
+    def _shelter(self, world: "SimulationWorld", resident: Resident) -> Activity | None:
+        """A walk to the nearest free spot under a roof, to wait there for the weather to pass."""
+        passable = world.passable()
+        taken = {other.destination for other in world.residents.values() if other is not resident}
+        rooms = sorted(
+            (room for room in world.rooms.values() if room.roofed),
+            key=lambda room: (
+                manhattan(resident.tile, (room.x + room.width // 2, room.y + room.height // 2)), room.room_id
+            ),
+        )
+        for room in rooms:
+            spots = sorted(
+                (
+                    (x, y)
+                    for x in range(room.x, room.x + room.width)
+                    for y in range(room.y, room.y + room.height)
+                    if passable((x, y)) and (x, y) not in taken
+                ),
+                key=lambda spot: (manhattan(resident.tile, spot), spot),
+            )
+            for spot in spots[:3]:
+                path = find_path(resident.tile, spot, passable)
+                if path is not None:
+                    return Activity(SHELTER_ACTION, None, path, SHELTER_MINUTES)
+        return None
+
     def _wander(self, world: "SimulationWorld", resident: Resident) -> Activity:
         minutes = world.rng.randint(*WANDER_MINUTES)
         passable = world.passable()
+        # Nobody who is in the dry strolls out into a storm.
+        indoors_only = world.happenings.is_stormy(world) and world.under_roof(resident.tile)
         for _ in range(WANDER_ATTEMPTS):
             target = (
                 resident.x + world.rng.randint(-WANDER_RANGE, WANDER_RANGE),
                 resident.y + world.rng.randint(-WANDER_RANGE, WANDER_RANGE),
             )
-            if not passable(target):
+            if not passable(target) or (indoors_only and not world.under_roof(target)):
                 continue
             path = find_path(resident.tile, target, passable)
             if path is not None:

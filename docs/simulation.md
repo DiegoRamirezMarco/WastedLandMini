@@ -142,8 +142,21 @@ room. An argument's importance rises with the resentment between the two.
   one most missed that has a free post. It is put to them as any job offer is, and they take it
   unless they are talked out of it.
 - **A caravan** leaves a few things on the shop's counter, drawn from its own list.
-- **A storm** lasts some hours. While it does, work done out of doors makes nothing, nobody sets
-  out on a trip, and anyone not under a roof grows more stressed by the minute.
+- **A storm** lasts some hours. While it does, work in the open stops and whoever does it leaves
+  their post, nobody sets out on a trip, and anyone not under a roof grows more stressed by the
+  minute. So people get out of it: taking shelter is one more thing a resident can choose, ahead
+  of anything but work under a roof and a real need. They walk to the nearest free spot under a
+  roof and wait there, free to talk, until it passes. Nobody who is in the dry strolls out.
+- **Raiders** come by night, and give warning like a storm does. With nobody at the gate they
+  walk in and take a share of everything that is everyone's in the kinds of container they go
+  for; what belongs to someone is left. If whoever keeps the gate is at their post, it is theirs
+  to decide and the player's to advise: stand their ground, and the raiders leave with nothing
+  but may leave a wound, less likely on someone armed; or step aside, and they help themselves.
+  Those who learn that someone drove raiders off think the better of them.
+- **The night watch.** A job can keep watch for a kind of event. Its worker goes to hear the
+  evening's bulletin, and if they know such an event is on its way they stay at their post until
+  an hour after it is due, whatever their shift. It goes by what they know: unwarned, they go to
+  bed, and the gate stands empty.
 - **Vermin** get into the pantries by night and eat a share of the food that is everyone's.
 
 ## Wear, repairs and credits
@@ -275,6 +288,10 @@ Everything here is between adults, and nothing happens to anyone who does not wa
 - **Participants** know it. **Witnesses** are residents who are awake (not using something marked
   `unaware`, such as a bed), within `sight_range` tiles and with nothing opaque in between. Walls
   and doors are opaque (`data/terrain.json`), so what happens inside a shack stays inside.
+- **In the dark**, during `dark_hours`, a thing is only witnessed from within `dark_sight_range`,
+  unless it happens in the light: within reach of an object that gives `light`, with no wall in
+  between. So by night what is done by a fire or under a lamp is seen as by day, and what is done
+  away from them is seen by almost nobody. Whoever keeps watch still sees that much further.
 - At the end of a friendly exchange a resident may pass on the most striking fact they know that
   the other does not. That is a **rumor**: the listener's credibility is the teller's, reduced, and
   higher the more the listener trusts the teller. A rumor too weak to believe is ignored.

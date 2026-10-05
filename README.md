@@ -14,12 +14,12 @@ watches, advises and intervenes, but does not control them.
 - Consequences that last: injuries, a clinic, fights you can try to stop, and death.
 - A world beyond the fence: someone goes out to scavenge, is gone for hours, and comes back with
   what stocks the shop and mends the tools, or comes back hurt.
-- A world that does not leave it alone: strangers who ask to stay, caravans, dust storms and
-  vermin in the pantry. A radio gives word of some of it, to whoever listens and whoever they tell.
+- A world that does not leave it alone: strangers who ask to stay, caravans, dust storms to take
+  shelter from, vermin in the pantry, and raiders by night for whoever is on watch to face. A radio gives word of some of it, to whoever listens and whoever they tell.
 - Relationships that deepen: friendships, adults who fall for each other and say so or do not
   dare, couples, affairs kept secret until someone finds out, jealousy and breakups.
 - Day and night over a place that looks salvaged: fires in barrels, lamps by the doors, wrecks
-  and scrap.
+  and scrap. What happens in the dark, away from them, is seen by almost nobody.
 - Close-up interaction view for important conversations and crises.
 - Pixel art: simple bodies with modular faces or optional custom PNG faces.
 - Autonomous residents with needs, personalities, memories and directional relationships.

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from simulation.events.crisis import Crisis
-from simulation.events.world_event import GATE_CHOICES
+from simulation.events.world_event import GATE_CHOICES, RAID_CHOICES
 from simulation.residents.needs import NEED_NAMES
 from simulation.social.relationship import FEELINGS
 from simulation.work.expedition import EXPEDITION_CHOICES
@@ -57,6 +57,8 @@ class OutcomeDefinition:
     expedition: str | None = None
     # What choosing this does about the stranger at the gate: `let_in` or `turn_away`.
     gate: str | None = None
+    # What choosing this does about raiders: `stand_ground` or `give_way`.
+    raid: str | None = None
 
 
 @dataclass(frozen=True)
@@ -123,6 +125,9 @@ def _outcome_from_data(kind: str, outcome_id: str, data: dict[str, Any]) -> Outc
     gate = str(data["gate"]) if "gate" in data else None
     if gate is not None and gate not in GATE_CHOICES:
         raise ValueError(f"Unknown gate choice in {where}: {gate}")
+    raid = str(data["raid"]) if "raid" in data else None
+    if raid is not None and raid not in RAID_CHOICES:
+        raise ValueError(f"Unknown raid choice in {where}: {raid}")
     return OutcomeDefinition(
         outcome_id=outcome_id,
         score=score,
@@ -134,4 +139,5 @@ def _outcome_from_data(kind: str, outcome_id: str, data: dict[str, Any]) -> Outc
         takes_job=bool(data.get("takes_job", False)),
         expedition=expedition,
         gate=gate,
+        raid=raid,
     )

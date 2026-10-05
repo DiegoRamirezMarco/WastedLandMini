@@ -11,7 +11,9 @@ from simulation.knowledge.fact import SOURCE_PARTICIPANT
 from simulation.knowledge.knowledge_system import learn
 from simulation.events.world_event import (
     LET_IN,
+    RAID,
     SPOIL,
+    STAND_GROUND,
     STOCK,
     STRANGER,
     WEATHER,
@@ -29,6 +31,16 @@ if TYPE_CHECKING:
     from simulation.world import SimulationWorld
 
 STRANGER_DECISION = "stranger"
+RAID_DECISION = "raid"
+RAID_IMPORTANCE = 75
+REPELLED_IMPORTANCE = 70
+# Harm that standing up to raiders can do, and how much less likely it is for someone armed.
+RAID_INJURY = (10, 25)
+ARMED_FACTOR = 0.5
+RAID_CAUSE = "plantar cara a unos merodeadores"
+# From this hour a radio's bulletin counts as the evening one, for those who keep watch by night.
+EVENING_HOUR = 20
+EVENING_NOTICE = "evening:"
 BED_USE_ACTION = "sleep"
 ARRIVAL_IMPORTANCE = 60
 TURNED_AWAY_IMPORTANCE = 40
@@ -52,6 +64,9 @@ class WorldEventSystem:
         if world.at_the_gate is not None and not self._being_decided(world):
             # Nobody is left to answer: whoever was waiting gives up and goes.
             world.at_the_gate = None
+        if world.under_raid is not None and not any(d.kind == RAID_DECISION for d in world.decisions.values()):
+            # Nobody is left in their way.
+            self.answer_raid(world, None, "")
         settings = world.registries.world_events
         now = world.clock.total_minutes
         for upcoming in [each for each in world.upcoming if each.at <= now]:
@@ -88,6 +103,8 @@ class WorldEventSystem:
         knows it can pass on. Nobody knows what is coming just because it is.
         """
         world.notices[f"{BULLETIN_NOTICE}{listener.resident_id}"] = world.clock.day
+        if world.clock.hour >= EVENING_HOUR:
+            world.notices[f"{EVENING_NOTICE}{listener.resident_id}"] = world.clock.day
         for upcoming in world.upcoming:
             definition = world.registries.world_events.events.get(upcoming.event_id)
             if definition is None or not definition.forecast:
@@ -124,9 +141,15 @@ class WorldEventSystem:
                 return upcoming
         return None
 
-    def radio_to_check(self, world: "SimulationWorld", resident: Resident) -> str | None:
-        """A radio set this resident has yet to listen to today, the nearest one. None if they have, or there is none."""
-        if world.notices.get(f"{BULLETIN_NOTICE}{resident.resident_id}") == world.clock.day:
+    def radio_to_check(self, world: "SimulationWorld", resident: Resident, evening: bool = False) -> str | None:
+        """A radio set this resident has yet to listen to today, the nearest one. None if they have, or there is none.
+
+        With `evening`, it is the evening's bulletin they have yet to hear, and only once it is on.
+        """
+        if evening and world.clock.hour < EVENING_HOUR:
+            return None
+        notice = EVENING_NOTICE if evening else BULLETIN_NOTICE
+        if world.notices.get(f"{notice}{resident.resident_id}") == world.clock.day:
             return None
         sets = [
             placed
@@ -151,6 +174,65 @@ class WorldEventSystem:
         """Whoever is waiting at the gate to be let in."""
         return next(
             (n for n in world.registries.world_events.newcomers if n.newcomer_id == world.at_the_gate), None
+        )
+
+    def answer_raid(self, world: "SimulationWorld", keeper: Resident | None, choice: str) -> None:
+        """Carry out what whoever was on watch decided about the raiders. With nobody there, they help themselves."""
+        definition = world.registries.world_events.events.get(world.under_raid or "")
+        world.under_raid = None
+        if definition is None:
+            return
+        if keeper is None or choice != STAND_GROUND:
+            self._loot(world, definition)
+            return
+        room = world.room_at(keeper.tile)
+        world.emit_event(
+            DomainEvent(
+                "raid_repelled",
+                REPELLED_IMPORTANCE,
+                f"{keeper.name} planta cara a unos merodeadores y los echa",
+                [keeper.resident_id],
+                location_id=room.room_id if room is not None else None,
+            ),
+            at=keeper.tile,
+            fact_text=f"{keeper.name} echó a unos merodeadores",
+        )
+        armed = world.health.weapon_of(world, keeper)[0] > 1.0
+        if world.event_rng.random() < definition.danger * (ARMED_FACTOR if armed else 1.0):
+            world.health.hurt(world, keeper, world.event_rng.randint(*RAID_INJURY), "cut", RAID_CAUSE)
+
+    def _loot(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
+        taken = 0
+        for kind in definition.containers:
+            for _, inventory in containers_of_kind(world, kind):
+                for item in list(inventory.items):
+                    if item.owner_id is None:
+                        taken += inventory.take_units(item.instance_id, int(item.quantity * definition.fraction))
+        said = f"se llevan {taken} cosas" if taken else "no encuentran nada que llevarse"
+        tile = self._arrival_tile(world)
+        world.emit_event(
+            DomainEvent("raid", RAID_IMPORTANCE, f"{definition.text}: {said}"),
+            at=tile,
+            fact_text="unos merodeadores entraron de noche",
+        )
+
+    def _raid(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
+        keeper = self._keeper(world, definition)
+        world.under_raid = definition.event_id
+        if keeper is None or world.interventions.ask(world, keeper, RAID_DECISION) is None:
+            self.answer_raid(world, None, "")
+
+    def _keeper(self, world: "SimulationWorld", definition: WorldEventDefinition) -> Resident | None:
+        """Whoever does the job an event asks for and is at their post, free to deal with it."""
+        return next(
+            (
+                resident
+                for resident in world.residents.values()
+                if resident.job_id == definition.asks
+                and world.work.on_duty(world, resident)
+                and world.interventions.pending_for(world, resident.resident_id) is None
+            ),
+            None,
         )
 
     def answer_gate(self, world: "SimulationWorld", choice: str) -> None:
@@ -211,6 +293,8 @@ class WorldEventSystem:
             )
         if definition.kind == WEATHER:
             return world.weather is None
+        if definition.kind == RAID:
+            return world.under_raid is None and RAID_DECISION in world.registries.decisions
         return bool(containers_of_kind(world, definition.container or ""))
 
     def _unseen(self, world: "SimulationWorld") -> list[Newcomer]:
@@ -258,19 +342,12 @@ class WorldEventSystem:
                     )
         elif definition.kind == SPOIL:
             self._spoil(world, definition)
+        elif definition.kind == RAID:
+            self._raid(world, definition)
 
     def _stranger(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
         newcomer = world.event_rng.choice(self._unseen(world))
-        keeper = next(
-            (
-                resident
-                for resident in world.residents.values()
-                if resident.job_id == definition.asks
-                and world.work.on_duty(world, resident)
-                and world.interventions.pending_for(world, resident.resident_id) is None
-            ),
-            None,
-        )
+        keeper = self._keeper(world, definition)
         if keeper is None:
             # They may try again another day: nobody has seen them.
             world.emit_event(

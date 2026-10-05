@@ -60,6 +60,9 @@ class JobDefinition:
     expedition: ExpeditionRule | None = None
     # Whether the work is done in the open, where bad weather stops it.
     outdoors: bool = False
+    # Kind of world event this job keeps watch for: a worker who knows one is on its way stays at
+    # the post until it has come, whatever their shift.
+    watch_for: str | None = None
 
 
 def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition:
@@ -110,4 +113,5 @@ def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition
         needed=int(data.get("needed", 1)),
         expedition=expedition_rule_from_data(job_id, data["expedition"]) if "expedition" in data else None,
         outdoors=bool(data.get("outdoors", False)),
+        watch_for=str(data["watch_for"]) if "watch_for" in data else None,
     )

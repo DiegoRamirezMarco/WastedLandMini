@@ -7,7 +7,12 @@
     "critical_max": 100
   },
   "perception": {
-    "sight_range": 8
+    "sight_range": 8,
+    "dark_hours": [
+      22,
+      5
+    ],
+    "dark_sight_range": 3
   },
   "reactions": {
     "argument_started": {
@@ -87,6 +92,21 @@
     },
     "tryst_started": {
       "secret": 2
+    },
+    "raid_repelled": {
+      "blame_target": "actor",
+      "blame": {
+        "affection": 6.0,
+        "trust": 8.0
+      },
+      "needs": {
+        "stress": 3.0
+      }
+    },
+    "raid": {
+      "needs": {
+        "stress": 8.0
+      }
     }
   }
 }

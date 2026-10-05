@@ -31,9 +31,14 @@ FULL_REACTION_IMPORTANCE = 50.0
 
 
 def witnesses_of(world: "SimulationWorld", at: Tile, exclude: Collection[str] = ()) -> list[str]:
-    """Residents who can see what happens at `at`: awake, close enough, nothing in the way."""
+    """Residents who can see what happens at `at`: awake, close enough, nothing in the way.
+
+    In the dark only what is near is seen, unless a fire or a lamp lights it.
+    """
     perception = world.registries.event_settings.get("perception", {})
     sight_range = int(perception.get("sight_range", DEFAULT_SIGHT_RANGE))
+    if world.is_dark() and not world.is_lit(at):
+        sight_range = min(sight_range, int(perception.get("dark_sight_range", sight_range)))
     opaque = world.opaque()
     return [
         resident.resident_id

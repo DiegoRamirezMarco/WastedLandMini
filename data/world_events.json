@@ -120,6 +120,26 @@
       "category": "food",
       "fraction": 0.2,
       "text": "Las ratas entran en la despensa"
+    },
+    "raid": {
+      "kind": "raid",
+      "chance_per_day": 0.12,
+      "hours": [
+        22,
+        24
+      ],
+      "cooldown_days": 5,
+      "lead_hours": 4,
+      "forecast": "merodeadores por los alrededores",
+      "asks": "guard",
+      "containers": [
+        "pantry",
+        "shop_counter",
+        "scrap_pile"
+      ],
+      "fraction": 0.25,
+      "danger": 0.5,
+      "text": "Unos merodeadores entran de noche"
     }
   }
 }

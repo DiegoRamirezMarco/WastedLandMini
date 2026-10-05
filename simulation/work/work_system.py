@@ -30,6 +30,10 @@ WORK_EVENT_IMPORTANCE = 5
 # Time spent loading or unloading at the end of a haul.
 HAUL_MINUTES = 2
 MINUTES_PER_DAY = 24 * 60
+# How far ahead someone who keeps watch stays up for what they know is coming, and how long after.
+WATCH_AHEAD_MINUTES = 8 * 60
+WATCH_AFTER_MINUTES = 60
+WATCH_NOTICE = "watch:"
 
 
 def minutes_left_in_shift(job: JobDefinition, hour: int, minute: int) -> int:
@@ -71,10 +75,18 @@ class WorkSystem:
         return (world.clock.day - 1) % world.registries.economy.week_days == resident.day_off
 
     def shift_minutes_left(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> int:
-        """Minutes this resident still has to work right now. 0 off shift and on their day off."""
-        if self.is_day_off(world, resident):
-            return 0
-        return minutes_left_in_shift(job, world.clock.hour, world.clock.minute)
+        """Minutes this resident still has to work right now. 0 off shift and on their day off.
+
+        Someone whose job is to keep watch, and who knows what they watch for is on its way, is on
+        duty until it has come and gone, shift or no shift.
+        """
+        shift = 0 if self.is_day_off(world, resident) else minutes_left_in_shift(job, world.clock.hour, world.clock.minute)
+        if job.watch_for is None:
+            return shift
+        coming = world.happenings.expected(world, resident, job.watch_for, within=WATCH_AHEAD_MINUTES)
+        if coming is None:
+            return shift
+        return max(shift, coming.at + WATCH_AFTER_MINUTES - world.clock.total_minutes)
 
     def tool_of(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> ItemInstance | None:
         """The working tool for this job that a resident has on them, if the job uses one."""
@@ -99,6 +111,9 @@ class WorkSystem:
             return None
         if not world.health.is_fit_for_work(resident):
             return None
+        if job.outdoors and world.happenings.is_stormy(world):
+            # Work in the open waits for the weather, and so does whoever does it.
+            return None
         remaining = self.shift_minutes_left(world, resident, job)
         if job.produces is not None:
             errand = hauling.errand(world, resident, job.produces, remaining)
@@ -109,12 +124,17 @@ class WorkSystem:
             errand = world.expeditions.errand(world, resident)
             if errand is not None:
                 return ScoredAction(HAUL_ACTION, WORK_SCORE, errand)
+        radio_id = None
+        if leaving and remaining > 0:
+            # Nobody who is about to go out there leaves without hearing what the radio has to say.
+            radio_id = world.happenings.radio_to_check(world, resident)
+        elif job.watch_for is not None and not self.is_day_off(world, resident):
+            # Whoever keeps watch hears the evening's bulletin before turning in, in case it is a night to stay up.
+            radio_id = world.happenings.radio_to_check(world, resident, evening=True)
+        if radio_id is not None:
+            return ScoredAction(world.definition_of(world.interactables[radio_id]).use.action, WORK_SCORE, radio_id)
         if remaining <= 0:
             return None
-        radio_id = world.happenings.radio_to_check(world, resident) if leaving else None
-        if radio_id is not None:
-            # Nobody who is about to go out there leaves without hearing what the radio has to say.
-            return ScoredAction(world.definition_of(world.interactables[radio_id]).use.action, WORK_SCORE, radio_id)
         return ScoredAction(WORK_ACTION, WORK_SCORE, resident.post_id)
 
     def plan(
@@ -134,7 +154,7 @@ class WorkSystem:
         """Spend one minute of a shift at the post."""
         job = self.job_of(world, resident)
         placed = world.interactables.get(activity.target_id or "")
-        if job is None or placed is None:
+        if job is None or placed is None or (job.outdoors and world.happenings.is_stormy(world)):
             self._leave(resident)
             return
         remaining = activity.minutes_left if activity.using else self.shift_minutes_left(world, resident, job)
@@ -153,6 +173,7 @@ class WorkSystem:
             resident.current_action = WORK_ACTION
             self._face(resident, placed)
             room = world.room_at(resident.tile)
+            self._say_if_watching(world, resident, job)
             world.emit_event(
                 DomainEvent(
                     "work_started",
@@ -204,6 +225,24 @@ class WorkSystem:
         if activity.minutes_left <= 0:
             self._leave(resident)
 
+    def _say_if_watching(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> None:
+        """Say, once a night, that someone is at their post out of hours because of what they know is coming."""
+        if job.watch_for is None or minutes_left_in_shift(job, world.clock.hour, world.clock.minute) > 0:
+            return
+        key = f"{WATCH_NOTICE}{resident.resident_id}"
+        if world.notices.get(key) == world.clock.day:
+            return
+        world.notices[key] = world.clock.day
+        world.emit_event(
+            DomainEvent(
+                "night_watch",
+                WORK_EVENT_IMPORTANCE + 20,
+                f"{resident.name} se queda de guardia esta noche por lo que anuncia la radio",
+                [resident.resident_id],
+            ),
+            at=resident.tile,
+        )
+
     def _leave(self, resident: Resident) -> None:
         resident.activity = None
         resident.current_action = "idle"
@@ -222,9 +261,6 @@ class WorkSystem:
         Raw material is taken from what the worker has fetched.
         """
         rule = job.produces
-        if job.outdoors and world.happenings.is_stormy(world):
-            # Nothing gets done in the open until the weather passes.
-            return True
         if rule.into == INTO_STATION:
             target = world.containers.get(placed.object_id)
             full = target is None or target.count(rule.item) >= rule.max_stock

@@ -150,12 +150,22 @@ settlement is created, in `SimulationWorld.demo_world`.
     `"outdoors": true` makes nothing while it lasts.
   - `spoil`: removes a `fraction` of each shared stack of `category` in containers of kind
     `container`.
+  - `raid`: takes a `fraction` of each shared stack in the kinds of container listed in
+    `containers`, unless the worker of the job in `asks` is on duty and stands their ground, which
+    hurts them with a chance of `danger`.
 - Any event can give warning with `"lead_hours": 6` and `"forecast": "una tormenta de polvo"`,
   the words a radio uses for it. It is then settled that many hours before the `hours` it keeps to,
   which must not reach back before midnight. A `weather` event's `danger` is added to the trip of
   anyone it catches outside.
 - An object's use is listening to a radio with `"radio": true`, and an item tagged `radio` is one
   too when it is used.
+- A job with `"watch_for": "raid"` keeps watch for that kind of event: its worker hears the evening
+  bulletin and, knowing one is coming, stays at the post until it has.
+- In `data/events.json`, `perception` also takes `dark_hours` and `dark_sight_range`: when it is
+  dark, and how far a thing is seen then if nothing lights it. Leave `dark_hours` out and it is
+  never dark.
+- The game also opens `raid` by ID, and an outcome's `"raid"` (`stand_ground` or `give_way`) is
+  what is done about the raiders.
 - In `data/decisions.json` the game opens `stranger` by ID. Its texts may use `{visitor}`, and an
   outcome's `"gate"` (`let_in` or `turn_away`) is what is done about them.
 - A map's `arrivals` lists the tiles just inside the gate where someone let in first stands.

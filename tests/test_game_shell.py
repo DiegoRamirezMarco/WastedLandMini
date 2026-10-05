@@ -12,7 +12,7 @@ from graphics.shelf_display import displayed_goods
 from scenes.global_view import NOBODY_NEEDS_ATTENTION, ROOFS_OFF, SUGGESTION_REFUSED, ZOOM_TILE_SIZES
 from settings import GAME_MINUTES_PER_REAL_SECOND, SCALE, TILE_SIZE
 from simulation.events.event import DomainEvent
-from simulation.events.world_event import Weather
+from simulation.events.world_event import Upcoming, Weather
 from simulation.health.injury import Injury
 from simulation.residents.activity import Activity
 from ui.inventory_view import condition_color
@@ -927,6 +927,35 @@ class GameShellTests(unittest.TestCase):
             view.render()
         self.assertIn("olga", view.hitboxes)
         self.assertEqual(describe_job(world, world.residents["olga"]), "Sin trabajo")
+
+    def test_raiders_are_put_to_the_player_and_shelter_is_put_into_words(self) -> None:
+        self._make_everyone_get_along()
+        view, world = self.game.global_view, self.game.world
+        lucia, tomas = world.residents["lucia"], world.residents["tomas"]
+        lucia.activity = Activity("shelter", path=[(7, 9)], minutes_left=90)
+        self.assertEqual(describe_action(world, lucia), "corre a resguardarse")
+        lucia.activity = Activity("shelter", minutes_left=90, using=True)
+        self.assertEqual(describe_action(world, lucia), "se resguarda del mal tiempo")
+
+        world.clock.day, world.clock.hour, world.clock.minute = 2, 22, 58
+        world.happened = {event_id: 2 for event_id in world.registries.world_events.events}
+        tomas.activity = Activity("work", "guard_post", minutes_left=300, using=True)
+        world.upcoming.append(Upcoming("raid", world.clock.total_minutes + 1))
+        world.step(1)
+        self.assertEqual([decision.kind for decision in world.decisions.values()], ["raid"])
+        self.game.update_music()
+        self.assertEqual(self.game.audio.track, "tension")
+        self._key(pygame.K_TAB)
+        interaction = self.game.interaction_view
+        self.assertEqual(interaction.decision.resident_id, "tomas")
+        self.game.active_scene.render()
+        self._key(pygame.K_3)
+        self.assertIn("Apártate, no merece la pena", interaction.result)
+        self.assertIn(interaction.expression, ("angry", "sad"))
+        self._key(pygame.K_SPACE)
+        view.centre_on_resident("tomas")
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
 
     # --- Atmosphere ---
 

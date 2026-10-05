@@ -58,6 +58,10 @@ Event types emitted so far:
 | `radio_bulletin` | A resident is the first to hear on a radio what is on its way | 35 |
 | `stayed_in` | A resident who knows a storm is coming does not leave on a trip (once a day) | 20 |
 | `caught_out` | A storm rises while a resident is outside the settlement | 45 |
+| `night_watch` | A guard who knows raiders are about takes up their post out of hours (once a night) | 25 |
+| `raiders_at_gate` | Raiders reach a gate that is kept, and the guard waits for advice | 65 |
+| `raid_repelled` | The guard stands their ground and the raiders leave | 70 |
+| `raid` | Raiders walk in and take what they can | 75 |
 | `crisis_resolved` | The resident decides what to do | Same as the crisis |
 
 Every event carries its participants, its witnesses, the room it happened in (if any) and a

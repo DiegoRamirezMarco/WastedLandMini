@@ -43,7 +43,11 @@
     "food_spoiled": "missing",
     "radio_bulletin": "whisper",
     "caught_out": "alert",
-    "stayed_in": "click"
+    "stayed_in": "click",
+    "raiders_at_gate": "alert",
+    "raid": "theft",
+    "raid_repelled": "resolve",
+    "night_watch": "click"
   },
   "music": {
     "tracks": {

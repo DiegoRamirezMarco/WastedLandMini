@@ -98,7 +98,8 @@
     "per_minute": {
       "social": -0.04
     },
-    "priority": 3
+    "priority": 3,
+    "watch_for": "raid"
   },
   "medic": {
     "name": "Enfermería",

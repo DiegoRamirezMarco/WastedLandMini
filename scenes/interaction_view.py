@@ -26,6 +26,7 @@ OUTCOME_EXPRESSIONS = {
     "confront": "angry", "talk_it_out": "neutral", "cool_off": "sad", "fight": "angry", "walk_away": "sad",
     "take": "happy", "stay": "neutral", "confess": "happy", "keep_quiet": "sad", "break_up": "sad",
     "push_on": "happy", "turn_back": "sad", "let_in": "happy", "turn_away": "angry",
+    "stand_ground": "angry", "give_way": "sad",
 }
 # Face a resident wears while they make up their mind, by kind of decision. Anger for any other.
 DECISION_EXPRESSIONS = {"job_offer": "neutral", "confession": "neutral", "breakup": "sad", "risky_find": "neutral",

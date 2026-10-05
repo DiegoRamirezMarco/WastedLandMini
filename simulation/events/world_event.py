@@ -8,11 +8,16 @@ STRANGER = "stranger"
 STOCK = "stock"
 WEATHER = "weather"
 SPOIL = "spoil"
-KINDS = (STRANGER, STOCK, WEATHER, SPOIL)
+RAID = "raid"
+KINDS = (STRANGER, STOCK, WEATHER, SPOIL, RAID)
 # What whoever answers the gate can do about a stranger.
 LET_IN = "let_in"
 TURN_AWAY = "turn_away"
 GATE_CHOICES = (LET_IN, TURN_AWAY)
+# What whoever is on watch can do about raiders.
+STAND_GROUND = "stand_ground"
+GIVE_WAY = "give_way"
+RAID_CHOICES = (STAND_GROUND, GIVE_WAY)
 
 
 @dataclass(frozen=True)
@@ -38,8 +43,10 @@ class WorldEventDefinition:
     # Days that must pass before it can happen again.
     cooldown_days: int = 1
     text: str = ""
-    # stranger: the job whose worker on duty answers the gate.
+    # stranger and raid: the job whose worker on duty answers the gate, or stands in the way.
     asks: str | None = None
+    # raid: the kinds of container the raiders take from, a `fraction` of each shared stack.
+    containers: tuple[str, ...] = ()
     # stock: the kind of container that receives things, how many, and which, by weight.
     # spoil: the kind of container that loses them.
     container: str | None = None
@@ -55,6 +62,7 @@ class WorldEventDefinition:
     stress_per_minute: float = 0.0
     end_text: str = ""
     # weather: how much likelier it makes whoever it catches outside the settlement to come back hurt.
+    # raid: the chance that whoever stands their ground is hurt doing it.
     danger: float = 0.0
     # Hours between the event being on its way and its happening, in which a radio can give word of
     # it, and how the radio puts it: "anuncian ...". With no lead it comes unannounced.
@@ -124,6 +132,7 @@ def world_event_settings_from_data(data: dict[str, Any]) -> WorldEventSettings:
             text=str(values.get("text", "")),
             asks=str(values["asks"]) if "asks" in values else None,
             container=str(values["container"]) if "container" in values else None,
+            containers=tuple(str(kind) for kind in values.get("containers", [])),
             count=_pair(values.get("count"), (0, 0)),
             items=tuple((str(entry["item"]), float(entry.get("weight", 1.0))) for entry in values.get("items", [])),
             category=str(values["category"]) if "category" in values else None,

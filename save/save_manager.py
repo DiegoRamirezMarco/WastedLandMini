@@ -7,7 +7,7 @@ from simulation.events.crisis import Crisis
 from simulation.events.decision import Decision, DecisionOption
 from simulation.events.event import DomainEvent
 from simulation.events.world_event import Upcoming, Weather
-from simulation.events.world_event_system import STRANGER_DECISION
+from simulation.events.world_event_system import RAID_DECISION, STRANGER_DECISION
 from simulation.health.injury import Death, Injury
 from simulation.items.inventory import Inventory
 from simulation.items.item import ItemInstance
@@ -44,12 +44,13 @@ FIRST_ECONOMY_VERSION = 8
 # Version 11 added trips outside and the cart they leave from, and made the scrap piles hold scrap.
 # Version 12 added what happens from outside: weather, the gate, and beds for whoever is let in.
 # Version 13 added events that are on their way, and the settlement's radio to hear of them.
+# Version 14 added raids. A save from before simply has never had one.
 LAST_MAP_CHANGE_VERSION = 13
 FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 13
+    CURRENT_VERSION = 14
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -70,6 +71,7 @@ class SaveManager:
             "weather": vars(world.weather) if world.weather is not None else None,
             "upcoming": [vars(upcoming) for upcoming in world.upcoming],
             "at_the_gate": world.at_the_gate,
+            "under_raid": world.under_raid,
             "newcomers_seen": list(world.newcomers_seen),
             "map_id": world.map_id,
             "interactables": [
@@ -395,6 +397,10 @@ class SaveManager:
         # Whoever waits at the gate does so only while someone is deciding about them.
         deciding = any(decision.kind == STRANGER_DECISION for decision in world.decisions.values())
         world.at_the_gate = waiting if waiting in known and deciding else None
+        raid = _text_or_none(data.get("under_raid"))
+        # Raiders are only at the gate while someone is deciding what to do about them.
+        facing = any(decision.kind == RAID_DECISION for decision in world.decisions.values())
+        world.under_raid = raid if raid in events.events and facing else None
 
     def _restore_decisions(self, world: SimulationWorld, data: dict[str, Any]) -> None:
         world.decision_count = int(data.get("decision_count", 0))

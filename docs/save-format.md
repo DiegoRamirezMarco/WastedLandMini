@@ -4,17 +4,18 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 13 (current)
+## Version 14 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `13` |
+| `version` | `14` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
 | `happened`, `weather` | Day each world event last happened; the weather now, as `event_id` and `until` |
 | `upcoming` | World events on their way: `event_id`, `at`, and the `fact_id` of the word a radio gave of it |
 | `at_the_gate`, `newcomers_seen` | ID of the newcomer waiting for an answer; IDs of all who have come before |
+| `under_raid` | ID of the raid at the gate while whoever is on watch decides what to do |
 | `map_id` | ID of the map in `data/maps/` |
 | `interactables` | Placed objects: `id`, `kind`, tile `x` and `y` |
 | `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries` |
@@ -52,6 +53,8 @@ when loading.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 13** had no raids, and has simply never had one. Raiders at the gate whom nobody is
+  deciding about are dropped.
 - **Version 12** had nothing on its way and no radio in the cantina. It gains the radio.
 - An event on its way that is no longer defined is dropped. One whose word nobody has any more
   is kept, and is simply unheard again.

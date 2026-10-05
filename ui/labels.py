@@ -2,6 +2,7 @@
 
 from simulation.items.item import ItemInstance
 from simulation.items.item_system import FOOD_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
+from simulation.residents.activity import SHELTER_ACTION
 from simulation.residents.resident import Resident
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.work.job import JobDefinition
@@ -159,6 +160,8 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
         verb = "come" if definition.category == FOOD_CATEGORY else "pasa un rato con"
         return f"{verb} {definition.article} {definition.name}"
     placed = world.interactables.get(activity.target_id) if activity.target_id else None
+    if activity.action == SHELTER_ACTION:
+        return "se resguarda del mal tiempo" if not activity.path else "corre a resguardarse"
     if placed is None:
         if any(decision.resident_id == resident.resident_id for decision in world.decisions.values()):
             return "le da vueltas a algo"

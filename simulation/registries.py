@@ -6,7 +6,7 @@ from typing import Any
 
 from simulation.economy.settings import EconomySettings, economy_settings_from_data
 from simulation.events.decision import DecisionDefinition, decision_definition_from_data
-from simulation.events.world_event import STRANGER, WorldEventSettings, world_event_settings_from_data
+from simulation.events.world_event import RAID, STRANGER, WorldEventSettings, world_event_settings_from_data
 from simulation.health.injury import InjuryDefinition, injury_definition_from_data
 from simulation.items.custom_content import load_custom_items
 from simulation.items.registry import ItemRegistry
@@ -204,6 +204,10 @@ class BuiltInRegistries:
             if interaction.dialogue is not None and interaction.dialogue not in self.dialogue:
                 raise ValueError(f"Interaction {interaction_id} uses unknown dialogue: {interaction.dialogue}")
         for job_id, job in self.jobs.items():
+            if job.watch_for is not None and not any(
+                event.kind == job.watch_for for event in self.world_events.events.values()
+            ):
+                raise ValueError(f"Job {job_id} keeps watch for a kind of event that never happens: {job.watch_for}")
             station = self.interactables.find(job.station)
             if station is None:
                 raise ValueError(f"Job {job_id} is worked at unknown object kind: {job.station}")
@@ -249,9 +253,13 @@ class BuiltInRegistries:
             if unknown:
                 raise ValueError(f"Newcomer {newcomer.newcomer_id} has unknown personality traits: {sorted(unknown)}")
         for event_id, event in self.world_events.events.items():
-            if event.kind == STRANGER:
+            if event.kind in (STRANGER, RAID):
                 if event.asks not in self.jobs:
                     raise ValueError(f"World event {event_id} asks an unknown job to answer the gate: {event.asks}")
+                for kind in event.containers:
+                    holder = self.interactables.find(kind)
+                    if holder is None or not holder.container:
+                        raise ValueError(f"World event {event_id} names {kind}, which is not a container kind")
                 continue
             holder = self.interactables.find(event.container) if event.container is not None else None
             if event.container is not None and (holder is None or not holder.container):

@@ -150,10 +150,10 @@ themselves work, caravans and storms come and go, nobody is ever let in without 
 the settlement still feeds everyone.
 
 Still open here:
-- Nobody takes shelter from a storm: it wears on them and they carry on.
 - A stranger is a name at the gate until let in. Nobody sees them wait, and nobody else has a say.
-- Nothing hostile comes from outside: no raids, and nothing a guard on duty could drive off.
 - Nobody ever leaves the settlement for good.
+
+S13 closed the rest: residents take shelter from a storm, and raiders come by night.
 
 ### S12 — Word from outside — done
 - World events that give warning: settled hours before they come
@@ -167,11 +167,28 @@ scavenger who knows stays in and the one who does not is caught out, and word of
 has already happened is no longer passed on.
 
 Still open here:
-- Only the scavenger does anything about a forecast. Nobody else brings anything in, takes
-  shelter or goes to meet a caravan.
+- Only the scavenger and the guard do anything about a forecast. Nobody brings anything in ahead
+  of a storm or goes to meet a caravan.
 - The radio is never wrong, and says nothing but what is on its way: no voices, no music, no
   other settlements.
 - The player sees a forecast only when a resident hears it.
+
+### S13 — Dark and danger — done
+- Darkness that limits what is seen: at night only what is close, or lit by a fire or a lamp
+- Shelter: nobody stays out in a storm who can get under a roof, and work in the open stops
+- Raiders by night, who take what they can unless someone stands in their way
+- A night watch: a guard who has heard raiders are about stays at the gate past their shift
+
+Done when: by night a thing is witnessed only from close by or in the light; a storm empties the
+open ground and the garden; raiders who find nobody at the gate carry off a share of what is
+everyone's; and a guard who heard of them on the radio is there when they come, with the player
+given a say in whether to stand or step aside.
+
+Still open here:
+- Raiders only take things. They never hurt anyone but the guard, and never come twice in a night.
+- Only the guard keeps watch. Nobody else can be roused to help, and nobody takes a turn.
+- The dark hides what happens but changes nothing else: nobody is afraid of it or stays in.
+- Nobody lights or puts out a lamp: they burn all night by themselves.
 
 ## Presentation track
 
@@ -219,10 +236,8 @@ instead of crashing.
 - A minimap, and jumping to whoever needs attention
 - More wear and scrap: the place should look salvaged
 
-Still open here:
-- Darkness is only seen. It does not yet shorten how far residents see, and nobody lights or puts
-  out a lamp: that belongs to the simulation track.
-- The minimap is always on screen and cannot be put away.
+Still open here: the minimap is always on screen and cannot be put away. (S13 made darkness
+matter: it now limits what residents see.)
 
 ### P7 — The economy on screen (needs S8) — done
 - A job board: who holds which post, which are vacant, and suggesting who should do what

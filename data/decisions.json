@@ -435,5 +435,62 @@
         }
       }
     ]
+  },
+  "raid": {
+    "event_type": "raiders_at_gate",
+    "window_minutes": 20,
+    "cooldown_minutes": 0,
+    "anger_threshold": 0,
+    "importance": 65,
+    "text": "{name} ve llegar a unos merodeadores y tiene que decidir",
+    "prompt": "Vienen varios, y no traen buenas intenciones. ¿Les planto cara?",
+    "outcomes": {
+      "stand_ground": {
+        "score": {
+          "bias": -0.1,
+          "courage": 0.6,
+          "aggression": 0.3,
+          "health": 0.3
+        },
+        "raid": "stand_ground",
+        "text": "{name} les planta cara"
+      },
+      "give_way": {
+        "score": {
+          "bias": 0.4,
+          "stress": 0.3,
+          "empathy": 0.1
+        },
+        "raid": "give_way",
+        "needs": {
+          "stress": 15
+        },
+        "text": "{name} se aparta y les deja hacer",
+        "memory": "Dejé pasar a unos merodeadores."
+      }
+    },
+    "options": [
+      {
+        "id": "fight",
+        "text": "Plántales cara",
+        "influence": {
+          "stand_ground": 0.5,
+          "give_way": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "hide",
+        "text": "Apártate, no merece la pena",
+        "influence": {
+          "give_way": 0.5,
+          "stand_ground": -0.3
+        }
+      }
+    ]
   }
 }
