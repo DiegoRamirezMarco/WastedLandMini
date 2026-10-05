@@ -18,12 +18,20 @@ class ItemIcons:
         self._assets = assets
         self._custom = custom
         self._cache: dict[str, pygame.Surface] = {}
+        self._small: dict[str, pygame.Surface] = {}
 
     def icon(self, item_id: str) -> pygame.Surface:
         """Return the 16×16 icon of an item, or the placeholder if it has none."""
         if item_id not in self._cache:
             self._cache[item_id] = self._find(item_id)
         return self._cache[item_id]
+
+    def small(self, item_id: str) -> pygame.Surface:
+        """The icon at half size, for things seen on the map: in someone's hands or on a shelf."""
+        if item_id not in self._small:
+            half = (ICON_SIZE[0] // 2, ICON_SIZE[1] // 2)
+            self._small[item_id] = pygame.transform.scale(self.icon(item_id), half)
+        return self._small[item_id]
 
     def _find(self, item_id: str) -> pygame.Surface:
         if f"{item_id}.png" in self._assets.files("sprites/items"):

@@ -14,11 +14,11 @@
   "rows": [
     "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
     "f,,..,........,........,.........,,,.....,....,.......,....f",
-    "f.#########,.,.,..........##########.,..##############.....f",
-    "f,#=======#,..........,...#________#..,.#============#.,,..f",
-    "f,#=======#.......,,,.....#________#....#============#..,..f",
-    "f,#=======#.......,,,....,#________#..,.#============#.....f",
-    "f.#=======#...,....,......#________#....#============#....,f",
+    "f.#########,.,#########...##########.,..##############.....f",
+    "f,#=======#,..#=======#...#________#..,.#============#.,,..f",
+    "f,#=======#...#=======#...#________#....#============#..,..f",
+    "f,#=======#...#=======#..,#________#..,.#============#.....f",
+    "f.#=======#...####+####...#________#....#============#....,f",
     "f.####+####.,.............####+#####..,.#============#....,f",
     "f.,,,,.....,.........,...........,..,,,.#============#.....f",
     "f,.,,,.....,....,......,............,,,.######+#######....,f",
@@ -59,6 +59,7 @@
     {"id": "garden", "name": "huerto", "x": 40, "y": 15, "width": 12, "height": 8, "privacy": 0.0},
     {"id": "gate", "name": "puerta", "x": 24, "y": 29, "width": 11, "height": 6, "privacy": 0.0},
     {"id": "clinic", "name": "enfermería", "x": 27, "y": 22, "width": 7, "height": 4, "privacy": 0.5, "roofed": true},
+    {"id": "shop", "name": "tienda", "x": 15, "y": 3, "width": 7, "height": 3, "privacy": 0.2, "roofed": true},
     {"id": "graveyard", "name": "cementerio", "x": 53, "y": 26, "width": 6, "height": 8, "privacy": 0.0}
   ],
   "objects": [
@@ -108,14 +109,54 @@
     {"id": "clinic_bed_1", "kind": "clinic_bed", "x": 27, "y": 22},
     {"id": "clinic_bed_2", "kind": "clinic_bed", "x": 29, "y": 22},
     {"id": "medicine_cabinet", "kind": "medicine_cabinet", "x": 33, "y": 22},
-    {"id": "bed_6", "kind": "bed", "x": 7, "y": 24}
+    {"id": "bed_6", "kind": "bed", "x": 7, "y": 24},
+    {"id": "bed_7", "kind": "bed", "x": 3, "y": 5},
+    {"id": "bed_8", "kind": "bed", "x": 9, "y": 5},
+    {"id": "shop_counter", "kind": "shop_counter", "x": 17, "y": 3},
+    {"id": "shop_shelf_1", "kind": "shelf", "x": 15, "y": 3},
+    {"id": "shop_shelf_2", "kind": "shelf", "x": 20, "y": 3},
+    {"id": "handcart", "kind": "handcart", "x": 30, "y": 32},
+    {"id": "radio_set", "kind": "radio_set", "x": 52, "y": 8},
+    {"id": "bed_9", "kind": "bed", "x": 3, "y": 26},
+    {"id": "bed_10", "kind": "bed", "x": 7, "y": 26},
+    {"id": "bed_11", "kind": "bed", "x": 13, "y": 26},
+    {"id": "lamp_dormitory", "kind": "lamp", "x": 8, "y": 8},
+    {"id": "lamp_shop", "kind": "lamp", "x": 20, "y": 7},
+    {"id": "lamp_storehouse", "kind": "lamp", "x": 32, "y": 8},
+    {"id": "lamp_cantina", "kind": "lamp", "x": 48, "y": 10},
+    {"id": "lamp_clinic", "kind": "lamp", "x": 32, "y": 27},
+    {"id": "lamp_workshop", "kind": "lamp", "x": 18, "y": 29},
+    {"id": "lamp_south_house", "kind": "lamp", "x": 7, "y": 29},
+    {"id": "lamp_gate_west", "kind": "lamp", "x": 26, "y": 34},
+    {"id": "lamp_gate_east", "kind": "lamp", "x": 32, "y": 34},
+    {"id": "wreck_yard", "kind": "wreck", "x": 36, "y": 30},
+    {"id": "wreck_corner", "kind": "wreck", "x": 55, "y": 3},
+    {"id": "tyres_workshop", "kind": "tyres", "x": 22, "y": 24},
+    {"id": "tyres_corner", "kind": "tyres", "x": 58, "y": 6},
+    {"id": "tyres_south", "kind": "tyres", "x": 1, "y": 33},
+    {"id": "tyres_yard", "kind": "tyres", "x": 39, "y": 29},
+    {"id": "junk_1", "kind": "junk", "x": 24, "y": 25},
+    {"id": "junk_2", "kind": "junk", "x": 35, "y": 32},
+    {"id": "junk_3", "kind": "junk", "x": 54, "y": 5},
+    {"id": "junk_4", "kind": "junk", "x": 10, "y": 20},
+    {"id": "junk_5", "kind": "junk", "x": 48, "y": 12},
+    {"id": "junk_6", "kind": "junk", "x": 2, "y": 13},
+    {"id": "junk_7", "kind": "junk", "x": 56, "y": 22},
+    {"id": "junk_8", "kind": "junk", "x": 13, "y": 31}
   ],
   "stock": [
     {"container": "pantry_1", "item": "canned_beans", "count": 24},
     {"container": "pantry_2", "item": "canned_beans", "count": 8},
     {"container": "pantry_2", "item": "pizza_radioactiva", "count": 3},
     {"container": "cooking_pot", "item": "stew", "count": 4},
-    {"container": "crate_workshop", "item": "rusty_knife", "count": 1}
+    {"container": "crate_workshop", "item": "rusty_knife", "count": 1},
+    {"container": "scrap_workshop", "item": "scrap", "count": 4},
+    {"container": "scrap_yard", "item": "scrap", "count": 4},
+    {"container": "shop_counter", "item": "canned_beans", "count": 10},
+    {"container": "shop_counter", "item": "pizza_radioactiva", "count": 2},
+    {"container": "shop_counter", "item": "hoe", "count": 2},
+    {"container": "shop_counter", "item": "rusty_knife", "count": 1},
+    {"container": "shop_counter", "item": "old_radio", "count": 1}
   ],
   "graves": [
     [54, 28],
@@ -125,12 +166,19 @@
     [58, 28],
     [58, 31]
   ],
+  "arrivals": [
+    [29, 33],
+    [28, 33]
+  ],
   "spawns": [
     [6, 9],
     [19, 15],
     [30, 9],
     [5, 30],
     [16, 30],
-    [30, 28]
+    [30, 28],
+    [22, 9],
+    [38, 12],
+    [34, 29]
   ]
 }

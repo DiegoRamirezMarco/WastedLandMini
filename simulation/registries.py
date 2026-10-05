@@ -4,12 +4,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from simulation.economy.settings import EconomySettings, economy_settings_from_data
 from simulation.events.decision import DecisionDefinition, decision_definition_from_data
+from simulation.events.world_event import STRANGER, WorldEventSettings, world_event_settings_from_data
 from simulation.health.injury import InjuryDefinition, injury_definition_from_data
 from simulation.items.custom_content import load_custom_items
 from simulation.items.registry import ItemRegistry
 from simulation.residents.personality import Personality
+from simulation.social.bonds import BondSettings, bond_settings_from_data
 from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
+from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
 from world.interactable import InteractableDefinition, interactable_definition_from_data
 from world.map import TerrainDefinition
@@ -117,6 +121,10 @@ class BuiltInRegistries:
     decisions: dict[str, DecisionDefinition] = field(default_factory=dict)
     jobs: dict[str, JobDefinition] = field(default_factory=dict)
     injuries: dict[str, InjuryDefinition] = field(default_factory=dict)
+    economy: EconomySettings = field(default_factory=EconomySettings)
+    bonds: BondSettings = field(default_factory=BondSettings)
+    expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
+    world_events: WorldEventSettings = field(default_factory=WorldEventSettings)
     event_settings: dict[str, Any] = field(default_factory=dict)
     dialogue: dict[str, list[str]] = field(default_factory=dict)
 
@@ -167,6 +175,18 @@ class BuiltInRegistries:
                 str(job_id): job_definition_from_data(str(job_id), values)
                 for job_id, values in _read_object(jobs_path).items()
             }
+        world_events_path = root / "world_events.json"
+        if world_events_path.is_file():
+            registries.world_events = world_event_settings_from_data(_read_object(world_events_path))
+        expeditions_path = root / "expeditions.json"
+        if expeditions_path.is_file():
+            registries.expeditions = expedition_settings_from_data(_read_object(expeditions_path))
+        bonds_path = root / "relationships.json"
+        if bonds_path.is_file():
+            registries.bonds = bond_settings_from_data(_read_object(bonds_path))
+        economy_path = root / "economy.json"
+        if economy_path.is_file():
+            registries.economy = economy_settings_from_data(_read_object(economy_path))
         registries.validate()
         return registries
 
@@ -176,6 +196,10 @@ class BuiltInRegistries:
             use = self.interactables.get(kind).use
             if use is not None and use.item_id is not None and self.items.find(use.item_id) is None:
                 raise ValueError(f"Interactable {kind} uses unknown item: {use.item_id}")
+            shown = self.interactables.get(kind).display_of
+            holder = self.interactables.find(shown) if shown is not None else None
+            if shown is not None and (holder is None or not holder.container):
+                raise ValueError(f"Interactable {kind} displays what is in {shown}, which is not a container kind")
         for interaction_id, interaction in self.interactions.items():
             if interaction.dialogue is not None and interaction.dialogue not in self.dialogue:
                 raise ValueError(f"Interaction {interaction_id} uses unknown dialogue: {interaction.dialogue}")
@@ -183,6 +207,10 @@ class BuiltInRegistries:
             station = self.interactables.find(job.station)
             if station is None:
                 raise ValueError(f"Job {job_id} is worked at unknown object kind: {job.station}")
+            if job.tool is not None and not any(
+                job.tool.tag in self.items.get(item_id).tags for item_id in self.items.ids()
+            ):
+                raise ValueError(f"Job {job_id} uses a tool that no item is tagged as: {job.tool.tag}")
             rule = job.produces
             if rule is None:
                 continue
@@ -202,6 +230,34 @@ class BuiltInRegistries:
             for outcome in decision.outcomes.values():
                 if outcome.interaction is not None and outcome.interaction not in self.interactions:
                     raise ValueError(f"Decision {kind} uses unknown interaction: {outcome.interaction}")
+        for item_id in self.items.ids():
+            if self.items.get(item_id).properties.get("wear", 0.0) < 0:
+                raise ValueError(f"Item {item_id} has negative wear")
+        for kind in self.interactables.kinds():
+            use = self.interactables.get(kind).use
+            source = self.interactables.find(use.material_from) if use is not None and use.material_from else None
+            if use is not None and use.material is not None and (source is None or not source.container):
+                raise ValueError(f"Interactable {kind} takes its repair material from no kind of container")
+        # Unknown loot is tolerated, like unknown stock: it may come from an optional pack.
+        for rule in self.expeditions.deliveries:
+            holder = self.interactables.find(rule.to)
+            if holder is None or not holder.container:
+                raise ValueError(f"Expedition finds are delivered to {rule.to}, which is not a container kind")
+        traits = set(vars(Personality()))
+        for newcomer in self.world_events.newcomers:
+            unknown = newcomer.personality.keys() - traits
+            if unknown:
+                raise ValueError(f"Newcomer {newcomer.newcomer_id} has unknown personality traits: {sorted(unknown)}")
+        for event_id, event in self.world_events.events.items():
+            if event.kind == STRANGER:
+                if event.asks not in self.jobs:
+                    raise ValueError(f"World event {event_id} asks an unknown job to answer the gate: {event.asks}")
+                continue
+            holder = self.interactables.find(event.container) if event.container is not None else None
+            if event.container is not None and (holder is None or not holder.container):
+                raise ValueError(f"World event {event_id} names {event.container}, which is not a container kind")
+        if self.expeditions.injury_kind not in self.injuries and self.injuries:
+            raise ValueError(f"Expeditions leave an unknown kind of injury: {self.expeditions.injury_kind}")
         for map_id, layout in self.maps.items():
             tile_map = layout.tile_map
             unknown = {terrain for row in tile_map.tiles for terrain in row} - self.terrain.keys()

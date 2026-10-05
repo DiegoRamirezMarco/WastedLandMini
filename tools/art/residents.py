@@ -190,6 +190,14 @@ LOOKS = {
     "tomas": Look("short", "dust", "stone", "skin_2", "skin_1", "moss", "moss_dark", "iron", "shadow", "rust_dark"),
     "ines": Look("bun", "rust_dark", "ink", "skin_3", "skin_2", "plum", "dusk", "stone", "iron", "shadow"),
     "vera": Look("long", "stone", "iron", "skin_4", "skin_3", "bone", "dust", "steel", "deep", "shadow"),
+    "paco": Look("short", "iron", "shadow", "skin_3", "skin_2", "ochre", "rust", "deep", "shadow", "rust_dark"),
+    "nuria": Look("bun", "shadow", "ink", "skin_2", "skin_1", "rose", "plum", "earth", "earth_dark", "shadow"),
+    "sergio": Look("short", "copper", "rust", "skin_3", "skin_2", "steel", "deep", "earth", "earth_dark", "ink"),
+    # Those who may come to the gate one day.
+    "olga": Look("bun", "dust", "stone", "skin_3", "skin_2", "dusk", "ink", "iron", "shadow", "rust_dark"),
+    "hugo": Look("short", "ochre", "rust", "skin_4", "skin_3", "ember", "blood", "steel", "deep", "shadow"),
+    "carmen": Look("long", "ink", "shadow", "skin_2", "skin_1", "moss", "moss_dark", "rust", "rust_dark", "ink"),
+    "bruno": Look("short", "bone", "dust", "skin_1", "rust_dark", "earth", "earth_dark", "stone", "iron", "shadow"),
 }
 
 

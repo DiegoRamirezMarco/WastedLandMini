@@ -282,8 +282,9 @@ class BelongingsTests(unittest.TestCase):
 
     def test_a_stressed_resident_turns_to_something_they_carry_and_keeps_it(self) -> None:
         self.lucia.needs.stress = 90
-        # Without a fire to sit by or a comforting pizza, the toy is what she has.
+        # Without a fire to sit by, a radio to listen to or a comforting pizza, the toy is what she has.
         self.world.interactables.pop("campfire")
+        self.world.interactables.pop("radio_set")
         self.world.containers["pantry_2"].items.clear()
         self.world.step(1)
         self.assertEqual(self.lucia.activity.action, USE_ITEM_ACTION)

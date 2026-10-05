@@ -61,6 +61,32 @@
         "stress": 10.0,
         "per_affection": 0.25
       }
+    },
+    "affair": {
+      "secret": 2,
+      "blame_subjects": 2,
+      "blame": {
+        "trust": -4.0,
+        "resentment": 2.0
+      },
+      "needs": {
+        "stress": 2.0
+      },
+      "victim": {
+        "resentment": 45.0,
+        "trust": -40.0,
+        "affection": -20.0
+      },
+      "victim_needs": {
+        "stress": 20.0
+      },
+      "rival": {
+        "resentment": 30.0,
+        "trust": -20.0
+      }
+    },
+    "tryst_started": {
+      "secret": 2
     }
   }
 }

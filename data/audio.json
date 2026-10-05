@@ -17,6 +17,44 @@
     "fight_started": "theft",
     "injured": "missing",
     "death": "missing",
-    "work_started": "click"
+    "work_started": "click",
+    "item_bought": "gift",
+    "item_broke": "missing",
+    "job_offered": "alert",
+    "job_changed": "resolve",
+    "post_vacant": "missing",
+    "feelings_stirring": "alert",
+    "couple_in_trouble": "alert",
+    "couple_formed": "gift",
+    "confession_rejected": "missing",
+    "couple_broke_up": "missing",
+    "affair": "whisper",
+    "tryst_started": "whisper",
+    "friendship_changed": "chat",
+    "expedition_left": "click",
+    "expedition_returned": "supplies",
+    "risky_find": "alert",
+    "stranger_at_gate": "alert",
+    "stranger_unanswered": "missing",
+    "stranger_turned_away": "missing",
+    "newcomer_joined": "gift",
+    "caravan_passed": "supplies",
+    "weather_changed": "whisper",
+    "food_spoiled": "missing",
+    "radio_bulletin": "whisper",
+    "caught_out": "alert",
+    "stayed_in": "click"
+  },
+  "music": {
+    "tracks": {
+      "day": "day",
+      "night": "night",
+      "storm": "storm",
+      "tension": "tension"
+    },
+    "night_hours": [
+      21,
+      6
+    ]
   }
 }

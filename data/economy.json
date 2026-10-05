@@ -1,0 +1,8 @@
+{
+  "wage_per_hour": 1,
+  "starting_credits": 6,
+  "price_factor": 1.0,
+  "scarcity_markup": 1.0,
+  "vacancy_notice_hours": 24,
+  "week_days": 7
+}

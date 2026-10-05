@@ -4,6 +4,7 @@ from pathlib import Path
 import pygame
 
 from audio.audio_manager import AudioManager, load_sound_map
+from audio.music import load_music_settings, track_for
 from graphics.assets import ASSETS_DIR, AssetStore
 from graphics.face_renderer import FaceRenderer
 from graphics.font import FONT_SHEET, SHEET_SIZE, BitmapFont
@@ -51,7 +52,13 @@ class Game:
         self.font = BitmapFont(self.assets.image(FONT_SHEET, size=SHEET_SIZE))
         self.icons = ItemIcons(self.assets, custom)
         self.faces = FaceRenderer(self.assets, custom)
-        self.audio = AudioManager(ASSETS_DIR / "sounds", load_sound_map(DATA_DIR / "audio.json"))
+        self.music = load_music_settings(DATA_DIR / "audio.json")
+        self.audio = AudioManager(
+            ASSETS_DIR / "sounds",
+            load_sound_map(DATA_DIR / "audio.json"),
+            ASSETS_DIR / "music",
+            self.music.tracks.values(),
+        )
         self.saves = SaveManager()
         self._build_scenes()
 
@@ -131,6 +138,11 @@ class Game:
             self.scene_name = "global"
         self.global_view.requested_decision = None
 
+    def update_music(self) -> None:
+        """Have the music follow the mood of the settlement."""
+        self.audio.set_music(track_for(self.world, self.music))
+        self.audio.keep_music_going()
+
     def advance_simulation(self, dt: float) -> None:
         """Play the game minutes that `dt` real seconds are worth. Time stops outside the global view."""
         if self.scene_name != "global" or self.world.clock.paused:
@@ -161,6 +173,7 @@ class Game:
             self.sync_scenes()
 
             self.advance_simulation(dt)
+            self.update_music()
             self.active_scene.update(dt)
             self.active_scene.render()
             pygame.transform.scale(self.canvas, self.screen.get_size(), self.screen)

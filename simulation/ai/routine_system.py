@@ -9,8 +9,9 @@ from simulation.items.item_system import ITEM_ACTIONS, ItemSystem
 from simulation.residents.activity import WANDER_ACTION, Activity
 from simulation.residents.needs import NEED_NAMES
 from simulation.residents.resident import Resident
+from simulation.social.bonds import TRYST, TRYST_ACTION
 from simulation.social.social_system import SocialSystem
-from simulation.work.work_system import WORK_ACTION
+from simulation.work.work_system import WORK_ACTIONS
 from world.interactable import Interactable, UseDefinition
 from world.map import Tile
 from world.pathfinding import find_path, manhattan
@@ -60,6 +61,8 @@ class RoutineSystem:
                 scored.append(ScoredAction(use.action, score + self._noise(world), placed.object_id))
         for talk in self.social.candidates(world, resident):
             scored.append(ScoredAction(talk.name, talk.score + self._noise(world), partner_id=talk.partner_id))
+        for tryst in world.bonds.candidates(world, resident):
+            scored.append(ScoredAction(tryst.name, tryst.score + self._noise(world), partner_id=tryst.partner_id))
         for handle in self.items.candidates(world, resident):
             scored.append(
                 ScoredAction(handle.name, handle.score + self._noise(world), handle.target_id, item_id=handle.item_id)
@@ -73,12 +76,14 @@ class RoutineSystem:
     def plan(self, world: "SimulationWorld", resident: Resident) -> Activity:
         """Return the best activity the resident can actually reach."""
         for candidate in ranked(self.candidates(world, resident)):
-            if candidate.partner_id is not None:
+            if candidate.name == TRYST_ACTION:
+                activity = self.social.pursue(world, resident, world.residents[candidate.partner_id], TRYST)
+            elif candidate.partner_id is not None:
                 activity = self.social.approach(world, resident, world.residents[candidate.partner_id])
             elif candidate.name in ITEM_ACTIONS:
                 activity = self.items.plan(world, resident, candidate)
-            elif candidate.name == WORK_ACTION:
-                activity = world.work.plan(world, resident)
+            elif candidate.name in WORK_ACTIONS:
+                activity = world.work.plan(world, resident, candidate)
             elif candidate.target_id is None:
                 return self._wander(world, resident)
             else:
@@ -94,6 +99,16 @@ class RoutineSystem:
         self, world: "SimulationWorld", resident: Resident, placed: Interactable, use: UseDefinition
     ) -> float | None:
         """How much the resident wants this use right now. None if it has nothing to offer them."""
+        distance_cost = DISTANCE_COST * manhattan(resident.tile, (placed.x, placed.y))
+        if use.price > resident.credits:
+            return None
+        if use.sells or use.repairs > 0:
+            want = (
+                world.trade.shop_score(world, resident, placed.object_id)
+                if use.sells
+                else world.trade.repair_score(world, resident, use)
+            )
+            return want - distance_cost if want is not None else None
         if use.heals:
             care = world.health.care_score(resident)
             return care - DISTANCE_COST * manhattan(resident.tile, (placed.x, placed.y)) if care > 0 else None

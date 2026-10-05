@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 
 from simulation.events.event import DomainEvent
 from simulation.health.injury import Death, Injury
+from simulation.items.item import ItemInstance
 from simulation.residents.resident import Resident
 from simulation.social.interaction import InteractionDefinition
 from world.interactable import Interactable, UseDefinition
-from world.pathfinding import manhattan
 
 if TYPE_CHECKING:
     from simulation.world import SimulationWorld
@@ -68,15 +68,22 @@ class HealthSystem:
             injury.severity -= rate / MINUTES_PER_DAY
         resident.injuries = [injury for injury in resident.injuries if injury.severity > 0]
 
+    def weapon_item(self, world: "SimulationWorld", resident: Resident) -> ItemInstance | None:
+        """The best weapon a resident carries that is in a state to be used, if they have one."""
+        best: tuple[float, ItemInstance] | None = None
+        for item in resident.inventory.items:
+            damage = world.registries.items.resolve(item.definition_id).properties.get("damage", 0.0)
+            if not item.broken and damage > (best[0] if best is not None else 1.0):
+                best = (damage, item)
+        return best[1] if best is not None else None
+
     def weapon_of(self, world: "SimulationWorld", resident: Resident) -> tuple[float, tuple[str, ...]]:
         """Damage multiplier and tags of the best weapon a resident carries. Bare hands are 1."""
-        best: tuple[float, tuple[str, ...]] = (1.0, ())
-        for item in resident.inventory.items:
-            definition = world.registries.items.resolve(item.definition_id)
-            damage = definition.properties.get("damage", 0.0)
-            if damage > best[0]:
-                best = (damage, definition.tags)
-        return best
+        weapon = self.weapon_item(world, resident)
+        if weapon is None:
+            return (1.0, ())
+        definition = world.registries.items.resolve(weapon.definition_id)
+        return (definition.properties.get("damage", 1.0), definition.tags)
 
     def fight_damage(
         self, world: "SimulationWorld", victim: Resident, attacker: Resident, definition: InteractionDefinition
@@ -87,6 +94,9 @@ class HealthSystem:
         low, high = definition.damage
         strength = (0.6 + attacker.personality.aggression / 125.0) * max(0.5, attacker.health / 100.0)
         multiplier, tags = self.weapon_of(world, attacker)
+        weapon = self.weapon_item(world, attacker)
+        if weapon is not None:
+            world.items.wear(world, attacker, weapon)
         amount = world.rng.randint(low, high) * strength * multiplier
         kind = "cut" if "blade" in tags else ("fracture" if amount >= FRACTURE_DAMAGE else DEFAULT_INJURY)
         return self.hurt(world, victim, amount, kind, f"una pelea con {attacker.name}", attacker)
@@ -132,6 +142,8 @@ class HealthSystem:
             if other.activity is not None and other.activity.partner_id == dead_id:
                 other.activity = None
                 other.current_action = "idle"
+            if other.couple_with == dead_id:
+                other.couple_with = None
         for decision in list(world.decisions.values()):
             if decision.resident_id == dead_id or (decision.crisis and decision.crisis.target_id == dead_id):
                 del world.decisions[decision.decision_id]
@@ -140,7 +152,7 @@ class HealthSystem:
             for item in inventory.items:
                 if item.owner_id == dead_id:
                     item.owner_id = None
-        nearest = self._nearest_container(world, tile)
+        nearest = world.nearest_container(tile)
         for item in resident.inventory.items:
             item.owner_id = None if item.owner_id == dead_id else item.owner_id
             if nearest is not None:
@@ -160,12 +172,6 @@ class HealthSystem:
         )
         subjects = [killer.resident_id, dead_id] if killer is not None else [dead_id]
         world.emit_event(event, at=tile, fact_text=f"{resident.name} murió tras {cause}", subjects=subjects)
-
-    def _nearest_container(self, world: "SimulationWorld", tile: tuple[int, int]) -> str | None:
-        placed = [world.interactables[cid] for cid in world.containers if cid in world.interactables]
-        if not placed:
-            return None
-        return min(placed, key=lambda p: (manhattan(tile, (p.x, p.y)), p.object_id)).object_id
 
     def _dig_grave(self, world: "SimulationWorld", dead_id: str) -> str | None:
         """Put a grave on the first free plot of the map's graveyard, if it has one."""

@@ -1,0 +1,125 @@
+{
+  "quiet_days": 1,
+  "newcomers": [
+    {
+      "id": "olga",
+      "name": "Olga",
+      "age": 47,
+      "personality": {
+        "empathy": 70,
+        "courage": 60,
+        "sociability": 45
+      }
+    },
+    {
+      "id": "hugo",
+      "name": "Hugo",
+      "age": 24,
+      "personality": {
+        "impulsiveness": 70,
+        "sociability": 70,
+        "greed": 55
+      }
+    },
+    {
+      "id": "carmen",
+      "name": "Carmen",
+      "age": 35,
+      "personality": {
+        "aggression": 65,
+        "courage": 70,
+        "empathy": 40
+      }
+    },
+    {
+      "id": "bruno",
+      "name": "Bruno",
+      "age": 58,
+      "personality": {
+        "empathy": 60,
+        "sociability": 30,
+        "greed": 35
+      }
+    }
+  ],
+  "events": {
+    "stranger": {
+      "kind": "stranger",
+      "chance_per_day": 0.25,
+      "hours": [
+        9,
+        21
+      ],
+      "cooldown_days": 3,
+      "asks": "guard"
+    },
+    "caravan": {
+      "kind": "stock",
+      "chance_per_day": 0.2,
+      "hours": [
+        9,
+        18
+      ],
+      "cooldown_days": 4,
+      "container": "shop_counter",
+      "count": [
+        3,
+        6
+      ],
+      "items": [
+        {
+          "item": "canned_beans",
+          "weight": 3
+        },
+        {
+          "item": "pizza_radioactiva",
+          "weight": 1
+        },
+        {
+          "item": "hoe",
+          "weight": 0.5
+        },
+        {
+          "item": "old_radio",
+          "weight": 0.3
+        }
+      ],
+      "text": "Pasa una caravana y deja género en la tienda",
+      "lead_hours": 5,
+      "forecast": "el paso de una caravana"
+    },
+    "dust_storm": {
+      "kind": "weather",
+      "chance_per_day": 0.15,
+      "hours": [
+        10,
+        17
+      ],
+      "cooldown_days": 4,
+      "minutes": [
+        150,
+        300
+      ],
+      "name": "tormenta de polvo",
+      "stress_per_minute": 0.03,
+      "text": "Se levanta una tormenta de polvo",
+      "end_text": "Amaina la tormenta de polvo",
+      "lead_hours": 6,
+      "forecast": "una tormenta de polvo",
+      "danger": 0.4
+    },
+    "vermin": {
+      "kind": "spoil",
+      "chance_per_day": 0.1,
+      "hours": [
+        0,
+        6
+      ],
+      "cooldown_days": 6,
+      "container": "pantry",
+      "category": "food",
+      "fraction": 0.2,
+      "text": "Las ratas entran en la despensa"
+    }
+  }
+}

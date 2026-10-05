@@ -38,5 +38,13 @@ class Inventory:
             self.items.remove(item)
         return True
 
+    def take_units(self, instance_id: str, units: int) -> int:
+        """Use up to `units` of a stack. Returns how many there were to take."""
+        item = self.find(instance_id)
+        taken = min(units, item.quantity) if item is not None else 0
+        for _ in range(taken):
+            self.take_unit(instance_id)
+        return taken
+
     def count(self, definition_id: str) -> int:
         return sum(item.quantity for item in self.items if item.definition_id == definition_id)

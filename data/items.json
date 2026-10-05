@@ -26,6 +26,9 @@
     ],
     "effects": {
       "stress": -8
+    },
+    "properties": {
+      "wear": 5
     }
   },
   {
@@ -69,7 +72,8 @@
       "blunt"
     ],
     "properties": {
-      "damage": 1.4
+      "damage": 1.4,
+      "wear": 8
     }
   },
   {
@@ -83,7 +87,32 @@
       "blade"
     ],
     "properties": {
-      "damage": 1.8
+      "damage": 1.8,
+      "wear": 10
     }
+  },
+  {
+    "id": "hoe",
+    "name": "azada",
+    "article": "una",
+    "category": "tool",
+    "base_value": 12,
+    "tags": [
+      "tool",
+      "hoe"
+    ],
+    "properties": {
+      "wear": 2
+    }
+  },
+  {
+    "id": "scrap",
+    "name": "chatarra",
+    "article": "una",
+    "category": "material",
+    "base_value": 3,
+    "tags": [
+      "scrap"
+    ]
   }
 ]

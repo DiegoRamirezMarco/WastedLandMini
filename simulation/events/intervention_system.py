@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 
 GRIEVANCE = "grievance"
 BRAWL = "brawl"
+JOB_OFFER = "job_offer"
+CONFESSION = "confession"
+BREAKUP = "breakup"
 BROOD_ACTION = "brood"
 # Resentment below this is not a grievance worth a crisis, however stressed the resident is.
 MIN_RESENTMENT = 30.0
@@ -30,6 +33,8 @@ MAX_BODILY_NEED = 70.0
 SCORE_NOISE = 0.03
 MAX_IMPORTANCE = 69
 ADVICE_STRENGTH = 1.0
+# After someone has been asked about a vacant job, nobody else is asked about it for this long.
+JOB_ASK_INTERVAL_MINUTES = 360
 
 
 def anger(world: "SimulationWorld", resident: Resident, target: Resident) -> float:
@@ -77,13 +82,17 @@ def score_inputs(world: "SimulationWorld", resident: Resident, target: Resident 
         "affection": 0.5,
         "resentment": 0.0,
         "fear": 0.0,
+        "attraction": 0.0,
         "health": resident.health / 100.0,
+        "vacancy": 0.0,
+        "idle": 0.0,
     }
     if target is not None:
         feelings = world.relationship(resident.resident_id, target.resident_id)
         inputs["affection"] = (feelings.affection + 100.0) / 200.0
         inputs["resentment"] = feelings.resentment / 100.0
         inputs["fear"] = feelings.fear / 100.0
+        inputs["attraction"] = feelings.attraction / 100.0
     return inputs
 
 
@@ -126,6 +135,108 @@ class InterventionSystem:
             return None
         return self._open(world, resident, target, definition, anger(world, resident, target))
 
+    def maybe_offer_job(self, world: "SimulationWorld", resident: Resident) -> Activity | None:
+        """Put a job that has gone unfilled too long to this resident, if they are the one to ask.
+
+        Changing jobs changes the settlement, so it opens a decision the player may weigh in on.
+        Returns the activity of waiting for that, or None.
+        """
+        definition = world.registries.decisions.get(JOB_OFFER)
+        if definition is None:
+            return None
+        if self.pending_for(world, resident.resident_id) is not None or self._cooling_down(world, definition, resident):
+            return None
+        if max(resident.needs.hunger, resident.needs.tiredness) > MAX_BODILY_NEED:
+            return None
+        now = world.clock.total_minutes
+        # Someone looking for work does not wait to be asked: they look at what there is.
+        opening = world.staffing.opening_for(world, resident)
+        if opening is not None and not any(decision.job_id == opening for decision in world.decisions.values()):
+            return self._open(world, resident, None, definition, 0.0, opening)
+        for job_id in world.staffing.overdue(world):
+            asked_at = world.crisis_cooldowns.get(self._job_key(job_id))
+            if asked_at is not None and now - asked_at < JOB_ASK_INTERVAL_MINUTES:
+                continue
+            asked = next(
+                (
+                    candidate
+                    for candidate in world.staffing.candidates(world, job_id)
+                    if not self._cooling_down(world, definition, candidate)
+                ),
+                None,
+            )
+            if asked is resident:
+                world.crisis_cooldowns[self._job_key(job_id)] = now
+                return self._open(world, resident, None, definition, 0.0, job_id)
+        return None
+
+    def _job_key(self, job_id: str) -> str:
+        """Key under which the last time a vacant job was put to someone is kept."""
+        return f"{JOB_OFFER}@{job_id}"
+
+    def maybe_romance(self, world: "SimulationWorld", resident: Resident) -> Activity | None:
+        """Open a decision if a resident has something of the heart to make up their mind about.
+
+        Saying what they feel to someone, or leaving a partner, changes two lives, so neither
+        happens outright: the player may weigh in first. Returns the activity of waiting, or None.
+        """
+        if self.pending_for(world, resident.resident_id) is not None:
+            return None
+        if max(resident.needs.hunger, resident.needs.tiredness) > MAX_BODILY_NEED:
+            return None
+        for kind, find in (
+            (BREAKUP, world.bonds.soured_partner),
+            (CONFESSION, world.bonds.confession_target),
+        ):
+            definition = world.registries.decisions.get(kind)
+            if definition is None or self._cooling_down(world, definition, resident):
+                continue
+            target = find(world, resident)
+            if target is None or self.pending_for(world, target.resident_id) is not None:
+                continue
+            return self._open(world, resident, target, definition, anger(world, resident, target))
+        return None
+
+    def ask(self, world: "SimulationWorld", resident: Resident, kind: str) -> Decision | None:
+        """Open a decision for a resident without stopping what they are doing.
+
+        For someone who cannot stand and think it over where the player sees them, such as a
+        resident outside the settlement. Returns the decision, or None if they have one open.
+        """
+        definition = world.registries.decisions.get(kind)
+        if definition is None or self.pending_for(world, resident.resident_id) is not None:
+            return None
+        decision = self._decision(world, resident, None, definition, 0.0)
+        world.decisions[decision.decision_id] = decision
+        world.emit_event(
+            DomainEvent(
+                event_type=definition.event_type,
+                importance=decision.crisis.urgency,
+                text=self.fill(world, definition.text, resident, None),
+                participants=[resident.resident_id],
+            )
+        )
+        return decision
+
+    def suggest_job(self, world: "SimulationWorld", resident_id: str, job_id: str, option_id: str) -> str | None:
+        """The player puts it to a resident that they take up a job, with one of the usual advices.
+
+        The resident decides on the spot, as they would at the end of any decision: the advice
+        shifts the scores and they pick. Returns what they chose, or None if they cannot be asked:
+        no such job or no free post for it, a decision already open, or asked too recently.
+        """
+        definition = world.registries.decisions.get(JOB_OFFER)
+        resident = world.residents.get(resident_id)
+        job = world.registries.jobs.get(job_id)
+        if definition is None or resident is None or job is None or resident.job_id == job_id:
+            return None
+        if world.staffing.free_post(world, job) is None:
+            return None
+        if self.pending_for(world, resident_id) is not None or self._cooling_down(world, definition, resident):
+            return None
+        decision = self._decision(world, resident, None, definition, 0.0, job_id)
+        return self._settle(world, decision, option_id, waiting=False)
+
     def _cooldown_key(self, kind: str, resident_id: str) -> str:
         return resident_id if kind == GRIEVANCE else f"{kind}:{resident_id}"
 
@@ -133,15 +244,16 @@ class InterventionSystem:
         last = world.crisis_cooldowns.get(self._cooldown_key(definition.kind, resident.resident_id))
         return last is not None and world.clock.total_minutes - last < definition.cooldown_minutes
 
-    def _open(
+    def _decision(
         self,
         world: "SimulationWorld",
         resident: Resident,
-        target: Resident,
+        target: Resident | None,
         definition: DecisionDefinition,
         anger_value: float,
-    ) -> Activity:
-        """Open a decision for `resident` about `target` and have them wait for advice."""
+        job_id: str | None = None,
+    ) -> Decision:
+        """A decision for `resident` about `target`, or about taking up a job. It is not open yet."""
         world.decision_count += 1
         importance = min(
             MAX_IMPORTANCE, definition.importance + round((anger_value - definition.anger_threshold) / 2)
@@ -149,25 +261,47 @@ class InterventionSystem:
         decision = Decision(
             decision_id=f"decision_{world.decision_count}",
             resident_id=resident.resident_id,
-            prompt=definition.prompt.replace("{target}", target.name),
+            prompt=self.fill(world, definition.prompt, resident, target, job_id),
             options=[
-                DecisionOption(option.option_id, option.text.replace("{target}", target.name), dict(option.influence))
+                DecisionOption(
+                    option.option_id, self.fill(world, option.text, resident, target, job_id), dict(option.influence)
+                )
                 for option in definition.options
             ],
             related_event_type=definition.event_type,
             kind=definition.kind,
             deadline=world.clock.total_minutes + definition.window_minutes,
-            crisis=Crisis(resident.resident_id, target.resident_id, anger_value, importance, intent=""),
+            crisis=Crisis(
+                resident.resident_id,
+                target.resident_id if target is not None else None,
+                anger_value,
+                importance,
+                intent="",
+            ),
+            job_id=job_id,
         )
         decision.crisis.intent = self.leaning(world, decision)
+        return decision
+
+    def _open(
+        self,
+        world: "SimulationWorld",
+        resident: Resident,
+        target: Resident | None,
+        definition: DecisionDefinition,
+        anger_value: float,
+        job_id: str | None = None,
+    ) -> Activity:
+        """Open a decision for `resident` and have them wait for advice."""
+        decision = self._decision(world, resident, target, definition, anger_value, job_id)
         world.decisions[decision.decision_id] = decision
         resident.current_action = BROOD_ACTION
         room = world.room_at(resident.tile)
         world.emit_event(
             DomainEvent(
                 event_type=definition.event_type,
-                importance=importance,
-                text=self._fill(definition.text, resident, target),
+                importance=decision.crisis.urgency,
+                text=self.fill(world, definition.text, resident, target, job_id),
                 participants=[resident.resident_id],
                 location_id=room.room_id if room is not None else None,
             ),
@@ -201,6 +335,8 @@ class InterventionSystem:
         crisis = decision.crisis
         target = world.residents.get(crisis.target_id) if crisis and crisis.target_id else None
         inputs = score_inputs(world, resident, target, crisis.anger if crisis else 0.0)
+        if decision.job_id is not None:
+            inputs.update(world.staffing.decision_inputs(world, resident, decision.job_id))
         heed = advice_influence(resident, ADVICE_STRENGTH)
         scores: dict[str, float] = {}
         for outcome_id, outcome in definition.outcomes.items():
@@ -221,6 +357,15 @@ class InterventionSystem:
         if decision is None:
             return None
         resident = world.residents.get(decision.resident_id)
+        brooding = resident is not None and resident.activity is not None and resident.activity.action == BROOD_ACTION
+        return self._settle(world, decision, option_id, waiting=brooding)
+
+    def _settle(self, world: "SimulationWorld", decision: Decision, option_id: str | None, waiting: bool) -> str | None:
+        """Have the resident weigh the advice, pick an outcome and act on it.
+
+        `waiting` says whether they had stopped to think it over, and so go back to their day.
+        """
+        resident = world.residents.get(decision.resident_id)
         definition = world.registries.decisions.get(decision.kind)
         if resident is None or definition is None:
             return None
@@ -239,23 +384,31 @@ class InterventionSystem:
                 feelings.adjust(feeling, delta)
         room = world.room_at(resident.tile)
         location_id = room.room_id if room is not None else None
-        if chosen.memory is not None and target is not None:
+        if chosen.memory is not None and (target is not None or decision.job_id is not None):
             world.memories.remember(
                 resident.resident_id,
                 Memory(
-                    text=chosen.memory.replace("{target}", target.name),
+                    text=self.fill(world, chosen.memory, resident, target, decision.job_id),
                     importance=float(crisis.urgency if crisis else definition.importance),
-                    emotional_value=-0.3,
-                    people=[target.resident_id],
+                    emotional_value=-0.3 if target is not None else 0.2,
+                    people=[target.resident_id] if target is not None else [],
                     tags=["crisis", chosen.outcome_id],
                     timestamp=world.clock.total_minutes,
                     location_id=location_id,
                 ),
             )
+        if chosen.takes_job and decision.job_id is not None:
+            world.staffing.assign(world, resident, decision.job_id)
+        if chosen.expedition is not None:
+            world.expeditions.choose(world, resident, chosen.expedition)
+        # The answer is put into words before the gate is opened or shut, while the visitor still has a name.
+        answer = self.fill(world, chosen.text, resident, target, decision.job_id)
+        if chosen.gate is not None:
+            world.happenings.answer_gate(world, chosen.gate)
         if chosen.interaction is not None and target is not None:
             resident.activity = self.social.pursue(world, resident, target, chosen.interaction)
             resident.current_action = "walking"
-        else:
+        elif waiting:
             resident.activity = None
             resident.current_action = "idle"
 
@@ -265,7 +418,7 @@ class InterventionSystem:
             DomainEvent(
                 event_type="crisis_resolved",
                 importance=crisis.urgency if crisis else definition.importance,
-                text=f"{self._fill(chosen.text, resident, target)} ({advice})",
+                text=f"{answer} ({advice})",
                 participants=[resident.resident_id],
                 location_id=location_id,
             ),
@@ -285,5 +438,20 @@ class InterventionSystem:
                 best = (resentment, other)
         return best[1] if best is not None else None
 
-    def _fill(self, text: str, resident: Resident, target: Resident | None) -> str:
-        return text.replace("{name}", resident.name).replace("{target}", target.name if target else "nadie")
+    def fill(
+        self,
+        world: "SimulationWorld",
+        text: str,
+        resident: Resident,
+        target: Resident | None,
+        job_id: str | None = None,
+    ) -> str:
+        """Put the names of who and what a decision is about into one of its texts."""
+        job = world.registries.jobs.get(job_id or "")
+        visitor = world.happenings.visitor(world)
+        return (
+            text.replace("{name}", resident.name)
+            .replace("{target}", target.name if target else "nadie")
+            .replace("{job}", job.name if job else "ninguno")
+            .replace("{visitor}", visitor.name if visitor else "alguien")
+        )

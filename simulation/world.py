@@ -5,9 +5,12 @@ from simulation.ai.activity_system import ActivitySystem
 from simulation.clock import SimulationClock
 from simulation.commands import SimulationCommand
 from simulation.events.decision import Decision
-from simulation.events.event import DomainEvent
+from simulation.events.event import DomainEvent, euphonic
 from simulation.events.event_manager import EventManager
+from simulation.economy.trade_system import TradeSystem
 from simulation.events.intervention_system import InterventionSystem
+from simulation.events.world_event import Upcoming, Weather
+from simulation.events.world_event_system import WorldEventSystem
 from simulation.health.health_system import HealthSystem
 from simulation.health.injury import Death
 from simulation.items.inventory import Inventory
@@ -21,10 +24,14 @@ from simulation.registries import DEFAULT_MAP_ID, BuiltInRegistries, builtin_reg
 from simulation.residents.personality import Personality
 from simulation.residents.resident import Resident
 from simulation.rng import SimulationRNG
+from simulation.social.bonds import BondSystem
 from simulation.social.relationship import Relationship
-from simulation.work.work_system import WorkSystem
+from simulation.work.expedition_system import ExpeditionSystem
+from simulation.work.staffing import StaffingSystem
+from simulation.work.work_system import WORK_ACTION, WorkSystem
 from world.interactable import Interactable, InteractableDefinition
 from world.map import Tile, TileMap
+from world.pathfinding import manhattan
 from world.room import Room
 
 
@@ -54,7 +61,24 @@ class SimulationWorld:
     history: list[DomainEvent] = field(default_factory=list)
     items: ItemSystem = field(default_factory=ItemSystem)
     work: WorkSystem = field(default_factory=WorkSystem)
+    staffing: StaffingSystem = field(default_factory=StaffingSystem)
+    trade: TradeSystem = field(default_factory=TradeSystem)
+    bonds: BondSystem = field(default_factory=BondSystem)
+    expeditions: ExpeditionSystem = field(default_factory=ExpeditionSystem)
+    happenings: WorldEventSystem = field(default_factory=WorldEventSystem)
+    # Randomness of what happens to the settlement from outside, kept apart from everything else's.
+    event_rng: SimulationRNG = field(default_factory=lambda: SimulationRNG(7007))
+    # Day on which each world event last happened, by event ID.
+    happened: dict[str, int] = field(default_factory=dict)
+    weather: Weather | None = None
+    # World events that are on their way, soonest first as they were settled.
+    upcoming: list[Upcoming] = field(default_factory=list)
+    # ID of the newcomer waiting at the gate for an answer, and of everyone who has come before.
+    at_the_gate: str | None = None
+    newcomers_seen: list[str] = field(default_factory=list)
     health: HealthSystem = field(default_factory=HealthSystem)
+    # Game minute since which each job has been short of people, by job ID.
+    vacancies: dict[str, int] = field(default_factory=dict)
     # Everyone who has died, oldest first.
     deaths: list[Death] = field(default_factory=list)
     # Contents of each container object, by object ID.
@@ -79,6 +103,8 @@ class SimulationWorld:
         self.clock.advance_minutes(1)
         self.interventions.tick(self)
         self.items.tick_world(self)
+        self.staffing.tick(self)
+        self.happenings.tick(self)
         for resident in list(self.residents.values()):
             # Someone may die during this very minute.
             if resident.resident_id in self.residents:
@@ -94,6 +120,10 @@ class SimulationWorld:
         """Give the player's advice on an open decision. The resident then decides."""
         return self.interventions.resolve(self, decision_id, option_id)
 
+    def suggest_job(self, resident_id: str, job_id: str, option_id: str) -> str | None:
+        """Put it to a resident that they take up a job. They weigh it and decide for themselves."""
+        return self.interventions.suggest_job(self, resident_id, job_id, option_id)
+
     def set_speed(self, speed: int) -> None:
         if speed < 1:
             raise ValueError("speed must be at least 1")
@@ -105,16 +135,19 @@ class SimulationWorld:
         at: Tile | None = None,
         fact_text: str | None = None,
         subjects: Collection[str] | None = None,
+        expires_at: int | None = None,
     ) -> Fact | None:
         """Announce an event. With `at`, whoever can see that tile witnesses it.
         With `fact_text`, it is recorded as a fact about `subjects` (by default the participants)
-        that those present know and can pass on. Returns that fact, if one was recorded."""
+        that those present know and can pass on, until `expires_at` if it is news of something to
+        come. Returns that fact, if one was recorded."""
         event.timestamp = self.clock.total_minutes
+        event.text = euphonic(event.text)
         fact = None
         if at is not None:
             event.witnesses = witnesses_of(self, at, exclude=event.participants)
         if fact_text is not None:
-            fact = record_fact(self, event, fact_text, subjects)
+            fact = record_fact(self, event, euphonic(fact_text), subjects, expires_at)
         importance = self.registries.event_settings.get("importance", {})
         if event.importance > int(importance.get("ambient_max", 29)):
             self.history.append(event)
@@ -169,12 +202,21 @@ class SimulationWorld:
         return self.registries.interactables.get(placed.kind)
 
     def users_of(self, object_id: str) -> int:
-        """How many residents are using this object or on their way to it."""
+        """How many residents are using this object or on their way to it. Whoever works it does not count."""
         return sum(
             1
             for resident in self.residents.values()
-            if resident.activity is not None and resident.activity.target_id == object_id
+            if resident.activity is not None
+            and resident.activity.target_id == object_id
+            and resident.activity.action != WORK_ACTION
         )
+
+    def nearest_container(self, tile: Tile) -> str | None:
+        """ID of the container closest to a tile, if the settlement has any."""
+        placed = [self.interactables[object_id] for object_id in self.containers if object_id in self.interactables]
+        if not placed:
+            return None
+        return min(placed, key=lambda p: (manhattan(tile, (p.x, p.y)), p.object_id)).object_id
 
     def room_at(self, tile: Tile) -> Room | None:
         return next((room for room in self.rooms.values() if room.contains(tile)), None)
@@ -225,7 +267,11 @@ class SimulationWorld:
 
     @classmethod
     def demo_world(cls, seed: int = 7, registries: BuiltInRegistries | None = None) -> "SimulationWorld":
-        world = cls(rng=SimulationRNG(seed), registries=registries or builtin_registries())
+        world = cls(
+            rng=SimulationRNG(seed),
+            event_rng=SimulationRNG(seed * 7919 + 13),
+            registries=registries or builtin_registries(),
+        )
         world.load_layout(DEFAULT_MAP_ID)
         world.stock_from_layout()
         residents = [
@@ -235,20 +281,33 @@ class SimulationWorld:
             Resident("tomas", "Tomás", personality=Personality(courage=75, sociability=35, aggression=55)),
             Resident("ines", "Inés", personality=Personality(empathy=65, sociability=60, greed=40)),
             Resident("vera", "Vera", personality=Personality(empathy=80, sociability=55, courage=60)),
+            Resident("paco", "Paco", personality=Personality(empathy=45, sociability=45, impulsiveness=40)),
+            Resident("nuria", "Nuria", personality=Personality(empathy=55, sociability=70, greed=65)),
+            Resident("sergio", "Sergio", personality=Personality(courage=70, greed=60, impulsiveness=55)),
         ]
-        # Who works where. Marta cooks what Raúl and Inés grow, which is where their quarrel comes from.
+        # Who works where, and the day of the week each has off. Marta cooks what Raúl and Inés
+        # grow, which is where their quarrel comes from.
         posts = {
-            "marta": ("cook", "cooking_pot"),
-            "raul": ("farmer", "crop_1"),
-            "lucia": ("bartender", "bar"),
-            "tomas": ("guard", "guard_post"),
-            "ines": ("farmer", "crop_5"),
-            "vera": ("medic", "medicine_cabinet"),
+            "marta": ("cook", "cooking_pot", 6),
+            "raul": ("farmer", "crop_1", 3),
+            "lucia": ("bartender", "bar", 1),
+            "tomas": ("guard", "guard_post", 2),
+            "ines": ("farmer", "crop_5", 5),
+            "vera": ("medic", "medicine_cabinet", 4),
+            "paco": ("mechanic", "workbench", 2),
+            "nuria": ("shopkeeper", "shop_counter", 4),
+            "sergio": ("scavenger", "handcart", 5),
+        }
+        ages = {
+            "marta": 41, "raul": 38, "lucia": 27, "tomas": 45, "ines": 33, "vera": 52, "paco": 36, "nuria": 29,
+            "sergio": 31,
         }
         for resident in residents:
-            job_id, post_id = posts[resident.resident_id]
+            resident.age = ages[resident.resident_id]
+            job_id, post_id, day_off = posts[resident.resident_id]
+            resident.credits = world.registries.economy.starting_credits
             if job_id in world.registries.jobs and post_id in world.interactables:
-                resident.job_id, resident.post_id = job_id, post_id
+                resident.job_id, resident.post_id, resident.day_off = job_id, post_id, day_off
         spawns = world.registries.maps[world.map_id].spawns
         for index, resident in enumerate(residents):
             resident.x, resident.y = spawns[index % len(spawns)]
@@ -258,9 +317,10 @@ class SimulationWorld:
         world.relationship("raul", "marta").affection = 15
         world.relationship("raul", "marta").resentment = 50
         world.residents["raul"].needs.stress = 45
-        # Tomás and Inés share the south house and get on.
-        world.relationship("tomas", "ines").affection = 30
-        world.relationship("ines", "tomas").affection = 30
+        # Tomás and Inés share the south house and get on. There is something more there, unsaid.
+        for one, other in (("tomas", "ines"), ("ines", "tomas")):
+            world.relationship(one, other).affection = 30
+            world.relationship(one, other).attraction = 38
         # Belongings: Marta's radio and Raúl's stash sit in crates; Lucía carries her toy.
         for container_id, item_id, count, owner_id in (
             ("crate_dorm", "old_radio", 1, "marta"),
@@ -273,4 +333,8 @@ class SimulationWorld:
         if world.registries.items.find("baton") is not None:
             # The guard carries a truncheon. It makes him dangerous in a fight.
             world.stock(world.residents["tomas"].inventory, "baton", 1, "tomas")
+        if world.registries.items.find("hoe") is not None:
+            # Each of the two who work the garden has a hoe of their own.
+            for farmer_id in ("raul", "ines"):
+                world.stock(world.residents[farmer_id].inventory, "hoe", 1, farmer_id)
         return world

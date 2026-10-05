@@ -39,6 +39,8 @@ class SettlementLayout:
     supplies: list[SupplyRule] = field(default_factory=list)
     # Plots where the dead are buried, in the order they are used.
     graves: list[Tile] = field(default_factory=list)
+    # Tiles just inside the gate, where someone let in from outside first stands.
+    arrivals: list[Tile] = field(default_factory=list)
 
 
 def layout_from_data(data: dict[str, Any], source: str = "<data>") -> SettlementLayout:
@@ -101,4 +103,5 @@ def layout_from_data(data: dict[str, Any], source: str = "<data>") -> Settlement
             for rule in data.get("supplies", [])
         ],
         graves=[(int(plot[0]), int(plot[1])) for plot in data.get("graves", [])],
+        arrivals=[(int(tile[0]), int(tile[1])) for tile in data.get("arrivals", [])],
     )

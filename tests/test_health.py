@@ -357,8 +357,9 @@ class DeathTests(unittest.TestCase):
         self._kill()
         for resident_id, (job, _) in {"marta": ("cook", ""), "raul": ("farmer", ""), "ines": ("farmer", "")}.items():
             self.world.residents[resident_id].job_id = job
+        living = len(self.world.residents)
         self.world.step(5 * MINUTES_PER_DAY)
-        self.assertEqual(len(self.world.residents), 5)
+        self.assertEqual(len(self.world.residents), living)
         self.assertEqual(len(self.world.deaths), 1)
 
 
@@ -415,7 +416,7 @@ class ConsequencesInTheSettlementTests(unittest.TestCase):
                 world.apply_command(ChooseOptionCommand(decision.decision_id, option))
         self.assertNotIn("fight_started", _types(world))
         self.assertEqual(world.deaths, [])
-        self.assertEqual([r.health for r in world.residents.values()], [100.0] * 6)
+        self.assertEqual([r.health for r in world.residents.values()], [100.0] * len(world.residents))
 
     def test_egging_everyone_on_fills_the_clinic_but_needs_stay_in_hand(self) -> None:
         world = SimulationWorld.demo_world(seed=99)

@@ -74,6 +74,8 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
   an object whose kind is marked `"container": true`. An item that is not defined is left out.
 - Terrain is drawn with the tile of the same name in the tileset; a terrain without a tile shows
   the placeholder. An object kind is drawn with `assets/sprites/objects/<kind>.png`.
+- `"light": 5` on an object kind makes it light that many tiles around it after dark. A kind with
+  no `use` is scenery; give it `"blocks": false` if it can be walked over.
 
 ## Health and weapons
 
@@ -104,12 +106,77 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
 - `station` is an object kind from `data/interactables.json`; a resident's post is one object of it.
 - `shifts` are hour ranges and may run past midnight, e.g. `[22, 6]`.
 - `produces` is optional. `into` is `station` (the post itself, which must be a container) or a
-  container kind. `from` and `from_category` name the raw material, if the work needs any.
+  container kind the worker carries the produce to. `from` and `from_category` name the raw
+  material and the container kind the worker fetches it from, if the work needs any. `carry` is
+  how many units go in one trip, either way (6 unless set).
 - `per_minute` changes the worker's needs while on duty, and `sight_bonus` extends how far they see.
+- `"tool": {"tag": "hoe", "speed": 1.5}` makes the work that much faster for a worker carrying a
+  working item with that tag. At least one item must have the tag.
+- `wage` is credits per hour on duty, in place of the settlement's `wage_per_hour`.
+- `needed` is how many residents the job takes (1 unless set); with fewer it has a vacancy.
+  `priority` says how much it is missed: a vacancy is offered to those in jobs of lower priority.
 - An object's use can require a job to be on duty with `"staffed_by": "bartender"`.
 
-Which resident has which job is set where the settlement is created, in
-`SimulationWorld.demo_world`.
+Which resident has which job, and which day of the week they have off, is set where the
+settlement is created, in `SimulationWorld.demo_world`.
+
+## Expeditions
+
+- A job is done outside with `"expedition": {"minutes": [240, 360], "finds": [3, 6], "danger": 0.12}`:
+  how long a trip takes, how many things it brings back, and the chance of coming back hurt.
+- `data/expeditions.json` says what is out there. `loot` lists items with a `weight`; the heavier,
+  the oftener found. `deliveries` says where finds go, the first match winning:
+  `{"tag": "scrap", "to": "scrap_pile"}` for items with a tag, `{"to": "shop_counter"}` for the
+  rest. `to` must be a container kind. `injury` and `injury_kind` are what a bad trip does.
+  `find_chance`, `push_on_finds`, `push_on_danger`, `push_on_minutes` and `turn_back_minutes`
+  shape the risky find.
+- In `data/decisions.json` the game opens `risky_find` by ID, and an outcome's `"expedition"`
+  (`push_on` or `turn_back`) is what it does to the trip.
+
+## World events
+
+`data/world_events.json` holds what can happen to the settlement from outside.
+
+- `quiet_days` is how many days pass at the start before anything does.
+- `newcomers` lists who may come to the gate: `id`, `name`, `age`, `personality` and `traits`.
+  Each needs art under its `id`, like any resident: a body sheet and the two face layers.
+- `events` maps an ID to an event. All have a `kind`, a `chance_per_day`, the `hours` it can
+  happen in and its `cooldown_days`. By kind:
+  - `stranger`: `asks` names the job whose worker on duty answers the gate.
+  - `stock`: puts `count` things from `items` (each with a `weight`) into the first container of
+    kind `container`, and says `text`.
+  - `weather`: lasts `minutes`, is called `name`, adds `stress_per_minute` to anyone not under a
+    roof, and says `text` when it comes and `end_text` when it goes. A job marked
+    `"outdoors": true` makes nothing while it lasts.
+  - `spoil`: removes a `fraction` of each shared stack of `category` in containers of kind
+    `container`.
+- Any event can give warning with `"lead_hours": 6` and `"forecast": "una tormenta de polvo"`,
+  the words a radio uses for it. It is then settled that many hours before the `hours` it keeps to,
+  which must not reach back before midnight. A `weather` event's `danger` is added to the trip of
+  anyone it catches outside.
+- An object's use is listening to a radio with `"radio": true`, and an item tagged `radio` is one
+  too when it is used.
+- In `data/decisions.json` the game opens `stranger` by ID. Its texts may use `{visitor}`, and an
+  outcome's `"gate"` (`let_in` or `turn_away`) is what is done about them.
+- A map's `arrivals` lists the tiles just inside the gate where someone let in first stands.
+
+## Wear, prices and the shop
+
+- An item wears out if its `properties` give it `wear`, the condition it loses per use out of 100:
+  `{"wear": 2}`. An item without it lasts for ever.
+- An object's use costs credits with `"price": 2`.
+- `"repairs": 2.0` makes a use mend a worn thing the resident brings, that much condition a
+  minute. Give it a `staffed_by` so that someone has to be there to do it. With
+  `"material": "scrap"` and `"material_from": "scrap_pile"` each repair uses up one item with that
+  tag from a container of that kind.
+- `"sells": true` makes a use the buying of something kept inside the object, which must be a
+  container. Stock it from the map's `stock` like any other container.
+- `"display_of": "shop_counter"` on an object kind makes it show what the containers of that kind
+  in the same room hold, as the shop's shelves do. It changes nothing but how the object is drawn.
+- `data/economy.json` holds the settlement's rules: `wage_per_hour`, `starting_credits`,
+  `price_factor` (a price is the item's `base_value` times this), `scarcity_markup` (how much
+  dearer a thing gets as it runs out), `vacancy_notice_hours` and `week_days`. Every field has a
+  default, and so does the file.
 
 ## Traits and sounds
 
@@ -119,6 +186,13 @@ Which resident has which job is set where the settlement is created, in
 
 `data/audio.json` says which sound each event type plays. Sounds are WAV files in
 `assets/sounds/`, named as in that file.
+
+Its `music` section says which track plays in each mood: `tracks` maps `day`, `night`, `storm`
+and `tension` to WAV files in `assets/music/`, and `night_hours` says when night falls and ends.
+A mood left out plays nothing. Trouble (a fight, or someone waiting for advice on something
+urgent) is heard over a storm, and a storm over the hour. A track must be written to loop: it
+should end where it begins. The built-in ones are written out by `python -m tools.make_art` from
+the notes in `tools/art/music.py`.
 
 ## Social exchanges
 
@@ -143,17 +217,47 @@ Which resident has which job is set where the settlement is created, in
 `dialogue` names a list of lines in `data/dialogue.json`; one is picked for the event text.
 `relationship` holds base changes that are scaled by both residents' personalities.
 
+An exchange is part of a romance with `"romance"`: `confession` (at its end the one told answers
+from what they feel), `tryst` (two residents alone: it needs the other to want it and nobody
+watching) or `breakup` (at its end the couple is over). In `relationship`, a positive `attraction`
+is scaled by the spark between the two instead of by their personalities.
+
+## Friendship and romance
+
+`data/relationships.json` holds the rules:
+
+- `friendship` lists the degrees of friendship from the least to the closest, each with an `id`,
+  a `name` and the `affection` and `trust` it takes. The last one is who secrets are told to.
+- `adult_age` is the age from which a resident takes any part in romance. It cannot be under 18.
+- `romance` sets the thresholds: `confess_attraction` and `confess_affection` to think of saying
+  so, `accept_attraction` and `accept_affection` to say yes, `tryst_attraction`, `tryst_hours` and
+  `tryst_cooldown_minutes` for time alone, `affair_attraction` and `affair_max_empathy` for going
+  behind a partner's back, `taken_attraction_factor`, and `breakup_resentment`.
+
+In `data/events.json`, a reaction can now also say:
+
+- `"secret": 2`: how many of the fact's first subjects keep it to themselves (`true` is 1).
+- `"blame_subjects": 2`: how many of the first subjects did it. The rest had it done to them, and
+  onlookers do not blame them.
+- `"rival"`: what someone it was done to feels about the other one, when the one who wronged them
+  is their own partner.
+
 ## Decisions
 
 `data/decisions.json` defines the crisis in which a resident asks for advice: when it opens, how
 long the player has, the outcomes the resident may choose and the advice the player may give.
 
 - An outcome's `score` weighs inputs that each run from 0 to 1: `bias` (always 1), `anger`,
-  `aggression`, `impulsiveness`, `empathy`, `courage`, `sociability`, `greed`, `stress`,
-  `affection` and `resentment` (the last two towards the other person).
+  `aggression`, `impulsiveness`, `empathy`, `courage`, `sociability`, `greed`, `stress`, `health`,
+  `affection`, `resentment`, `fear` and `attraction` (the last four towards the other person),
+  and for a decision about a job, `vacancy` (how long it has stood empty) and `idle` (1 for someone with no
+  job).
 - An option's `influence` adds to the score of the outcomes it names. It is advice, not a command.
 - An outcome may name an `interaction` from `data/social.json` for the resident to go and have,
-  change `needs` and `feelings`, and leave a `memory`.
+  change `needs` and `feelings`, and leave a `memory`. `"takes_job": true` makes it taking up the
+  job the decision is about.
+- The game opens `grievance`, `brawl`, `job_offer`, `confession`, `breakup`, `risky_find` and `stranger` by ID. Texts may use `{name}`, `{target}`
+  and, in `job_offer`, `{job}`.
 
 ## Faces
 

@@ -1,8 +1,11 @@
 """Display text for simulation state. Nothing here feeds back into gameplay."""
 
+from simulation.items.item import ItemInstance
 from simulation.items.item_system import FOOD_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
 from simulation.residents.resident import Resident
-from simulation.work.work_system import WORK_ACTION
+from simulation.work.expedition_system import EXPEDITION_ACTION
+from simulation.work.job import JobDefinition
+from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
 from simulation.world import SimulationWorld
 
 NEED_LABELS = {"hunger": "Hambre", "tiredness": "Sueño", "social": "Social", "stress": "Estrés"}
@@ -22,8 +25,95 @@ def describe_job(world: SimulationWorld, resident: Resident) -> str:
     job = world.work.job_of(world, resident)
     if job is None:
         return "Sin trabajo"
-    shifts = ", ".join(f"{start}-{end}" for start, end in job.shifts)
-    return f"Trabajo: {job.name} ({shifts})"
+    if world.work.is_day_off(world, resident):
+        return f"Trabajo: {job.name} (hoy libra)"
+    return f"Trabajo: {job.name} ({describe_shifts(job)})"
+
+
+def describe_shifts(job: JobDefinition) -> str:
+    """A job's hours, such as `11-14, 18-21`."""
+    return ", ".join(f"{start}-{end}" for start, end in job.shifts)
+
+
+def describe_holders(world: SimulationWorld, job_id: str) -> str:
+    """Who does a job, such as `Raúl, Inés (libra)`, or `nadie`."""
+    names = [
+        f"{resident.name} (libra)" if world.work.is_day_off(world, resident) else resident.name
+        for resident in world.staffing.workers(world, job_id)
+    ]
+    return ", ".join(names) if names else "nadie"
+
+
+def describe_vacancy(world: SimulationWorld, job_id: str) -> str | None:
+    """How long a job has been short of people, such as `vacante hace 30 h`. None if it is not."""
+    job = world.registries.jobs.get(job_id)
+    if job is None or not world.staffing.is_short(world, job):
+        return None
+    since = world.vacancies.get(job_id)
+    hours = (world.clock.total_minutes - since) // 60 if since is not None else 0
+    return f"vacante hace {hours} h" if hours >= 1 else "vacante"
+
+
+def condition_of(world: SimulationWorld, item: ItemInstance) -> float | None:
+    """The state of a thing that wears out, from 100 down to 0. None for things that never do."""
+    wears = world.registries.items.resolve(item.definition_id).properties.get("wear", 0.0) > 0
+    return max(0.0, item.condition) if wears else None
+
+
+def selling_use(world: SimulationWorld, container_id: str):
+    """The use of a container that is buying from it, if it is a shop counter."""
+    placed = world.interactables.get(container_id)
+    use = world.definition_of(placed).use if placed is not None else None
+    return use if use is not None and use.sells else None
+
+
+def price_at(world: SimulationWorld, container_id: str, item: ItemInstance) -> int:
+    """What one unit of something on a counter costs right now."""
+    definition = world.registries.items.resolve(item.definition_id)
+    return world.trade.price_of(world, definition, world.containers[container_id].count(item.definition_id))
+
+
+def shop_goods(world: SimulationWorld) -> list[tuple[str, int]]:
+    """Everything on sale in the settlement as item definition ID and price, cheapest first."""
+    goods: dict[str, int] = {}
+    for container_id, inventory in world.containers.items():
+        if selling_use(world, container_id) is None:
+            continue
+        for item in inventory.items:
+            if item.owner_id is None and not item.broken:
+                price = price_at(world, container_id, item)
+                goods[item.definition_id] = min(price, goods.get(item.definition_id, price))
+    return sorted(goods.items(), key=lambda entry: (entry[1], entry[0]))
+
+
+def has_shop(world: SimulationWorld) -> bool:
+    return any(selling_use(world, container_id) is not None for container_id in world.containers)
+
+
+def affordable_goods(world: SimulationWorld, resident: Resident) -> list[str]:
+    """Item definition IDs of what a resident has credits enough to buy, cheapest first."""
+    return [definition_id for definition_id, price in shop_goods(world) if price <= resident.credits]
+
+
+def describe_bond(world: SimulationWorld, resident: Resident, other: Resident) -> str:
+    """What `other` is to `resident`, in a word after their name: their partner, a friend, or nothing."""
+    if resident.couple_with == other.resident_id:
+        return " (pareja)"
+    feelings = world.relationships.get((resident.resident_id, other.resident_id))
+    tier = world.bonds.tier(world, feelings) if feelings is not None else None
+    return f" ({tier.name})" if tier is not None else ""
+
+
+def describe_weather(world: SimulationWorld) -> str | None:
+    """The weather the settlement is under, such as `Tormenta de polvo`. None when there is nothing to say."""
+    weather = world.happenings.weather_now(world)
+    return weather.name.capitalize() if weather is not None else None
+
+
+def describe_credits(resident: Resident) -> str:
+    """What a resident has earned and not spent, in whole credits, such as `12 vales`."""
+    whole = int(resident.credits)
+    return "1 vale" if whole == 1 else f"{whole} vales"
 
 
 def describe_injuries(world: SimulationWorld, resident: Resident) -> str:
@@ -47,12 +137,18 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
         if not activity.using:
             return f"va a hablar con {partner.name}"
         interaction = world.registries.interactions.get(activity.action)
+        if interaction is not None and interaction.romance == "tryst":
+            return f"a solas con {partner.name}"
         verb = "discute" if interaction is not None and interaction.hostile else "charla"
         return f"{verb} con {partner.name}"
     if activity.action == WORK_ACTION:
         job = world.work.job_of(world, resident)
         post = job.name.lower() if job is not None else "su puesto"
         return f"trabajando: {post}" if activity.using else f"va a trabajar: {post}"
+    if activity.action == EXPEDITION_ACTION:
+        return "fuera del asentamiento"
+    if activity.action == HAUL_ACTION:
+        return "carga y descarga" if activity.using else "acarrea para su puesto"
     if activity.action == STEAL_ACTION:
         return "se lleva algo que no es suyo" if activity.using else "trama algo"
     if activity.action == USE_ITEM_ACTION:
@@ -73,6 +169,6 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
     text = definition.use.text
     item_id = activity.item_id or definition.use.item_id
     if item_id is not None:
-        item = world.registries.items.resolve(item_id)
+        item = world.items.definition_for(world, item_id)
         text = text.replace("{item}", f"{item.article} {item.name}")
     return text

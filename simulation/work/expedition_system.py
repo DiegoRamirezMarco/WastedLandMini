@@ -1,0 +1,187 @@
+"""Scavenging outside: setting out, what happens out there, and bringing the finds home."""
+
+from typing import TYPE_CHECKING
+
+from simulation.events.event import DomainEvent
+from simulation.events.world_event import WEATHER
+from simulation.items.item import ItemInstance
+from simulation.residents.activity import Activity
+from simulation.residents.resident import Resident
+from simulation.work.expedition import PUSH_ON, TURN_BACK, Expedition
+from simulation.work.hauling import containers_of_kind
+from simulation.work.job import JobDefinition
+from world.interactable import Interactable
+from world.pathfinding import manhattan
+
+if TYPE_CHECKING:
+    from simulation.world import SimulationWorld
+
+EXPEDITION_ACTION = "expedition"
+RISKY_FIND = "risky_find"
+LEFT_IMPORTANCE = 15
+RETURN_IMPORTANCE = 30
+# Nobody sets out with less of their shift than this ahead of them.
+MIN_SHIFT_LEFT = 60
+INJURY_CAUSE = "una salida fuera del asentamiento"
+STAYED_IN_IMPORTANCE = 20
+STAYED_IN_NOTICE = "stayed_in:"
+
+
+class ExpeditionSystem:
+    def can_set_out(self, world: "SimulationWorld", resident: Resident, job: JobDefinition, shift_left: int) -> bool:
+        """Whether a worker at their post should leave on a trip now: one a day, and empty-handed."""
+        return (
+            job.expedition is not None
+            and resident.expedition is None
+            and resident.last_expedition_day != world.clock.day
+            and shift_left >= MIN_SHIFT_LEFT
+            and bool(world.registries.expeditions.loot)
+            and not (job.outdoors and world.happenings.is_stormy(world))
+            and not self._finds_on(resident)
+        )
+
+    def stays_in(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> bool:
+        """Whether a worker about to leave thinks better of it: they know bad weather would catch them out.
+
+        It goes by what they have heard, not by what is coming. Said once a day.
+        """
+        rule = job.expedition
+        if rule is None or not job.outdoors:
+            return False
+        if world.happenings.expected(world, resident, WEATHER, within=rule.minutes[1]) is None:
+            return False
+        key = f"{STAYED_IN_NOTICE}{resident.resident_id}"
+        if world.notices.get(key) != world.clock.day:
+            world.notices[key] = world.clock.day
+            world.emit_event(
+                DomainEvent(
+                    "stayed_in",
+                    STAYED_IN_IMPORTANCE,
+                    f"{resident.name} no sale hoy: la radio anuncia mal tiempo",
+                    [resident.resident_id],
+                ),
+                at=resident.tile,
+            )
+        return True
+
+    def set_out(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> None:
+        """Send a resident out. From here on they are away: nobody sees them and they see nobody."""
+        rule, settings = job.expedition, world.registries.expeditions
+        now = world.clock.total_minutes
+        minutes = world.rng.randint(*rule.minutes)
+        finds = world.rng.randint(*rule.finds)
+        comes_on_something = world.rng.random() < settings.find_chance
+        resident.expedition = Expedition(
+            returns_at=now + minutes,
+            finds=finds,
+            danger=rule.danger,
+            find_at=now + minutes // 2 if comes_on_something else None,
+        )
+        resident.last_expedition_day = world.clock.day
+        resident.activity = Activity(EXPEDITION_ACTION, resident.post_id, minutes_left=minutes, using=True)
+        resident.current_action = EXPEDITION_ACTION
+        world.emit_event(
+            DomainEvent("expedition_left", LEFT_IMPORTANCE, f"{resident.name} {job.text}", [resident.resident_id]),
+            at=resident.tile,
+        )
+
+    def tick(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> None:
+        """Spend one minute out there."""
+        trip = resident.expedition
+        job = world.work.job_of(world, resident)
+        if trip is None:
+            resident.activity = None
+            resident.current_action = "idle"
+            return
+        if job is not None:
+            world.trade.pay_wage(world, resident, job)
+        now = world.clock.total_minutes
+        activity.minutes_left = max(1, trip.returns_at - now)
+        if trip.find_at is not None and now >= trip.find_at:
+            trip.find_at = None
+            # Whether to risk it is theirs to decide, and the player's to advise on.
+            world.interventions.ask(world, resident, RISKY_FIND)
+        if now >= trip.returns_at and world.interventions.pending_for(world, resident.resident_id) is None:
+            self._come_back(world, resident, trip)
+
+    def choose(self, world: "SimulationWorld", resident: Resident, choice: str) -> None:
+        """Carry out what a resident decided about a risky find."""
+        trip, settings = resident.expedition, world.registries.expeditions
+        if trip is None:
+            return
+        if choice == PUSH_ON:
+            trip.finds += settings.push_on_finds
+            trip.danger = min(1.0, trip.danger + settings.push_on_danger)
+            trip.returns_at += settings.push_on_minutes
+        elif choice == TURN_BACK:
+            trip.finds = trip.finds // 2
+            trip.returns_at = min(trip.returns_at, world.clock.total_minutes + settings.turn_back_minutes)
+
+    def _come_back(self, world: "SimulationWorld", resident: Resident, trip: Expedition) -> None:
+        settings = world.registries.expeditions
+        resident.expedition = None
+        resident.activity = None
+        resident.current_action = "idle"
+        loot = [entry for entry in settings.loot if world.registries.items.find(entry.item) is not None]
+        found: dict[str, int] = {}
+        for _ in range(trip.finds if loot else 0):
+            # A weighted draw: the heavier a thing is in the table, the oftener it turns up.
+            mark = world.rng.random() * sum(entry.weight for entry in loot)
+            for entry in loot:
+                mark -= entry.weight
+                if mark < 0:
+                    break
+            found[entry.item] = found.get(entry.item, 0) + 1
+        for item_id, units in found.items():
+            world.stock(resident.inventory, item_id, units, None)
+        haul = ", ".join(f"{world.registries.items.resolve(item_id).name} ({units})" for item_id, units in found.items())
+        world.emit_event(
+            DomainEvent(
+                "expedition_returned",
+                RETURN_IMPORTANCE,
+                f"{resident.name} vuelve de fuera con {haul}" if haul else f"{resident.name} vuelve de fuera de vacío",
+                [resident.resident_id],
+            ),
+            at=resident.tile,
+        )
+        if world.rng.random() < trip.danger:
+            world.health.hurt(world, resident, world.rng.randint(*settings.injury), settings.injury_kind, INJURY_CAUSE)
+
+    # ----- bringing the finds where they go -----
+
+    def _finds_on(self, resident: Resident) -> list[ItemInstance]:
+        """What a resident carries that is nobody's yet."""
+        return [item for item in resident.inventory.items if item.owner_id is None]
+
+    def _goes_to(self, world: "SimulationWorld", item: ItemInstance) -> str | None:
+        """The kind of container a find is taken to."""
+        tags = world.registries.items.resolve(item.definition_id).tags
+        return next(
+            (rule.to for rule in world.registries.expeditions.deliveries if rule.tag is None or rule.tag in tags), None
+        )
+
+    def errand(self, world: "SimulationWorld", resident: Resident) -> str | None:
+        """The container to walk to with what was brought back: the nearest that takes the first find."""
+        for item in self._finds_on(resident):
+            kind = self._goes_to(world, item)
+            places = [world.interactables[object_id] for object_id, _ in containers_of_kind(world, kind or "")]
+            if places:
+                return min(places, key=lambda p: (manhattan(resident.tile, (p.x, p.y)), p.object_id)).object_id
+        return None
+
+    def unload(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> str | None:
+        """Leave in a container everything carried that belongs there. Returns what was done, or None."""
+        container = world.containers.get(placed.object_id)
+        if container is None:
+            return None
+        left = []
+        for item in self._finds_on(resident):
+            if self._goes_to(world, item) != placed.kind:
+                continue
+            resident.inventory.remove(item.instance_id)
+            world.stock(container, item.definition_id, item.quantity, None)
+            left.append(f"{world.registries.items.resolve(item.definition_id).name} ({item.quantity})")
+        if not left:
+            return None
+        definition = world.definition_of(placed)
+        return f"deja {', '.join(left)} en {definition.article} {definition.name}"

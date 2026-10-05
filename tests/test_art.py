@@ -20,6 +20,7 @@ from graphics.item_icons import ICON_SIZE as ITEM_ICON_SIZE
 from graphics.item_icons import ItemIcons
 from graphics.map_renderer import render_roofs, render_terrain, roof_names, tile_names
 from graphics.tileset import (
+    CLOSE_ROOF_SHEET,
     ROOF_CELLS,
     ROOF_SHEET,
     ROOF_SHEET_SIZE,
@@ -106,6 +107,17 @@ class ArtGeneratorTests(unittest.TestCase):
                     self.assertEqual(len(block), 1, (name, x, y))
                     self.assertEqual(block.pop()[3], 255, (name, x, y))
 
+    def test_the_roofs_seen_from_close_cover_the_same_tiles_in_finer_art(self) -> None:
+        sheet = build_all()[CLOSE_ROOF_SHEET]
+        self.assertEqual(sheet.get_size(), ROOF_SHEET_SIZE)
+        close, far = Tileset(sheet, ROOF_CELLS), Tileset(build_all()[ROOF_SHEET], ROOF_CELLS)
+        for name in ROOF_CELLS:
+            tile = close.tile(name)
+            pixels = [tuple(tile.get_at((x, y))) for x in range(TILE_SIZE) for y in range(TILE_SIZE)]
+            self.assertTrue(all(pixel[3] == 255 for pixel in pixels), name)
+            coarse = [tuple(far.tile(name).get_at((x, y))) for x in range(TILE_SIZE) for y in range(TILE_SIZE)]
+            self.assertNotEqual(pixels, coarse, name)
+
     def test_unknown_tile_name_gives_a_placeholder(self) -> None:
         tiles = Tileset(build_all()[SETTLEMENT_SHEET], SETTLEMENT_CELLS)
         self.assertIn(tuple(tiles.tile("lava").get_at((0, 0)))[:3], PLACEHOLDER_COLORS)
@@ -182,6 +194,10 @@ class SettlementArtCoverageTests(unittest.TestCase):
             self.assertGreaterEqual(height, definition.height * TILE_SIZE, kind)
         for resident_id in self.world.residents:
             self.assertTrue((ASSETS_DIR / f"sprites/residents/{resident_id}.png").exists(), resident_id)
+        # Whoever may come to the gate one day is drawn already.
+        for newcomer in self.world.registries.world_events.newcomers:
+            for folder in ("sprites/residents", "faces/base", "faces/hair"):
+                self.assertTrue((ASSETS_DIR / folder / f"{newcomer.newcomer_id}.png").exists(), newcomer.newcomer_id)
 
 
 class CharacterRendererTests(unittest.TestCase):

@@ -5,6 +5,7 @@ from simulation.items.inventory import Inventory
 from simulation.residents.activity import Activity
 from simulation.residents.needs import Needs
 from simulation.residents.personality import Personality
+from simulation.work.expedition import Expedition
 from world.map import Tile
 
 FACINGS = ("down", "left", "right", "up")
@@ -29,6 +30,20 @@ class Resident:
     post_id: str | None = None
     # Minutes worked towards the next thing their job produces.
     work_progress: int = 0
+    # Day of the week, counted from 0, on which they do not work. None for no day off.
+    day_off: int | None = None
+    # What their work has earned them and they have not spent yet.
+    credits: float = 0.0
+    # Age in years. Romance is only ever between adults.
+    age: int = 30
+    # ID of the resident they are a couple with, who names them in turn.
+    couple_with: str | None = None
+    # The trip outside the settlement they are on, while they are on one.
+    expedition: Expedition | None = None
+    # Day on which they last set out, so that nobody goes twice in a day.
+    last_expedition_day: int = 0
+    # Whether they are looking for a job to take, as someone newly arrived is.
+    seeks_work: bool = False
     injuries: list[Injury] = field(default_factory=list)
     # Tiles walked during the last tick, starting where the tick began. Lets the
     # presentation animate movement; it is not saved.
@@ -38,6 +53,11 @@ class Resident:
     def health(self) -> float:
         """From 100, unhurt, down to 0, dead: what their injuries leave them."""
         return max(0.0, 100.0 - sum(injury.severity for injury in self.injuries))
+
+    @property
+    def away(self) -> bool:
+        """Outside the settlement: they see nobody, and nobody sees or reaches them."""
+        return self.expedition is not None
 
     @property
     def tile(self) -> Tile:

@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING
 from simulation.ai.navigation import path_beside
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency
 from simulation.events.event import DomainEvent
+from simulation.events.world_event_system import RADIO_TAG
 from simulation.items.inventory import Inventory
-from simulation.items.item import ItemDefinition, ItemInstance
+from simulation.items.item import WORN_CONDITION, ItemDefinition, ItemInstance
 from simulation.items.registry import UNKNOWN_CATEGORY
 from simulation.items.theft import TheftAttempt
 from simulation.items.trading import TradeOffer
@@ -43,6 +44,7 @@ GIFT_CHANCE = 0.25
 TRADE_IMPORTANCE = 15
 NO_FOOD_IMPORTANCE = 40
 NO_FOOD_NOTICE = "no_food"
+BROKEN_IMPORTANCE = 30
 
 
 def _named(definition: ItemDefinition) -> str:
@@ -71,6 +73,32 @@ class ItemSystem:
     def _matching_traits(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> list[dict]:
         traits = (world.registries.traits.find(trait_id) for trait_id in resident.traits)
         return [trait for trait in traits if trait and set(trait.get("tags", [])) & set(definition.tags)]
+
+    def definition_for(self, world: "SimulationWorld", item_id: str) -> ItemDefinition:
+        """The definition behind an ID that names either a kind of item or one item in particular."""
+        definition = world.registries.items.find(item_id)
+        if definition is not None:
+            return definition
+        item = self.find_item(world, item_id)
+        return world.registries.items.resolve(item.definition_id if item is not None else item_id)
+
+    def wear(self, world: "SimulationWorld", holder: Resident, item: ItemInstance) -> None:
+        """Take the toll of one use on an item. A thing worn right out breaks, and does nothing until repaired."""
+        definition = world.registries.items.resolve(item.definition_id)
+        toll = definition.properties.get("wear", 0.0)
+        if toll <= 0 or item.broken:
+            return
+        item.condition = max(0.0, item.condition - toll)
+        if item.broken:
+            world.emit_event(
+                DomainEvent(
+                    "item_broke",
+                    BROKEN_IMPORTANCE,
+                    f"A {holder.name} se le rompe {_named(definition)}",
+                    [holder.resident_id],
+                ),
+                at=holder.tile,
+            )
 
     def _relief(self, resident: Resident, effects: dict[str, float]) -> float:
         return sum(need_urgency(resident, need) for need, delta in effects.items() if delta < 0 and need in NEED_NAMES)
@@ -106,13 +134,15 @@ class ItemSystem:
         """Take one unit of the best food out of a container. Returns its definition ID."""
         food = self.best_food(world, resident, container_id, category)
         if food is None:
-            self._report_no_food(world, resident)
+            # A wasted walk to one empty pot is not news. Nothing to eat anywhere is.
+            if not any(self.best_food(world, resident, other_id, category) for other_id in world.containers):
+                self._report_no_food(world, resident)
             return None
         world.containers[container_id].take_unit(food.instance_id)
         return food.definition_id
 
     def _report_no_food(self, world: "SimulationWorld", resident: Resident) -> None:
-        """Say that someone found the shelves bare, at most once a day."""
+        """Say that someone found every shelf bare, at most once a day."""
         if world.notices.get(NO_FOOD_NOTICE) == world.clock.day:
             return
         world.notices[NO_FOOD_NOTICE] = world.clock.day
@@ -134,7 +164,7 @@ class ItemSystem:
             placed = world.interactables.get(container_id) if container_id else None
             distance = manhattan(resident.tile, (placed.x, placed.y)) if placed is not None else 0
             for item in inventory.items:
-                if item.owner_id != resident.resident_id:
+                if item.owner_id != resident.resident_id or item.broken:
                     continue
                 definition = world.registries.items.resolve(item.definition_id)
                 relief = self._relief(resident, self.use_effects(world, resident, definition))
@@ -234,7 +264,7 @@ class ItemSystem:
     def _begin_use(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> bool:
         inventory = self._where(world, resident, activity)
         item = inventory.find(activity.item_id or "") if inventory is not None else None
-        if item is None or item.owner_id != resident.resident_id:
+        if item is None or item.owner_id != resident.resident_id or item.broken:
             return False
         self._face(world, resident, activity)
         definition = world.registries.items.resolve(item.definition_id)
@@ -260,6 +290,14 @@ class ItemSystem:
         resident.needs.apply(self.use_effects(world, resident, definition))
         if definition.category == FOOD_CATEGORY:
             inventory.take_unit(item.instance_id)
+            return
+        if RADIO_TAG in definition.tags:
+            world.happenings.hear_radio(world, resident)
+        self.wear(world, resident, item)
+        if item.condition < WORN_CONDITION and inventory is not resident.inventory:
+            # Too worn to put back: they keep it on them, to have it seen to.
+            inventory.remove(item.instance_id)
+            resident.inventory.add(item)
 
     def _begin_theft(self, world: "SimulationWorld", thief: Resident, activity: Activity) -> bool:
         container = world.containers.get(activity.target_id or "")

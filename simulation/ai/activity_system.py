@@ -11,7 +11,8 @@ from simulation.residents.activity import MOVE_TILES_PER_MINUTE, Activity
 from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
 from simulation.residents.resident import Resident
 from simulation.social.social_system import SocialSystem
-from simulation.work.work_system import WORK_ACTION
+from simulation.work.expedition_system import EXPEDITION_ACTION
+from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
 from world.interactable import UseDefinition
 from world.map import Tile
 
@@ -36,12 +37,17 @@ class ActivitySystem:
     social: SocialSystem = field(default_factory=SocialSystem)
 
     def tick(self, world: "SimulationWorld", resident: Resident) -> None:
-        resident.needs.step(1, resting=not world.is_aware(resident))
+        # Asleep, the body runs slow. So it does for someone out there, who eats as they go from what they took.
+        resident.needs.step(1, resting=resident.away or not world.is_aware(resident))
         world.health.tick(world, resident)
         resident.trail = [resident.tile]
         if resident.activity is None:
             world.items.notice_missing(world, resident)
-            crisis = world.interventions.maybe_open(world, resident)
+            crisis = (
+                world.interventions.maybe_open(world, resident)
+                or world.interventions.maybe_offer_job(world, resident)
+                or world.interventions.maybe_romance(world, resident)
+            )
             resident.activity = crisis or self.routine.plan(world, resident)
         activity = resident.activity
 
@@ -62,6 +68,12 @@ class ActivitySystem:
             return
         if activity.action == WORK_ACTION:
             world.work.tick(world, resident, activity)
+            return
+        if activity.action == HAUL_ACTION:
+            world.work.haul_tick(world, resident, activity)
+            return
+        if activity.action == EXPEDITION_ACTION:
+            world.expeditions.tick(world, resident, activity)
             return
         use = self._use_of(world, activity)
         if not activity.using:
@@ -95,19 +107,36 @@ class ActivitySystem:
             return True
         if use.staffed_by is not None and not world.work.is_staffed(world, use.staffed_by):
             return False
-        if use.consumes is not None:
+        if use.price > resident.credits:
+            return False
+        if use.sells:
+            # Paid for and handed over at once; the event of it is the purchase itself.
+            activity.item_id = world.trade.buy(world, resident, activity.target_id)
+            if activity.item_id is None:
+                return False
+        elif use.repairs > 0:
+            worn = world.trade.worn_item(world, resident)
+            if worn is None or not world.trade.take_repair_material(world, use):
+                return False
+            activity.item_id = worn.instance_id
+        elif use.consumes is not None:
             # What they eat is taken off the shelf now, so two residents never eat the same unit.
             activity.item_id = world.items.take_food(world, resident, activity.target_id, use.consumes)
             if activity.item_id is None:
                 return False
         elif use.item_id is not None:
             activity.item_id = use.item_id
+        world.trade.pay(resident, use.price)
+        if use.radio:
+            world.happenings.hear_radio(world, resident)
         placed = world.interactables[activity.target_id]
         resident.current_action = activity.action
         resident.facing = facing_towards(resident.tile, (placed.x, placed.y)) or "down"
+        if use.sells:
+            return True
         text = use.text
         if activity.item_id is not None:
-            item = world.registries.items.resolve(activity.item_id)
+            item = world.items.definition_for(world, activity.item_id)
             text = text.replace("{item}", f"{item.article} {item.name}")
         room = world.room_at(resident.tile)
         world.emit_event(
@@ -137,9 +166,11 @@ class ActivitySystem:
                 relieved = True
             if use.heals and resident.health >= RECOVERED_HEALTH:
                 relieved = True
+            if use.repairs > 0 and world.trade.repair_minute(world, activity, use):
+                relieved = True
         if activity.minutes_left > 0 and not relieved:
             return
-        if use is not None and activity.item_id is not None:
+        if use is not None and activity.item_id is not None and not use.sells and use.repairs <= 0:
             item = world.registries.items.resolve(activity.item_id)
             resident.needs.apply(world.items.use_effects(world, resident, item))
         resident.activity = None

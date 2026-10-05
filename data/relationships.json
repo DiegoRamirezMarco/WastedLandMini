@@ -1,0 +1,33 @@
+{
+  "adult_age": 18,
+  "friendship": [
+    {
+      "id": "friend",
+      "name": "amistad",
+      "affection": 30,
+      "trust": 10
+    },
+    {
+      "id": "close_friend",
+      "name": "amistad íntima",
+      "affection": 60,
+      "trust": 30
+    }
+  ],
+  "romance": {
+    "confess_attraction": 45,
+    "confess_affection": 35,
+    "accept_attraction": 35,
+    "accept_affection": 25,
+    "tryst_attraction": 40,
+    "tryst_hours": [
+      21,
+      6
+    ],
+    "tryst_cooldown_minutes": 1440,
+    "affair_attraction": 60,
+    "affair_max_empathy": 60,
+    "taken_attraction_factor": 0.3,
+    "breakup_resentment": 45
+  }
+}

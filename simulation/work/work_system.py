@@ -5,23 +5,30 @@ from typing import TYPE_CHECKING
 from simulation.ai.navigation import path_beside
 from simulation.ai.utility_ai import ScoredAction
 from simulation.events.event import DomainEvent
-from simulation.items.inventory import Inventory
 from simulation.items.item import ItemInstance
 from simulation.residents.activity import Activity
 from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
 from simulation.residents.resident import Resident
-from simulation.work.job import INTO_STATION, JobDefinition, ProduceRule
+from simulation.work import hauling
+from simulation.work.job import INTO_STATION, JobDefinition
 from world.interactable import Interactable
 
 if TYPE_CHECKING:
     from simulation.world import SimulationWorld
 
 WORK_ACTION = "work"
+# Carrying what the job makes or needs between the post and a container.
+HAUL_ACTION = "haul"
+WORK_ACTIONS = (WORK_ACTION, HAUL_ACTION)
 # Going to work beats idling and mild wants, and gives way to a real need.
 WORK_SCORE = 0.6
 # With a need this high a resident sees to it before starting or going back to work.
 PRESSING_NEED = 80.0
+# Someone about to leave the settlement for hours sees to a need long before it gets that far.
+SETTING_OUT_NEED = 50.0
 WORK_EVENT_IMPORTANCE = 5
+# Time spent loading or unloading at the end of a haul.
+HAUL_MINUTES = 2
 MINUTES_PER_DAY = 24 * 60
 
 
@@ -57,24 +64,70 @@ class WorkSystem:
         job = self.job_of(world, resident)
         return job.sight_bonus if job is not None and self.on_duty(world, resident) else 0
 
+    def is_day_off(self, world: "SimulationWorld", resident: Resident) -> bool:
+        """Whether today is the day of the week this resident does not work."""
+        if resident.day_off is None:
+            return False
+        return (world.clock.day - 1) % world.registries.economy.week_days == resident.day_off
+
+    def shift_minutes_left(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> int:
+        """Minutes this resident still has to work right now. 0 off shift and on their day off."""
+        if self.is_day_off(world, resident):
+            return 0
+        return minutes_left_in_shift(job, world.clock.hour, world.clock.minute)
+
+    def tool_of(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> ItemInstance | None:
+        """The working tool for this job that a resident has on them, if the job uses one."""
+        if job.tool is None:
+            return None
+        for item in resident.inventory.items:
+            if not item.broken and job.tool.tag in world.registries.items.resolve(item.definition_id).tags:
+                return item
+        return None
+
     def candidate(self, world: "SimulationWorld", resident: Resident) -> ScoredAction | None:
-        """Going to work, if the resident has a post, it is their shift, and no need is pressing."""
+        """Going to work, or on an errand for it, if the resident has a post and no need is pressing.
+
+        Work is for the shift. Handing in what they still carry is also done once it is over.
+        """
         job = self.job_of(world, resident)
         if job is None or resident.post_id not in world.interactables:
             return None
-        if minutes_left_in_shift(job, world.clock.hour, world.clock.minute) <= 0:
-            return None
-        if any(getattr(resident.needs, need) >= PRESSING_NEED for need in BODILY_NEEDS):
+        leaving = job.expedition is not None and resident.last_expedition_day != world.clock.day
+        pressing = SETTING_OUT_NEED if leaving else PRESSING_NEED
+        if any(getattr(resident.needs, need) >= pressing for need in BODILY_NEEDS):
             return None
         if not world.health.is_fit_for_work(resident):
             return None
+        remaining = self.shift_minutes_left(world, resident, job)
+        if job.produces is not None:
+            errand = hauling.errand(world, resident, job.produces, remaining)
+            if errand is not None:
+                return ScoredAction(HAUL_ACTION, WORK_SCORE, errand)
+        if job.expedition is not None:
+            # What was brought back from outside is put away before anything else.
+            errand = world.expeditions.errand(world, resident)
+            if errand is not None:
+                return ScoredAction(HAUL_ACTION, WORK_SCORE, errand)
+        if remaining <= 0:
+            return None
+        radio_id = world.happenings.radio_to_check(world, resident) if leaving else None
+        if radio_id is not None:
+            # Nobody who is about to go out there leaves without hearing what the radio has to say.
+            return ScoredAction(world.definition_of(world.interactables[radio_id]).use.action, WORK_SCORE, radio_id)
         return ScoredAction(WORK_ACTION, WORK_SCORE, resident.post_id)
 
-    def plan(self, world: "SimulationWorld", resident: Resident) -> Activity | None:
-        placed = world.interactables.get(resident.post_id or "")
+    def plan(
+        self, world: "SimulationWorld", resident: Resident, candidate: ScoredAction | None = None
+    ) -> Activity | None:
+        """The walk to the post, or to the container an errand leads to."""
+        hauling_to = candidate.target_id if candidate is not None and candidate.name == HAUL_ACTION else None
+        placed = world.interactables.get(hauling_to or resident.post_id or "")
         path = path_beside(world, resident, placed) if placed is not None else None
         if path is None:
             return None
+        if hauling_to is not None:
+            return Activity(HAUL_ACTION, hauling_to, path, HAUL_MINUTES)
         return Activity(WORK_ACTION, resident.post_id, path)
 
     def tick(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> None:
@@ -84,8 +137,14 @@ class WorkSystem:
         if job is None or placed is None:
             self._leave(resident)
             return
+        remaining = activity.minutes_left if activity.using else self.shift_minutes_left(world, resident, job)
+        if world.expeditions.can_set_out(world, resident, job, remaining) and not world.expeditions.stays_in(
+            world, resident, job
+        ):
+            # This job is done out there: the post is only where they leave from, as soon as they can.
+            world.expeditions.set_out(world, resident, job)
+            return
         if not activity.using:
-            remaining = minutes_left_in_shift(job, world.clock.hour, world.clock.minute)
             if remaining <= 0:
                 self._leave(resident)
                 return
@@ -98,16 +157,51 @@ class WorkSystem:
                 DomainEvent(
                     "work_started",
                     WORK_EVENT_IMPORTANCE,
-                    f"{resident.name} {job.text}",
+                    f"{resident.name} {job.text if job.expedition is None else 'se queda al cuidado del carro'}",
                     [resident.resident_id],
                     location_id=room.room_id if room is not None else None,
                 )
             )
         resident.needs.apply(job.per_minute)
-        if job.produces is not None:
-            self._produce(world, resident, job.produces, placed)
+        world.trade.pay_wage(world, resident, job)
         activity.minutes_left -= 1
+        if job.produces is not None and not self._produce(world, resident, job, placed, activity.minutes_left):
+            # Hands full, or nothing left to work with: off on an errand.
+            self._leave(resident)
+            return
         if activity.minutes_left <= 0 or any(getattr(resident.needs, need) >= URGENT_NEED for need in BODILY_NEEDS):
+            self._leave(resident)
+
+    def haul_tick(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> None:
+        """Spend one minute at the container a worker has carried things to, or come to fetch them from."""
+        job = self.job_of(world, resident)
+        placed = world.interactables.get(activity.target_id or "")
+        if job is None or placed is None:
+            self._leave(resident)
+            return
+        if not activity.using:
+            done = hauling.exchange(world, resident, job.produces, placed) if job.produces is not None else None
+            if done is None and job.expedition is not None:
+                done = world.expeditions.unload(world, resident, placed)
+            if done is None:
+                self._leave(resident)
+                return
+            activity.using = True
+            resident.current_action = HAUL_ACTION
+            self._face(resident, placed)
+            room = world.room_at(resident.tile)
+            world.emit_event(
+                DomainEvent(
+                    "goods_hauled",
+                    WORK_EVENT_IMPORTANCE,
+                    f"{resident.name} {done}",
+                    [resident.resident_id],
+                    location_id=room.room_id if room is not None else None,
+                )
+            )
+        world.trade.pay_wage(world, resident, job)
+        activity.minutes_left -= 1
+        if activity.minutes_left <= 0:
             self._leave(resident)
 
     def _leave(self, resident: Resident) -> None:
@@ -119,43 +213,40 @@ class WorkSystem:
         if dx or dy:
             resident.facing = ("right" if dx > 0 else "left") if abs(dx) > abs(dy) else ("down" if dy > 0 else "up")
 
-    def _containers_of_kind(self, world: "SimulationWorld", kind: str) -> list[tuple[str, Inventory]]:
-        return [
-            (object_id, inventory)
-            for object_id, inventory in world.containers.items()
-            if object_id in world.interactables and world.interactables[object_id].kind == kind
-        ]
+    def _produce(
+        self, world: "SimulationWorld", resident: Resident, job: JobDefinition, placed: Interactable, shift_left: int
+    ) -> bool:
+        """One minute's work towards the next unit. False if the worker has to leave the post to go on.
 
-    def _raw_material(self, world: "SimulationWorld", rule: ProduceRule) -> tuple[Inventory, ItemInstance] | None:
-        """The fullest shared stack of something the rule can be made from."""
-        best: tuple[Inventory, ItemInstance] | None = None
-        for _, inventory in self._containers_of_kind(world, rule.source or ""):
-            for item in inventory.items:
-                definition = world.registries.items.resolve(item.definition_id)
-                if item.owner_id is not None or definition.category != rule.source_category:
-                    continue
-                if rule.skip_tag is not None and rule.skip_tag in definition.tags:
-                    continue
-                if best is None or item.quantity > best[1].quantity:
-                    best = (inventory, item)
-        return best
-
-    def _produce(self, world: "SimulationWorld", resident: Resident, rule: ProduceRule, placed: Interactable) -> None:
-        resident.work_progress += 1
-        if resident.work_progress < rule.every_minutes:
-            return
+        What is made stays in the post, or in the worker's hands until they carry it where it goes.
+        Raw material is taken from what the worker has fetched.
+        """
+        rule = job.produces
+        if job.outdoors and world.happenings.is_stormy(world):
+            # Nothing gets done in the open until the weather passes.
+            return True
         if rule.into == INTO_STATION:
             target = world.containers.get(placed.object_id)
+            full = target is None or target.count(rule.item) >= rule.max_stock
         else:
-            # Share the output between the containers of that kind, emptiest first.
-            options = self._containers_of_kind(world, rule.into)
-            target = min(options, key=lambda option: (option[1].count(rule.item), option[0]))[1] if options else None
-        if target is None or target.count(rule.item) >= rule.max_stock:
-            return
+            target = resident.inventory
+            full = hauling.carried(resident, rule.item) >= rule.carry
+        if target is None:
+            return True
+        if full:
+            return hauling.errand(world, resident, rule, shift_left) is None
+        tool = self.tool_of(world, resident, job)
+        speed = job.tool.speed if job.tool is not None and tool is not None else 1.0
+        resident.work_progress = min(resident.work_progress + 1, rule.every_minutes)
+        if resident.work_progress * speed < rule.every_minutes:
+            return True
         if rule.source is not None:
-            material = self._raw_material(world, rule)
+            material = hauling.raw_carried(world, resident, rule)
             if material is None:
-                return
-            material[0].take_unit(material[1].instance_id)
+                return hauling.errand(world, resident, rule, shift_left) is None
+            resident.inventory.take_unit(material.instance_id)
         world.stock(target, rule.item, 1, None)
         resident.work_progress = 0
+        if tool is not None:
+            world.items.wear(world, resident, tool)
+        return True

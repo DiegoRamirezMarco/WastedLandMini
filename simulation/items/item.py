@@ -1,5 +1,8 @@
 from dataclasses import dataclass, field
 
+# A thing in worse condition than this is worth taking to be repaired.
+WORN_CONDITION = 50.0
+
 
 @dataclass(frozen=True)
 class ItemDefinition:
@@ -22,3 +25,8 @@ class ItemInstance:
     owner_id: str | None = None
     condition: float = 100.0
     quantity: int = 1
+
+    @property
+    def broken(self) -> bool:
+        """Worn right out. A broken thing does nothing until it is repaired."""
+        return self.condition <= 0.0

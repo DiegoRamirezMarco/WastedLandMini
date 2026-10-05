@@ -13,7 +13,10 @@
         "stress": -0.05
       },
       "position": "on",
-      "preferred_hours": [22, 7],
+      "preferred_hours": [
+        22,
+        7
+      ],
       "unaware": true,
       "until": "tiredness"
     }
@@ -43,7 +46,8 @@
       },
       "capacity": 4,
       "interruptible": true
-    }
+    },
+    "light": 6
   },
   "table": {
     "name": "mesa",
@@ -70,7 +74,8 @@
       "minutes": 20,
       "consumes": "food",
       "capacity": 3
-    }
+    },
+    "light": 3
   },
   "bar": {
     "name": "barra",
@@ -87,8 +92,13 @@
       "capacity": 4,
       "interruptible": true,
       "staffed_by": "bartender",
-      "preferred_hours": [18, 23]
-    }
+      "preferred_hours": [
+        18,
+        23
+      ],
+      "price": 2
+    },
+    "light": 4
   },
   "crop_bed": {
     "name": "bancal",
@@ -101,16 +111,50 @@
   "workbench": {
     "name": "banco de trabajo",
     "article": "un",
-    "width": 2
+    "width": 2,
+    "use": {
+      "action": "repair",
+      "text": "lleva {item} a arreglar",
+      "minutes": 90,
+      "repairs": 2.0,
+      "price": 4,
+      "staffed_by": "mechanic",
+      "material": "scrap",
+      "material_from": "scrap_pile"
+    },
+    "light": 3
+  },
+  "shop_counter": {
+    "name": "mostrador",
+    "article": "un",
+    "width": 2,
+    "container": true,
+    "use": {
+      "action": "shop",
+      "text": "compra {item} en la tienda",
+      "minutes": 5,
+      "sells": true,
+      "staffed_by": "shopkeeper",
+      "capacity": 2
+    },
+    "light": 3
+  },
+  "shelf": {
+    "name": "estantería",
+    "article": "una",
+    "width": 2,
+    "display_of": "shop_counter"
   },
   "barrel": {
     "name": "bidón",
-    "article": "un"
+    "article": "un",
+    "light": 4
   },
   "scrap_pile": {
     "name": "montón de chatarra",
     "article": "un",
-    "width": 2
+    "width": 2,
+    "container": true
   },
   "water_tank": {
     "name": "depósito de agua",
@@ -133,10 +177,54 @@
   },
   "medicine_cabinet": {
     "name": "botiquín",
-    "article": "un"
+    "article": "un",
+    "light": 3
   },
   "grave": {
     "name": "tumba",
     "article": "una"
+  },
+  "lamp": {
+    "name": "farol",
+    "article": "un",
+    "light": 5
+  },
+  "wreck": {
+    "name": "coche oxidado",
+    "article": "un",
+    "width": 3,
+    "height": 2
+  },
+  "tyres": {
+    "name": "pila de neumáticos",
+    "article": "una"
+  },
+  "junk": {
+    "name": "trastos",
+    "article": "unos",
+    "blocks": false
+  },
+  "handcart": {
+    "name": "carro",
+    "article": "un"
+  },
+  "radio_set": {
+    "name": "radio del asentamiento",
+    "article": "una",
+    "use": {
+      "action": "listen",
+      "text": "escucha la radio",
+      "minutes": 20,
+      "per_minute": {
+        "stress": -0.12
+      },
+      "capacity": 3,
+      "interruptible": true,
+      "preferred_hours": [
+        6,
+        10
+      ],
+      "radio": true
+    }
   }
 }

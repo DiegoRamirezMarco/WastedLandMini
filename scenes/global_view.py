@@ -8,9 +8,12 @@ from graphics.face_renderer import FaceRenderer
 from graphics.font import CELL_SIZE, BitmapFont
 from graphics.icons import ICON_SIZE, icon_path
 from graphics.item_icons import ItemIcons
+from graphics.lighting import BLOCK, LightMap, daylight, shade
 from graphics.map_renderer import render_roofs, render_terrain, roof_names
 from graphics.palette import PALETTE
+from graphics.shelf_display import SLOTS, displayed_goods
 from graphics.tileset import (
+    CLOSE_ROOF_SHEET,
     ROOF_CELLS,
     ROOF_SHEET,
     ROOF_SHEET_SIZE,
@@ -19,16 +22,18 @@ from graphics.tileset import (
     SETTLEMENT_SHEET_SIZE,
     Tileset,
 )
-from scenes.hud import LOG_INTENT, PAUSE_INTENT, Hud
+from scenes.hud import JOBS_INTENT, LOG_INTENT, PAUSE_INTENT, Hud
 from scenes.scene import canvas_position
 from settings import SCALE, TILE_SIZE
-from simulation.commands import SetPausedCommand, SetSpeedCommand
+from simulation.commands import SetPausedCommand, SetSpeedCommand, SuggestJobCommand
 from simulation.events.event import DomainEvent
 from simulation.items.item_system import USE_ITEM_ACTION
 from simulation.work.work_system import WORK_ACTION
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
+from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
 from world.interactable import Interactable
+from world.map import Tile
 
 MAP_ORIGIN = (0, 32)
 # Walk cycle over one tile: step A, idle, step B, idle.
@@ -40,6 +45,17 @@ ANIMATION_FPS = 5
 BOBBING_ICONS = ("alert", "sleep")
 # Health below which a resident is shown as hurt.
 HURT_HEALTH = 70.0
+# Where a load is drawn on a body frame, by the way the resident faces: in their arms, or on their back.
+LOAD_OFFSETS = {"down": (4, 13), "up": (4, 12), "left": (0, 13), "right": (8, 13)}
+SUGGESTION_REFUSED = "Ahora no se le puede proponer ese puesto"
+NOBODY_NEEDS_ATTENTION = "Nadie necesita atención ahora"
+ROOFS_ON = "Tejados puestos: se quitan al mirar dentro"
+ROOFS_OFF = "Tejados quitados"
+MINIMAP_MARGIN = 6
+# What bad weather multiplies the picture of the map by, and how many streaks of dust blow across it.
+STORM_TINT = (226, 198, 156)
+STORM_STREAKS = 70
+STORM_SPEED = 140
 # Canvas pixels per real second that the view scrolls while a direction key is held.
 SCROLL_SPEED = 260
 SCROLL_KEYS = {
@@ -99,6 +115,25 @@ class GlobalView:
         self.roofs = roof_names(world.tile_map, world.rooms.values())
         roof_tiles = Tileset(self.assets.image(ROOF_SHEET, size=ROOF_SHEET_SIZE), ROOF_CELLS)
         self.roofed_terrain = render_roofs(self.terrain, self.roofs, roof_tiles)
+        # The same from close, where a building keeps its roof until it is looked into.
+        close_tiles = Tileset(self.assets.image(CLOSE_ROOF_SHEET, size=ROOF_SHEET_SIZE), ROOF_CELLS)
+        self.close_roofed_terrain = render_roofs(self.terrain, self.roofs, close_tiles)
+        self.roof_tiles: dict[str, set[Tile]] = {
+            room.room_id: set(roof_names(world.tile_map, [room])) for room in world.rooms.values() if room.roofed
+        }
+        # Whether buildings have their roof on from close. Off, every one of them stands open.
+        self.roofs_on = True
+        # Canvas position of the mouse, as far as the scene has been told.
+        self.pointer: tuple[int, int] | None = None
+        # Tiles under a roof that is on this frame: what stands there is not drawn.
+        self._hidden: set[Tile] = set()
+        self.lights = LightMap()
+        tiles = (world.tile_map.width, world.tile_map.height)
+        self._minimap = minimap_base(self.roofed_terrain, tiles)
+        width, height = minimap_size(tiles)
+        self.hud.minimap_rect = pygame.Rect(
+            canvas.get_width() - MINIMAP_MARGIN - width, canvas.get_height() - MINIMAP_MARGIN - height, width, height
+        )
         # The part of the canvas that shows the map, and the map pixel at its top-left corner.
         self.viewport = pygame.Rect(
             MAP_ORIGIN, (canvas.get_width() - MAP_ORIGIN[0], canvas.get_height() - MAP_ORIGIN[1])
@@ -119,8 +154,15 @@ class GlobalView:
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
             self._apply(LOG_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_j:
+            self._apply(JOBS_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
             self.centre_on_resident(self.hud.selected_id)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_g:
+            self.jump_to_attention()
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_t:
+            self.roofs_on = not self.roofs_on
+            self.hud.notify(ROOFS_ON if self.roofs_on else ROOFS_OFF)
         elif event.type == pygame.KEYDOWN and event.key in ZOOM_KEYS:
             self.set_zoom(self.zoom + ZOOM_KEYS[event.key])
         elif event.type == pygame.MOUSEWHEEL:
@@ -128,10 +170,13 @@ class GlobalView:
             steps = (event.y > 0) - (event.y < 0)
             self.set_zoom(self.zoom + steps, canvas_position(pygame.mouse.get_pos()))
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            self.click(canvas_position(event.pos))
-        elif event.type == pygame.MOUSEMOTION and event.buttons[RIGHT_MOUSE_BUTTON]:
-            # Dragging with the right button pulls the map along with the mouse.
-            self.scroll(-event.rel[0] / SCALE, -event.rel[1] / SCALE)
+            self.pointer = canvas_position(event.pos)
+            self.click(self.pointer)
+        elif event.type == pygame.MOUSEMOTION:
+            self.pointer = canvas_position(event.pos)
+            if event.buttons[RIGHT_MOUSE_BUTTON]:
+                # Dragging with the right button pulls the map along with the mouse.
+                self.scroll(-event.rel[0] / SCALE, -event.rel[1] / SCALE)
 
     def update(self, dt: float) -> None:
         if not self.world.clock.paused:
@@ -200,11 +245,71 @@ class GlobalView:
                 self.centre_on_resident(decision.resident_id)
                 break
 
+    def needing_attention(self) -> list[str]:
+        """Residents the player should look at, the most pressing first.
+
+        Whoever waits for advice, then whoever is in the middle of something serious, then the hurt.
+        """
+        waiting = [decision.resident_id for decision in self.world.decisions.values()]
+        involved = [resident_id for resident_id in self.world.residents if resident_id in self.alerts]
+        hurt = [
+            resident_id for resident_id, resident in self.world.residents.items() if resident.health < HURT_HEALTH
+        ]
+        return [resident_id for resident_id in dict.fromkeys([*waiting, *involved, *hurt]) if resident_id in self.world.residents]
+
+    def jump_to_attention(self) -> str | None:
+        """Select and show the next resident who needs attention, going round them one by one."""
+        waiting = self.needing_attention()
+        if not waiting:
+            self.hud.notify(NOBODY_NEEDS_ATTENTION)
+            return None
+        current = self.hud.selected_id
+        chosen = waiting[(waiting.index(current) + 1) % len(waiting)] if current in waiting else waiting[0]
+        self.hud.select_resident(chosen)
+        self.centre_on_resident(chosen)
+        return chosen
+
+    def looked_into(self) -> set[str]:
+        """Roofed rooms that stand open this frame: under the pointer, or holding what is selected."""
+        if self.overview:
+            return set()
+        if not self.roofs_on:
+            return set(self.roof_tiles)
+        looked_at: list[Tile] = []
+        if self.pointer is not None and self.viewport.collidepoint(self.pointer) and not self.hud.covers(self.pointer):
+            x, y = self._map_point(self.pointer)
+            looked_at.append((int(x // TILE_SIZE), int(y // TILE_SIZE)))
+        selected = self.world.residents.get(self.hud.selected_id or "")
+        if selected is not None:
+            looked_at.append(selected.tile)
+        container = self.world.interactables.get(self.hud.selected_container or "")
+        if container is not None:
+            looked_at.append((container.x, container.y))
+        return {
+            room_id for room_id in self.roof_tiles if any(self._is_at(room_id, tile) for tile in looked_at)
+        }
+
+    def _is_at(self, room_id: str, tile: Tile) -> bool:
+        """Whether a tile is under a building's roof or in the wall in front of it, door included."""
+        room = self.world.rooms[room_id]
+        in_front = tile[1] == room.y + room.height and room.x - 1 <= tile[0] <= room.x + room.width
+        return tile in self.roof_tiles[room_id] or in_front
+
+    def _roof_area(self, room_id: str) -> pygame.Rect:
+        """The part of the map a building's roof covers, in map pixels."""
+        room = self.world.rooms[room_id]
+        return pygame.Rect(
+            (room.x - 1) * TILE_SIZE, (room.y - 1) * TILE_SIZE, (room.width + 2) * TILE_SIZE, room.height * TILE_SIZE
+        ).clip(self.terrain.get_rect())
+
     def click(self, position: tuple[int, int]) -> None:
-        """Handle a left click at a canvas position: a button, a resident, or empty ground."""
+        """Handle a left click at a canvas position: a button, the minimap, a resident, or empty ground."""
         intent = self.hud.click(position)
+        minimap = self.hud.minimap_rect
         if intent is not None:
             self._apply(intent)
+        elif minimap is not None and minimap.collidepoint(position):
+            self.centre_on(tile_at(minimap, position))
         elif not self.hud.covers(position) and self.viewport.collidepoint(position):
             # The resident drawn last is in front, so it is the one picked.
             picked = [rid for rid, rect in self.hitboxes.items() if rect.collidepoint(position)]
@@ -227,32 +332,66 @@ class GlobalView:
         if intent == PAUSE_INTENT:
             self.world.apply_command(SetPausedCommand(not self.world.clock.paused))
         elif intent == LOG_INTENT:
-            self.hud.log_open = not self.hud.log_open
+            self.hud.toggle_log()
+        elif intent == JOBS_INTENT:
+            self.hud.toggle_jobs()
+        elif isinstance(intent, tuple) and intent[0] == "suggest":
+            self._suggest_job(intent[1])
         elif isinstance(intent, tuple) and intent[0] == "speed":
             self.world.apply_command(SetSpeedCommand(intent[1]))
         elif isinstance(intent, tuple) and intent[0] == "zoom":
             self.set_zoom(self.zoom + intent[1])
+
+    def _suggest_job(self, job_id: str) -> None:
+        """Put a job to the selected resident and say what came of it. The choice is theirs."""
+        resident = self.world.residents.get(self.hud.selected_id or "")
+        if resident is None:
+            return
+        before = len(self.world.history)
+        outcome = self.world.apply_command(SuggestJobCommand(resident.resident_id, job_id))
+        answers = [event for event in self.world.history[before:] if event.event_type == "crisis_resolved"]
+        if outcome is None or not answers:
+            self.hud.notify(SUGGESTION_REFUSED)
+        else:
+            # The event also says what advice it came with, which here is always the same.
+            self.hud.notify(answers[-1].text.partition(" (")[0])
 
     def render(self) -> None:
         self.canvas.fill(PALETTE["ink"])
         region = self._visible_region()
         self._scene = self._buffer(region.size)
         self._scene_origin = region.topleft
-        self._scene.blit(self.roofed_terrain if self.overview else self.terrain, (0, 0), region)
+        self._scene.blit(self.roofed_terrain if self.overview else self.close_roofed_terrain, (0, 0), region)
+        # A building that is looked into has its roof taken off: the bare terrain is put back there.
+        open_rooms = self.looked_into()
+        self._hidden = set()
+        for room_id, covered in self.roof_tiles.items():
+            if room_id not in open_rooms:
+                self._hidden |= covered
+                continue
+            area = self._roof_area(room_id)
+            self._scene.blit(self.terrain, (area.x - region.x, area.y - region.y), area)
 
         # Objects and residents share one list so that whatever stands lower on screen is in front.
         draws: list[Draw] = []
         for placed in self.world.interactables.values():
-            # From afar a roof hides what is under it.
-            if not (self.overview and (placed.x, placed.y) in self.roofs):
+            # A roof hides what is under it.
+            if (placed.x, placed.y) not in self._hidden:
                 draws.append(self._object_draw(placed))
         for resident in self.world.residents.values():
-            draws.append(self._marker_draw(resident) if self.overview else self._resident_draw(resident))
+            if resident.away:
+                # Whoever is outside the settlement is nowhere on its map.
+                continue
+            # Someone under a roof is still found: their face is shown on it, as from afar.
+            unseen = self.overview or resident.tile in self._hidden
+            draws.append(self._marker_draw(resident) if unseen else self._resident_draw(resident))
         self.hitboxes = {}
         self.container_hitboxes = {}
         self._overlays = []
         for _, _, draw in sorted(draws, key=lambda entry: entry[:2]):
             draw()
+        self._storm(region)
+        self._shade(region)
 
         # Nothing of the map is drawn outside its part of the canvas.
         self.canvas.set_clip(self.viewport)
@@ -267,6 +406,68 @@ class GlobalView:
         self.canvas.set_clip(None)
 
         self.hud.render()
+        self._draw_minimap(region)
+
+    def _storm(self, region: pygame.Rect) -> None:
+        """Under bad weather, wash the scene in dust and blow streaks of it across."""
+        if not self.world.happenings.is_stormy(self.world):
+            return
+        self._scene.fill(STORM_TINT, special_flags=pygame.BLEND_RGB_MULT)
+        drift = int(self.time * STORM_SPEED)
+        for index in range(STORM_STREAKS):
+            # Each streak keeps its own height and length, and they all move with the wind.
+            x = (index * 97 + drift * (1 + index % 3)) % (region.width + 16) - 16
+            y = (index * 53 + index * index * 7) % max(1, region.height)
+            pygame.draw.line(self._scene, PALETTE["sand"], (x, y), (x + 4 + index % 5, y))
+
+    def _shade(self, region: pygame.Rect) -> None:
+        """Darken the scene by the hour, leaving a pool of light round every fire and lamp in sight."""
+        level = daylight(self.world.clock.hour, self.world.clock.minute)
+        if level >= 1.0:
+            return
+        flicker = int(self.time * ANIMATION_FPS) % 2
+        lights = []
+        for placed in self.world.interactables.values():
+            definition = self.world.definition_of(placed)
+            if definition.light <= 0 or (placed.x, placed.y) in self._hidden:
+                continue
+            centre = (
+                round((placed.x + definition.width / 2) * TILE_SIZE) - region.x,
+                round((placed.y + definition.height / 2) * TILE_SIZE) - region.y,
+            )
+            # A flame wavers; a lamp burns steady.
+            wavers = self._frames(placed.kind, definition.width) > 1
+            lights.append((centre, definition.light * TILE_SIZE - (BLOCK * flicker if wavers else 0)))
+        shade(self._scene, self.lights.render(region.size, level, lights))
+
+    def _frames(self, kind: str, width_in_tiles: int) -> int:
+        """How many animation frames an object's sheet holds, side by side."""
+        sheet = self.assets.image(f"sprites/objects/{kind}.png")
+        return max(1, sheet.get_width() // (width_in_tiles * TILE_SIZE))
+
+    def _draw_minimap(self, region: pygame.Rect) -> None:
+        rect = self.hud.minimap_rect
+        if rect is None:
+            return
+        attention = set(self.needing_attention())
+        blink = int(self.time * ANIMATION_FPS) % 2 == 0
+        dots = {}
+        for resident_id, resident in self.world.residents.items():
+            if resident.away:
+                continue
+            color = "paper"
+            if resident_id in attention:
+                color = "ember" if blink else "glow"
+            elif resident_id == self.hud.selected_id:
+                color = "lamp"
+            dots[(resident.x, resident.y)] = color
+        view = pygame.Rect(
+            region.x * TILE_PIXELS // TILE_SIZE,
+            region.y * TILE_PIXELS // TILE_SIZE,
+            region.width * TILE_PIXELS // TILE_SIZE,
+            region.height * TILE_PIXELS // TILE_SIZE,
+        )
+        draw_minimap(self.canvas, rect, self._minimap, view, dots)
 
     def _buffer(self, size: tuple[int, int]) -> pygame.Surface:
         """A surface of this size to draw a frame on, kept from one frame to the next."""
@@ -327,14 +528,17 @@ class GlobalView:
         sheet = self.assets.image(f"sprites/objects/{placed.kind}.png")
         # A sheet wider than the object holds animation frames side by side.
         width = definition.width * TILE_SIZE
-        frames = max(1, sheet.get_width() // width)
-        frame = int(self.time * ANIMATION_FPS) % frames
+        frame = int(self.time * ANIMATION_FPS) % self._frames(placed.kind, definition.width)
         image = sheet.subsurface((frame * width, 0, min(width, sheet.get_width()), sheet.get_height()))
         bottom = (placed.y + definition.height) * TILE_SIZE
         area = pygame.Rect((placed.x * TILE_SIZE, bottom - image.get_height()), image.get_size())
 
+        goods = displayed_goods(self.world, placed) if definition.display_of is not None else []
+
         def draw() -> None:
             self._blit(image, area.topleft)
+            for definition_id, (dx, dy) in zip(goods, SLOTS):
+                self._blit(self.icons.small(definition_id), (area.left + dx, area.top + dy))
             if placed.object_id in self.world.containers:
                 self.container_hitboxes[placed.object_id] = self._canvas_rect(area)
 
@@ -349,8 +553,13 @@ class GlobalView:
         feet = (left + TILE_SIZE // 2, top + TILE_SIZE - 2)
         body = pygame.Rect(feet[0] - FRAME_SIZE[0] // 2, feet[1] - FRAME_SIZE[1], *FRAME_SIZE)
 
+        load = self._load_of(resident)
+
         def draw() -> None:
             self._blit(self.characters.frame(resident.resident_id, facing, step), body.topleft)
+            if load is not None:
+                dx, dy = LOAD_OFFSETS[facing]
+                self._blit(self.icons.small(load), (body.left + dx, body.top + dy))
             hitbox = self._canvas_rect(body)
             self.hitboxes[resident.resident_id] = hitbox
             self._overlays.append(lambda: self._draw_overhead(resident, hitbox.midtop, with_name=True))
@@ -450,14 +659,21 @@ class GlobalView:
         half_tile = self.tile_px // 2
         return centre_x + half_tile - 3 - width if partner.x > resident.x else centre_x - half_tile + 3
 
+    def _load_of(self, resident: Resident) -> str | None:
+        """Definition ID of what a resident is carrying for their job: goods that are nobody's yet."""
+        return next((item.definition_id for item in resident.inventory.items if item.owner_id is None), None)
+
     def _item_in_hand(self, resident: Resident) -> str | None:
         """Definition ID of what a resident is eating or using right now."""
         activity = resident.activity
         if activity is None or not activity.using or activity.item_id is None:
             return None
+        item = self.world.items.find_item(self.world, activity.item_id)
+        if item is not None:
+            # One thing in particular: what they are using, or having repaired.
+            return item.definition_id
         if activity.action == USE_ITEM_ACTION:
-            item = self.world.items.find_item(self.world, activity.item_id)
-            return item.definition_id if item is not None else None
+            return None
         return activity.item_id if activity.target_id is not None and activity.partner_id is None else None
 
     def _draw_overhead(

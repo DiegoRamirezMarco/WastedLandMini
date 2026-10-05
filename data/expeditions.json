@@ -1,0 +1,47 @@
+{
+  "loot": [
+    {
+      "item": "scrap",
+      "weight": 5
+    },
+    {
+      "item": "canned_beans",
+      "weight": 3
+    },
+    {
+      "item": "pizza_radioactiva",
+      "weight": 0.5
+    },
+    {
+      "item": "hoe",
+      "weight": 0.4
+    },
+    {
+      "item": "rusty_knife",
+      "weight": 0.3
+    },
+    {
+      "item": "old_radio",
+      "weight": 0.2
+    }
+  ],
+  "deliveries": [
+    {
+      "tag": "scrap",
+      "to": "scrap_pile"
+    },
+    {
+      "to": "shop_counter"
+    }
+  ],
+  "injury": [
+    8,
+    20
+  ],
+  "injury_kind": "cut",
+  "find_chance": 0.35,
+  "push_on_finds": 4,
+  "push_on_danger": 0.35,
+  "push_on_minutes": 60,
+  "turn_back_minutes": 30
+}

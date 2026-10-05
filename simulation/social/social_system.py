@@ -8,6 +8,7 @@ from simulation.knowledge.knowledge_system import share_rumor
 from simulation.memory.memory import Memory
 from simulation.residents.activity import MOVE_TILES_PER_MINUTE, WANDER_ACTION, Activity
 from simulation.residents.resident import Resident
+from simulation.social.bonds import AFFAIR_EVENT, AFFAIR_IMPORTANCE, TRYST
 from simulation.social.interaction import InteractionDefinition
 from simulation.social.relationship import SIGNED_FEELINGS, Relationship
 from simulation.work.work_system import WORK_ACTION
@@ -59,11 +60,16 @@ def argument_chance(world: "SimulationWorld", a: Resident, b: Resident) -> float
 
 
 def feeling_changes(
-    definition: InteractionDefinition, resident: Resident, partner: Resident, feelings: Relationship
+    definition: InteractionDefinition,
+    resident: Resident,
+    partner: Resident,
+    feelings: Relationship,
+    attraction_rate: float = 0.0,
 ) -> dict[str, float]:
     """How `resident`'s feelings about `partner` change. Depends on both personalities,
-    so the two sides of one exchange come out different. Affection and trust grow more
-    slowly the higher they already are."""
+    so the two sides of one exchange come out different. Affection, trust and attraction grow
+    more slowly the higher they already are, and attraction only grows at `attraction_rate`:
+    not at all where there is nothing to grow from."""
     mine, theirs = resident.personality, partner.personality
     if definition.hostile:
         other = 0.5 + theirs.aggression / 100.0
@@ -74,7 +80,9 @@ def feeling_changes(
     changes: dict[str, float] = {}
     for feeling, base in definition.relationship.items():
         delta = base * other * own.get(feeling, 1.0)
-        if delta > 0 and feeling in SIGNED_FEELINGS:
+        if feeling == "attraction" and base > 0:
+            delta = base * attraction_rate
+        if delta > 0 and feeling in (*SIGNED_FEELINGS, "attraction"):
             delta *= max(0.0, 1.0 - getattr(feelings, feeling) / 100.0)
         changes[feeling] = delta
     return changes
@@ -161,6 +169,10 @@ class SocialSystem:
             activity = started
         definition = world.registries.interactions[activity.action]
         resident.needs.apply(definition.per_minute)
+        partner = world.residents.get(activity.partner_id or "")
+        if definition.romance == TRYST and partner is not None:
+            # Two people off alone can still be come across.
+            world.bonds.seen(world, resident, partner)
         activity.minutes_left -= 1
         if activity.minutes_left <= 0:
             self._conclude(world, resident, activity, definition)
@@ -205,12 +217,17 @@ class SocialSystem:
     def _begin(self, world: "SimulationWorld", resident: Resident, approach: Activity) -> Activity | None:
         """Start the exchange for both residents. Returns `resident`'s new activity."""
         partner = world.residents.get(approach.partner_id or "")
-        if partner is None or manhattan(resident.tile, partner.tile) != 1:
+        if partner is None or partner.away or manhattan(resident.tile, partner.tile) != 1:
             return None
         if approach.intent is not None:
             # A resident with their mind made up interrupts anything but another exchange.
             definition = world.registries.interactions.get(approach.intent)
             if definition is None or self._in_exchange(partner):
+                return None
+            if definition.romance is not None and not world.bonds.may_begin(world, resident, partner, definition):
+                if world.relationship(resident.resident_id, partner.resident_id).last_together == world.clock.total_minutes:
+                    # Turned down: there is nothing to wait around for.
+                    approach.minutes_left = 0
                 return None
         else:
             if not self._can_be_approached(world, partner, resident):
@@ -223,7 +240,12 @@ class SocialSystem:
 
         for one, other in ((resident, partner), (partner, resident)):
             one.activity = Activity(
-                definition.interaction_id, minutes_left=minutes, using=True, partner_id=other.resident_id
+                definition.interaction_id,
+                minutes_left=minutes,
+                using=True,
+                partner_id=other.resident_id,
+                # Whoever came for this exchange keeps it as their intent, so its end is theirs to settle.
+                intent=approach.intent if one is resident else None,
             )
             one.current_action = definition.interaction_id
             dx, dy = other.x - one.x, other.y - one.y
@@ -259,9 +281,15 @@ class SocialSystem:
         )
         if sought and definition.hostile:
             importance += CONFRONTATION_IMPORTANCE
+        event_type, subjects = f"{definition.interaction_id}_started", None
+        betrayed = world.bonds.betrayed_by(world, speaker, listener) if definition.romance == TRYST else []
+        if betrayed:
+            # Behind someone's back it is another thing, and it is also about whoever is not there.
+            event_type, subjects = AFFAIR_EVENT, [speaker.resident_id, listener.resident_id, *betrayed]
+            importance += AFFAIR_IMPORTANCE
         world.emit_event(
             DomainEvent(
-                event_type=f"{definition.interaction_id}_started",
+                event_type=event_type,
                 importance=importance,
                 text=text,
                 participants=[speaker.resident_id, listener.resident_id],
@@ -273,6 +301,7 @@ class SocialSystem:
                 if definition.fact is not None
                 else None
             ),
+            subjects=subjects,
         )
 
     def _heat(self, world: "SimulationWorld", resident: Resident, towards: Resident) -> float:
@@ -290,10 +319,14 @@ class SocialSystem:
         partner = world.residents.get(activity.partner_id or "")
         if partner is not None:
             feelings = world.relationship(resident.resident_id, partner.resident_id)
-            for feeling, delta in feeling_changes(definition, resident, partner, feelings).items():
+            drawn = world.bonds.attraction_rate(world, resident, partner)
+            for feeling, delta in feeling_changes(definition, resident, partner, feelings, drawn).items():
                 feelings.adjust(feeling, delta)
             if definition.hostile:
                 feelings.last_argued = world.clock.total_minutes
+            world.bonds.update_friendship(world, resident, partner)
+            if definition.romance is not None and activity.intent == definition.interaction_id:
+                world.bonds.resolve(world, resident, partner, definition)
             room = world.room_at(resident.tile)
             world.memories.remember(
                 resident.resident_id,

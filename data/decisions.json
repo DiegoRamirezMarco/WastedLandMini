@@ -146,5 +146,294 @@
         }
       }
     ]
+  },
+  "job_offer": {
+    "event_type": "job_offered",
+    "window_minutes": 60,
+    "cooldown_minutes": 720,
+    "anger_threshold": 0,
+    "importance": 50,
+    "text": "{name} se plantea hacerse cargo de un puesto: {job}",
+    "prompt": "Hace falta gente en un puesto: {job}. ¿Me pongo yo?",
+    "outcomes": {
+      "take": {
+        "score": {
+          "bias": -0.25,
+          "vacancy": 0.6,
+          "idle": 0.7,
+          "empathy": 0.35,
+          "courage": 0.15
+        },
+        "takes_job": true,
+        "text": "{name} decide hacerse cargo del puesto: {job}",
+        "memory": "Me hice cargo de un puesto que hacía falta: {job}."
+      },
+      "stay": {
+        "score": {
+          "bias": 0.3,
+          "greed": 0.25
+        },
+        "text": "{name} prefiere seguir con lo suyo"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Hazlo, hace falta",
+        "influence": {
+          "take": 0.5,
+          "stay": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "discourage",
+        "text": "Mejor sigue en lo tuyo",
+        "influence": {
+          "stay": 0.5,
+          "take": -0.3
+        }
+      }
+    ]
+  },
+  "confession": {
+    "event_type": "feelings_stirring",
+    "window_minutes": 60,
+    "cooldown_minutes": 2880,
+    "anger_threshold": 0,
+    "importance": 50,
+    "text": "{name} le da vueltas a decirle a {target} lo que siente",
+    "prompt": "Creo que siento algo por {target}. ¿Se lo digo?",
+    "outcomes": {
+      "confess": {
+        "score": {
+          "bias": -0.25,
+          "courage": 0.5,
+          "impulsiveness": 0.2,
+          "attraction": 0.5,
+          "affection": 0.3
+        },
+        "interaction": "confession",
+        "text": "{name} va a decirle a {target} lo que siente"
+      },
+      "keep_quiet": {
+        "score": {
+          "bias": 0.45,
+          "stress": 0.2
+        },
+        "needs": {
+          "stress": 4
+        },
+        "text": "{name} se lo calla una vez más",
+        "memory": "No me atreví a decirle nada a {target}."
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Díselo",
+        "influence": {
+          "confess": 0.5,
+          "keep_quiet": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "discourage",
+        "text": "Mejor espera",
+        "influence": {
+          "keep_quiet": 0.5,
+          "confess": -0.3
+        }
+      }
+    ]
+  },
+  "breakup": {
+    "event_type": "couple_in_trouble",
+    "window_minutes": 60,
+    "cooldown_minutes": 1440,
+    "anger_threshold": 0,
+    "importance": 55,
+    "text": "{name} no sabe si seguir con {target}",
+    "prompt": "Ya no sé si quiero seguir con {target}.",
+    "outcomes": {
+      "break_up": {
+        "score": {
+          "bias": -0.3,
+          "resentment": 0.9,
+          "anger": 0.3,
+          "impulsiveness": 0.2,
+          "affection": -0.4
+        },
+        "interaction": "breakup",
+        "text": "{name} va a decirle a {target} que se acabó"
+      },
+      "talk_it_out": {
+        "score": {
+          "bias": 0.05,
+          "empathy": 0.4,
+          "affection": 0.5
+        },
+        "interaction": "heart_to_heart",
+        "text": "{name} decide hablar las cosas con {target}"
+      },
+      "stay": {
+        "score": {
+          "bias": 0.25,
+          "fear": 0.3
+        },
+        "needs": {
+          "stress": 5
+        },
+        "text": "{name} aguanta un poco más",
+        "memory": "Estuve a punto de dejar a {target}."
+      }
+    },
+    "options": [
+      {
+        "id": "leave",
+        "text": "Sepárate",
+        "influence": {
+          "break_up": 0.5,
+          "talk_it_out": -0.2
+        }
+      },
+      {
+        "id": "talk",
+        "text": "Habladlo",
+        "influence": {
+          "talk_it_out": 0.6,
+          "break_up": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "stay",
+        "text": "Aguanta",
+        "influence": {
+          "stay": 0.5,
+          "break_up": -0.3
+        }
+      }
+    ]
+  },
+  "risky_find": {
+    "event_type": "risky_find",
+    "window_minutes": 45,
+    "cooldown_minutes": 0,
+    "anger_threshold": 0,
+    "importance": 50,
+    "text": "{name} ha dado fuera con algo que promete, pero no se fía",
+    "prompt": "He dado con un sitio sin tocar, pero no me gusta cómo pinta. ¿Entro?",
+    "outcomes": {
+      "push_on": {
+        "score": {
+          "bias": -0.2,
+          "courage": 0.5,
+          "greed": 0.5,
+          "impulsiveness": 0.3,
+          "health": 0.2
+        },
+        "expedition": "push_on",
+        "text": "{name} se la juega y entra"
+      },
+      "turn_back": {
+        "score": {
+          "bias": 0.55,
+          "stress": 0.2
+        },
+        "expedition": "turn_back",
+        "text": "{name} lo deja estar y se vuelve"
+      }
+    },
+    "options": [
+      {
+        "id": "go",
+        "text": "Entra, merece la pena",
+        "influence": {
+          "push_on": 0.5,
+          "turn_back": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "careful",
+        "text": "Vuélvete, no compensa",
+        "influence": {
+          "turn_back": 0.5,
+          "push_on": -0.3
+        }
+      }
+    ]
+  },
+  "stranger": {
+    "event_type": "stranger_at_gate",
+    "window_minutes": 60,
+    "cooldown_minutes": 0,
+    "anger_threshold": 0,
+    "importance": 55,
+    "text": "{visitor} llama a la puerta y pide quedarse: le toca decidir a {name}",
+    "prompt": "Hay alguien en la puerta. Dice llamarse {visitor} y quiere quedarse. ¿Abro?",
+    "outcomes": {
+      "let_in": {
+        "score": {
+          "bias": -0.05,
+          "empathy": 0.6,
+          "courage": 0.2,
+          "sociability": 0.2
+        },
+        "gate": "let_in",
+        "text": "{name} abre la puerta a {visitor}"
+      },
+      "turn_away": {
+        "score": {
+          "bias": 0.25,
+          "aggression": 0.3,
+          "greed": 0.3,
+          "stress": 0.2
+        },
+        "gate": "turn_away",
+        "text": "{name} le dice a {visitor} que siga su camino"
+      }
+    },
+    "options": [
+      {
+        "id": "open",
+        "text": "Que pase",
+        "influence": {
+          "let_in": 0.5,
+          "turn_away": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "close",
+        "text": "Que siga su camino",
+        "influence": {
+          "turn_away": 0.5,
+          "let_in": -0.3
+        }
+      }
+    ]
   }
 }

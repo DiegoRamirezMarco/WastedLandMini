@@ -18,6 +18,10 @@ class Relationship:
     resentment: float = 0.0
     # Game minute of the last argument with this person, as the source remembers it.
     last_argued: int | None = None
+    # Degree of friendship the source last held the target in: a tier ID, or nothing.
+    bond: str = ""
+    # Game minute the source last went off alone with the target, or asked to.
+    last_together: int | None = None
 
     def adjust(self, feeling: str, delta: float) -> None:
         if feeling not in FEELINGS:

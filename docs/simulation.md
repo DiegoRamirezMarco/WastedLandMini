@@ -70,16 +70,120 @@ room. An argument's importance rises with the resentment between the two.
   a pressing bodily need: nobody starts a shift starving.
 - At the post they work until the shift ends. Hunger or exhaustion at 85 sends them off to see to
   it, and they come back if the shift is still on. Loneliness never does.
-- **Production.** Every so many minutes of work makes one unit of an item, into the post itself or
-  into the emptiest container of a given kind, up to a stock limit. A rule can require one unit of
-  raw material from another kind of container: the cook turns raw food from the pantries into stew
-  in the pot. With no raw material, or a full pot, nothing is made.
+- **Production.** Every so many minutes of work makes one unit of an item, up to a stock limit.
+  It stays in the post itself (the stew in the pot) or in the worker's hands (the vegetables).
+- **Carrying.** Nothing appears where it is used. A worker whose hands are full walks to the
+  emptiest container of the receiving kind that has room and leaves the load there; whatever they
+  still carry when the shift ends is handed in then. A job that needs raw material sends its
+  worker to fetch a load from the container with most of it: the cook walks to a pantry for what
+  goes in the pot, and cooks from what they brought. With nothing to fetch, or a full pot, they
+  stay at the post and nothing is made. What is being carried belongs to nobody and is nobody's
+  to eat, give or steal; someone who changes jobs puts it down in the nearest container.
+- **Tools.** A job can name a kind of tool by tag. A worker who has a working one on them works
+  that much faster, and each unit made wears it.
 - **Staffed places.** A use with `staffed_by` exists only while someone with that job is on duty.
   The bar serves nobody when the bartender is away, and turns away whoever arrives too late.
 - **Watch.** A job's `sight_bonus` lets its worker see further while on duty, so the guard witnesses
   what others would miss.
 - Workers can be approached for a chat if their job is `interruptible`, and go back to work after.
-- Nothing arrives from outside: the settlement eats what its farmers grow and its cook prepares.
+- No food arrives from outside by itself: the settlement eats what its farmers grow and its cook
+  prepares. What does come in is whatever a scavenger brings back (see Beyond the fence).
+- **Days off.** A resident can have one day of the week on which they do not work. Their post
+  simply stands empty that day: no stew if it is the cook, a shut bar if it is the bartender.
+
+## Beyond the fence
+
+- **The job.** A job with an `expedition` is done outside. Its post is only where the worker
+  leaves from: on reaching it during the shift they set out, once a day, and are gone for hours.
+  Nobody sets out with hunger or tiredness half way up: they see to it first.
+- **Out there** a resident is away. They are not on the map, they witness nothing, and nobody can
+  walk up to them, not even someone who has made up their mind to. They are paid as on any shift,
+  and hunger grows at half pace: they eat as they go from what they took.
+- **Coming back.** At the end of the trip they are at the cart again with what they found in
+  their hands, so many things drawn from the table in `data/expeditions.json`, the commonest
+  oftenest. Things from a pack that is not installed are never found. With the trip's `danger` as
+  the chance, they come back hurt.
+- **Putting it away.** What was found is carried to where it goes before anything else: the first
+  rule in `deliveries` that fits says which kind of container. Scrap goes to a scrap pile; the
+  rest goes on the shop's counter, where it is sold. Apart from a passing caravan, nothing reaches
+  the shop any other way.
+- **A risky find.** Some trips come on something that promises more and looks dangerous. That is
+  a decision, and the player may advise, but the resident is not stopped by it: they are still out
+  there, and they do not come home until it is settled. Going for it means more finds, more danger
+  and a later return; turning back means half the finds and an early one. The bold and the
+  grasping go for it unless talked out of it.
+- **Repairs take scrap.** A use that `repairs` can name a `material`: each repair uses up one
+  such thing from a container of the kind given, and with none there is no repairing.
+
+## What comes from outside
+
+- **World events** are defined in `data/world_events.json`: how likely each is on a day it can
+  happen, the hours it keeps to, and how long before it can come again. They are rolled once an
+  hour with a random generator of their own, so whether one happens never changes what the
+  residents would otherwise have done. Nothing happens on a settlement's first day.
+- **Warning.** An event with `lead_hours` is settled that many hours before it comes, and is on
+  its way in between. That it is coming is true of the world and known to nobody, until someone
+  listens to a radio. If by its hour it can no longer happen, it comes to nothing.
+- **The radio.** Listening to the settlement's radio, or to a working radio of one's own, gives
+  word of whatever is on its way: what, and for what hour. The first to hear a bulletin makes it a
+  fact. Those in sight hear it too, later listeners hear the same, and anyone who knows it may
+  pass it on like any other news, but only until its hour has come: after that it is not news.
+- **Heeding it.** Whoever is about to leave on a trip listens to the radio first, once a day.
+  If they know of bad weather that would catch them out, by having heard it or been told, they
+  stay in that day. They go by what they know: unwarned, they set out, and a storm that catches
+  someone outside makes them that much likelier to come back hurt.
+- **A stranger at the gate.** Someone from the list of newcomers asks to stay. They only come
+  while there is a bed for them and while whoever keeps the gate is on duty. It is that resident's
+  decision, and the player may advise: the kind open the gate, the gruff shut it. Let in, the
+  stranger becomes a resident on the spot, hungry and tired and with nothing. Turned away, they
+  never come back. If the settlement has no gatekeeper at all, they knock and nobody answers, and
+  may try again another day.
+- **Looking for work.** Someone newly arrived looks for a job without waiting to be asked: the
+  one most missed that has a free post. It is put to them as any job offer is, and they take it
+  unless they are talked out of it.
+- **A caravan** leaves a few things on the shop's counter, drawn from its own list.
+- **A storm** lasts some hours. While it does, work done out of doors makes nothing, nobody sets
+  out on a trip, and anyone not under a roof grows more stressed by the minute.
+- **Vermin** get into the pantries by night and eat a share of the food that is everyone's.
+
+## Wear, repairs and credits
+
+- **Wear.** An item with a `wear` property loses that much condition each time it is used: a tool
+  for each unit it helps make, a weapon for each fight, a radio each time it is listened to. At 0
+  it is broken and does nothing: no faster work, no harder blow, no comfort. Something too worn to
+  put back is kept on its owner, to have it seen to.
+- **Repairs.** A use with `repairs` mends a worn thing its owner brings, so much condition a
+  minute, while the job it is `staffed_by` has someone on duty. It stops if they leave.
+- **Credits.** Every minute on duty, or loading and unloading for the job, earns a resident a
+  share of the hourly wage (`data/economy.json`, or the job's own `wage`). A use with a `price`
+  takes that many credits when it starts, and is not even considered by someone who cannot pay.
+  A drink at the bar and a repair at the workbench both cost.
+- **The shop.** A use with `sells` is buying one unit of something kept in that object, while its
+  keeper is on duty. A thing costs its base value times the settlement's price factor, and more
+  the fewer are left. What a resident wants to buy:
+  - a tool for their own job when they carry none, above anything else;
+  - a weapon, if they are afraid enough of someone and carry none;
+  - otherwise whatever would do them most good right now for its price, unless they already own
+    one, or two units if it is food.
+  What is bought becomes the buyer's and goes with them.
+
+## Who does what
+
+- A job with fewer people than it `needed`, and a post standing free, has a **vacancy**. Days off
+  do not count. After `vacancy_notice_hours` it is announced once, and from then on it is offered
+  round.
+- **Who is asked.** Those with no job first, then those whose own job has people to spare, then
+  those whose job has a lower `priority`, least important first. Nobody is asked to leave a job
+  that matters as much as the vacant one. One resident is asked at a time, a few hours apart.
+- **The offer** is a decision like any crisis: the resident stops to think, the player may advise,
+  and the outcome with the highest score wins. Taking the job grows more likely the longer it has
+  been vacant, for those with nothing to do, and with empathy and courage; greed argues for
+  staying put. So a cook who dies is replaced within a day or two, and the bar may then stand
+  empty instead.
+- **Suggestions.** `SuggestJobCommand` puts a job with a free post to a resident on the player's
+  word. They weigh it at once with the advice it comes with, and may still say no. The same
+  resident cannot be pressed again until the offer's cooldown has passed.
+- Taking a job gives the first free post of its kind, and ends any shift or errand under way.
 
 ## Health, fights and death
 
@@ -93,12 +197,12 @@ room. An argument's importance rises with the resentment between the two.
   decision, like any crisis, and the player can step in. Only if the resident then chooses to
   fight do they go after the other.
 - A fight is an exchange with a `damage` range. Each side is hurt by what the other deals: more
-  from the aggressive and the healthy, and multiplied by the best weapon they carry (an item's
-  `damage` property). A blade cuts, a heavy blow breaks something, the rest are bruises.
+  from the aggressive and the healthy, and multiplied by the best working weapon they carry (an
+  item's `damage` property). A blade cuts, a heavy blow breaks something, the rest are bruises.
 - **Death.** At 0 health a resident dies. They are removed from the living and recorded in
   `world.deaths`; a grave appears on the map's next free plot; what they owned becomes everyone's
   and what they carried is put in the nearest container; decisions and activities that involved
-  them end; their post stands empty. The death is a fact: those who see it or hear of it turn on
+  them end; their post stands empty until someone takes it (see Who does what). The death is a fact: those who see it or hear of it turn on
   the killer and grieve in proportion to how fond they were of the dead.
 
 ## Things
@@ -109,7 +213,8 @@ room. An argument's importance rises with the resentment between the two.
   a settlement starts (`stock`) and what arrives each day (`supplies`).
 - **Food is real.** A use with `consumes` takes one unit of that category out of the object's own
   contents when the resident arrives, shared or their own, the one they would enjoy most. With
-  nothing to take, the pantry is not worth the walk; finding bare shelves is reported once a day.
+  nothing to take, the pantry is not worth the walk. Arriving to find it empty is a wasted trip;
+  it is reported, once a day, only when there is nothing to eat anywhere else either.
 - **Belongings.** A resident uses their own things, carried or kept in a container, when the
   item's effects would help: food is eaten and used up, anything else is kept.
 - **Worth** is personal: base value times the multiplier of any trait whose tags fit the item.
@@ -119,11 +224,49 @@ room. An argument's importance rises with the resentment between the two.
 - **Theft.** A resident tempted enough takes someone else's thing from a container that nobody
   can see at that moment. Temptation grows with the item's worth to them, their greed and their
   resentment of the owner, and shrinks with empathy. The item changes hands but not owner.
-  The theft is a fact about thief and victim; the thief knows it and never volunteers it.
+  The theft is a fact about thief and victim; the thief knows it and keeps it to themselves,
+  unless it is to confide in a close friend.
 - **Finding out.** Whoever sees it learns it. The owner reacts only on learning who did it, by
   seeing it or being told. An owner who merely sees the empty spot knows something is missing,
   and is upset, but not who to blame.
 - Talking things out after a crisis gives stolen things back.
+
+## Friendship, romance and couples
+
+Everything here is between adults, and nothing happens to anyone who does not want it.
+
+- **Friendship** is a matter of degree and runs one way. What a resident feels for another
+  amounts to a tier from `data/relationships.json` once affection and trust both reach it:
+  friendship, then close friendship. Crossing into a tier, or falling out of it, is an event.
+- **Attraction** is one more feeling, and it does not grow out of nothing. A friendly exchange
+  raises it only where there is a spark, which is fixed by who the two are and is not the same
+  in both directions, or where some attraction is felt already. Someone with a partner is slower
+  to be drawn to anyone else. Arguments and fights lower it.
+- **Saying so.** A single resident drawn enough to another who is also free, and fond enough of
+  them, stops to wonder whether to tell them. That is a decision like any crisis, and the player
+  may advise. Courage and rashness argue for speaking, and the timid keep quiet unless encouraged.
+- **The answer** is the other's to give, from what they feel themselves. If they are drawn and fond
+  enough in turn, the two are a couple from then on. If not, the one who spoke is hurt by it and
+  cools towards them.
+- **Time alone.** At night a couple may seek each other out to be alone. It only happens if the
+  one sought wants it too, and only once nobody awake can see them: until then they wait. It is
+  told as an event that the two went off alone, and no more. It eases stress and draws them closer.
+  Two residents who are both free never do this: they say what they feel first.
+- **Affairs.** Someone with a partner, drawn strongly enough to another and without the empathy
+  to stop, may seek that other out instead, and so may someone drawn to a person who has a
+  partner. If the other is willing it is an affair: the same event, but also a fact about the
+  partner it is behind the back of.
+- **Secrets.** Neither of the two tells anyone. A secret is only ever told to a close friend, and
+  never to whoever it was kept from. The same goes for a thief's theft. But two people alone can
+  be come across, and whoever sees them knows, and may talk.
+- **Jealousy.** A resident who learns of an affair by seeing it or being told turns on their
+  partner and, less, on the other one; an onlooker thinks worse of the two who did it and never
+  of the one it was done to.
+- **Breaking up.** A resident who resents their partner enough stops to wonder whether to go on.
+  The player may advise leaving, talking or staying. Resentment argues for leaving; empathy and
+  what fondness is left argue for talking it out. Leaving means going to tell the other, and only
+  then is the couple over. The one left takes it harder.
+- A death leaves a partner on their own.
 
 ## Who knows what
 

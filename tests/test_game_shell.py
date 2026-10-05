@@ -7,12 +7,32 @@ import pygame
 
 from graphics.character_renderer import FRAME_SIZE
 from graphics.face_renderer import MARKER_SIZE
-from scenes.global_view import ZOOM_TILE_SIZES
+from graphics.lighting import NIGHT, STEPS, ambient, daylight
+from graphics.shelf_display import displayed_goods
+from scenes.global_view import NOBODY_NEEDS_ATTENTION, ROOFS_OFF, SUGGESTION_REFUSED, ZOOM_TILE_SIZES
 from settings import GAME_MINUTES_PER_REAL_SECOND, SCALE, TILE_SIZE
 from simulation.events.event import DomainEvent
+from simulation.events.world_event import Weather
 from simulation.health.injury import Injury
 from simulation.residents.activity import Activity
-from ui.labels import describe_action, describe_injuries, describe_job, format_time
+from ui.inventory_view import condition_color
+from ui.resident_card import card_height
+from ui.job_board import post_rows, suggest_buttons, suggest_intent
+from ui.labels import (
+    affordable_goods,
+    condition_of,
+    describe_action,
+    describe_bond,
+    describe_credits,
+    describe_injuries,
+    describe_job,
+    describe_weather,
+    format_time,
+    has_shop,
+    price_at,
+    selling_use,
+    shop_goods,
+)
 
 
 class GameShellTests(unittest.TestCase):
@@ -38,6 +58,17 @@ class GameShellTests(unittest.TestCase):
     def _minutes(self) -> int:
         clock = self.game.world.clock
         return (clock.day - 1) * 24 * 60 + clock.hour * 60 + clock.minute
+
+    def _look_into(self, room_id: str) -> None:
+        """Rest the mouse on a building, which takes its roof off, and draw the result."""
+        view = self.game.global_view
+        room = self.game.world.rooms[room_id]
+        x, y = view._tile_pixel(room.x + room.width / 2, room.y + room.height / 2)
+        moved = pygame.event.Event(
+            pygame.MOUSEMOTION, pos=(x * SCALE + 1, y * SCALE + 1), rel=(0, 0), buttons=(0, 0, 0)
+        )
+        view.handle_event(moved)
+        view.render()
 
     def _play(self, seconds: float) -> None:
         for _ in range(round(seconds * 60)):
@@ -256,7 +287,7 @@ class GameShellTests(unittest.TestCase):
 
     def test_clicking_a_container_lists_what_is_inside_and_a_resident_replaces_it(self) -> None:
         view = self.game.global_view
-        view.render()
+        self._look_into("storehouse")
         self._click(view.container_hitboxes["pantry_1"].center)
         self.assertEqual((view.hud.selected_container, view.hud.selected_id), ("pantry_1", None))
         self.assertIsNotNone(view.hud.container_rect())
@@ -308,6 +339,30 @@ class GameShellTests(unittest.TestCase):
         self.assertEqual(audio.on_events([loud]), "alert")
         self.game.handle_key(pygame.K_m)
         self.assertFalse(audio.muted)
+
+    def test_the_music_follows_the_settlement_and_is_silenced_with_the_rest(self) -> None:
+        self._make_everyone_get_along()
+        audio, world = self.game.audio, self.game.world
+        self.assertIsNone(audio.track)
+        self.game.update_music()
+        self.assertEqual(audio.track, "day")
+        self.assertFalse(audio.set_music("day"), "the same track is not started again")
+        world.clock.hour = 23
+        self.game.update_music()
+        self.assertEqual(audio.track, "night")
+        world.weather = Weather("dust_storm", world.clock.total_minutes + 60)
+        self.game.update_music()
+        self.assertEqual(audio.track, "storm")
+        self.game.handle_key(pygame.K_m)
+        self.assertTrue(audio.muted)
+        world.weather = None
+        self.game.update_music()
+        self.assertEqual(audio.track, "night", "muted, it still knows what it would be playing")
+        self.game.handle_key(pygame.K_m)
+        self.assertTrue(audio.set_music(None))
+        self.assertIsNone(audio.track)
+        self.assertTrue(audio.set_music("no_such_track"), "a track there is no file for is only silence")
+        self.game.update_music()
 
     def test_saving_and_loading_bring_back_the_same_settlement(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -504,7 +559,7 @@ class GameShellTests(unittest.TestCase):
 
     def test_from_afar_the_whole_settlement_shows_with_roofs_on_and_a_face_per_resident(self) -> None:
         view, world = self.game.global_view, self.game.world
-        view.render()
+        self._look_into("dormitory")
         self.assertIn("crate_dorm", view.container_hitboxes)
         # Someone indoors is found from afar all the same.
         marta = world.residents["marta"]
@@ -574,6 +629,416 @@ class GameShellTests(unittest.TestCase):
         self.assertIn("se da la vuelta", interaction.result)
         self.assertEqual(interaction.expression, "sad")
         self.game.active_scene.render()
+
+    # --- Work, credits and changing jobs ---
+
+    def test_errands_repairs_credits_and_days_off_are_put_into_words(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        raul, lucia = world.residents["raul"], world.residents["lucia"]
+        self.assertEqual(describe_credits(lucia), "6 vales")
+        lucia.credits = 1.9
+        self.assertEqual(describe_credits(lucia), "1 vale")
+        lucia.activity = Activity("haul", "pantry_1", path=[(7, 9)], minutes_left=2)
+        self.assertEqual(describe_action(world, lucia), "acarrea para su puesto")
+        lucia.activity = Activity("haul", "pantry_1", minutes_left=2, using=True)
+        self.assertEqual(describe_action(world, lucia), "carga y descarga")
+        hoe = raul.inventory.stack_of("hoe", "raul")
+        raul.activity = Activity("repair", "workbench", minutes_left=30, using=True, item_id=hoe.instance_id)
+        self.assertEqual(describe_action(world, raul), "lleva una azada a arreglar")
+        self.assertEqual(view._item_in_hand(raul), "hoe")
+        raul.activity = Activity("shop", "shop_counter", minutes_left=5, using=True, item_id="canned_beans")
+        self.assertEqual(describe_action(world, raul), "compra unas judías en conserva en la tienda")
+        world.clock.day = 2
+        self.assertEqual(describe_job(world, lucia), "Trabajo: Cantina (hoy libra)")
+        for resident_id in ("raul", "lucia"):
+            view.hud.select_resident(resident_id)
+            view.centre_on_resident(resident_id)
+            with self.assertNoLogs("graphics.assets", level="WARNING"):
+                view.render()
+
+    def test_a_vacant_post_is_put_to_the_player_like_any_other_decision(self) -> None:
+        self._make_everyone_get_along()
+        world = self.game.world
+        marta = world.residents["marta"]
+        marta.job_id = marta.post_id = None
+        world.vacancies["cook"] = world.clock.total_minutes - 30 * 60
+        marta.activity = world.interventions.maybe_offer_job(world, marta)
+        self.assertEqual([d.job_id for d in world.decisions.values()], ["cook"])
+        self.assertEqual(self.game.global_view._status_icon(marta, resting=False), "alert")
+        self._key(pygame.K_TAB)
+        interaction = self.game.interaction_view
+        self.assertEqual(self.game.scene_name, "interaction")
+        self.assertEqual(interaction.expression, "neutral")
+        self.assertEqual([button.intent for button in interaction.buttons], ["encourage", "neutral", "discourage"])
+        self.assertIn("Cocina", interaction.decision.prompt)
+        self.assertIn("Cocina", interaction._leaning_text(interaction.decision, "Marta", ""))
+        self.game.active_scene.render()
+        self._key(pygame.K_1)
+        self.assertEqual(world.decisions, {})
+        self.assertIn("Hazlo, hace falta", interaction.result)
+        self.assertEqual(interaction.expression, "happy")
+        self.assertEqual((marta.job_id, marta.post_id), ("cook", "cooking_pot"))
+        self.game.active_scene.render()
+
+    # --- The economy on screen ---
+
+    def test_the_job_board_lists_every_post_and_says_which_stand_empty(self) -> None:
+        self._make_everyone_get_along()
+        view, world = self.game.global_view, self.game.world
+        hud = view.hud
+        self._click(hud.jobs_button.rect.center)
+        self.assertTrue(hud.jobs_open)
+        self._click(hud.log_button.rect.center)
+        self.assertEqual((hud.jobs_open, hud.log_open), (False, True), "the two share a corner of the screen")
+        view.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_j))
+        self.assertEqual((hud.jobs_open, hud.log_open), (True, False))
+
+        rows = {row.job_id: row for row in post_rows(world, None)}
+        self.assertEqual(
+            list(rows),
+            ["farmer", "cook", "medic", "guard", "scavenger", "mechanic", "shopkeeper", "bartender"],
+            "most missed first",
+        )
+        self.assertEqual((rows["farmer"].title, rows["farmer"].holders), ("Huerto (8-13, 15-18)", "Raúl, Inés"))
+        self.assertFalse(any(row.vacant or row.can_suggest for row in rows.values()))
+
+        world.health.die(world, world.residents["marta"], "una prueba")
+        world.step(3 * 60)
+        rows = {row.job_id: row for row in post_rows(world, "lucia")}
+        self.assertTrue(rows["cook"].vacant)
+        self.assertEqual(rows["cook"].holders, "nadie · vacante hace 2 h")
+        can = {job_id for job_id, row in rows.items() if row.can_suggest}
+        self.assertEqual(can, {"farmer", "cook"}, "only where a post is free, and never her own")
+        world.clock.day = 2
+        self.assertEqual(post_rows(world, None)[-1].holders, "Lucía (libra)")
+        hud.select_resident("lucia")
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+
+    def test_proposing_a_post_from_the_board_asks_the_resident_and_shows_their_answer(self) -> None:
+        self._make_everyone_get_along()
+        view, world = self.game.global_view, self.game.world
+        hud, lucia = view.hud, world.residents["lucia"]
+        hud.toggle_jobs()
+        self.assertEqual(suggest_buttons(view.font, hud.jobs_rect(), world, hud.selected_id), [])
+        hud.select_resident("lucia")
+        view.render()
+        buttons = {button.intent: button for button in suggest_buttons(view.font, hud.jobs_rect(), world, "lucia")}
+        self.assertEqual(list(buttons), [suggest_intent("farmer")])
+        self._click(buttons[suggest_intent("farmer")].rect.center)
+        self.assertEqual((lucia.job_id, lucia.post_id), ("farmer", "crop_2"))
+        self.assertEqual(hud.notice, "Lucía decide hacerse cargo del puesto: Huerto")
+        self.assertEqual(hud.selected_id, "lucia", "a click on the board fell through to the map")
+
+        # The bar she left has a free post now, but she has only just been asked.
+        view.render()
+        buttons = {button.intent: button for button in suggest_buttons(view.font, hud.jobs_rect(), world, "lucia")}
+        self.assertEqual(list(buttons), [suggest_intent("bartender")])
+        self._click(buttons[suggest_intent("bartender")].rect.center)
+        self.assertEqual(lucia.job_id, "farmer")
+        self.assertEqual(hud.notice, SUGGESTION_REFUSED)
+        self._play(1)
+        texts = [event.text for event in hud.feed.recent(10)]
+        self.assertTrue(any("Lucía cambia de puesto: de Cantina a Huerto" in text for text in texts))
+
+    def test_the_counter_shows_prices_and_the_card_what_a_resident_can_afford(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        lucia = world.residents["lucia"]
+        self.assertTrue(has_shop(world))
+        self.assertIsNone(selling_use(world, "pantry_1"))
+        self.assertIsNotNone(selling_use(world, "shop_counter"))
+        counter = world.containers["shop_counter"]
+        beans = counter.stack_of("canned_beans", None)
+        self.assertEqual(price_at(world, "shop_counter", beans), 11)
+        self.assertEqual(shop_goods(world)[:2], [("canned_beans", 11), ("hoe", 18)])
+        self.assertEqual(affordable_goods(world, lucia), [], "six credits buy nothing there")
+        lucia.credits = 20.0
+        self.assertEqual(affordable_goods(world, lucia), ["canned_beans", "hoe"])
+        beans.quantity = 1
+        self.assertEqual(price_at(world, "shop_counter", beans), 20, "the last tin is dear")
+        self.assertEqual(affordable_goods(world, lucia), ["hoe", "canned_beans"])
+        with_shop = card_height(world)
+        del world.containers["shop_counter"]
+        self.assertFalse(has_shop(world))
+        self.assertLess(card_height(world), with_shop, "no shop, no row for it on the card")
+        world.containers["shop_counter"] = counter
+        for select, target in ((view.hud.select_container, "shop_counter"), (view.hud.select_resident, "lucia")):
+            select(target)
+            with self.assertNoLogs("graphics.assets", level="WARNING"):
+                view.render()
+
+    def test_things_that_wear_out_show_the_state_they_are_in(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        raul, lucia = world.residents["raul"], world.residents["lucia"]
+        hoe = raul.inventory.stack_of("hoe", "raul")
+        self.assertEqual(condition_of(world, hoe), 100.0)
+        self.assertIsNone(condition_of(world, lucia.inventory.items[0]), "a toy never wears out")
+        self.assertEqual([condition_color(value) for value in (80.0, 30.0, 5.0)], ["lichen", "lamp", "ember"])
+        view.hud.select_resident("raul")
+        view.render()
+        card = view.hud.card_rect()
+        sound = pygame.image.tobytes(self.game.canvas.subsurface(card), "RGB")
+        hoe.condition = 10.0
+        view.render()
+        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(card), "RGB"), sound)
+        hoe.condition = -3.0
+        self.assertEqual(condition_of(world, hoe), 0.0)
+
+    def test_a_load_is_seen_in_the_hands_that_carry_it(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        raul = world.residents["raul"]
+        self.assertIsNone(view._load_of(raul), "his own hoe is not a load")
+        view.centre_on_resident("raul")
+        view.render()
+        body = view.hitboxes["raul"].copy()
+        empty_handed = pygame.image.tobytes(self.game.canvas.subsurface(body), "RGB")
+        world.stock(raul.inventory, "vegetables", 4, None)
+        self.assertEqual(view._load_of(raul), "vegetables")
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(body), "RGB"), empty_handed)
+
+    def test_the_shop_shelves_show_the_stock_and_empty_as_it_sells(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        shelves = [world.interactables["shop_shelf_1"], world.interactables["shop_shelf_2"]]
+        first, second = (displayed_goods(world, shelf) for shelf in shelves)
+        self.assertEqual(first[:5], ["canned_beans", "pizza_radioactiva", "hoe", "rusty_knife", "old_radio"])
+        self.assertEqual((len(first), len(second)), (6, 6))
+        self.assertEqual(displayed_goods(world, world.interactables["pantry_1"]), [], "a pantry is not a display")
+
+        view.centre_on((18, 4))
+        self._look_into("shop")
+        area = view._canvas_rect(pygame.Rect(15 * TILE_SIZE, 2 * TILE_SIZE, 2 * TILE_SIZE, 2 * TILE_SIZE))
+        stocked = pygame.image.tobytes(self.game.canvas.subsurface(area), "RGB")
+        counter = world.containers["shop_counter"]
+        counter.items[:] = [counter.stack_of("canned_beans", None)]
+        counter.items[0].quantity = 2
+        self.assertEqual([displayed_goods(world, shelf) for shelf in shelves], [["canned_beans"] * 2, []])
+        counter.items.clear()
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(area), "RGB"), stocked)
+
+    # --- Friends and couples on screen ---
+
+    def test_a_matter_of_the_heart_is_put_to_the_player_and_the_card_says_who_is_who(self) -> None:
+        self._make_everyone_get_along()
+        view, world = self.game.global_view, self.game.world
+        tomas, ines, vera = (world.residents[name] for name in ("tomas", "ines", "vera"))
+        self.assertEqual(describe_bond(world, tomas, ines), "")
+        world.relationship("tomas", "vera").affection = 70
+        world.relationship("tomas", "vera").trust = 40
+        self.assertEqual(describe_bond(world, tomas, vera), " (amistad íntima)")
+        self.assertEqual(describe_bond(world, vera, tomas), "", "it runs one way")
+
+        feelings = world.relationship("tomas", "ines")
+        feelings.attraction, feelings.affection = 50, 40
+        tomas.activity = world.interventions.maybe_romance(world, tomas)
+        self.assertEqual([d.kind for d in world.decisions.values()], ["confession"])
+        self._key(pygame.K_TAB)
+        interaction = self.game.interaction_view
+        self.assertEqual(self.game.scene_name, "interaction")
+        self.assertEqual(interaction.expression, "neutral")
+        self.assertEqual(len(interaction.buttons), 3)
+        self.game.active_scene.render()
+        self._key(pygame.K_1)
+        self.assertIn("Díselo", interaction.result)
+        self.assertEqual(interaction.expression, "happy")
+        self.assertEqual(tomas.activity.intent, "confession")
+        self._key(pygame.K_SPACE)
+
+        tomas.couple_with, ines.couple_with = "ines", "tomas"
+        self.assertEqual(describe_bond(world, tomas, ines), " (pareja)")
+        tomas.activity = Activity("tryst", minutes_left=30, using=True, partner_id="ines")
+        self.assertEqual(describe_action(world, tomas), "a solas con Inés")
+        view.hud.select_resident("tomas")
+        view.centre_on_resident("tomas")
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+
+    # --- Beyond the fence ---
+
+    def test_whoever_is_outside_is_not_on_the_map_and_their_find_is_put_to_the_player(self) -> None:
+        self._make_everyone_get_along()
+        view, world = self.game.global_view, self.game.world
+        sergio = world.residents["sergio"]
+        view.centre_on_resident("sergio")
+        view.render()
+        self.assertIn("sergio", view.hitboxes)
+        while not sergio.away:
+            world.step(1)
+        view.centre_on_resident("sergio")
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        self.assertNotIn("sergio", view.hitboxes)
+        self.assertEqual(describe_action(world, sergio), "fuera del asentamiento")
+        view.hud.select_resident("sergio")
+        view.render()
+        self.assertIsNotNone(view.hud.card_rect(), "his card can still be read")
+
+        sergio.expedition.find_at = world.clock.total_minutes + 1
+        sergio.expedition.returns_at = world.clock.total_minutes + 200
+        world.step(2)
+        self.assertEqual(view.needing_attention(), ["sergio"])
+        self._key(pygame.K_TAB)
+        interaction = self.game.interaction_view
+        self.assertEqual(self.game.scene_name, "interaction")
+        self.assertEqual(interaction.decision.kind, "risky_find")
+        self.game.active_scene.render()
+        self._key(pygame.K_3)
+        self.assertIn("Vuélvete, no compensa", interaction.result)
+        self.assertEqual(interaction.expression, "sad")
+        self.assertTrue(sergio.away)
+
+    # --- What comes from outside ---
+
+    def test_a_storm_is_seen_and_named_and_a_newcomer_is_drawn_like_anyone(self) -> None:
+        self._make_everyone_get_along()
+        view, world = self.game.global_view, self.game.world
+        self.assertIsNone(describe_weather(world))
+        view.centre_on((15, 14))
+        view.render()
+        ground = view._tile_pixel(10.5, 18.5)
+        clear = tuple(self.game.canvas.get_at(ground))[:3]
+        world.weather = Weather("dust_storm", world.clock.total_minutes + 120)
+        self.assertEqual(describe_weather(world), "Tormenta de polvo")
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        self.assertNotEqual(tuple(self.game.canvas.get_at(ground))[:3], clear)
+        world.weather = None
+
+        tomas = world.residents["tomas"]
+        tomas.activity = Activity("work", "guard_post", minutes_left=300, using=True)
+        world.at_the_gate = "olga"
+        world.interventions.ask(world, tomas, "stranger")
+        self._key(pygame.K_TAB)
+        interaction = self.game.interaction_view
+        self.assertEqual(interaction.decision.kind, "stranger")
+        self.assertIn("Olga", interaction.decision.prompt)
+        self.game.active_scene.render()
+        self._key(pygame.K_1)
+        self.assertIn("Tomás abre la puerta a Olga", interaction.result)
+        self.assertEqual(interaction.expression, "happy")
+        self._key(pygame.K_SPACE)
+        self.assertIn("olga", world.residents)
+        view.hud.select_resident("olga")
+        view.centre_on_resident("olga")
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        self.assertIn("olga", view.hitboxes)
+        self.assertEqual(describe_job(world, world.residents["olga"]), "Sin trabajo")
+
+    # --- Atmosphere ---
+
+    def _brightness(self, tile: tuple[float, float]) -> int:
+        return sum(self.game.canvas.get_at(self.game.global_view._tile_pixel(*tile))[:3])
+
+    def test_the_light_goes_by_the_clock_in_steps(self) -> None:
+        self.assertEqual([daylight(hour) for hour in (12, 8, 19, 0, 3, 22)], [1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        self.assertEqual((daylight(6, 30), daylight(20, 30)), (0.5, 0.5))
+        levels = [daylight(hour, minute) for hour in range(24) for minute in range(0, 60, 5)]
+        self.assertEqual({level * STEPS % 1 for level in levels}, {0.0}, "twilight moves in whole steps")
+        dusk = [daylight(19, minute) for minute in range(30, 60)] + [daylight(20, m) for m in range(60)]
+        self.assertEqual(dusk, sorted(dusk, reverse=True))
+        self.assertEqual((ambient(1.0), ambient(0.0)), ((255, 255, 255), NIGHT))
+
+    def test_night_darkens_the_settlement_except_around_fires_and_lamps(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        far, by_the_fire, by_a_lamp = (10.5, 18.5), (19.5, 13.5), (9.5, 9.5)
+        view.centre_on((15, 14))
+        world.clock.hour = 12
+        view.render()
+        noon = {tile: self._brightness(tile) for tile in (far, by_the_fire, by_a_lamp)}
+        world.clock.hour = 0
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        night = {tile: self._brightness(tile) for tile in (far, by_the_fire, by_a_lamp)}
+        self.assertLess(night[far], noon[far] * 0.6)
+        for lit in (by_the_fire, by_a_lamp):
+            self.assertGreater(night[lit] / noon[lit], 0.7, lit)
+            self.assertLessEqual(night[lit], noon[lit], "light never makes a thing brighter than by day")
+        # Names and icons are not part of the scene, so the night does not dim them.
+        world.clock.hour = 20
+        world.clock.minute = 30
+        view.render()
+        self.assertLess(night[far], self._brightness(far))
+        self.assertLess(self._brightness(far), noon[far])
+
+    def test_a_building_keeps_its_roof_until_someone_looks_inside(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        marta = world.residents["marta"]
+        marta.x, marta.y = world.rooms["dormitory"].x + 1, world.rooms["dormitory"].y + 2
+        marta.trail = []
+        view.centre_on((12, 8))
+        view.render()
+        self.assertEqual(view.looked_into(), set())
+        self.assertNotIn("crate_dorm", view.container_hitboxes)
+        self.assertEqual(view.hitboxes["marta"].size, MARKER_SIZE, "under a roof she is a face on it")
+
+        self._look_into("dormitory")
+        self.assertEqual(view.looked_into(), {"dormitory"})
+        self.assertIn("crate_dorm", view.container_hitboxes)
+        self.assertEqual(view.hitboxes["marta"].size, FRAME_SIZE)
+        self._look_into("shop")
+        self.assertEqual(view.looked_into(), {"shop"}, "only what is looked at stands open")
+
+        # Whoever is selected is followed indoors, wherever the mouse is.
+        view.hud.select_resident("marta")
+        self.assertEqual(view.looked_into(), {"dormitory", "shop"})
+        view.hud.select_container("pantry_1")
+        self.assertEqual(view.looked_into(), {"storehouse", "shop"})
+
+        view.hud.select_container(None)
+        view.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_t))
+        self.assertEqual(view.hud.notice, ROOFS_OFF)
+        self.assertEqual(view.looked_into(), set(view.roof_tiles))
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        self.assertIn("pantry_1", view.container_hitboxes)
+        view.set_zoom(0)
+        self.assertEqual(view.looked_into(), set(), "from afar every roof is on")
+
+    def test_the_minimap_shows_the_settlement_and_a_click_on_it_goes_there(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        minimap = view.hud.minimap_rect
+        self.assertTrue(self.game.canvas.get_rect().contains(minimap))
+        self.assertGreater(minimap.left, self.game.canvas.get_width() // 2)
+        self.assertTrue(view.hud.covers(minimap.center))
+        view.hud.select_resident("raul")
+        view.centre_on((5, 5))
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        self._click(minimap.center)
+        self.assertEqual(view.hud.selected_id, "raul", "a click on the minimap fell through to the map")
+        x, y = view._map_point(view.viewport.center)
+        self.assertAlmostEqual(x / TILE_SIZE, world.tile_map.width / 2, delta=1)
+        self.assertAlmostEqual(y / TILE_SIZE, world.tile_map.height / 2, delta=1)
+        # A corner of it is a corner of the map, as far as the view can go.
+        self._click((minimap.left + 2, minimap.top + 2))
+        self.assertEqual(view._map_point(view.viewport.topleft), (0.0, 0.0))
+
+    def test_one_key_goes_round_whoever_needs_attention(self) -> None:
+        self._make_everyone_get_along()
+        view, world = self.game.global_view, self.game.world
+        go = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_g)
+        self.assertEqual(view.needing_attention(), [])
+        view.handle_event(go)
+        self.assertEqual(view.hud.notice, NOBODY_NEEDS_ATTENTION)
+        self.assertIsNone(view.hud.selected_id)
+
+        ines, marta = world.residents["ines"], world.residents["marta"]
+        ines.injuries = [Injury("cut", 40)]
+        marta.job_id = marta.post_id = None
+        world.vacancies["cook"] = world.clock.total_minutes - 30 * 60
+        marta.activity = world.interventions.maybe_offer_job(world, marta)
+        self.assertEqual(view.needing_attention(), ["marta", "ines"], "whoever waits for advice comes first")
+        chosen = []
+        for _ in range(3):
+            view.handle_event(go)
+            view.render()
+            chosen.append(view.hud.selected_id)
+            self.assertTrue(view.viewport.contains(view.hitboxes[view.hud.selected_id]))
+        self.assertEqual(chosen, ["marta", "ines", "marta"])
 
     def test_a_death_leaves_a_grave_on_the_map_and_a_line_in_the_log(self) -> None:
         self._make_everyone_get_along()

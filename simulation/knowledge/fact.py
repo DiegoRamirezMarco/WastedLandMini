@@ -16,6 +16,8 @@ class Fact:
     importance: int = 0
     timestamp: int = 0
     location_id: str | None = None
+    # Game minute after which it is no longer worth telling anyone, for news about what is to come.
+    expires_at: int | None = None
 
 
 @dataclass

@@ -26,6 +26,11 @@ class InteractionDefinition:
     returns_stolen: bool = False
     # Range of harm each side does the other, for an exchange that comes to blows.
     damage: tuple[int, int] | None = None
+    # What the exchange is to a romance: `confession`, `tryst` or `breakup`. None for any other.
+    romance: str | None = None
+
+
+ROMANCE_KINDS = ("confession", "tryst", "breakup")
 
 
 def interaction_definition_from_data(interaction_id: str, data: dict[str, Any]) -> InteractionDefinition:
@@ -42,6 +47,9 @@ def interaction_definition_from_data(interaction_id: str, data: dict[str, Any]) 
         if not 0 <= low <= high:
             raise ValueError(f"Interaction {interaction_id} has an invalid damage range")
         damage = (low, high)
+    romance = str(data["romance"]) if "romance" in data else None
+    if romance is not None and romance not in ROMANCE_KINDS:
+        raise ValueError(f"Interaction {interaction_id} is an unknown kind of romance: {romance}")
     shortest, longest = (int(value) for value in data["minutes"])
     if not 1 <= shortest <= longest:
         raise ValueError(f"Interaction {interaction_id} has an invalid minutes range")
@@ -61,4 +69,5 @@ def interaction_definition_from_data(interaction_id: str, data: dict[str, Any]) 
         fact=str(data["fact"]) if "fact" in data else None,
         returns_stolen=bool(data.get("returns_stolen", False)),
         damage=damage,
+        romance=romance,
     )

@@ -2,13 +2,15 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from simulation.events.crisis import Crisis
+from simulation.events.world_event import GATE_CHOICES
 from simulation.residents.needs import NEED_NAMES
 from simulation.social.relationship import FEELINGS
+from simulation.work.expedition import EXPEDITION_CHOICES
 
 # What an outcome's score may depend on. Each is scaled to run from 0 to 1.
 SCORE_INPUTS = (
     "bias", "anger", "aggression", "impulsiveness", "empathy", "courage", "sociability", "greed",
-    "stress", "affection", "resentment", "fear", "health",
+    "stress", "affection", "resentment", "fear", "attraction", "health", "vacancy", "idle",
 )
 
 
@@ -34,6 +36,8 @@ class Decision:
     # Game minute at which the resident stops waiting and decides alone.
     deadline: int = 0
     crisis: Crisis | None = None
+    # Job the decision is about, when it is about taking up a post.
+    job_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -47,6 +51,12 @@ class OutcomeDefinition:
     needs: dict[str, float] = field(default_factory=dict)
     feelings: dict[str, float] = field(default_factory=dict)
     memory: str | None = None
+    # Whether choosing this means taking up the job the decision is about.
+    takes_job: bool = False
+    # What choosing this does to the trip outside the resident is on: `push_on` or `turn_back`.
+    expedition: str | None = None
+    # What choosing this does about the stranger at the gate: `let_in` or `turn_away`.
+    gate: str | None = None
 
 
 @dataclass(frozen=True)
@@ -107,6 +117,12 @@ def _outcome_from_data(kind: str, outcome_id: str, data: dict[str, Any]) -> Outc
         unknown = names.keys() - set(allowed)
         if unknown:
             raise ValueError(f"Unknown {label} in {where}: {sorted(unknown)}")
+    expedition = str(data["expedition"]) if "expedition" in data else None
+    if expedition is not None and expedition not in EXPEDITION_CHOICES:
+        raise ValueError(f"Unknown expedition choice in {where}: {expedition}")
+    gate = str(data["gate"]) if "gate" in data else None
+    if gate is not None and gate not in GATE_CHOICES:
+        raise ValueError(f"Unknown gate choice in {where}: {gate}")
     return OutcomeDefinition(
         outcome_id=outcome_id,
         score=score,
@@ -115,4 +131,7 @@ def _outcome_from_data(kind: str, outcome_id: str, data: dict[str, Any]) -> Outc
         needs=needs,
         feelings=feelings,
         memory=str(data["memory"]) if "memory" in data else None,
+        takes_job=bool(data.get("takes_job", False)),
+        expedition=expedition,
+        gate=gate,
     )

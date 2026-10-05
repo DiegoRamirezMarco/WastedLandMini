@@ -22,7 +22,8 @@
 | Asset | Size | Notes |
 |---|---|---|
 | Tile | 16×16 | The canvas is 40 tiles wide and 22.5 tall |
-| Roof tile | 16×16 | Only ever shown at half size, so it is drawn in blocks of 2×2 pixels |
+| Roof tile, from afar | 16×16 | `sprites/tiles/roofs.png`. Only ever shown at half size, so it is drawn in blocks of 2×2 pixels |
+| Roof tile, from close | 16×16 | `sprites/tiles/roofs_close.png`. The same tiles in the same cells, drawn pixel by pixel |
 | Resident body frame | 16×24 | Feet at the bottom centre of the frame |
 | Object | Whole tiles | One PNG per object kind, as wide as its footprint. A taller image rises above the footprint, e.g. the pantry is 16×32 on a 1×1 footprint. A wider one holds animation frames side by side, e.g. the campfire is 48×16 |
 | Item or food icon | 16×16 | |
@@ -43,6 +44,7 @@
 
 ### Colour
 - Use only the colours in `graphics/palette.py` (34 colours).
+- The one exception is light, which is not art but something done to it: see Day and night below.
 - `assets/palette.gpl` is the same palette for sprite editors. After changing the palette in code,
   regenerate it with `python -m graphics.palette`.
 - Pixels are fully opaque or fully transparent. No partial alpha, no anti-aliasing.
@@ -76,6 +78,7 @@ assets/
         eyes/<expression>.png    brows/<expression>.png    mouth/<expression>.png
     ui/font.png
     sounds/<name>.wav            16-bit mono, 22050 Hz
+    music/<name>.wav             16-bit mono, 11025 Hz, written to loop
     ui/icon_<name>.png
 custom_content/
     items/<item_id>/icon.png
@@ -96,18 +99,50 @@ custom_content/
 - The view zooms in steps: a tile takes 8, 16, 32 or 48 canvas pixels. From 16 up the art is
   shown at ×1, ×2 or ×3. Names and icons are drawn on the canvas itself and keep their size.
 - The 8-pixel step is the overview, the settlement from afar. The map is shown at half size
-  and sits in the middle of the view if it is smaller than it. Buildings have their roof on,
-  which hides what is inside, and each resident is only their face, with their status icon,
-  drawn over the tile they are on whether or not a roof covers it.
+  and sits in the middle of the view if it is smaller than it. Every building has its roof on,
+  and each resident is only their face, with their status icon, drawn over the tile they are on
+  whether or not a roof covers it.
+- From close a building also has its roof on, until it is looked into: the mouse resting on it or
+  on its front wall, or the selected resident or container being inside. Then that one roof comes
+  off and the inside shows. A roof hides the objects under it, and whoever is under it is drawn as
+  their face on the roof, as from afar. `T` takes all the roofs off for those who prefer it.
 - A roof covers a roofed room and the walls behind and beside it. The wall in front, with the
-  door, stays in view below the eave. Roof tiles are in `sprites/tiles/roofs.png`.
+  door, stays in view below the eave.
 - Walls and fences show their front where they end towards the viewer and their top elsewhere.
 - Objects and residents are drawn back to front, so whatever stands lower on screen is in front.
 - Simple readable bodies.
 - Name, status icon (talking, arguing, asleep, hurt, at work, `!`) and selection arrow stacked over each resident.
 - Animated objects and bobbing icons run on real time and stop while the game is paused.
 - While someone eats or uses an item, its icon floats over their head.
+- What a resident carries for their job is drawn in their hands, or on their back when they walk
+  away from the viewer: the item's icon at half size.
+- An object that displays a container's contents, such as a shop's shelf, is drawn bare and the
+  game puts the stock on it, one half-size icon per unit, a little of everything. Its sprite
+  leaves room for them: on the 32×32 shelf, three 8×8 places on each of two boards.
+- A thing that wears out has a thin bar under its icon wherever it is listed: green while sound,
+  yellow when worn, red when all but gone.
 - Important equipment should eventually be visually legible.
+
+### Day and night
+- The light follows the game clock: full day from 7:30 to 19:30, full night from 21:30 to 5:30, and
+  dawn and dusk in between, in eight steps so that it never fades smoothly.
+- After dark the picture of the map is multiplied by a light map: a dim blue everywhere, and a warm
+  pool around every object whose kind gives `light`, as many tiles wide as it says. This is the
+  only place where colours outside the palette reach the screen.
+- A pool of light is made of 4×4 blocks of map pixels in four rings, so its edge is stepped, and it
+  grows with the zoom like the rest of the map. A flame, which is an animated object, wavers by
+  one block; a lamp burns steady.
+- A light under a roof that is on does not show. Names, icons, faces on roofs and the HUD are
+  drawn after the light and are never dimmed.
+
+### Minimap
+- The whole map at 2 canvas pixels a tile, in the bottom right corner, with the roofs on.
+- One dot per resident: `paper`, `lamp` for the selected one, and blinking `ember` and `glow` for
+  whoever needs attention. A `glow` frame marks the part of the map in view.
+
+### Set dressing
+- The settlement should look salvaged. Things that are only there to be looked at are object kinds
+  like any other, with no use: wrecks and stacks of tyres block the way, loose junk does not.
 
 ## Interaction view
 - Close framing for important social events.

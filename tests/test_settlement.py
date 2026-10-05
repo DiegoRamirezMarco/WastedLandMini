@@ -156,8 +156,11 @@ class LifeInTheSettlementTests(unittest.TestCase):
     def test_residents_only_walk_between_adjacent_walkable_tiles(self) -> None:
         world = SimulationWorld.demo_world(seed=3)
         walkable = world.passable()
+        # Beds of any kind are lain on, so their own tile is walked onto.
         beds = {
-            (placed.x, placed.y) for placed in world.interactables.values() if placed.kind == "bed"
+            (placed.x, placed.y)
+            for placed in world.interactables.values()
+            if (use := world.definition_of(placed).use) is not None and use.position == "on"
         }
         for _ in range(2 * MINUTES_PER_DAY):
             world.step(1)

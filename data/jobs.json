@@ -3,8 +3,14 @@
     "name": "Huerto",
     "station": "crop_bed",
     "shifts": [
-      [8, 13],
-      [15, 18]
+      [
+        8,
+        13
+      ],
+      [
+        15,
+        18
+      ]
     ],
     "text": "se pone a trabajar en el huerto",
     "interruptible": true,
@@ -14,70 +20,169 @@
     },
     "produces": {
       "item": "vegetables",
-      "every_minutes": 25,
+      "every_minutes": 30,
       "into": "pantry",
-      "max_stock": 40
-    }
+      "max_stock": 40,
+      "carry": 6
+    },
+    "tool": {
+      "tag": "hoe",
+      "speed": 1.5
+    },
+    "priority": 5,
+    "needed": 2,
+    "outdoors": true
   },
   "cook": {
     "name": "Cocina",
     "station": "cooking_pot",
     "shifts": [
-      [11, 14],
-      [18, 21]
+      [
+        11,
+        14
+      ],
+      [
+        18,
+        21
+      ]
     ],
     "text": "se pone a cocinar",
     "interruptible": true,
     "produces": {
       "item": "stew",
-      "every_minutes": 15,
+      "every_minutes": 12,
       "into": "station",
-      "max_stock": 8,
+      "max_stock": 10,
       "from": "pantry",
       "from_category": "food",
-      "skip_tag": "cooked"
+      "skip_tag": "cooked",
+      "carry": 10
     },
     "per_minute": {
       "social": -0.03
-    }
+    },
+    "priority": 5
   },
   "bartender": {
     "name": "Cantina",
     "station": "bar",
     "shifts": [
-      [18, 23]
+      [
+        18,
+        23
+      ]
     ],
     "text": "abre la cantina",
     "interruptible": true,
     "per_minute": {
       "social": -0.08
-    }
+    },
+    "priority": 1
   },
   "guard": {
     "name": "Guardia",
     "station": "guard_post",
     "shifts": [
-      [9, 13],
-      [17, 21]
+      [
+        9,
+        13
+      ],
+      [
+        17,
+        21
+      ]
     ],
     "text": "empieza su turno de guardia",
     "interruptible": true,
     "sight_bonus": 8,
     "per_minute": {
       "social": -0.04
-    }
+    },
+    "priority": 3
   },
   "medic": {
     "name": "Enfermería",
     "station": "medicine_cabinet",
     "shifts": [
-      [9, 13],
-      [16, 20]
+      [
+        9,
+        13
+      ],
+      [
+        16,
+        20
+      ]
     ],
     "text": "abre la enfermería",
     "interruptible": true,
     "per_minute": {
       "social": -0.03
-    }
+    },
+    "priority": 4
+  },
+  "mechanic": {
+    "name": "Taller",
+    "station": "workbench",
+    "shifts": [
+      [
+        10,
+        14
+      ],
+      [
+        16,
+        20
+      ]
+    ],
+    "text": "abre el taller",
+    "interruptible": true,
+    "per_minute": {
+      "social": -0.03
+    },
+    "priority": 2
+  },
+  "shopkeeper": {
+    "name": "Tienda",
+    "station": "shop_counter",
+    "shifts": [
+      [
+        12,
+        15
+      ],
+      [
+        18,
+        21
+      ]
+    ],
+    "text": "abre la tienda",
+    "interruptible": true,
+    "per_minute": {
+      "social": -0.06
+    },
+    "priority": 2
+  },
+  "scavenger": {
+    "name": "Rebusca",
+    "station": "handcart",
+    "shifts": [
+      [
+        8,
+        15
+      ]
+    ],
+    "text": "sale del asentamiento a rebuscar",
+    "interruptible": true,
+    "priority": 3,
+    "expedition": {
+      "minutes": [
+        240,
+        360
+      ],
+      "finds": [
+        3,
+        6
+      ],
+      "danger": 0.12
+    },
+    "outdoors": true
   }
 }

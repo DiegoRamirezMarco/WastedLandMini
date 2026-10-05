@@ -1,7 +1,10 @@
 {
   "chat": {
     "hostile": false,
-    "minutes": [10, 30],
+    "minutes": [
+      10,
+      30
+    ],
     "importance": 10,
     "per_minute": {
       "social": -1.0,
@@ -10,7 +13,8 @@
     "relationship": {
       "affection": 1.0,
       "trust": 0.4,
-      "resentment": -0.5
+      "resentment": -0.5,
+      "attraction": 4.0
     },
     "text": "{a} y {b} charlan",
     "dialogue": "chat",
@@ -22,7 +26,10 @@
   },
   "argument": {
     "hostile": true,
-    "minutes": [5, 15],
+    "minutes": [
+      5,
+      15
+    ],
     "importance": 35,
     "tension_importance": 30,
     "per_minute": {
@@ -33,7 +40,8 @@
       "resentment": 5.0,
       "fear": 2.0,
       "affection": -3.0,
-      "trust": -1.5
+      "trust": -1.5,
+      "attraction": -3.0
     },
     "text": "{a} discute con {b}",
     "dialogue": "angry",
@@ -46,7 +54,10 @@
   },
   "heart_to_heart": {
     "hostile": false,
-    "minutes": [15, 30],
+    "minutes": [
+      15,
+      30
+    ],
     "importance": 30,
     "per_minute": {
       "social": -1.0,
@@ -55,7 +66,8 @@
     "relationship": {
       "resentment": -8.0,
       "trust": 2.0,
-      "affection": 1.5
+      "affection": 1.5,
+      "attraction": 2.0
     },
     "text": "{a} habla las cosas con {b}",
     "dialogue": "reconcile",
@@ -68,7 +80,10 @@
   },
   "fight": {
     "hostile": true,
-    "minutes": [3, 8],
+    "minutes": [
+      3,
+      8
+    ],
     "importance": 60,
     "tension_importance": 20,
     "per_minute": {
@@ -78,7 +93,8 @@
       "resentment": 8.0,
       "fear": 10.0,
       "affection": -8.0,
-      "trust": -6.0
+      "trust": -6.0,
+      "attraction": -10.0
     },
     "text": "{a} se pelea con {b}",
     "dialogue": "fight",
@@ -88,6 +104,80 @@
       "fight"
     ],
     "fact": "{a} se peleó con {b}",
-    "damage": [8, 18]
+    "damage": [
+      8,
+      18
+    ]
+  },
+  "confession": {
+    "hostile": false,
+    "minutes": [
+      5,
+      12
+    ],
+    "importance": 45,
+    "per_minute": {
+      "social": -0.5,
+      "stress": 0.3
+    },
+    "relationship": {
+      "trust": 1.0
+    },
+    "text": "{a} le dice a {b} lo que siente",
+    "memory": "Hablé con {other} de lo que sentimos.",
+    "emotional_value": 0.2,
+    "tags": [
+      "romance"
+    ],
+    "romance": "confession"
+  },
+  "tryst": {
+    "hostile": false,
+    "minutes": [
+      40,
+      90
+    ],
+    "importance": 40,
+    "per_minute": {
+      "social": -1.0,
+      "stress": -0.4
+    },
+    "relationship": {
+      "affection": 3.0,
+      "trust": 2.0,
+      "attraction": 3.0,
+      "resentment": -2.0
+    },
+    "text": "{a} y {b} se pierden un rato a solas",
+    "memory": "Pasé un rato a solas con {other}.",
+    "emotional_value": 0.8,
+    "tags": [
+      "romance"
+    ],
+    "fact": "{a} y {b} estuvieron a solas",
+    "romance": "tryst"
+  },
+  "breakup": {
+    "hostile": false,
+    "minutes": [
+      5,
+      15
+    ],
+    "importance": 55,
+    "per_minute": {
+      "stress": 0.8
+    },
+    "relationship": {
+      "affection": -10.0,
+      "attraction": -15.0,
+      "resentment": 4.0
+    },
+    "text": "{a} le dice a {b} que se acabó",
+    "memory": "{other} y yo hablamos de dejarlo.",
+    "emotional_value": -0.7,
+    "tags": [
+      "romance"
+    ],
+    "romance": "breakup"
   }
 }

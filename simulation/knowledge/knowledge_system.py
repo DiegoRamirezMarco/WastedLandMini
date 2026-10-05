@@ -39,6 +39,7 @@ def witnesses_of(world: "SimulationWorld", at: Tile, exclude: Collection[str] = 
         resident.resident_id
         for resident in world.residents.values()
         if resident.resident_id not in exclude
+        and not resident.away
         and world.is_aware(resident)
         and within_range(resident.tile, at, sight_range + world.work.sight_bonus(world, resident))
         and line_of_sight(resident.tile, at, opaque)
@@ -46,7 +47,11 @@ def witnesses_of(world: "SimulationWorld", at: Tile, exclude: Collection[str] = 
 
 
 def record_fact(
-    world: "SimulationWorld", event: DomainEvent, text: str, subjects: Collection[str] | None = None
+    world: "SimulationWorld",
+    event: DomainEvent,
+    text: str,
+    subjects: Collection[str] | None = None,
+    expires_at: int | None = None,
 ) -> Fact:
     """Record an event as a fact. Its participants and witnesses learn it at first hand.
 
@@ -61,6 +66,7 @@ def record_fact(
         importance=event.importance,
         timestamp=event.timestamp,
         location_id=event.location_id,
+        expires_at=expires_at,
     )
     world.knowledge.add_fact(fact)
     for resident_id in event.participants:
@@ -130,9 +136,16 @@ def react(world: "SimulationWorld", resident: Resident, fact: Fact, credibility:
             resident.needs.apply(
                 {need: delta * credibility for need, delta in rule.get("victim_needs", {}).items()}
             )
-            feelings = world.relationship(resident.resident_id, actor)
+            # With a rival in it, the one who did the wrong is their own partner, not whoever acted.
+            others = [subject for subject in fact.subject_ids[:2] if subject != resident.resident_id]
+            wronged_by = resident.couple_with if "rival" in rule and resident.couple_with in others else actor
+            feelings = world.relationship(resident.resident_id, wronged_by)
             for feeling, base in rule["victim"].items():
                 feelings.adjust(feeling, float(base) * strength)
+            for rival in (subject for subject in others if subject != wronged_by and "rival" in rule):
+                if rival in world.residents:
+                    for feeling, base in rule["rival"].items():
+                        world.relationship(resident.resident_id, rival).adjust(feeling, float(base) * strength)
         return
     resident.needs.apply({need: delta * credibility for need, delta in rule.get("needs", {}).items()})
     mourn = rule.get("mourn")
@@ -142,7 +155,9 @@ def react(world: "SimulationWorld", resident: Resident, fact: Fact, credibility:
         fondness = max(0.0, bond.affection) if bond is not None else 0.0
         grief = float(mourn.get("stress", 0.0)) + float(mourn.get("per_affection", 0.0)) * fondness
         resident.needs.apply({"stress": grief * credibility})
-    involved = [subject for subject in fact.subject_ids if subject in world.residents]
+    # Only the first subjects did anything, where a rule says so: the rest had it done to them.
+    doers = fact.subject_ids[: int(rule.get("blame_subjects", len(fact.subject_ids)))]
+    involved = [subject for subject in doers if subject in world.residents]
     blamed = {subject: 1.0 for subject in involved}
     if rule.get("blame_target") == "actor":
         blamed = {actor: 1.0} if actor in world.residents else {}
@@ -170,15 +185,23 @@ def share_rumor(world: "SimulationWorld", teller: Resident, listener: Resident) 
     facts = world.knowledge.facts
 
     def keeps_quiet(fact: Fact) -> bool:
-        """Nobody volunteers their own misdeeds."""
-        secret = reactions.get(fact.event_type, {}).get("secret", False)
-        return bool(secret) and bool(fact.subject_ids) and fact.subject_ids[0] == teller.resident_id
+        """Nobody volunteers their own misdeeds, except to a friend close enough to confide in,
+        and never to anyone else the thing is about."""
+        keepers = int(reactions.get(fact.event_type, {}).get("secret", 0))
+        if teller.resident_id not in fact.subject_ids[:keepers]:
+            return False
+        return listener.resident_id in fact.subject_ids or not world.bonds.confides_in(world, teller, listener)
+
+    def stale(fact: Fact) -> bool:
+        """Word of something that was to come is not news once its hour has passed."""
+        return fact.expires_at is not None and world.clock.total_minutes >= fact.expires_at
 
     news = [
         belief
         for belief in world.knowledge.beliefs_of(teller.resident_id)
         if not world.knowledge.knows(listener.resident_id, belief.fact_id)
         and not keeps_quiet(facts[belief.fact_id])
+        and not stale(facts[belief.fact_id])
     ]
     if not news:
         return None

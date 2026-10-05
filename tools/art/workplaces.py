@@ -1,4 +1,4 @@
-"""Objects of the settlement's premises: the cantina, the garden, the workshop and the gate."""
+"""Objects of the settlement's premises: the cantina, the garden, the workshop, the shop and the gate."""
 
 import random
 
@@ -96,6 +96,148 @@ def _workbench() -> pygame.Surface:
     return surface
 
 
+def _shop_counter() -> pygame.Surface:
+    surface = _blank(32, 16)
+    # A plank counter with a couple of tins and a pair of scales on it.
+    _box(surface, (1, 6, 30, 9), "copper")
+    fill(surface, "sand", (1, 6, 30, 2))
+    fill(surface, "rust_dark", (1, 14, 30, 1))
+    for x in (8, 16, 24):
+        fill(surface, "rust", (x, 8, 1, 6))
+    for x, color in ((4, "ember"), (10, "lichen")):
+        fill(surface, "ink", (x - 1, 1, 5, 5))
+        fill(surface, color, (x, 2, 3, 4))
+        dots(surface, "paper", [(x + 1, 3)])
+    fill(surface, "ink", (19, 1, 9, 1))
+    fill(surface, "dust", (23, 2, 1, 4))
+    for x in (19, 25):
+        fill(surface, "ink", (x - 1, 3, 5, 2))
+        fill(surface, "stone", (x, 3, 3, 1))
+    return surface
+
+
+def _shelf() -> pygame.Surface:
+    surface = _blank(32, 32)
+    # Bare shelving of salvaged planks: two boards for goods, and a closed base. What stands on the
+    # boards is drawn by the game, from what the shop has in stock.
+    _box(surface, (1, 1, 30, 30), "rust_dark")
+    for x in (1, 29):
+        fill(surface, "rust", (x, 1, 2, 30))
+    fill(surface, "copper", (1, 1, 30, 1))
+    for y in (10, 21):
+        fill(surface, "sand", (3, y, 26, 1))
+        fill(surface, "copper", (3, y + 1, 26, 1))
+    fill(surface, "rust", (3, 23, 26, 7))
+    for x in (11, 20):
+        fill(surface, "rust_dark", (x, 23, 1, 7))
+    dots(surface, "ink", [(7, 26), (16, 26), (25, 26)])
+    return surface
+
+
+def _handcart() -> pygame.Surface:
+    surface = _blank(16, 16)
+    # A cart knocked together from a crate and two wheels, with its handles sticking out.
+    fill(surface, "ink", (0, 6, 4, 1))
+    fill(surface, "ink", (0, 9, 4, 1))
+    _box(surface, (4, 4, 10, 7), "copper")
+    fill(surface, "sand", (4, 4, 10, 1))
+    fill(surface, "rust", (4, 7, 10, 1))
+    fill(surface, "rust_dark", (4, 10, 10, 1))
+    for x in (5, 11):
+        fill(surface, "ink", (x - 1, 10, 4, 5))
+        fill(surface, "iron", (x, 11, 2, 3))
+        dots(surface, "dust", [(x, 12)])
+    return surface
+
+
+def _radio_set() -> pygame.Surface:
+    surface = _blank(16, 32)
+    # A big old receiver on a crate, with a wire for an aerial run up the wall.
+    fill(surface, "ink", (11, 0, 1, 14))
+    dots(surface, "dust", [(11, 0), (10, 1), (12, 1)])
+    _box(surface, (2, 20, 12, 11), "rust")
+    fill(surface, "copper", (2, 20, 12, 1))
+    fill(surface, "rust_dark", (2, 25, 12, 1))
+    _box(surface, (3, 11, 10, 9), "copper")
+    fill(surface, "sand", (3, 11, 10, 1))
+    fill(surface, "shadow", (4, 13, 5, 5))
+    dots(surface, "rust_dark", [(5, 14), (7, 14), (5, 16), (7, 16)])
+    fill(surface, "bone", (10, 13, 2, 2))
+    dots(surface, "lamp", [(10, 17)])
+    dots(surface, "ember", [(11, 17)])
+    return surface
+
+
+def _lamp() -> pygame.Surface:
+    surface = _blank(16, 32)
+    # A lantern hung from a post of scrap pipe.
+    _box(surface, (7, 9, 2, 21), "iron")
+    fill(surface, "stone", (7, 9, 1, 21))
+    _box(surface, (5, 29, 6, 2), "iron")
+    _box(surface, (4, 2, 8, 7), "shadow")
+    fill(surface, "lamp", (5, 3, 6, 5))
+    fill(surface, "glow", (6, 4, 4, 3))
+    fill(surface, "ink", (7, 3, 1, 5))
+    fill(surface, "iron", (3, 1, 10, 1))
+    dots(surface, "ink", [(7, 0), (8, 0)])
+    return surface
+
+
+def _wreck() -> pygame.Surface:
+    surface = _blank(48, 32)
+    # A car stripped to the shell: no wheels, no glass, and more rust than paint.
+    rng = random.Random(7)
+    _box(surface, (2, 14, 44, 13), "rust")
+    _box(surface, (10, 5, 24, 10), "rust")
+    fill(surface, "copper", (2, 14, 44, 2))
+    fill(surface, "copper", (10, 5, 24, 1))
+    fill(surface, "rust_dark", (2, 25, 44, 2))
+    # Empty windows, and the pillar between them.
+    fill(surface, "ink", (12, 7, 20, 7))
+    fill(surface, "shadow", (13, 8, 18, 5))
+    fill(surface, "rust", (21, 7, 2, 7))
+    # Wheel arches with nothing in them, sitting on bricks.
+    for x in (6, 34):
+        fill(surface, "ink", (x, 22, 8, 6))
+        fill(surface, "shadow", (x + 1, 23, 6, 4))
+        _box(surface, (x + 2, 27, 4, 3), "earth")
+    # What paint is left, and holes eaten through the panels.
+    for _ in range(9):
+        x, y = rng.randrange(4, 42), rng.randrange(16, 23)
+        fill(surface, "steel", (x, y, rng.randint(2, 4), 1))
+    for _ in range(6):
+        dots(surface, "rust_dark", [(rng.randrange(4, 44), rng.randrange(16, 24))])
+    dots(surface, "bone", [(3, 17), (44, 17)])
+    fill(surface, "ink", (0, 30, 48, 1))
+    return surface
+
+
+def _tyres() -> pygame.Surface:
+    surface = _blank(16, 16)
+    # Three tyres in a stack, seen a little from above.
+    for y in (9, 5, 1):
+        _box(surface, (3, y + 1, 10, 4), "shadow")
+        fill(surface, "iron", (4, y + 1, 8, 1))
+        fill(surface, "ink", (6, y + 2, 4, 1))
+        dots(surface, "stone", [(4, y + 3), (8, y + 3), (11, y + 3)])
+    return surface
+
+
+def _junk() -> pygame.Surface:
+    surface = _blank(16, 16)
+    # Odds and ends nobody has found a use for yet: a bent pipe, a tin, a scrap of sheet.
+    fill(surface, "ink", (2, 10, 9, 3))
+    fill(surface, "iron", (3, 11, 7, 1))
+    dots(surface, "stone", [(3, 11), (9, 11)])
+    fill(surface, "ink", (9, 5, 5, 5))
+    fill(surface, "rust", (10, 6, 3, 3))
+    dots(surface, "copper", [(11, 6)])
+    fill(surface, "ink", (4, 4, 4, 4))
+    fill(surface, "dust", (5, 5, 2, 2))
+    dots(surface, "rust_dark", [(12, 12), (2, 7), (7, 14)])
+    return surface
+
+
 def _barrel() -> pygame.Surface:
     """Three frames of a barrel with a fire burning in it."""
     flames = (
@@ -189,6 +331,14 @@ def build() -> dict[str, pygame.Surface]:
         "crop_bed": _crop_bed,
         "guard_post": _guard_post,
         "workbench": _workbench,
+        "shop_counter": _shop_counter,
+        "shelf": _shelf,
+        "lamp": _lamp,
+        "handcart": _handcart,
+        "radio_set": _radio_set,
+        "wreck": _wreck,
+        "tyres": _tyres,
+        "junk": _junk,
         "barrel": _barrel,
         "scrap_pile": _scrap_pile,
         "water_tank": _water_tank,

@@ -1,4 +1,13 @@
+import re
 from dataclasses import dataclass, field
+
+# In Spanish "y" becomes "e" before a word that starts with the sound of an i.
+_Y_BEFORE_I = re.compile(r"\by (?=[IiÍí]|[Hh][iIíÍ])")
+
+
+def euphonic(text: str) -> str:
+    """Fix the conjunction in a text put together from names: `Tomás y Inés` reads `Tomás e Inés`."""
+    return _Y_BEFORE_I.sub("e ", text)
 
 
 @dataclass

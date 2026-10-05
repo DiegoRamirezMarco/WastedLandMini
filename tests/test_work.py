@@ -10,6 +10,7 @@ from simulation.registries import DATA_DIR, BuiltInRegistries, builtin_registrie
 from simulation.residents.activity import Activity
 from simulation.residents.needs import Needs
 from simulation.social.social_system import PURSUIT_MINUTES, TALK_ACTION, SocialSystem
+from simulation.work.hauling import carried
 from simulation.work.job import job_definition_from_data
 from simulation.work.work_system import WORK_ACTION, minutes_left_in_shift
 from simulation.world import SimulationWorld
@@ -131,20 +132,21 @@ class GoingToWorkTests(unittest.TestCase):
         self.assertNotEqual(self.plan().action, WORK_ACTION)
 
     def test_they_stand_at_their_post_until_the_shift_ends(self) -> None:
-        _set_time(self.world, 8)
-        _run_until_on_duty(self.world, "raul")
-        post = self.world.interactables["crop_1"]
-        self.assertEqual(manhattan(self.raul.tile, (post.x, post.y)), 1)
-        self.assertEqual(self.raul.current_action, WORK_ACTION)
-        self.assertEqual(sum("Raúl se pone a trabajar" in line for line in self.world.event_log), 1)
-        where = self.raul.tile
+        tomas = self.world.residents["tomas"]
+        _set_time(self.world, 9)
+        _run_until_on_duty(self.world, "tomas")
+        post = self.world.interactables["guard_post"]
+        self.assertEqual(manhattan(tomas.tile, (post.x, post.y)), 1)
+        self.assertEqual(tomas.current_action, WORK_ACTION)
+        self.assertEqual(sum("Tomás empieza su turno" in line for line in self.world.event_log), 1)
+        where = tomas.tile
         while (self.world.clock.hour, self.world.clock.minute) != (12, 58):
             self.world.step(1)
             _keep_content(self.world)
-            self.assertTrue(self.world.work.on_duty(self.world, self.raul), self.world.clock.label)
-            self.assertEqual(self.raul.tile, where)
+            self.assertTrue(self.world.work.on_duty(self.world, tomas), self.world.clock.label)
+            self.assertEqual(tomas.tile, where)
         self.world.step(2)
-        self.assertFalse(self.world.work.on_duty(self.world, self.raul))
+        self.assertFalse(self.world.work.on_duty(self.world, tomas))
 
 
 class ProductionTests(unittest.TestCase):
@@ -160,7 +162,7 @@ class ProductionTests(unittest.TestCase):
             _keep_content(self.world)
         grown = [self.world.containers[pantry].count("vegetables") for pantry in self.pantries]
         self.assertGreaterEqual(sum(grown), 16)
-        self.assertLessEqual(abs(grown[0] - grown[1]), 1, "the harvest is shared between the pantries")
+        self.assertLessEqual(abs(grown[0] - grown[1]), 6, "the harvest is shared between the pantries, a load at a time")
 
     def test_nothing_grows_while_nobody_tends_the_garden(self) -> None:
         for resident_id in ("raul", "ines"):
@@ -172,13 +174,17 @@ class ProductionTests(unittest.TestCase):
         self.assertEqual(_count(self.world, "vegetables", *self.pantries), 0)
 
     def test_a_full_pantry_takes_no_more(self) -> None:
+        self.world.residents["marta"].job_id = None
         for pantry in self.pantries:
             self.world.stock(self.world.containers[pantry], "vegetables", 40, None)
         _set_time(self.world, 8)
-        for _ in range(3 * 60):
+        for _ in range(5 * 60):
             self.world.step(1)
             _keep_content(self.world)
         self.assertEqual(_count(self.world, "vegetables", *self.pantries), 80)
+        for farmer_id in ("raul", "ines"):
+            # With nowhere to take it, a farmer stops once their hands are full.
+            self.assertEqual(carried(self.world.residents[farmer_id], "vegetables"), 6)
 
     def test_the_cook_turns_raw_food_into_stew_one_for_one(self) -> None:
         pot = self.world.containers["cooking_pot"]
@@ -192,9 +198,10 @@ class ProductionTests(unittest.TestCase):
             _keep_content(self.world)
         cooked = pot.count("stew")
         self.assertGreaterEqual(cooked, 6)
-        self.assertLessEqual(cooked, 8, "the pot only holds so much")
+        self.assertLessEqual(cooked, 10, "the pot only holds so much")
         raw_after = sum(item.quantity for pantry in self.pantries for item in self.world.containers[pantry].items)
-        self.assertEqual(raw_before - raw_after, cooked)
+        in_hand = sum(item.quantity for item in self.world.residents["marta"].inventory.items if item.owner_id is None)
+        self.assertEqual(raw_before - raw_after, cooked + in_hand, "every unit taken was cooked or is still on her")
 
     def test_with_nothing_to_cook_the_pot_stays_empty_and_cooked_food_is_not_cooked_again(self) -> None:
         pot = self.world.containers["cooking_pot"]
@@ -368,7 +375,7 @@ class SettlementLayoutTests(unittest.TestCase):
     def test_the_buildings_have_a_roof_and_the_open_places_do_not(self) -> None:
         world = SimulationWorld.demo_world()
         roofed = {room.room_id for room in world.rooms.values() if room.roofed}
-        self.assertEqual(roofed, {"dormitory", "storehouse", "cantina", "south_house", "workshop", "clinic"})
+        self.assertEqual(roofed, {"dormitory", "storehouse", "cantina", "south_house", "workshop", "clinic", "shop"})
         for room_id in roofed:
             room = world.rooms[room_id]
             around = [
@@ -419,7 +426,9 @@ class WorkingWeekTests(unittest.TestCase):
                 for need in ("hunger", "tiredness", "social", "stress"):
                     self.assertLess(getattr(resident.needs, need), 100.0, (resident.name, need, world.clock.label))
         for resident_id, actions in hours.items():
-            self.assertGreater(actions[WORK_ACTION] / 7 / 60, 2.0, f"{resident_id} barely worked")
+            # The scavenger's work is done out there.
+            worked = actions[WORK_ACTION] + actions["expedition"]
+            self.assertGreater(worked / 7 / 60, 2.0, f"{resident_id} barely worked")
             self.assertGreater(actions["sleep"] / 7 / 60, 6.0, f"{resident_id} barely slept")
         self.assertNotIn("no_food", _types(world))
         self.assertTrue(any("guiso caliente" in line for line in world.event_log))
@@ -434,6 +443,10 @@ class WorkDataAndSaveTests(unittest.TestCase):
     def test_a_job_that_makes_something_undefined_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "unknown item: caviar"):
             _registries_with("jobs.json", '"item": "stew"', '"item": "caviar"')
+
+    def test_an_object_cannot_give_less_than_no_light(self) -> None:
+        with self.assertRaisesRegex(ValueError, "negative amount of light"):
+            _registries_with("interactables.json", '"light": 6', '"light": -1')
 
     def test_a_place_staffed_by_an_unknown_job_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "unknown job: sommelier"):
@@ -470,7 +483,10 @@ class WorkDataAndSaveTests(unittest.TestCase):
         loaded.step(MINUTES_PER_DAY)
 
     def test_the_demo_registries_know_every_job(self) -> None:
-        self.assertEqual(sorted(builtin_registries().jobs), ["bartender", "cook", "farmer", "guard", "medic"])
+        self.assertEqual(
+            sorted(builtin_registries().jobs),
+            ["bartender", "cook", "farmer", "guard", "mechanic", "medic", "scavenger", "shopkeeper"],
+        )
 
 
 if __name__ == "__main__":

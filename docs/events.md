@@ -14,12 +14,18 @@ Event types emitted so far:
 |---|---|---|
 | `activity_started` | A resident starts using an object | 5 |
 | `work_started` | A resident takes up their post | 5 |
+| `goods_hauled` | A worker leaves a load in a container, or fetches one from it | 5 |
+| `item_bought` | A resident buys something over the counter | 15 |
+| `item_broke` | Something wears right out | 30 |
+| `post_vacant` | A job has been short of people too long (once per vacancy) | 35 |
+| `job_offered` | A resident is asked to take a vacant job and waits for advice | 50 |
+| `job_changed` | A resident takes up a job | 40 |
 | `chat_started` | Two residents start a friendly chat | 10 |
 | `argument_started` | Two residents start an argument | 35, plus up to 30 with the resentment between them, plus 15 if one went looking for the other |
 | `heart_to_heart_started` | A resident talks things out after a crisis | 30 |
 | `rumor_told` | A resident tells another about a fact | 15 |
 | `supplies_arrived` | The day's supplies reach a container | 10 |
-| `no_food` | Someone finds nothing to eat (once a day) | 40 |
+| `no_food` | Someone finds nothing to eat, there or anywhere else (once a day) | 40 |
 | `gift_given`, `trade_made` | Something changes hands after a friendly exchange | 20, 15 |
 | `theft_committed` | A resident takes someone else's thing | 45 |
 | `theft_noticed` | An owner sees that something of theirs is gone | 40 |
@@ -29,6 +35,29 @@ Event types emitted so far:
 | `fight_started` | Two residents come to blows | 60, plus up to 20 with resentment, plus 15 |
 | `injured` | A resident comes out of something hurt | 45 |
 | `death` | A resident dies | 95 |
+| `friendship_changed` | What one resident feels for another grows into a friendship, or out of it | 25 |
+| `feelings_stirring` | A resident wonders whether to tell someone what they feel, and waits for advice | 50 |
+| `confession_started` | A resident tells another what they feel | 45 |
+| `couple_formed` | The one told feels the same | 60 |
+| `confession_rejected` | The one told does not | 45 |
+| `tryst_started` | A couple go off alone | 40 |
+| `affair` | Two residents go off alone behind a partner's back | 55 |
+| `couple_in_trouble` | A resident wonders whether to leave their partner, and waits for advice | 55 to 69, by anger |
+| `breakup_started` | A resident tells their partner it is over | 55 |
+| `couple_broke_up` | The couple is over | 65 |
+| `expedition_left` | A resident leaves the settlement to scavenge | 15 |
+| `risky_find` | A resident out there comes on something that looks dangerous, and waits for advice | 50 |
+| `expedition_returned` | A resident comes back with what they found | 30 |
+| `stranger_at_gate` | Someone asks to be let in, and the guard waits for advice | 55 |
+| `newcomer_joined` | A stranger is let in and stays | 60 |
+| `stranger_turned_away` | A stranger is sent on their way | 40 |
+| `stranger_unanswered` | Someone knocks and there is no gatekeeper to answer | 35 |
+| `caravan_passed` | A caravan leaves goods at the shop | 30 |
+| `weather_changed` | A storm rises, or passes | 45, 30 |
+| `food_spoiled` | Vermin eat part of what is in the pantries | 45 |
+| `radio_bulletin` | A resident is the first to hear on a radio what is on its way | 35 |
+| `stayed_in` | A resident who knows a storm is coming does not leave on a trip (once a day) | 20 |
+| `caught_out` | A storm rises while a resident is outside the settlement | 45 |
 | `crisis_resolved` | The resident decides what to do | Same as the crisis |
 
 Every event carries its participants, its witnesses, the room it happened in (if any) and a

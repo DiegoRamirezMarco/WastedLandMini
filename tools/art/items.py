@@ -167,6 +167,46 @@ RUSTY_KNIFE = [
 ]
 RUSTY_KNIFE_LEGEND = {"o": "ink", "d": "dust", "s": "stone", "k": "rust"}
 
+HOE = [
+    "................",
+    "........oooooo..",
+    ".......oddddddo.",
+    ".......osssskko.",
+    "........ooookko.",
+    "..........okko..",
+    ".........okko...",
+    "........okko....",
+    ".......okko.....",
+    "......okko......",
+    ".....okko.......",
+    "....okko........",
+    "...okko.........",
+    "...oko..........",
+    "....o...........",
+    "................",
+]
+HOE_LEGEND = {"o": "ink", "d": "dust", "s": "stone", "k": "copper"}
+
+SCRAP = [
+    "................",
+    "................",
+    "......ooo.......",
+    ".....osddo......",
+    "....ossssdoooo..",
+    "...oossiissrro..",
+    "..orrsiiisrrro..",
+    ".orrrsssooorro..",
+    ".orkrrsoiiioo...",
+    ".orrkroiiiiso...",
+    "..orroiisiisso..",
+    "..oooissiisddo..",
+    "....osiiissso...",
+    ".....oooooo.....",
+    "................",
+    "................",
+]
+SCRAP_LEGEND = {"o": "ink", "d": "dust", "s": "stone", "i": "iron", "r": "rust", "k": "rust_dark"}
+
 
 def _checked(surface: pygame.Surface, name: str) -> pygame.Surface:
     if surface.get_size() != ICON_SIZE:
@@ -183,6 +223,8 @@ def build() -> dict[str, pygame.Surface]:
         builtin_icon_path("stew"): _checked(paint(STEW, STEW_LEGEND), "stew"),
         builtin_icon_path("baton"): _checked(paint(BATON, BATON_LEGEND), "baton"),
         builtin_icon_path("rusty_knife"): _checked(paint(RUSTY_KNIFE, RUSTY_KNIFE_LEGEND), "rusty_knife"),
+        builtin_icon_path("hoe"): _checked(paint(HOE, HOE_LEGEND), "hoe"),
+        builtin_icon_path("scrap"): _checked(paint(SCRAP, SCRAP_LEGEND), "scrap"),
     }
 
 

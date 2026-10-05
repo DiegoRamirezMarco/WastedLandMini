@@ -24,7 +24,12 @@ CONTINUE_KEYS = (pygame.K_SPACE, pygame.K_RETURN)
 # Face each resident shows once they have made up their mind, by outcome ID.
 OUTCOME_EXPRESSIONS = {
     "confront": "angry", "talk_it_out": "neutral", "cool_off": "sad", "fight": "angry", "walk_away": "sad",
+    "take": "happy", "stay": "neutral", "confess": "happy", "keep_quiet": "sad", "break_up": "sad",
+    "push_on": "happy", "turn_back": "sad", "let_in": "happy", "turn_away": "angry",
 }
+# Face a resident wears while they make up their mind, by kind of decision. Anger for any other.
+DECISION_EXPRESSIONS = {"job_offer": "neutral", "confession": "neutral", "breakup": "sad", "risky_find": "neutral",
+                        "stranger": "neutral"}
 
 
 class InteractionView:
@@ -49,7 +54,8 @@ class InteractionView:
         """Show the given open decision, or an empty scene if there is none."""
         self.decision = self.world.decisions.get(decision_id) if decision_id else None
         self.result = None
-        self.expression = "angry"
+        # Someone weighing a job or their own heart is not at the end of their tether, as in a crisis.
+        self.expression = DECISION_EXPRESSIONS.get(self.decision.kind if self.decision else "", "angry")
         self.closed = False
         self.buttons = self._option_buttons()
 
@@ -162,5 +168,11 @@ class InteractionView:
         intent = decision.crisis.intent if decision.crisis else ""
         if definition is None or intent not in definition.outcomes:
             return ""
-        text = definition.outcomes[intent].text.replace("{name}", name).replace("{target}", target_name)
+        job = self.world.registries.jobs.get(decision.job_id or "")
+        text = (
+            definition.outcomes[intent]
+            .text.replace("{name}", name)
+            .replace("{target}", target_name)
+            .replace("{job}", job.name if job is not None else "")
+        )
         return f"Si nadie le dice nada: {text}."

@@ -7,6 +7,7 @@ from functools import partial
 import pygame
 
 from graphics.tileset import (
+    CLOSE_ROOF_SHEET,
     ROOF_CELLS,
     ROOF_SHEET,
     ROOF_SHEET_SIZE,
@@ -244,6 +245,39 @@ def _roof(name: str) -> pygame.Surface:
 ROOF_PAINTERS: dict[str, Callable[[], pygame.Surface]] = {name: partial(_roof, name) for name in ROOFS}
 
 
+def _close_roof(name: str) -> pygame.Surface:
+    """Corrugated tin seen from close: a ridge every four pixels, catching the light on one side."""
+    surface = _blank("stone")
+    for x in range(0, T, 4):
+        fill(surface, "dust", (x + 1, 0, 1, T))
+        fill(surface, "iron", (x + 3, 0, 1, T))
+    # Where one sheet overlaps the next.
+    fill(surface, "iron", (0, T - 1, T, 1))
+    if name == "roof_rusty":
+        rng = random.Random(23)
+        for _ in range(4):
+            x, y = rng.randrange(1, T - 5), rng.randrange(1, T - 5)
+            fill(surface, "rust", (x, y, rng.randint(2, 4), rng.randint(2, 4)))
+            dots(surface, "copper", [(x + 1, y + 1)])
+            dots(surface, "rust_dark", [(x, y + 2)])
+    elif name == "roof_patched":
+        # A sheet of something else nailed over a hole.
+        fill(surface, "shadow", (2, 3, 11, 9))
+        fill(surface, "steel", (3, 4, 9, 7))
+        fill(surface, "teal", (5, 4, 2, 7))
+        dots(surface, "dust", [(3, 4), (11, 4), (3, 10), (11, 10)])
+    elif name == "roof_eave":
+        # The lower edge, and the shadow it throws on the wall under it.
+        fill(surface, "dust", (0, T - 4, T, 2))
+        fill(surface, "shadow", (0, T - 2, T, 2))
+    return surface
+
+
+CLOSE_ROOF_PAINTERS: dict[str, Callable[[], pygame.Surface]] = {
+    name: partial(_close_roof, name) for name in ROOFS
+}
+
+
 def _sheet(
     painters: dict[str, Callable[[], pygame.Surface]], cells: dict[str, Cell], size: tuple[int, int]
 ) -> pygame.Surface:
@@ -260,4 +294,5 @@ def build() -> dict[str, pygame.Surface]:
     return {
         SETTLEMENT_SHEET: _sheet(PAINTERS, SETTLEMENT_CELLS, SETTLEMENT_SHEET_SIZE),
         ROOF_SHEET: _sheet(ROOF_PAINTERS, ROOF_CELLS, ROOF_SHEET_SIZE),
+        CLOSE_ROOF_SHEET: _sheet(CLOSE_ROOF_PAINTERS, ROOF_CELLS, ROOF_SHEET_SIZE),
     }

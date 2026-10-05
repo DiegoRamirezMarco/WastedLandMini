@@ -37,7 +37,11 @@ SETTLEMENT_CELLS: dict[str, Cell] = {
 ROOF_SHEET = "sprites/tiles/roofs.png"
 ROOF_SHEET_SIZE = (4 * TILE_SIZE, TILE_SIZE)
 
-# Roofs are only seen from afar, at half size: their art is drawn in blocks of 2×2 pixels.
+# The same roofs seen from close, drawn pixel by pixel. They share the cells of the sheet above.
+CLOSE_ROOF_SHEET = "sprites/tiles/roofs_close.png"
+
+# The roofs of the first sheet are only seen from afar, at half size: their art is drawn in blocks
+# of 2×2 pixels.
 ROOF_CELLS: dict[str, Cell] = {
     "roof": (0, 0),
     "roof_rusty": (1, 0),

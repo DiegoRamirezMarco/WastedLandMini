@@ -84,21 +84,94 @@ Done when: a fight never starts without a chance to intervene, the injured recov
 the medic's care, and a death removes a resident and everything that depended on them without
 breaking the settlement.
 
-Still open here: nobody picks up a weapon on purpose, and a vacant post stays vacant (see S8).
-
-### S8 — A working economy
+### S8 — A working economy — done
 - Carrying: produce is hauled from where it is made to where it is used, instead of appearing there
 - A workshop job: repairs, and items that wear out
 - Trade at a post: a shopkeeper, prices, things bought with work
 - Residents can change jobs; the player can suggest who does what
 - Days off, and what happens when a post is left empty too long
 
-### S9 — Deep relationships
+Done when: a week passes in which nothing reaches a pantry or the pot except in someone's hands,
+a tool wears down and comes back from the workshop mended, things are bought with credits earned
+on shift, and a post left empty by a death is taken up by someone else.
+
+This also closed what S7 left open: a frightened resident buys a weapon on purpose, and a vacant
+post is offered round until someone takes it.
+
+Still open here:
+- Residents buy but never sell, and credits spent are simply gone: there is no settlement fund.
+
+S10 closed the rest: trips outside restock the shop, and a repair now uses up a piece of scrap.
+
+### S9 — Deep relationships — done
 - Friendship tiers
 - Adult romance
 - Consensual adult sexual relationships as narrative events
 - Breakups
 - Jealousy and secrets
+
+Done when: two residents become a couple only after one dares to say so and the other feels the
+same; a couple goes off alone and nobody else knows unless they come across them; whoever learns
+that their partner was with another turns on both; and a couple that has soured can end, with
+the player given a say before each confession and each breakup.
+
+Still open here:
+- Who is drawn to whom is fixed per pair, with no notion of what kind of person anyone is drawn to.
+- A couple changes nothing about where the two sleep or how they spend the day.
+- Jealousy only comes from learning of an affair, never from mere suspicion.
+- On screen a couple is only a word on the card: there is no sign of it on the map.
+
+### S10 — Beyond the fence — done
+- Scavenging as a job: a cart by the gate, one trip a day, hours outside
+- Whoever is out there is out of sight and out of reach, and sees nothing of the settlement
+- What comes back: finds drawn from a table, carried in by hand to the shop and the scrap piles
+- Danger: a trip can end in an injury
+- A risky find the player can advise on: go for more, or turn back
+- Repairs use up scrap
+
+Done when: a week passes in which the scavenger goes out most days and comes back, more reaches
+the shop than it started with, repairs are made with scrap that was brought in, and a find that
+looks dangerous is never gone for without the player having had a say.
+
+Still open here:
+- Only one resident goes out, alone, and always to the same nowhere: there are no places out there.
+- A trip is not seen: the scavenger simply stops being on the map until they are back.
+
+### S11 — What comes from outside — done
+- World events as data, rolled hourly with a random generator of their own
+- Strangers at the gate: the guard answers, the player advises, and whoever is let in stays
+- Newcomers who look for work without being asked
+- Caravans that leave goods at the shop
+- Dust storms: no work out of doors, no trips, and frayed nerves for whoever is out in one
+- Vermin in the pantries
+
+Done when: three weeks pass with the gate opened to whoever asks, in which strangers join and find
+themselves work, caravans and storms come and go, nobody is ever let in without a bed for them, and
+the settlement still feeds everyone.
+
+Still open here:
+- Nobody takes shelter from a storm: it wears on them and they carry on.
+- A stranger is a name at the gate until let in. Nobody sees them wait, and nobody else has a say.
+- Nothing hostile comes from outside: no raids, and nothing a guard on duty could drive off.
+- Nobody ever leaves the settlement for good.
+
+### S12 — Word from outside — done
+- World events that give warning: settled hours before they come
+- A radio in the cantina, and radios of one's own: whoever listens hears what is on its way
+- Word of it as a fact like any other: heard by those in the room, passed on, and stale once its hour comes
+- The scavenger hears the bulletin before leaving, and stays in if a storm would catch them out
+- A storm that catches someone outside makes their trip more dangerous
+
+Done when: nobody knows a storm is coming unless they heard it on a radio or were told, the
+scavenger who knows stays in and the one who does not is caught out, and word of something that
+has already happened is no longer passed on.
+
+Still open here:
+- Only the scavenger does anything about a forecast. Nobody else brings anything in, takes
+  shelter or goes to meet a caravan.
+- The radio is never wrong, and says nothing but what is on its way: no voices, no music, no
+  other settlements.
+- The player sees a forecast only when a resident hears it.
 
 ## Presentation track
 
@@ -140,18 +213,37 @@ instead of crashing.
 - Art for the new places, posts and residents
 - A view that zooms: three steps up close, and an overview with the roofs on and a face per resident
 
-### P6 — Atmosphere
+### P6 — Atmosphere — done
 - Day and night: light changes, and fires and lamps matter
-- Roofs that hide a building until someone looks inside (so far they are on in the overview and
-  off at every closer zoom)
+- Roofs that hide a building until someone looks inside
 - A minimap, and jumping to whoever needs attention
 - More wear and scrap: the place should look salvaged
 
+Still open here:
+- Darkness is only seen. It does not yet shorten how far residents see, and nobody lights or puts
+  out a lamp: that belongs to the simulation track.
+- The minimap is always on screen and cannot be put away.
+
+### P7 — The economy on screen (needs S8) — done
+- A job board: who holds which post, which are vacant, and suggesting who should do what
+- Prices at the counter, and what each resident can afford
+- The condition of things, on the card and in containers
+- Loads shown in a resident's hands while they carry them
+- Shelves and stock that make the shop look like one
+
+Still open here: a suggestion from the board always comes with the same encouragement, though the
+simulation would take any of the three advices; and the board does not say why someone cannot be
+asked just now.
+
+### P8 — Music — done
+- Synthesised loops written by the art tool, like the sound effects
+- A track for the day, the night, a storm and trouble, chosen from what is going on
+- One track fading into the next, under the sound effects, and silenced with them
+
+Still open here: nobody but the tool has composed anything, and nobody has listened to it with a
+critical ear. The tracks are short and there is one per mood, so they repeat soon.
+
 ## Later
 - Voice/TTS modulation
-- Music
-- Expeditions beyond the fence: scavenging as a job, and what comes back with it
-- World events
-- Radio
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it
