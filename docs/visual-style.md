@@ -149,10 +149,12 @@ cut apart where the body bends, each part laid along its bone and turned as the 
   example and longer at both ends, so that a body can be made stout, or any odd shape. The limbs
   of the near side are tinted one colour and those of the far side another. The parts are set
   apart from each other, so that each can be drawn whole.
-- **Cutting.** What is painted inside a zone goes with that part. Two parts that are jointed
-  overlap at the joint, and what is painted there goes with both, which is what keeps a bent limb
-  from showing a gap. What is painted outside every zone is left out. Everything on the head's
-  canvas is the head, hair and all.
+- **Cutting.** Between its two joints a part takes everything painted in its zone. Past a joint
+  it turns about, it takes only a round end, centred on the joint and as wide as the limb was
+  painted there. Two parts that meet at a joint so end in the same circle: bent, they show no gap
+  and no corner of either sticks out, however squarely the limb was drawn. A hand or a foot is
+  left as drawn, and so is the trunk. What is painted outside every zone is left out. Everything
+  on the head's canvas is the head, hair and all.
 - **Moving.** The doll is posed from the side by the same clips as any body. Facing left it is
   the same drawing in a mirror, and walking up or down the map it keeps the side it last faced.
   It reels, falls, loses limbs and lies still exactly as the game's own bodies do, since it is the

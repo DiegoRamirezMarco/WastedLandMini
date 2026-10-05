@@ -8,7 +8,7 @@ facing the other way it is the same drawing in a mirror.
 
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +33,8 @@ GUIDE_NEAR = PALETTE["sand"]
 GUIDE_FAR = PALETTE["teal"]
 GUIDE_MIDDLE = PALETTE["dust"]
 GUIDE_JOINT = PALETTE["ember"]
+# Pixels either side of a joint over which a limb is measured to see how wide it is drawn there.
+JOINT_BAND = 2
 # How solid the inside of a zone is on the guide, out of 255, and how thick its edge.
 ZONE_FILL = 60
 ZONE_EDGE = 2
@@ -67,6 +69,8 @@ class PartSpec:
     cap_reach: float = 0.0
     # The part is everything drawn on its canvas, such as a head with its hair.
     whole: bool = False
+    # The part does not turn about its first joint against another: the trunk, which the rest hangs from.
+    free_start: bool = False
 
     def zone(self) -> list[Point]:
         """The corners of the zone: a box along the part, wider than it and reaching past both joints."""
@@ -101,6 +105,50 @@ class DollTemplate:
             return mask
         self._zone(mask, spec, (255, 255, 255, 255))
         return mask
+
+    def cut_mask(self, bone: str, drawing: pygame.Surface) -> pygame.Surface:
+        """What of a drawing goes with a part: white and solid there, clear elsewhere.
+
+        Between its two joints a part takes all of its zone. Past a joint it turns about, it only
+        takes a round end centred on that joint, as wide as the limb was drawn there. Two parts
+        that meet at a joint so end in the same circle, and however the joint bends no corner of
+        either sticks out.
+        """
+        spec = self.parts[bone]
+        if spec.whole:
+            return self.mask(bone)
+        mask = pygame.Surface(self.canvases[spec.canvas], pygame.SRCALPHA)
+        solid = (255, 255, 255, 255)
+        followed = any(
+            other is not spec and other.canvas == spec.canvas and other.start == spec.end for other in self.parts.values()
+        )
+        shaft = replace(
+            spec,
+            ends=(spec.ends[0] if spec.free_start else 0.0, 0.0 if followed else spec.ends[1]),
+            cap_reach=0.0 if followed else spec.cap_reach,
+        )
+        self._zone(mask, shaft, solid)
+        joints = ([] if spec.free_start else [spec.start]) + ([spec.end] if followed else [])
+        for joint in joints:
+            width = self._width_at(drawing, spec, joint)
+            if width > 0:
+                pygame.draw.circle(mask, solid, joint, width + 1)
+        return mask
+
+    def _width_at(self, drawing: pygame.Surface, spec: PartSpec, joint: Point) -> int:
+        """Half the width of what is drawn across a part at one of its joints, in pixels."""
+        dx, dy = spec.end[0] - spec.start[0], spec.end[1] - spec.start[1]
+        length = math.hypot(dx, dy) or 1.0
+        along, across = (dx / length, dy / length), (-dy / length, dx / length)
+        size = drawing.get_size()
+        widest = 0
+        for step in range(-JOINT_BAND, JOINT_BAND + 1):
+            for offset in range(-int(spec.reach), int(spec.reach) + 1):
+                x = round(joint[0] + along[0] * step + across[0] * offset)
+                y = round(joint[1] + along[1] * step + across[1] * offset)
+                if 0 <= x < size[0] and 0 <= y < size[1] and drawing.get_at((x, y))[3]:
+                    widest = max(widest, abs(offset))
+        return widest
 
     def _zone(self, target: pygame.Surface, spec: PartSpec, color: tuple[int, ...], width: int = 0) -> None:
         """Paint the zone of a part, or with `width` only its edge."""
@@ -191,6 +239,7 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
             (cap[0] * unit, cap[1] * unit, cap[2] * unit) if cap is not None else None,
             float(values.get("cap_reach", 0.0)) * unit,
             bool(values.get("whole", False)),
+            bool(values.get("free_start", False)),
         )
     return DollTemplate(unit, canvases, parts)
 
@@ -222,7 +271,7 @@ class Doll:
                 drawing = pygame.transform.smoothscale(drawing, template.canvases[spec.canvas])
             cut = drawing.convert_alpha() if pygame.display.get_surface() is not None else drawing.copy()
             # Whatever of the drawing falls outside the part's zone belongs to another part.
-            cut.blit(template.mask(bone), (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            cut.blit(template.cut_mask(bone, drawing), (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             box = cut.get_bounding_rect()
             if box.width == 0:
                 continue

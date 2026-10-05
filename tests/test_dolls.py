@@ -114,6 +114,49 @@ class DollCuttingTests(unittest.TestCase):
         image, _ = doll.placed("spine", False, self.template.unit, 2.0)
         self.assertAlmostEqual(_painted(image), _painted(doll.parts["spine"].image), delta=30)
 
+    def test_parts_that_meet_at_a_joint_end_in_the_same_round_so_no_corner_sticks_out_when_it_bends(self) -> None:
+        upper, fore = self.template.parts["upper_arm_right"], self.template.parts["forearm_right"]
+        # An arm drawn as one thick bar, straight through the elbow, as anyone would draw it.
+        half = 22
+        bar = pygame.Rect(upper.start[0] - half, upper.start[1] - 10, half * 2, fore.end[1] - upper.start[1] + 20)
+        pygame.draw.rect(self.body, RED, bar)
+        doll = self._doll()
+        elbow = fore.start
+
+        def has(part_name: str, at: tuple[float, float]) -> bool:
+            """Whether a part kept the pixel of the drawing at a place on the canvas."""
+            part, spec = doll.parts[part_name], self.template.parts[part_name]
+            x, y = round(at[0] - spec.start[0] + part.start[0]), round(at[1] - spec.start[1] + part.start[1])
+            return part.image.get_rect().collidepoint(x, y) and part.image.get_at((x, y))[3] > 0
+
+        past = half * 0.85
+        # Past the elbow the upper arm keeps what is within the arm's width of the joint, and not the corners beyond.
+        self.assertTrue(has("upper_arm_right", (elbow[0], elbow[1] + past)))
+        self.assertFalse(has("upper_arm_right", (elbow[0] + past, elbow[1] + past)))
+        self.assertFalse(has("upper_arm_right", (elbow[0], elbow[1] + half * 1.5)))
+        # The forearm does the same on its side of the joint, so the two ends are one circle.
+        self.assertTrue(has("forearm_right", (elbow[0], elbow[1] - past)))
+        self.assertFalse(has("forearm_right", (elbow[0] - past, elbow[1] - past)))
+        # Between its joints each part is whole, corner to corner, and the hand end is left as drawn.
+        self.assertTrue(has("upper_arm_right", (elbow[0] + half - 2, elbow[1] - 20)))
+        self.assertTrue(has("forearm_right", (fore.end[0] + half - 2, fore.end[1] + 8)))
+        # The same at the shoulder, where the arm turns against the trunk.
+        self.assertFalse(has("upper_arm_right", (upper.start[0] + past, upper.start[1] - past)))
+        # Bent double, nothing of the arm reaches further from the elbow than the arm is wide.
+        skeleton = Skeleton(self.plan, "right", ["arm_left", "leg_left", "leg_right"])
+        pose = self.plan.pose("right")
+        skeleton.set_pose(pose)
+        joints = skeleton.joints
+        joints["elbow_right"].x, joints["elbow_right"].y = joints["shoulder_right"].x, joints["shoulder_right"].y + 3
+        joints["hand_right"].x, joints["hand_right"].y = joints["elbow_right"].x + 3, joints["elbow_right"].y
+        picture = pygame.Surface((300, 300), pygame.SRCALPHA)
+        detail = float(self.template.unit)
+        draw_doll(picture, doll, self.plan, skeleton, (150, 290), detail)
+        at_elbow = (150 + (joints["elbow_right"].x + 0.5) * detail, 290 + (joints["elbow_right"].y + 0.5) * detail)
+        outer_corner = (round(at_elbow[0] - past), round(at_elbow[1] + past))
+        self.assertEqual(picture.get_at(outer_corner)[3], 0, "the outside of the bend is round")
+        self.assertGreater(picture.get_at((round(at_elbow[0]), round(at_elbow[1])))[3], 0)
+
     def test_what_is_drawn_across_a_joint_goes_with_both_parts(self) -> None:
         elbow = self.template.parts["forearm_right"].start
         pygame.draw.circle(self.body, RED, elbow, 5)

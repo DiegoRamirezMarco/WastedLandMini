@@ -147,7 +147,8 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   of a rounder end, for a hand or a foot). `reach` is half the width of the zone the part may be
   drawn in and `ends` how far that zone goes beyond each joint, with `cap_reach` for a rounder
   end to it; give them room, so that people can draw other builds than the example. `whole` is
-  for a part that is everything on its canvas. A part must be as long as its bone is in the
+  for a part that is everything on its canvas, and `free_start` for one that does not turn about
+  its first joint, such as the trunk: every other part is cut round there. A part must be as long as its bone is in the
   `side` view, and zones may only overlap where two parts are jointed.
 - `physics`: gravity in pixels per second squared, how much speed is kept each step (`damping`),
   lost along the ground (`friction`) and given back on landing (`bounce`), how hard limits push
