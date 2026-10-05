@@ -20,7 +20,7 @@ Minimal `data.json`:
 ```
 
 Optional fields include `description`, `base_value`, `tags` and `effects`. `effects` maps a need
-(`hunger`, `tiredness`, `social`, `stress`) to the change from using or eating the item.
+(`hunger`, `thirst`, `tiredness`, `social`, `stress`) to the change from using or eating the item.
 
 Packs are loaded at start-up through the same registry as built-in items. A pack is skipped, with
 a warning in the log and without stopping the game, if:
@@ -74,8 +74,11 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
   an object whose kind is marked `"container": true`. An item that is not defined is left out.
 - Terrain is drawn with the tile of the same name in the tileset; a terrain without a tile shows
   the placeholder. An object kind is drawn with `assets/sprites/objects/<kind>.png`.
-- `"light": 5` on an object kind makes it light that many tiles around it after dark. A kind with
-  no `use` is scenery; give it `"blocks": false` if it can be walked over.
+- `"light": 5` on an object kind makes it light that many tiles around it after dark. The built-in
+  `lamp` kind needs generator fuel to shine; fires and other light kinds do not. A kind with no
+  `use` is scenery; give it `"blocks": false` if it can be walked over.
+- A use with `"consumes": "water"` takes one shared item from the object's own container, just as
+  food uses do. The built-in water tank is a container and consumes items in category `water`.
 
 ## Health and weapons
 
@@ -182,6 +185,7 @@ settlement is created, in `SimulationWorld.demo_world`.
   how long a trip takes, how many things it brings back, and the chance of coming back hurt.
 - `data/expeditions.json` says what is out there. `loot` lists items with a `weight`; the heavier,
   the oftener found. `deliveries` says where finds go, the first match winning:
+  `{"tag": "water", "to": "water_tank"}`, `{"tag": "fuel", "to": "generator"}`,
   `{"tag": "scrap", "to": "scrap_pile"}` for items with a tag, `{"to": "shop_counter"}` for the
   rest. `to` must be a container kind. `injury` and `injury_kind` are what a bad trip does.
   `find_chance`, `push_on_finds`, `push_on_danger`, `push_on_minutes` and `turn_back_minutes`
@@ -214,7 +218,7 @@ settlement is created, in `SimulationWorld.demo_world`.
   which must not reach back before midnight. A `weather` event's `danger` is added to the trip of
   anyone it catches outside.
 - An object's use is listening to a radio with `"radio": true`, and an item tagged `radio` is one
-  too when it is used.
+  too when it is used. Radios only give warnings while the generator has fuel.
 - A job with `"watch_for": "raid"` keeps watch for that kind of event: its worker hears the evening
   bulletin and, knowing one is coming, stays at the post until it has.
 - In `data/events.json`, `perception` also takes `dark_hours` and `dark_sight_range`: when it is

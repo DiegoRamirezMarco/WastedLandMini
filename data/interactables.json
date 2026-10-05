@@ -160,7 +160,21 @@
     "name": "depósito de agua",
     "article": "un",
     "width": 2,
-    "height": 2
+    "height": 2,
+    "container": true,
+    "use": {
+      "action": "drink_water",
+      "text": "bebe {item}",
+      "minutes": 8,
+      "consumes": "water",
+      "capacity": 3
+    }
+  },
+  "generator": {
+    "name": "generador",
+    "article": "un",
+    "width": 2,
+    "container": true
   },
   "clinic_bed": {
     "name": "camilla",

@@ -62,6 +62,30 @@
     }
   },
   {
+    "id": "water",
+    "name": "agua limpia",
+    "article": "un poco de",
+    "category": "water",
+    "base_value": 4,
+    "tags": [
+      "water"
+    ],
+    "effects": {
+      "thirst": -100
+    }
+  },
+  {
+    "id": "fuel",
+    "name": "combustible",
+    "article": "algo de",
+    "category": "material",
+    "base_value": 6,
+    "tags": [
+      "fuel",
+      "energy"
+    ]
+  },
+  {
     "id": "baton",
     "name": "porra",
     "article": "una",

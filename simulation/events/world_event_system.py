@@ -102,6 +102,8 @@ class WorldEventSystem:
         The first to hear a bulletin makes it a fact, which those around hear too and anyone who
         knows it can pass on. Nobody knows what is coming just because it is.
         """
+        if not world.has_power():
+            return
         world.notices[f"{BULLETIN_NOTICE}{listener.resident_id}"] = world.clock.day
         if world.clock.hour >= EVENING_HOUR:
             world.notices[f"{EVENING_NOTICE}{listener.resident_id}"] = world.clock.day
@@ -146,6 +148,8 @@ class WorldEventSystem:
 
         With `evening`, it is the evening's bulletin they have yet to hear, and only once it is on.
         """
+        if not world.has_power():
+            return None
         if evening and world.clock.hour < EVENING_HOUR:
             return None
         notice = EVENING_NOTICE if evening else BULLETIN_NOTICE

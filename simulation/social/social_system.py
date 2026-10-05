@@ -31,6 +31,7 @@ PURSUIT_MINUTES = 120
 CONFRONTATION_IMPORTANCE = 15
 # After an argument a resident does not seek the other out for this long, unless a crisis drives them.
 ARGUMENT_COOLDOWN_MINUTES = 360
+LOW_MOOD_ARGUMENT_WEIGHT = 0.2
 
 
 def _clamp(value: float, lowest: float, highest: float) -> float:
@@ -55,7 +56,15 @@ def argument_chance(world: "SimulationWorld", a: Resident, b: Resident) -> float
         world.relationship(a.resident_id, b.resident_id).affection
         + world.relationship(b.resident_id, a.resident_id).affection
     ) / 200.0
-    chance = 0.06 + 0.5 * tension(world, a, b) + 0.15 * temper + 0.2 * strain - 0.1 * warmth
+    low_mood = max(0.0, (50.0 - min(a.mood, b.mood)) / 50.0)
+    chance = (
+        0.06
+        + 0.5 * tension(world, a, b)
+        + 0.15 * temper
+        + 0.2 * strain
+        + LOW_MOOD_ARGUMENT_WEIGHT * low_mood
+        - 0.1 * warmth
+    )
     return _clamp(chance, 0.02, 0.9)
 
 
@@ -341,6 +350,7 @@ class SocialSystem:
                     location_id=room.room_id if room is not None else None,
                 ),
             )
+            resident.adjust_mood(definition.emotional_value * 8.0)
             if not definition.hostile:
                 share_rumor(world, resident, partner)
                 world.items.after_exchange(world, resident, partner, definition)

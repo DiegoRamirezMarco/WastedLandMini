@@ -20,6 +20,8 @@ class Resident:
     needs: Needs = field(default_factory=Needs)
     personality: Personality = field(default_factory=Personality)
     inventory: Inventory = field(default_factory=Inventory)
+    # General spirits, separate from immediate stress. Low mood makes work slower and quarrels likelier.
+    mood: float = 50.0
     current_action: str = "idle"
     facing: str = "down"
     activity: Activity | None = None
@@ -71,3 +73,6 @@ class Resident:
         if self.activity is not None and self.activity.path:
             return self.activity.path[-1]
         return self.tile
+
+    def adjust_mood(self, delta: float) -> None:
+        self.mood = max(0.0, min(100.0, self.mood + delta))

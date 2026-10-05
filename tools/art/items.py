@@ -127,6 +127,46 @@ STEW = [
 STEW_LEGEND = {"d": "dust", "o": "ink", "s": "stone", "e": "ember", "k": "rust", "b": "bone"}
 
 
+WATER = [
+    "................",
+    ".......oo.......",
+    "......ommo......",
+    ".....ommmo......",
+    "....ommmmmo.....",
+    "...ommmmmmmo....",
+    "..ommmmmmmmmo...",
+    "..ommmttmmmmo...",
+    ".ommmttttmmmmo..",
+    ".ommmttttmmmmo..",
+    ".ommmmmmmmmmo...",
+    "..ommmmmmmmo....",
+    "...ommmmmmo.....",
+    "....oooooo......",
+    "................",
+    "................",
+]
+WATER_LEGEND = {"o": "ink", "m": "mist", "t": "teal"}
+
+FUEL = [
+    "................",
+    ".....oooooo.....",
+    "....oddddddo....",
+    "....orrrrrro....",
+    "....orkkkkro....",
+    "....orkkkkro....",
+    "....orrrrrro....",
+    "....orrrerrro...",
+    "....orreeerro...",
+    "....oreeeyro....",
+    "....orreeero....",
+    "....orrrrrro....",
+    "....oddddddo....",
+    ".....oooooo.....",
+    "................",
+    "................",
+]
+FUEL_LEGEND = {"o": "ink", "d": "dust", "r": "rust", "k": "rust_dark", "e": "ember", "y": "lamp"}
+
 BATON = [
     "................",
     "............oo..",
@@ -221,6 +261,8 @@ def build() -> dict[str, pygame.Surface]:
         builtin_icon_path("old_radio"): _checked(paint(OLD_RADIO, OLD_RADIO_LEGEND), "old_radio"),
         builtin_icon_path("vegetables"): _checked(paint(VEGETABLES, VEGETABLES_LEGEND), "vegetables"),
         builtin_icon_path("stew"): _checked(paint(STEW, STEW_LEGEND), "stew"),
+        builtin_icon_path("water"): _checked(paint(WATER, WATER_LEGEND), "water"),
+        builtin_icon_path("fuel"): _checked(paint(FUEL, FUEL_LEGEND), "fuel"),
         builtin_icon_path("baton"): _checked(paint(BATON, BATON_LEGEND), "baton"),
         builtin_icon_path("rusty_knife"): _checked(paint(RUSTY_KNIFE, RUSTY_KNIFE_LEGEND), "rusty_knife"),
         builtin_icon_path("hoe"): _checked(paint(HOE, HOE_LEGEND), "hoe"),

@@ -24,7 +24,9 @@ The simulation runs without Pygame. Important state changes emit domain events. 
 
 ## What a resident does each minute
 
-1. Needs rise (`simulation/residents/needs.py`). Asleep, hunger and loneliness grow at half pace.
+1. Needs rise (`simulation/residents/needs.py`). Asleep, hunger, thirst and loneliness grow at half pace.
+   Mood drifts separately from stress: bad needs and wounds pull it down over time, good days let
+   it recover.
 2. With no activity, `RoutineSystem` scores every free usable object and picks the best reachable one:
    - each need the use would lower counts as `(need / 100)²`, weighted by personality;
    - a use with `preferred_hours` counts double inside that window and a fifth outside it,
@@ -36,7 +38,7 @@ The simulation runs without Pygame. Important state changes emit domain events. 
 3. `ActivitySystem` walks the resident along the path (2 tiles per minute), then applies the use
    until its minutes run out or the needs it lowers reach zero. A use with `until` ends when
    that one need reaches zero: sleep eases stress too, but only tiredness decides when to wake.
-   Any other need reaching 85 cuts a long restful use short: hunger wakes a sleeper.
+   Any other bodily need reaching 85 cuts a long restful use short: hunger or thirst wakes a sleeper.
 
 Starting a use emits an `activity_started` event with low importance.
 
@@ -48,7 +50,7 @@ Starting a use emits an `activity_started` event with low importance.
 - The wish to talk grows with the social need and with how much the resident likes the other
   person. Resentment puts off the meek and draws the aggressive towards a confrontation.
 - On arrival the exchange becomes a chat or an argument. Arguments are likelier with shared
-  resentment, hot tempers, and when either one is very hungry, tired or stressed.
+  resentment, hot tempers, low mood, and when either one is very hungry, tired or stressed.
 - `data/social.json` defines each kind of exchange: length, importance, need changes per minute,
   base relationship changes, event text, dialogue lines and the memory it leaves.
 - When it ends, each resident applies **their own** side: their feelings about the other change
@@ -81,6 +83,8 @@ room. An argument's importance rises with the resentment between the two.
   to eat, give or steal; someone who changes jobs puts it down in the nearest container.
 - **Tools.** A job can name a kind of tool by tag. A worker who has a working one on them works
   that much faster, and each unit made wears it.
+- **Mood.** Low mood slows productive work. It is not a need to be filled directly, but a slow
+  state that follows what a resident has been living through.
 - **Staffed places.** A use with `staffed_by` exists only while someone with that job is on duty.
   The bar serves nobody when the bartender is away, and turns away whoever arrives too late.
 - **Watch.** A job's `sight_bonus` lets its worker see further while on duty, so the guard witnesses
@@ -114,6 +118,18 @@ room. An argument's importance rises with the resentment between the two.
   grasping go for it unless talked out of it.
 - **Repairs take scrap.** A use that `repairs` can name a `material`: each repair uses up one
   such thing from a container of the kind given, and with none there is no repairing.
+
+## What the settlement lives on
+
+- **Water.** `thirst` is a bodily need like hunger. Residents drink from the water tank, consuming
+  shared `water` items. The scavenger can bring water back and hauls it to the tank by the same
+  delivery rules as every other find.
+- **Energy.** Generator fuel is kept in a generator container. When night begins, the generator
+  burns one unit. Lamps of kind `lamp` only light the map while fuel remains, and radios give no
+  warning without power.
+- **Mood.** Mood is saved on each resident. Memories and decisions can nudge it, and the minute
+  to minute state of the body pulls it slowly up or down. Low mood makes arguments more likely and
+  productive work slower.
 
 ## What comes from outside
 

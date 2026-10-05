@@ -9,6 +9,14 @@
       "weight": 3
     },
     {
+      "item": "water",
+      "weight": 6
+    },
+    {
+      "item": "fuel",
+      "weight": 1
+    },
+    {
       "item": "pizza_radioactiva",
       "weight": 0.5
     },
@@ -26,6 +34,14 @@
     }
   ],
   "deliveries": [
+    {
+      "tag": "water",
+      "to": "water_tank"
+    },
+    {
+      "tag": "fuel",
+      "to": "generator"
+    },
     {
       "tag": "scrap",
       "to": "scrap_pile"

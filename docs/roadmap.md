@@ -339,8 +339,7 @@ Still open here:
 - Places without a roof, such as the garden and the gate, are still only ground with a sign.
 - Bodies are the size they were.
 
-### S15 — What the settlement lives on — planned
-Settled with the player before building:
+### S15 — What the settlement lives on — done
 
 - **Water is a thirst of each resident's own**, a need like hunger: whoever is thirsty goes and
   drinks, from water that someone's work brings in
@@ -348,6 +347,11 @@ Settled with the player before building:
   the lamps give no light at night, and the radio gives no warning
 - **Mood is a state of its own**, apart from stress: it rises and falls slowly with what a
   resident lives through, and with it low they work worse and argue more
+
+Done when: thirst is saved and drives residents to drink from stocked water, expeditions can bring
+water and generator fuel back through the same hauling rules as other finds, lamps and radio
+warnings depend on fuel, and low mood makes work slower and arguments likelier without breaking a
+four-week headless run.
 
 Still to settle:
 - Medicine: used up by the clinic's care, and brought in from outside

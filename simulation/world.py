@@ -35,6 +35,12 @@ from world.pathfinding import manhattan
 from world.visibility import line_of_sight, within_range
 from world.room import Room
 
+POWER_ITEM = "fuel"
+POWERED_LIGHTS = {"lamp"}
+GENERATOR_KIND = "generator"
+POWER_OUT_NOTICE = "power_out"
+POWER_EVENT_IMPORTANCE = 25
+
 
 @dataclass
 class SimulationWorld:
@@ -104,6 +110,7 @@ class SimulationWorld:
 
     def _tick(self) -> None:
         self.clock.advance_minutes(1)
+        self._power_tick()
         self.interventions.tick(self)
         self.items.tick_world(self)
         self.staffing.tick(self)
@@ -245,14 +252,50 @@ class SimulationWorld:
     def is_lit(self, tile: Tile) -> bool:
         """Whether a tile is within reach of something that gives light, with nothing in between."""
         opaque = self.opaque()
+        powered = self.has_power()
         for placed in self.interactables.values():
             definition = self.definition_of(placed)
             if definition.light <= 0:
+                continue
+            if placed.kind in POWERED_LIGHTS and not powered:
                 continue
             source = (placed.x, placed.y)
             if within_range(source, tile, definition.light) and line_of_sight(source, tile, opaque):
                 return True
         return False
+
+    def power_units(self) -> int:
+        """Fuel units in generators that can keep lamps and the radio alive."""
+        return sum(
+            inventory.count(POWER_ITEM)
+            for object_id, inventory in self.containers.items()
+            if object_id in self.interactables and self.interactables[object_id].kind == GENERATOR_KIND
+        )
+
+    def has_power(self) -> bool:
+        return self.power_units() > 0
+
+    def _power_tick(self) -> None:
+        """Burn one fuel when the lamps come on for the night."""
+        hours = self.registries.event_settings.get("perception", {}).get("dark_hours")
+        dark_start = int(hours[0]) if hours else None
+        if self.clock.minute != 0 or self.clock.hour != dark_start:
+            return
+        generator = next(
+            (
+                inventory
+                for object_id, inventory in self.containers.items()
+                if object_id in self.interactables and self.interactables[object_id].kind == GENERATOR_KIND
+            ),
+            None,
+        )
+        stack = generator.stack_of(POWER_ITEM, None) if generator is not None else None
+        if stack is None:
+            if self.notices.get(POWER_OUT_NOTICE) != self.clock.day:
+                self.notices[POWER_OUT_NOTICE] = self.clock.day
+                self.emit_event(DomainEvent("power_failed", POWER_EVENT_IMPORTANCE, "El generador se queda sin combustible"))
+            return
+        generator.take_unit(stack.instance_id)
 
     def under_roof(self, tile: Tile) -> bool:
         room = self.room_at(tile)

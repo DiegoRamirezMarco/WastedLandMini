@@ -287,6 +287,23 @@ def _water_tank() -> pygame.Surface:
     return surface
 
 
+def _generator() -> pygame.Surface:
+    surface = _blank(32, 16)
+    _box(surface, (2, 5, 22, 9), "iron")
+    fill(surface, "stone", (2, 5, 22, 1))
+    fill(surface, "shadow", (4, 8, 9, 4))
+    fill(surface, "rust", (15, 8, 7, 3))
+    dots(surface, "lamp", [(6, 9), (8, 9), (19, 9)])
+    dots(surface, "ember", [(20, 9)])
+    fill(surface, "ink", (24, 7, 6, 1))
+    fill(surface, "ink", (29, 7, 1, 6))
+    fill(surface, "copper", (25, 8, 4, 4))
+    for x in (5, 20):
+        fill(surface, "ink", (x, 13, 5, 2))
+        fill(surface, "rust_dark", (x + 1, 13, 3, 1))
+    return surface
+
+
 def _clinic_bed() -> pygame.Surface:
     # The ordinary bed in hospital colours: a steel frame, white sheets and a red cross on the blanket.
     legend = {
@@ -342,6 +359,7 @@ def build() -> dict[str, pygame.Surface]:
         "barrel": _barrel,
         "scrap_pile": _scrap_pile,
         "water_tank": _water_tank,
+        "generator": _generator,
         "clinic_bed": _clinic_bed,
         "medicine_cabinet": _medicine_cabinet,
         "grave": _grave,

@@ -46,12 +46,13 @@ FIRST_ECONOMY_VERSION = 8
 # Version 13 added events that are on their way, and the settlement's radio to hear of them.
 # Version 14 added raids. A save from before simply has never had one.
 # Version 15 added lost limbs, none by default, and the particulars of events, empty by default.
-LAST_MAP_CHANGE_VERSION = 13
+# Version 16 added thirst, mood, water and generator fuel.
+LAST_MAP_CHANGE_VERSION = 16
 FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 15
+    CURRENT_VERSION = 16
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -88,6 +89,7 @@ class SaveManager:
                     "facing": resident.facing,
                     "needs": vars(resident.needs),
                     "personality": vars(resident.personality),
+                    "mood": resident.mood,
                     "current_action": resident.current_action,
                     "activity": _activity_to_data(resident.activity),
                     "traits": list(resident.traits),
@@ -205,6 +207,7 @@ class SaveManager:
                 y=tile[1],
                 needs=Needs(
                     hunger=float(needs_data.get("hunger", 15.0)),
+                    thirst=float(needs_data.get("thirst", 12.0)),
                     tiredness=float(needs_data.get("tiredness", 10.0)),
                     social=float(needs_data.get("social", 20.0)),
                     stress=float(needs_data.get("stress", 10.0)),
@@ -217,6 +220,7 @@ class SaveManager:
                     greed=float(personality_data.get("greed", 50.0)),
                     courage=float(personality_data.get("courage", 50.0)),
                 ),
+                mood=float(resident_data.get("mood", 50.0)),
                 current_action=str(resident_data.get("current_action", "idle")),
                 facing=facing if facing in FACINGS else "down",
                 activity=activity,

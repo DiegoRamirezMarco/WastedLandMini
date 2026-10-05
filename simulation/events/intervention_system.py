@@ -400,18 +400,20 @@ class InterventionSystem:
         room = world.room_at(resident.tile)
         location_id = room.room_id if room is not None else None
         if chosen.memory is not None:
+            memory_mood = -0.3 if target is not None else 0.2
             world.memories.remember(
                 resident.resident_id,
                 Memory(
                     text=self.fill(world, chosen.memory, resident, target, decision.job_id),
                     importance=float(crisis.urgency if crisis else definition.importance),
-                    emotional_value=-0.3 if target is not None else 0.2,
+                    emotional_value=memory_mood,
                     people=[target.resident_id] if target is not None else [],
                     tags=["crisis", chosen.outcome_id],
                     timestamp=world.clock.total_minutes,
                     location_id=location_id,
                 ),
             )
+            resident.adjust_mood(memory_mood * 8.0)
         if chosen.takes_job and decision.job_id is not None:
             world.staffing.assign(world, resident, decision.job_id)
         if chosen.expedition is not None:

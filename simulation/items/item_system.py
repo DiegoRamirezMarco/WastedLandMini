@@ -27,6 +27,7 @@ USE_ITEM_ACTION = "use_item"
 STEAL_ACTION = "steal"
 ITEM_ACTIONS = (USE_ITEM_ACTION, STEAL_ACTION)
 FOOD_CATEGORY = "food"
+WATER_CATEGORY = "water"
 
 USE_ITEM_MINUTES = 10
 USE_ITEM_APPEAL = 0.8
@@ -44,6 +45,7 @@ GIFT_CHANCE = 0.25
 TRADE_IMPORTANCE = 15
 NO_FOOD_IMPORTANCE = 40
 NO_FOOD_NOTICE = "no_food"
+NO_WATER_NOTICE = "no_water"
 BROKEN_IMPORTANCE = 30
 
 
@@ -136,7 +138,10 @@ class ItemSystem:
         if food is None:
             # A wasted walk to one empty pot is not news. Nothing to eat anywhere is.
             if not any(self.best_food(world, resident, other_id, category) for other_id in world.containers):
-                self._report_no_food(world, resident)
+                if category == WATER_CATEGORY:
+                    self._report_no_water(world, resident)
+                elif category == FOOD_CATEGORY:
+                    self._report_no_food(world, resident)
             return None
         world.containers[container_id].take_unit(food.instance_id)
         return food.definition_id
@@ -148,6 +153,15 @@ class ItemSystem:
         world.notices[NO_FOOD_NOTICE] = world.clock.day
         world.emit_event(
             DomainEvent("no_food", NO_FOOD_IMPORTANCE, f"{resident.name} no encuentra nada que comer", [resident.resident_id]),
+            at=resident.tile,
+        )
+
+    def _report_no_water(self, world: "SimulationWorld", resident: Resident) -> None:
+        if world.notices.get(NO_WATER_NOTICE) == world.clock.day:
+            return
+        world.notices[NO_WATER_NOTICE] = world.clock.day
+        world.emit_event(
+            DomainEvent("no_water", NO_FOOD_IMPORTANCE, f"{resident.name} no encuentra agua que beber", [resident.resident_id]),
             at=resident.tile,
         )
 

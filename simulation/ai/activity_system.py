@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from simulation.world import SimulationWorld
 
 ROUTINE_EVENT_IMPORTANCE = 5
+MOOD_DRIFT = 0.002
 
 
 def facing_towards(origin: Tile, target: Tile) -> str | None:
@@ -39,6 +40,7 @@ class ActivitySystem:
     def tick(self, world: "SimulationWorld", resident: Resident) -> None:
         # Asleep, the body runs slow. So it does for someone out there, who eats as they go from what they took.
         resident.needs.step(1, resting=resident.away or not world.is_aware(resident))
+        self._settle_mood(resident)
         world.health.tick(world, resident)
         resident.trail = [resident.tile]
         if resident.activity is None:
@@ -180,3 +182,17 @@ class ActivitySystem:
             resident.needs.apply(world.items.use_effects(world, resident, item))
         resident.activity = None
         resident.current_action = "idle"
+
+    def _settle_mood(self, resident: Resident) -> None:
+        """Let mood drift towards how life currently feels, without becoming another urgent need."""
+        needs = resident.needs
+        strain = (
+            needs.hunger * 0.16
+            + needs.thirst * 0.2
+            + needs.tiredness * 0.12
+            + needs.social * 0.08
+            + needs.stress * 0.24
+            + max(0.0, 100.0 - resident.health) * 0.2
+        )
+        target = max(0.0, min(100.0, 72.0 - strain))
+        resident.adjust_mood((target - resident.mood) * MOOD_DRIFT)

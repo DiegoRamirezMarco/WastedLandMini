@@ -35,6 +35,7 @@ MINUTES_PER_DAY = 24 * 60
 WATCH_AHEAD_MINUTES = 8 * 60
 WATCH_AFTER_MINUTES = 60
 WATCH_NOTICE = "watch:"
+LOW_MOOD_WORK_FLOOR = 0.75
 
 
 def minutes_left_in_shift(job: JobDefinition, hour: int, minute: int) -> int:
@@ -276,6 +277,7 @@ class WorkSystem:
         speed = job.tool.speed if job.tool is not None and tool is not None else 1.0
         # Short of an arm the work still gets done, in more minutes.
         speed *= world.health.work_pace(world, resident)
+        speed *= self._mood_pace(resident)
         needed = math.ceil(rule.every_minutes / speed)
         resident.work_progress = min(resident.work_progress + 1, needed)
         if resident.work_progress < needed:
@@ -290,3 +292,9 @@ class WorkSystem:
         if tool is not None:
             world.items.wear(world, resident, tool)
         return True
+
+    def _mood_pace(self, resident: Resident) -> float:
+        """Low spirits make productive work drag; good spirits do not make it superhuman."""
+        if resident.mood >= 50.0:
+            return 1.0
+        return max(LOW_MOOD_WORK_FLOOR, 0.75 + 0.25 * resident.mood / 50.0)

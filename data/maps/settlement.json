@@ -104,6 +104,7 @@
     {"id": "crop_7", "kind": "crop_bed", "x": 46, "y": 20},
     {"id": "crop_8", "kind": "crop_bed", "x": 48, "y": 20},
     {"id": "water_tank", "kind": "water_tank", "x": 54, "y": 15},
+    {"id": "generator", "kind": "generator", "x": 23, "y": 24},
     {"id": "guard_post", "kind": "guard_post", "x": 26, "y": 32},
     {"id": "barrel_gate", "kind": "barrel", "x": 32, "y": 32},
     {"id": "clinic_bed_1", "kind": "clinic_bed", "x": 27, "y": 22},
@@ -156,7 +157,9 @@
     {"container": "shop_counter", "item": "pizza_radioactiva", "count": 2},
     {"container": "shop_counter", "item": "hoe", "count": 2},
     {"container": "shop_counter", "item": "rusty_knife", "count": 1},
-    {"container": "shop_counter", "item": "old_radio", "count": 1}
+    {"container": "shop_counter", "item": "old_radio", "count": 1},
+    {"container": "water_tank", "item": "water", "count": 220},
+    {"container": "generator", "item": "fuel", "count": 20}
   ],
   "graves": [
     [54, 28],

@@ -1,7 +1,7 @@
 """Display text for simulation state. Nothing here feeds back into gameplay."""
 
 from simulation.items.item import ItemInstance
-from simulation.items.item_system import FOOD_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
+from simulation.items.item_system import FOOD_CATEGORY, WATER_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
 from simulation.residents.activity import SHELTER_ACTION
 from simulation.residents.resident import Resident
 from simulation.work.expedition_system import EXPEDITION_ACTION
@@ -10,7 +10,7 @@ from simulation.events.world_event_system import BED_USE_ACTION
 from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
 from simulation.world import SimulationWorld
 
-NEED_LABELS = {"hunger": "Hambre", "tiredness": "Sueño", "social": "Social", "stress": "Estrés"}
+NEED_LABELS = {"hunger": "Hambre", "thirst": "Sed", "tiredness": "Sueño", "social": "Social", "stress": "Estrés"}
 FEELING_LABELS = {"affection": "afecto", "resentment": "rencor"}
 MINUTES_PER_DAY = 24 * 60
 
@@ -227,6 +227,7 @@ ANGRY_STRESS = 70.0
 LOW_HEALTH = 70.0
 PRESSING_NEED = 85.0
 SCRAP_TAG = "scrap"
+FUEL_TAG = "fuel"
 
 
 def trait_names(world: SimulationWorld, resident: Resident) -> list[str]:
@@ -275,8 +276,8 @@ def expression_of(world: SimulationWorld, resident: Resident) -> str:
             return "angry" if interaction.hostile else "happy"
     if resident.needs.stress >= ANGRY_STRESS:
         return "angry"
-    needs = (resident.needs.hunger, resident.needs.tiredness, resident.needs.social)
-    return "sad" if resident.health < LOW_HEALTH or max(needs) >= PRESSING_NEED else "neutral"
+    needs = (resident.needs.hunger, resident.needs.thirst, resident.needs.tiredness, resident.needs.social)
+    return "sad" if resident.health < LOW_HEALTH or max(needs) >= PRESSING_NEED or resident.mood < 25.0 else "neutral"
 
 
 def spoken_line(world: SimulationWorld, resident: Resident) -> str | None:
@@ -291,18 +292,26 @@ def spoken_line(world: SimulationWorld, resident: Resident) -> str | None:
 
 
 def settlement_counts(world: SimulationWorld) -> list[tuple[str, str]]:
-    """What the settlement has, as an icon and a figure each: people and beds, food, and scrap."""
+    """What the settlement has, as an icon and a figure each."""
     beds = sum(
         1
         for placed in world.interactables.values()
         if (use := world.definition_of(placed).use) is not None and use.action == BED_USE_ACTION
     )
-    food = scrap = 0
+    food = water = scrap = fuel = 0
     for definition_id, quantity in settlement_stock(world):
         definition = world.registries.items.resolve(definition_id)
         food += quantity if definition.category == FOOD_CATEGORY else 0
+        water += quantity if definition.category == WATER_CATEGORY else 0
         scrap += quantity if SCRAP_TAG in definition.tags else 0
-    return [("people", f"{len(world.residents)}/{beds}"), ("food", str(food)), ("scrap", str(scrap))]
+        fuel += quantity if FUEL_TAG in definition.tags else 0
+    return [
+        ("people", f"{len(world.residents)}/{beds}"),
+        ("food", str(food)),
+        ("water", str(water)),
+        ("energy", str(fuel)),
+        ("scrap", str(scrap)),
+    ]
 
 
 def settlement_stock(world: SimulationWorld) -> list[tuple[str, int]]:

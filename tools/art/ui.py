@@ -6,7 +6,7 @@ from graphics.icons import ICON_SIZE, icon_path
 from tools.art.grid import paint
 
 LEGEND = {
-    "o": "ink", "p": "paper", "k": "ink", "e": "ember", "y": "lamp", "g": "glow", "m": "mist", "d": "dust", "h": "copper", "b": "blood", "l": "lichen",
+    "o": "ink", "p": "paper", "k": "ink", "e": "ember", "y": "lamp", "g": "glow", "m": "mist", "t": "teal", "d": "dust", "h": "copper", "b": "blood", "l": "lichen",
 }
 
 ICONS = {
@@ -129,6 +129,26 @@ ICONS = {
         "obbbbbbo",
         ".obbbbo.",
         "..oooo..",
+    ],
+    "water": [
+        "...oo...",
+        "..ommo..",
+        ".ommmo..",
+        "ommmmmo.",
+        "ommtmmo.",
+        ".ommmmo.",
+        "..oooo..",
+        "........",
+    ],
+    "energy": [
+        "..oyyo..",
+        ".oyyyyo.",
+        "...yy...",
+        "..oyyo..",
+        ".oyy....",
+        "oyyyyyo.",
+        "..yy....",
+        ".oo.....",
     ],
     "scrap": [
         "oooooooo",
