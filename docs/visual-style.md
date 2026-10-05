@@ -5,9 +5,10 @@
   buildings that have height and a name on each, a bubble over everyone for what they are doing,
   a bar of what the settlement has, a menu down the left, whoever is selected in full down the
   right, and the conversation docked under the map with two large faces and a speech bubble.
-- It stays pixel art, drawn from code and replaceable file by file. It will not look painted.
-- The frame of that picture is in place: see The screen below. Buildings are whole pictures
-  that stand up from the ground and can be replaced one by one. `docs/roadmap.md` says what follows.
+- Art drawn from code cannot get there: it was tried, and it looks home-made. The game is moving
+  to **illustrations made outside it**, shown at the resolution of the window: see Illustrations
+  below. Its own pixel art stays as what is drawn where nobody has made a picture yet.
+- The frame of that picture is in place: see The screen below. `docs/roadmap.md` says what follows.
 
 ## Pixel art
 - The game is pixel art.
@@ -103,6 +104,11 @@ custom_content/
     foods/<item_id>/icon.png
     faces/<resident_or_pack>/<expression>.png
     buildings/<room_id>.png
+illustrations/                   free of the style contract: see Illustrations
+    map/<map_id>.png
+    buildings/<room_id>.png
+    faces/<resident_id>/<expression>.png
+    ui/panel.png
 ```
 
 ### Loading
@@ -110,6 +116,24 @@ custom_content/
 - A missing, unreadable or wrongly sized image never crashes: it draws as a magenta and black
   checker and logs a warning. Those two colours are outside the palette on purpose.
 - Paths that leave the store's root are refused the same way.
+
+## Illustrations
+- Pictures in `illustrations/` are free of everything under Style contract: any size, any colours,
+  smooth edges. `illustrations/README.md` lists what can go there and how it should be framed.
+- They are shown at the resolution of the window, not of the canvas, so they are never doubled.
+  The window is put together in two steps: first whatever illustrations there are, then the
+  canvas scaled up over them. Where an illustration belongs, the canvas is left clear.
+- **The ground of the map** is one picture for the whole map. Over it the game draws only what
+  stands on the ground: fences, walls, floors, furniture and people, as hard-edged pixel art.
+  Night and storms darken the illustrated ground like the rest.
+- **A building** that has a picture is shown in it while its roof is on. It goes under everything
+  that stands on the map, so nobody is hidden behind it. A building without one keeps the game's
+  own picture, in among the residents.
+- **A face** that has a picture is shown in it wherever that resident's face is: large in the
+  dock and in the panel, and brought down for the small markers on the map.
+- **The skin** dresses the bar, the menu, the panel and the dock: its border keeps its width and
+  its middle stretches. Text, bars and buttons are still drawn on the canvas, over it.
+- With nothing in the folder, or without the folder, the game looks exactly as it did.
 
 ## The screen
 `ui/layout.py` cuts the canvas into five parts, and nothing is drawn across their edges.

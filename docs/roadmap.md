@@ -339,6 +339,25 @@ Still open here:
 - Places without a roof, such as the garden and the gate, are still only ground with a sign.
 - Bodies are the size they were.
 
+### P13 — Illustrations — under way
+After P11 and P12 the look was still home-made, and it was settled that art drawn from code would
+not do: the pictures are to be illustrations made outside the game, with an image generator.
+
+Done:
+- The window is put together from illustrations first and the canvas over them, so that a picture
+  is shown at its full resolution and never doubled
+- An illustrated ground for the whole map, with what stands on it drawn over; night and storms
+  darken it too
+- Illustrated buildings, faces at any size, and a skin for the large parts of the screen
+- All of it optional, file by file: `illustrations/README.md` says what goes where
+
+Still open here:
+- The pictures themselves. The first six, for one whole screen, are being made
+- Text is still the pixel font, and bars, buttons and icons are still pixel art
+- Furniture, objects and residents are still pixel art, standing on an illustrated ground
+- A drawn building hides nobody: it goes under everything that stands on the map
+- Places without a roof have no picture of their own, and an open building shows its pixel floor
+
 ### S15 — What the settlement lives on — done
 
 - **Water is a thirst of each resident's own**, a need like hunger: whoever is thirsty goes and

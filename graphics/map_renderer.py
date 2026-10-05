@@ -1,6 +1,6 @@
 """Draws a tile map's terrain. Chooses which tile shows each terrain; owns no map state."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 
 import pygame
 
@@ -13,6 +13,8 @@ from world.room import Room
 RAISED = {"wall": ("wall_top", "wall_face"), "fence": ("fence_top", "fence_face")}
 # Terrain drawn over bare ground because its tiles have transparent parts.
 OVER_DIRT = {"fence", "gate"}
+# The tiles that are bare ground, which an illustration of the ground takes the place of.
+GROUND_TILES = ("dirt", "dirt_pebbles", "grass", "grass_tuft")
 
 
 def _scatter(x: int, y: int) -> int:
@@ -57,12 +59,19 @@ def tile_names(tile_map: TileMap, x: int, y: int) -> list[str]:
     return [*layers, name]
 
 
-def render_terrain(tile_map: TileMap, tileset: Tileset) -> pygame.Surface:
-    surface = pygame.Surface((tile_map.width * TILE_SIZE, tile_map.height * TILE_SIZE))
+def render_terrain(tile_map: TileMap, tileset: Tileset, without: Collection[str] = ()) -> pygame.Surface:
+    """The terrain of a whole map as one picture.
+
+    With `without`, the tiles of those names are left out and the picture is clear where they
+    were: what stands on the ground, to go over a ground drawn some other way.
+    """
+    size = (tile_map.width * TILE_SIZE, tile_map.height * TILE_SIZE)
+    surface = pygame.Surface(size, pygame.SRCALPHA) if without else pygame.Surface(size)
     for y in range(tile_map.height):
         for x in range(tile_map.width):
             for name in tile_names(tile_map, x, y):
-                surface.blit(tileset.tile(name), (x * TILE_SIZE, y * TILE_SIZE))
+                if name not in without:
+                    surface.blit(tileset.tile(name), (x * TILE_SIZE, y * TILE_SIZE))
     return surface
 
 

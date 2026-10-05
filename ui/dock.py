@@ -7,6 +7,7 @@ import pygame
 from graphics.face_renderer import FACE_SIZE, FaceRenderer
 from graphics.font import BitmapFont
 from graphics.palette import PALETTE
+from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from ui.bubble import TAIL, draw_speech
 from ui.dialogue_box import draw_dialogue_box
 from ui.panel import draw_panel
@@ -37,12 +38,37 @@ def dock_areas(dock: pygame.Rect) -> DockAreas:
     return DockAreas(left, right, speech, side)
 
 
+def draw_face(
+    target: pygame.Surface,
+    faces: FaceRenderer,
+    area: pygame.Rect,
+    face_id: str,
+    expression: str,
+    layers: ScreenLayers | None = None,
+) -> None:
+    """A face filling an area. An illustrated one is shown at the resolution of the window, under the canvas."""
+    size = (area.width * layers.scale, area.height * layers.scale) if layers is not None else area.size
+    illustrated = faces.portrait(face_id, expression, size) if layers is not None else None
+    if illustrated is None:
+        draw_panel(target, area, fill="iron", border="stone")
+        target.blit(pygame.transform.scale(faces.face(face_id, expression), area.size), area)
+        return
+    target.fill(TRANSPARENT, area)
+    layers.picture_under(illustrated, area)
+
+
 def draw_portrait(
-    target: pygame.Surface, font: BitmapFont, faces: FaceRenderer, area: pygame.Rect, face_id: str, expression: str, name: str
+    target: pygame.Surface,
+    font: BitmapFont,
+    faces: FaceRenderer,
+    area: pygame.Rect,
+    face_id: str,
+    expression: str,
+    name: str,
+    layers: ScreenLayers | None = None,
 ) -> None:
     """A large face in a frame, with a name plate across the bottom of it."""
-    draw_panel(target, area, fill="iron", border="stone")
-    target.blit(pygame.transform.scale(faces.face(face_id, expression), area.size), area)
+    draw_face(target, faces, area, face_id, expression, layers)
     pygame.draw.rect(target, PALETTE["stone"], area, 1)
     width = font.width(name) + 10
     plate = pygame.Rect(area.centerx - width // 2, area.bottom - PLATE_HEIGHT - 2, width, PLATE_HEIGHT)
@@ -60,6 +86,7 @@ def draw_scene(
     text: str,
     speaker: int = -1,
     narration: bool = False,
+    layers: ScreenLayers | None = None,
 ) -> DockAreas:
     """Draw the dock as a scene between two residents, or with one alone.
 
@@ -69,10 +96,10 @@ def draw_scene(
     """
     draw_panel(target, dock, fill="shadow", border="iron")
     areas = dock_areas(dock)
-    draw_portrait(target, font, faces, areas.left, *left)
+    draw_portrait(target, font, faces, areas.left, *left, layers=layers)
     speech = areas.speech
     if right is not None:
-        draw_portrait(target, font, faces, areas.right, *right)
+        draw_portrait(target, font, faces, areas.right, *right, layers=layers)
     else:
         # Nobody across from them: what they say takes the room.
         speech = pygame.Rect(speech.x, speech.y, areas.right.right - speech.x, speech.height)

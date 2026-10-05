@@ -9,9 +9,11 @@ from graphics.assets import AssetStore
 from graphics.face_renderer import FaceRenderer
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.icons import ICON_SIZE, icon_path
+from graphics.illustrations import Illustrations, nine_slice
 from graphics.item_icons import ICON_SIZE as ITEM_ICON_SIZE
 from graphics.item_icons import ItemIcons
 from graphics.palette import PALETTE
+from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from settings import SPEEDS
 from simulation.events.event import DomainEvent
 from simulation.world import SimulationWorld
@@ -32,7 +34,7 @@ from ui.labels import (
     spoken_line,
 )
 from ui.layout import Layout, layout_for
-from ui.panel import draw_panel
+from ui.panel import draw_panel, set_skin
 from ui.resident_panel import draw_resident_panel, draw_roster, relationship_hitboxes, roster_rows
 
 MARGIN = 6
@@ -56,6 +58,9 @@ NOTICE_SECONDS = 3.0
 STORES_TITLE = "Almacén: lo que es de todos"
 STORES_EMPTY = "No queda nada"
 DOCK_TITLE = "Lo último"
+# The picture that the large parts of the screen wear, if there is one, and how wide its border is drawn.
+SKIN_PATH = "ui/panel.png"
+SKIN_BORDER_PIXELS = 20
 
 
 def speed_intent(speed: int) -> tuple[str, int]:
@@ -79,8 +84,8 @@ class MenuButton:
         return self.rect.collidepoint(position)
 
     def draw(self, target: pygame.Surface, font: BitmapFont, assets: AssetStore, active: bool = False) -> None:
-        pygame.draw.rect(target, PALETTE["shadow" if active else "ink"], self.rect)
         if active:
+            pygame.draw.rect(target, PALETTE["shadow"], self.rect)
             pygame.draw.rect(target, PALETTE["lamp"], self.rect, 1)
         size = (ICON_SIZE[0] * MENU_ICON_SCALE, ICON_SIZE[1] * MENU_ICON_SCALE)
         icon = pygame.transform.scale(assets.image(icon_path(self.icon), size=ICON_SIZE), size)
@@ -98,14 +103,22 @@ class Hud:
         icons: ItemIcons,
         faces: FaceRenderer,
         assets: AssetStore,
+        illustrations: Illustrations | None = None,
+        layers: ScreenLayers | None = None,
     ) -> None:
         self.canvas = canvas
+        self.layers = layers
         self.world = world
         self.font = font
         self.icons = icons
         self.faces = faces
         self.assets = assets
         self.layout: Layout = layout_for(canvas.get_size())
+        # The bar, the menu, the panel and the dock wear the skin, if the game has been given one.
+        self._skin_source = illustrations.find(SKIN_PATH) if illustrations is not None and layers is not None else None
+        self._skinned = {tuple(part) for part in (self.layout.top, self.layout.sidebar, self.layout.panel, self.layout.dock)}
+        self._skins: dict[tuple[int, int, int, int], pygame.Surface] = {}
+        set_skin(self._dress if self._skin_source is not None else None)
         # The log, the job board and the stores share a corner of the map, so only one is open at a time.
         self.log_open = False
         self.jobs_open = False
@@ -157,6 +170,18 @@ class Hud:
         ]
         self.jobs_button = self.menu[1]
         self.log_button = self.menu[3]
+
+    def _dress(self, target: pygame.Surface, rect: pygame.Rect) -> bool:
+        """Put the skin under one of the large parts of the screen, and clear the canvas there to show it."""
+        key = tuple(rect)
+        if target is not self.canvas or key not in self._skinned:
+            return False
+        if key not in self._skins:
+            size = self.layers.on_screen(rect).size
+            self._skins[key] = nine_slice(self._skin_source, size, SKIN_BORDER_PIXELS)
+        target.fill(TRANSPARENT, rect)
+        self.layers.picture_under(self._skins[key], rect)
+        return True
 
     @property
     def buttons(self) -> list[Button | MenuButton]:
@@ -261,7 +286,7 @@ class Hud:
 
     def render(self) -> None:
         self._render_top()
-        pygame.draw.rect(self.canvas, PALETTE["ink"], self.layout.sidebar)
+        draw_panel(self.canvas, self.layout.sidebar, border="ink")
         for button in self.menu:
             button.draw(self.canvas, self.font, self.assets, active=self._menu_active(button.intent))
         self._render_panel()
@@ -290,7 +315,7 @@ class Hud:
 
     def _render_top(self) -> None:
         top, clock = self.layout.top, self.world.clock
-        pygame.draw.rect(self.canvas, PALETTE["ink"], top)
+        draw_panel(self.canvas, top, border="ink")
         plaque = pygame.Rect(top.x + 2, top.y + 2, self.layout.sidebar.width - 4, top.height - 4)
         draw_panel(self.canvas, plaque, fill="shadow", border="copper")
         day = f"Día {clock.day}"
@@ -331,7 +356,9 @@ class Hud:
         panel = self.layout.panel
         resident = self.world.residents.get(self.selected_id or "")
         if resident is not None:
-            draw_resident_panel(self.canvas, self.font, self.icons, self.faces, self.assets, panel, self.world, resident)
+            draw_resident_panel(
+                self.canvas, self.font, self.icons, self.faces, self.assets, panel, self.world, resident, self.layers
+            )
         elif self.container_rect() is not None:
             draw_panel(self.canvas, panel)
             draw_container_panel(self.canvas, self.font, self.icons, panel.topleft, self.world, self.selected_container, panel.width)
@@ -359,6 +386,7 @@ class Hud:
             (partner.resident_id, expression_of(self.world, partner), partner.name),
             spoken_line(self.world, speaker) or "...",
             speaker=-1 if turn == 0 else 1,
+            layers=self.layers,
         )
         x, y = areas.side.x, areas.side.y
         lines = [(f"{resident.name} {describe_action(self.world, resident)}", "paper")]

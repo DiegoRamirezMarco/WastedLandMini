@@ -5,6 +5,7 @@ import pygame
 from graphics.face_renderer import FaceRenderer
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
+from graphics.screen_layers import ScreenLayers
 from scenes.scene import canvas_position
 from simulation.commands import ChooseOptionCommand
 from simulation.events.decision import Decision
@@ -47,8 +48,10 @@ class InteractionView:
         faces: FaceRenderer,
         dock: pygame.Rect | None = None,
         backdrop: Callable[[], None] | None = None,
+        layers: ScreenLayers | None = None,
     ) -> None:
         self.canvas = canvas
+        self.layers = layers
         self.world = world
         self.font = font
         self.faces = faces
@@ -143,6 +146,7 @@ class InteractionView:
             across,
             text,
             narration=self.result is not None,
+            layers=self.layers,
         )
         # A frame in the colour of an alert: this is waiting on the player.
         pygame.draw.rect(self.canvas, PALETTE["lamp"], dock, 1)

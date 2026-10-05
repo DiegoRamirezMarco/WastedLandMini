@@ -8,7 +8,9 @@ from audio.music import load_music_settings, track_for
 from graphics.assets import ASSETS_DIR, AssetStore
 from graphics.face_renderer import FaceRenderer
 from graphics.font import FONT_SHEET, SHEET_SIZE, BitmapFont
+from graphics.illustrations import ILLUSTRATIONS_DIR, Illustrations
 from graphics.item_icons import ItemIcons
+from graphics.screen_layers import ScreenLayers
 from save.save_manager import SaveManager
 from scenes.global_view import GlobalView
 from scenes.interaction_view import InteractionView
@@ -17,6 +19,7 @@ from settings import (
     GAME_MINUTES_PER_REAL_SECOND,
     INTERNAL_HEIGHT,
     INTERNAL_WIDTH,
+    SCALE,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
     SPEEDS,
@@ -35,12 +38,17 @@ MAX_MINUTES_PER_FRAME = 60
 
 
 class Game:
-    def __init__(self) -> None:
+    def __init__(self, illustrations_dir: Path | None = ILLUSTRATIONS_DIR) -> None:
         pygame.init()
         pygame.display.set_caption("Wasteland Minis")
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        # Scenes draw on the low-resolution canvas; the window only shows it scaled up.
-        self.canvas = pygame.Surface((INTERNAL_WIDTH, INTERNAL_HEIGHT))
+        # Pictures made outside the game go straight on the window, under the canvas.
+        self.illustrations = Illustrations(illustrations_dir)
+        self.layers = ScreenLayers(SCALE)
+        # Scenes draw on the low-resolution canvas; the window shows it scaled up. Where there are
+        # illustrations to show through it, the canvas can be left clear.
+        flags = pygame.SRCALPHA if self.illustrations.root is not None else 0
+        self.canvas = pygame.Surface((INTERNAL_WIDTH, INTERNAL_HEIGHT), flags)
         self.clock = pygame.time.Clock()
         self.world = SimulationWorld.demo_world()
         self.running = True
@@ -51,7 +59,7 @@ class Game:
         self.custom = AssetStore(CUSTOM_CONTENT_DIR)
         self.font = BitmapFont(self.assets.image(FONT_SHEET, size=SHEET_SIZE))
         self.icons = ItemIcons(self.assets, self.custom)
-        self.faces = FaceRenderer(self.assets, self.custom)
+        self.faces = FaceRenderer(self.assets, self.custom, self.illustrations)
         self.music = load_music_settings(DATA_DIR / "audio.json")
         self.audio = AudioManager(
             ASSETS_DIR / "sounds",
@@ -67,7 +75,8 @@ class Game:
         self.scene_name = "global"
         self.minutes_owed = 0.0
         self.global_view = GlobalView(
-            self.canvas, self.world, self.assets, self.font, self.icons, self.faces, self.custom
+            self.canvas, self.world, self.assets, self.font, self.icons, self.faces, self.custom,
+            self.illustrations, self.layers,
         )
         # Advice is asked for in the dock under the map, with the settlement left on show around it.
         self.interaction_view = InteractionView(
@@ -77,6 +86,7 @@ class Game:
             self.faces,
             dock=self.global_view.hud.layout.dock,
             backdrop=self.global_view.render,
+            layers=self.layers,
         )
 
     def save_game(self, path: Path = SAVE_PATH) -> bool:
@@ -173,6 +183,10 @@ class Game:
                 self.world.apply_command(SetSpeedCommand(SPEEDS[0]))
         self.global_view.tick_progress = self.minutes_owed
 
+    def present(self, screen: pygame.Surface | None = None) -> None:
+        """Put the frame the active scene has just drawn on the window, or on another surface of its size."""
+        self.layers.compose(screen if screen is not None else self.screen, self.canvas)
+
     def run(self) -> None:
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
@@ -188,7 +202,7 @@ class Game:
             self.update_music()
             self.active_scene.update(dt)
             self.active_scene.render()
-            pygame.transform.scale(self.canvas, self.screen.get_size(), self.screen)
+            self.present()
             pygame.display.flip()
 
         pygame.quit()

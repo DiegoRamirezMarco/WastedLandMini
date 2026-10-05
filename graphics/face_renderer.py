@@ -5,6 +5,7 @@ from collections import Counter
 import pygame
 
 from graphics.assets import AssetStore
+from graphics.illustrations import Illustrations
 from graphics.palette import PALETTE
 
 FACE_SIZE = (64, 64)
@@ -50,9 +51,12 @@ def _reduced(face: pygame.Surface, size: tuple[int, int]) -> pygame.Surface:
 
 
 class FaceRenderer:
-    def __init__(self, assets: AssetStore, custom: AssetStore | None = None) -> None:
+    def __init__(
+        self, assets: AssetStore, custom: AssetStore | None = None, illustrations: Illustrations | None = None
+    ) -> None:
         self._assets = assets
         self._custom = custom
+        self._illustrations = illustrations
         self._cache: dict[tuple[str, str], pygame.Surface] = {}
         self._markers: dict[tuple[str, str], pygame.Surface] = {}
 
@@ -62,8 +66,26 @@ class FaceRenderer:
             expression = DEFAULT_EXPRESSION
         key = (face_id, expression)
         if key not in self._cache:
-            self._cache[key] = self._custom_face(face_id, expression) or self._layered_face(face_id, expression)
+            self._cache[key] = (
+                self.portrait(face_id, expression, FACE_SIZE)
+                or self._custom_face(face_id, expression)
+                or self._layered_face(face_id, expression)
+            )
         return self._cache[key]
+
+    def portrait(self, face_id: str, expression: str, size: tuple[int, int]) -> pygame.Surface | None:
+        """An illustrated face at any size, for where it is shown large. None if nobody has drawn one.
+
+        The picture for the expression is used, else the neutral one, else the only one there is.
+        """
+        if self._illustrations is None:
+            return None
+        folder = f"faces/{face_id}"
+        available = self._illustrations.names(folder)
+        for name in (f"{expression}.png", f"{DEFAULT_EXPRESSION}.png"):
+            if name in available:
+                return self._illustrations.fitted(f"{folder}/{name}", size)
+        return self._illustrations.fitted(f"{folder}/{available[0]}", size) if len(available) == 1 else None
 
     def marker(self, face_id: str, expression: str = DEFAULT_EXPRESSION) -> pygame.Surface:
         """Return the same face at `MARKER_SIZE`, small enough to mark a resident on the map."""

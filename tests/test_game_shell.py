@@ -66,7 +66,8 @@ class GameShellTests(unittest.TestCase):
             os.environ[variable] = "dummy"
         from game.game import Game
 
-        self.game = Game()
+        # Whatever pictures have been dropped into `illustrations/` are left out: these tests are about the game's own art.
+        self.game = Game(illustrations_dir=None)
         self.addCleanup(pygame.quit)
 
     @staticmethod

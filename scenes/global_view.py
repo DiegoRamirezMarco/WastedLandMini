@@ -8,9 +8,11 @@ from graphics.building_renderer import FACADE_ROWS, BuildingRenderer, building_a
 from graphics.face_renderer import FaceRenderer
 from graphics.font import CELL_SIZE, BitmapFont
 from graphics.icons import ICON_SIZE, icon_path
+from graphics.illustrations import Illustrations
 from graphics.item_icons import ItemIcons
 from graphics.lighting import BLOCK, LightMap, daylight, shade
-from graphics.map_renderer import render_roofs, render_terrain, roof_names
+from graphics.screen_layers import TRANSPARENT, ScreenLayers
+from graphics.map_renderer import GROUND_TILES, render_roofs, render_terrain, roof_names
 from graphics.palette import PALETTE
 from graphics.shelf_display import SLOTS, displayed_goods
 from graphics.tileset import (
@@ -96,6 +98,9 @@ RIGHT_MOUSE_BUTTON = 2
 # The first is the overview: the settlement from afar, with the roofs on and a face for each resident.
 ZOOM_TILE_SIZES = (TILE_SIZE // 2, TILE_SIZE, TILE_SIZE * 2, TILE_SIZE * 3)
 DEFAULT_ZOOM = 1
+# An illustrated ground is kept at this many of its pixels to a pixel of the map's own art, which
+# is what the window shows at the default zoom.
+GROUND_DETAIL = 2
 ZOOM_KEYS = {
     pygame.K_PLUS: 1,
     pygame.K_KP_PLUS: 1,
@@ -117,8 +122,13 @@ class GlobalView:
         icons: ItemIcons,
         faces: FaceRenderer,
         custom: AssetStore | None = None,
+        illustrations: Illustrations | None = None,
+        layers: ScreenLayers | None = None,
     ) -> None:
         self.canvas = canvas
+        # Pictures made outside the game, and where they are put to go straight on the window.
+        self.illustrations = illustrations if layers is not None else None
+        self.layers = layers
         self.world = world
         self.assets = assets
         self.font = font
@@ -126,7 +136,7 @@ class GlobalView:
         self.faces = faces
         # Everyone's body, and what a blow leaves lying about. Presentation only: nothing of it is saved.
         self.bodies = BodyStage(BodyRenderer(assets, builtin_plan()))
-        self.hud = Hud(canvas, world, font, icons, faces, assets)
+        self.hud = Hud(canvas, world, font, icons, faces, assets, illustrations, layers)
         # Real seconds of unpaused play, driving animations that have nothing to do with game state.
         self.time = 0.0
         # How far the current game minute has played out, from 0 to 1. Set by the game shell.
@@ -140,6 +150,8 @@ class GlobalView:
         self.requested_decision: str | None = None
         tileset = Tileset(self.assets.image(SETTLEMENT_SHEET, size=SETTLEMENT_SHEET_SIZE), SETTLEMENT_CELLS)
         self.terrain = render_terrain(world.tile_map, tileset)
+        # What stands on the ground, without the ground: it goes over an illustrated one.
+        self.raised_terrain = render_terrain(world.tile_map, tileset, without=GROUND_TILES)
         # The tiles that roofs cover, and the same terrain with those roofs on, which is what the minimap shows.
         self.roofs = roof_names(world.tile_map, world.rooms.values())
         roof_tiles = Tileset(self.assets.image(ROOF_SHEET, size=ROOF_SHEET_SIZE), ROOF_CELLS)
@@ -176,7 +188,7 @@ class GlobalView:
         self._scene = self.terrain
         self._scene_origin = (0, 0)
         self._overlays: list[Callable[[], None]] = []
-        self._buffers: dict[tuple[int, int], pygame.Surface] = {}
+        self._buffers: dict[tuple[tuple[int, int], bool], pygame.Surface] = {}
         commons = world.rooms.get("commons")
         if commons is not None:
             self.centre_on((commons.x + commons.width / 2, commons.y + commons.height / 2))
@@ -398,11 +410,20 @@ class GlobalView:
             self.hud.notify(answers[-1].text.partition(" (")[0])
 
     def render(self) -> None:
+        if self.layers is not None:
+            self.layers.clear()
         self.canvas.fill(PALETTE["ink"])
         region = self._visible_region()
-        self._scene = self._buffer(region.size)
+        ground = self._ground()
+        self._scene = self._buffer(region.size, clear=ground is not None)
         self._scene_origin = region.topleft
-        self._scene.blit(self.terrain, (0, 0), region)
+        if ground is None:
+            self._scene.blit(self.terrain, (0, 0), region)
+        else:
+            self._scene.fill(TRANSPARENT)
+            self._scene.blit(self.raised_terrain, (0, 0), region)
+        # Buildings that someone has drawn, to go on the window rather than in among the pixel art.
+        pictures: list[tuple[pygame.Rect, str]] = []
         # Objects, residents and buildings share one list so that whatever stands lower on screen is in front.
         draws: list[Draw] = []
         # A building stands whole, roof and all, until it is looked into. Then it is not drawn, and the inside shows.
@@ -412,8 +433,16 @@ class GlobalView:
         for room_id in self._closed:
             self._hidden |= self.roof_tiles[room_id]
             room = self.world.rooms[room_id]
-            if building_area(room).colliderect(region):
+            if not building_area(room).colliderect(region):
+                continue
+            path = f"buildings/{room_id}.png"
+            if ground is not None and self.illustrations.find(path) is not None:
+                pictures.append((building_area(room), path))
+            else:
                 draws.append(self._building_draw(room))
+        for area, _ in pictures:
+            # A drawn building is on the window, under all this: its walls and floors are not put over it.
+            self._scene.fill(TRANSPARENT, area.move(-region.x, -region.y))
         for placed in self.world.interactables.values():
             # A roof hides what is under it.
             if (placed.x, placed.y) not in self._hidden:
@@ -434,16 +463,23 @@ class GlobalView:
         self._overlays = []
         for _, _, draw in sorted(draws, key=lambda entry: entry[:2]):
             draw()
-        self._storm(region)
-        self._shade(region)
+        stormy = self._storm(region)
+        light = self._light(region)
 
         # Nothing of the map is drawn outside its part of the canvas.
         self.canvas.set_clip(self.viewport)
         size = (self._scaled(region.width), self._scaled(region.height))
-        scene = self._scene
-        if size != region.size:
-            scene = pygame.transform.scale(scene, size, self._buffer(size))
-        self.canvas.blit(scene, self._canvas_point(*region.topleft))
+        if ground is not None:
+            self._show_illustrated(region, size, ground, pictures, stormy, light)
+        else:
+            if stormy:
+                self._scene.fill(STORM_TINT, special_flags=pygame.BLEND_RGB_MULT)
+            if light is not None:
+                shade(self._scene, light)
+            scene = self._scene
+            if size != region.size:
+                scene = pygame.transform.scale(scene, size, self._buffer(size))
+            self.canvas.blit(scene, self._canvas_point(*region.topleft))
         # Names, icons and faces go straight on the canvas, so they keep their size at any zoom.
         self._draw_zone_names()
         for overlay in self._overlays:
@@ -496,23 +532,77 @@ class GlobalView:
                 pygame.draw.rect(self.canvas, PALETTE["glow"], spot, 1)
             x += marker.get_width() + 2
 
-    def _storm(self, region: pygame.Rect) -> None:
-        """Under bad weather, wash the scene in dust and blow streaks of it across."""
+    def _ground(self) -> pygame.Surface | None:
+        """The ground of this map as someone has drawn it, at the detail the window shows. None if nobody has."""
+        if self.illustrations is None:
+            return None
+        width, height = self.terrain.get_size()
+        return self.illustrations.fitted(f"map/{self.world.map_id}.png", (width * GROUND_DETAIL, height * GROUND_DETAIL))
+
+    def _show_illustrated(
+        self,
+        region: pygame.Rect,
+        size: tuple[int, int],
+        ground: pygame.Surface,
+        pictures: list[tuple[pygame.Rect, str]],
+        stormy: bool,
+        light: pygame.Surface | None,
+    ) -> None:
+        """Have the map drawn on the window itself: the illustrated ground, then everything that stands on it.
+
+        The canvas is left clear over the map, so that only names, bubbles and signs are drawn there.
+        """
+        layers, illustrations, scene = self.layers, self.illustrations, self._scene
+        corner = self._canvas_point(*region.topleft)
+        place = layers.on_screen(pygame.Rect(corner, size))
+        clip = layers.on_screen(self.viewport)
+        # Window pixels to a pixel of the map's art.
+        detail = place.width / region.width
+        source = pygame.Rect(
+            region.x * GROUND_DETAIL, region.y * GROUND_DETAIL, region.width * GROUND_DETAIL, region.height * GROUND_DETAIL
+        )
+
+        def draw(screen: pygame.Surface) -> None:
+            before = screen.get_clip()
+            screen.set_clip(clip)
+            piece = ground.subsurface(source)
+            screen.blit(piece if piece.get_size() == place.size else pygame.transform.smoothscale(piece, place.size), place)
+            for area, path in pictures:
+                spot = pygame.Rect(
+                    place.x + round((area.x - region.x) * detail),
+                    place.y + round((area.y - region.y) * detail),
+                    round(area.width * detail),
+                    round(area.height * detail),
+                )
+                screen.blit(illustrations.fitted(path, spot.size), spot)
+            # The pixel art keeps its hard edges however large it is shown.
+            screen.blit(scene if scene.get_size() == place.size else pygame.transform.scale(scene, place.size), place)
+            if stormy:
+                screen.fill(STORM_TINT, place, special_flags=pygame.BLEND_RGB_MULT)
+            if light is not None:
+                screen.blit(pygame.transform.scale(light, place.size), place, special_flags=pygame.BLEND_RGB_MULT)
+            screen.set_clip(before)
+
+        layers.under(draw)
+        self.canvas.fill(TRANSPARENT, self.viewport)
+
+    def _storm(self, region: pygame.Rect) -> bool:
+        """Under bad weather, blow streaks of dust across the scene. Returns whether there is a storm to tint it."""
         if not self.world.happenings.is_stormy(self.world):
-            return
-        self._scene.fill(STORM_TINT, special_flags=pygame.BLEND_RGB_MULT)
+            return False
         drift = int(self.time * STORM_SPEED)
         for index in range(STORM_STREAKS):
             # Each streak keeps its own height and length, and they all move with the wind.
             x = (index * 97 + drift * (1 + index % 3)) % (region.width + 16) - 16
             y = (index * 53 + index * index * 7) % max(1, region.height)
             pygame.draw.line(self._scene, PALETTE["sand"], (x, y), (x + 4 + index % 5, y))
+        return True
 
-    def _shade(self, region: pygame.Rect) -> None:
-        """Darken the scene by the hour, leaving a pool of light round every fire and lamp in sight."""
+    def _light(self, region: pygame.Rect) -> pygame.Surface | None:
+        """What darkens the scene by the hour, with a pool of light round every fire and lamp in sight. None by day."""
         level = daylight(self.world.clock.hour, self.world.clock.minute)
         if level >= 1.0:
-            return
+            return None
         flicker = int(self.time * ANIMATION_FPS) % 2
         lights = []
         for placed in self.world.interactables.values():
@@ -528,7 +618,7 @@ class GlobalView:
             # A flame wavers; a lamp burns steady.
             wavers = self._frames(placed.kind, definition.width) > 1
             lights.append((centre, reach * TILE_SIZE - (BLOCK * flicker if wavers else 0)))
-        shade(self._scene, self.lights.render(region.size, level, lights))
+        return self.lights.render(region.size, level, lights)
 
     def _frames(self, kind: str, width_in_tiles: int) -> int:
         """How many animation frames an object's sheet holds, side by side."""
@@ -559,11 +649,15 @@ class GlobalView:
         )
         draw_minimap(self.canvas, rect, self._minimap, view, dots)
 
-    def _buffer(self, size: tuple[int, int]) -> pygame.Surface:
-        """A surface of this size to draw a frame on, kept from one frame to the next."""
-        if size not in self._buffers:
-            self._buffers[size] = pygame.Surface(size)
-        return self._buffers[size]
+    def _buffer(self, size: tuple[int, int], clear: bool = False) -> pygame.Surface:
+        """A surface of this size to draw a frame on, kept from one frame to the next.
+
+        A `clear` one can be left empty where nothing is drawn, to go over something else.
+        """
+        key = (size, clear)
+        if key not in self._buffers:
+            self._buffers[key] = pygame.Surface(size, pygame.SRCALPHA) if clear else pygame.Surface(size)
+        return self._buffers[key]
 
     def _scaled(self, pixels: int) -> int:
         """Canvas pixels that a distance in map pixels takes at the current zoom."""

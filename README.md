@@ -112,7 +112,9 @@ python -m tools.skeleton_lab
 
 ## Custom content
 
-To give a building a look of your own, drop a PNG named after it into `custom_content/buildings/`
-(`python -m tools.art.buildings` lists their names and sizes).
+Illustrations made outside the game go in `illustrations/`: the ground of the map, buildings,
+faces and the skin of the panels. They are shown at the full resolution of the window, in place of
+the game's own pixel art. `illustrations/README.md` lists the files and how to frame them, and
+`python -m tools.art.buildings` gives the proportions of each building.
 
 See `docs/modding.md` and the examples in `custom_content/`.

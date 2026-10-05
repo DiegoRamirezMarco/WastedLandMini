@@ -9,9 +9,11 @@ from graphics.icons import ICON_SIZE as MARK_SIZE
 from graphics.icons import icon_path
 from graphics.item_icons import ICON_SIZE, ItemIcons
 from graphics.palette import PALETTE
+from graphics.screen_layers import ScreenLayers
 from simulation.residents.needs import NEED_NAMES
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
+from ui.dock import draw_face
 from ui.inventory_view import draw_condition
 from ui.labels import (
     NEED_LABELS,
@@ -117,6 +119,7 @@ def draw_resident_panel(
     panel: pygame.Rect,
     world: SimulationWorld,
     resident: Resident,
+    layers: ScreenLayers | None = None,
 ) -> None:
     draw_panel(target, panel)
     x, y = panel.x + PADDING, panel.y + PADDING
@@ -124,8 +127,7 @@ def draw_resident_panel(
 
     # Their face, and beside it who they are and what they are about.
     portrait = pygame.Rect(x, y, *FACE_SIZE)
-    draw_panel(target, portrait, fill="iron", border="stone")
-    target.blit(faces.face(resident.resident_id, expression_of(world, resident)), portrait)
+    draw_face(target, faces, portrait, resident.resident_id, expression_of(world, resident), layers)
     pygame.draw.rect(target, PALETTE["stone"], portrait, 1)
     beside = portrait.right + 6
     room = panel.right - PADDING - beside
