@@ -4,6 +4,7 @@ import pygame
 
 from graphics.assets import AssetStore
 from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE, BodyRenderer
+from graphics.building_renderer import FACADE_ROWS, BuildingRenderer, building_area
 from graphics.face_renderer import FaceRenderer
 from graphics.font import CELL_SIZE, BitmapFont
 from graphics.icons import ICON_SIZE, icon_path
@@ -13,7 +14,6 @@ from graphics.map_renderer import render_roofs, render_terrain, roof_names
 from graphics.palette import PALETTE
 from graphics.shelf_display import SLOTS, displayed_goods
 from graphics.tileset import (
-    CLOSE_ROOF_SHEET,
     ROOF_CELLS,
     ROOF_SHEET,
     ROOF_SHEET_SIZE,
@@ -47,6 +47,7 @@ from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, ti
 from ui.panel import draw_panel
 from world.interactable import Interactable
 from world.map import Tile
+from world.room import Room
 
 # Tiles walked in one turn of the walk clip: a step with each foot.
 TILES_PER_STRIDE = 2
@@ -115,6 +116,7 @@ class GlobalView:
         font: BitmapFont,
         icons: ItemIcons,
         faces: FaceRenderer,
+        custom: AssetStore | None = None,
     ) -> None:
         self.canvas = canvas
         self.world = world
@@ -138,13 +140,12 @@ class GlobalView:
         self.requested_decision: str | None = None
         tileset = Tileset(self.assets.image(SETTLEMENT_SHEET, size=SETTLEMENT_SHEET_SIZE), SETTLEMENT_CELLS)
         self.terrain = render_terrain(world.tile_map, tileset)
-        # The tiles that roofs cover, and the same terrain with those roofs on.
+        # The tiles that roofs cover, and the same terrain with those roofs on, which is what the minimap shows.
         self.roofs = roof_names(world.tile_map, world.rooms.values())
         roof_tiles = Tileset(self.assets.image(ROOF_SHEET, size=ROOF_SHEET_SIZE), ROOF_CELLS)
         self.roofed_terrain = render_roofs(self.terrain, self.roofs, roof_tiles)
-        # The same from close, where a building keeps its roof until it is looked into.
-        close_tiles = Tileset(self.assets.image(CLOSE_ROOF_SHEET, size=ROOF_SHEET_SIZE), ROOF_CELLS)
-        self.close_roofed_terrain = render_roofs(self.terrain, self.roofs, close_tiles)
+        # On the map itself a building with its roof on is one picture, standing on the terrain.
+        self.buildings = BuildingRenderer(assets, custom)
         self.roof_tiles: dict[str, set[Tile]] = {
             room.room_id: set(roof_names(world.tile_map, [room])) for room in world.rooms.values() if room.roofed
         }
@@ -154,6 +155,8 @@ class GlobalView:
         self.pointer: tuple[int, int] | None = None
         # Tiles under a roof that is on this frame: what stands there is not drawn.
         self._hidden: set[Tile] = set()
+        # Buildings that stand closed this frame, by room ID.
+        self._closed: set[str] = set()
         self.lights = LightMap()
         tiles = (world.tile_map.width, world.tile_map.height)
         self._minimap = minimap_base(self.roofed_terrain, tiles)
@@ -326,13 +329,6 @@ class GlobalView:
         in_front = tile[1] == room.y + room.height and room.x - 1 <= tile[0] <= room.x + room.width
         return tile in self.roof_tiles[room_id] or in_front
 
-    def _roof_area(self, room_id: str) -> pygame.Rect:
-        """The part of the map a building's roof covers, in map pixels."""
-        room = self.world.rooms[room_id]
-        return pygame.Rect(
-            (room.x - 1) * TILE_SIZE, (room.y - 1) * TILE_SIZE, (room.width + 2) * TILE_SIZE, room.height * TILE_SIZE
-        ).clip(self.terrain.get_rect())
-
     def click(self, position: tuple[int, int]) -> None:
         """Handle a left click at a canvas position: a button, the minimap, a resident, or empty ground."""
         intent = self.hud.click(position)
@@ -406,19 +402,18 @@ class GlobalView:
         region = self._visible_region()
         self._scene = self._buffer(region.size)
         self._scene_origin = region.topleft
-        self._scene.blit(self.roofed_terrain if self.overview else self.close_roofed_terrain, (0, 0), region)
-        # A building that is looked into has its roof taken off: the bare terrain is put back there.
-        open_rooms = self.looked_into()
-        self._hidden = set()
-        for room_id, covered in self.roof_tiles.items():
-            if room_id not in open_rooms:
-                self._hidden |= covered
-                continue
-            area = self._roof_area(room_id)
-            self._scene.blit(self.terrain, (area.x - region.x, area.y - region.y), area)
-
-        # Objects and residents share one list so that whatever stands lower on screen is in front.
+        self._scene.blit(self.terrain, (0, 0), region)
+        # Objects, residents and buildings share one list so that whatever stands lower on screen is in front.
         draws: list[Draw] = []
+        # A building stands whole, roof and all, until it is looked into. Then it is not drawn, and the inside shows.
+        open_rooms = self.looked_into()
+        self._closed = set(self.roof_tiles) - open_rooms
+        self._hidden = set()
+        for room_id in self._closed:
+            self._hidden |= self.roof_tiles[room_id]
+            room = self.world.rooms[room_id]
+            if building_area(room).colliderect(region):
+                draws.append(self._building_draw(room))
         for placed in self.world.interactables.values():
             # A roof hides what is under it.
             if (placed.x, placed.y) not in self._hidden:
@@ -464,8 +459,15 @@ class GlobalView:
         for room in self.world.rooms.values():
             name = room.name.upper()
             width = self.font.width(name) + 6
-            centre_x, top = self._canvas_point((room.x + room.width / 2) * TILE_SIZE, (room.y - 1) * TILE_SIZE)
-            sign = pygame.Rect(centre_x - width // 2, top + 1, width, CELL_SIZE[1] + 2)
+            height = CELL_SIZE[1] + 2
+            if room.room_id in self._closed:
+                # On a building that stands closed, the sign sits on the eave, over its front.
+                row = room.y + room.height + 1 - FACADE_ROWS
+                centre_x, top = self._canvas_point((room.x + room.width / 2) * TILE_SIZE, row * TILE_SIZE)
+                top -= height + 1
+            else:
+                centre_x, top = self._canvas_point((room.x + room.width / 2) * TILE_SIZE, (room.y - 1) * TILE_SIZE)
+            sign = pygame.Rect(centre_x - width // 2, top + 1, width, height)
             if not self.viewport.colliderect(sign):
                 continue
             draw_panel(self.canvas, sign, fill="ink", border="copper")
@@ -669,6 +671,16 @@ class GlobalView:
             self._overlays.append(lambda: self._draw_overhead(resident, hitbox.midtop, with_name=True))
 
         return (top + TILE_SIZE, 1, draw)
+
+    def _building_draw(self, room: Room) -> Draw:
+        """A building with its roof on. Whatever stands behind it is hidden by as much as it rises."""
+        area = building_area(room)
+        picture = self.buildings.picture(room)
+
+        def draw() -> None:
+            self._blit(picture, area.topleft)
+
+        return (area.bottom, 0, draw)
 
     def _remains_draw(self, remains: Remains) -> Draw:
         """A dead body or a part of one, in among the living by how far down the map it lies."""

@@ -1347,6 +1347,29 @@ class GameShellTests(unittest.TestCase):
         view.render()
         self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(view.viewport), "RGB"), idle)
 
+    def test_a_building_stands_whole_until_it_is_looked_into_and_hides_what_is_behind_it(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        shop = world.rooms["shop"]
+        view.centre_on((shop.x + shop.width / 2, shop.y + shop.height / 2))
+        view.render()
+        self.assertIn("shop", view._closed)
+        # The row over the wall with the door is inside the shop, and shows as its front while it is closed.
+        front = view._canvas_rect(pygame.Rect(shop.x * TILE_SIZE, (shop.y + shop.height - 1) * TILE_SIZE, shop.width * TILE_SIZE, TILE_SIZE))
+        closed = pygame.image.tobytes(self.game.canvas.subsurface(front), "RGB")
+        behind = (shop.x + 1, shop.y - 2)
+        raul = world.residents["raul"]
+        raul.x, raul.y, raul.trail, raul.activity = behind[0], behind[1], [], None
+        view.render()
+        hitbox = view.hitboxes["raul"].copy()
+        hidden = pygame.image.tobytes(self.game.canvas.subsurface(hitbox), "RGB")
+        view.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_t))
+        view.render()
+        self.assertNotIn("shop", view._closed)
+        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(front), "RGB"), closed)
+        self.assertNotEqual(
+            pygame.image.tobytes(self.game.canvas.subsurface(hitbox), "RGB"), hidden, "the roof no longer hides his legs"
+        )
+
     # --- Bodies with bones ---
 
     def _stand_together(self, *names: str) -> None:

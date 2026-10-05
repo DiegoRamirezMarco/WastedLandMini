@@ -325,14 +325,19 @@ Still open here:
 - Traits are two. The panel has room for more than the settlement has.
 - The speech in the dock is drawn from a handful of lines per kind of exchange.
 
-### P12 — The settlement with height — next
-- Buildings seen at an angle: front walls two tiles high, roofs with a slope, tents and awnings
-- A watchtower, a fence with depth, strings of lights, more clutter between the buildings
-- A horizon: the ruined city beyond the fence, and a warm light at dusk
-- Larger bodies, to match
+### P12 — Buildings that stand up — done
+- A roofed building is one picture, with a front two tiles high, a cloth over its door and its
+  name on a sign over the eave
+- It rises above the wall at its back, and hides by that much whatever stands behind it
+- Looked into, the picture is not drawn and the inside shows, as before
+- Any building's picture can be replaced from `custom_content/buildings/`, at any size and in any
+  colours, without touching the game's own art
 
-Done when: the default view reads as the concept picture does, building by building, and every
-piece of it is still a PNG that can be replaced by hand.
+Still open here:
+- The pictures are put together from the same tiles as before. They stand up, but they are plain.
+- There is no horizon, no watchtower, no strings of lights, and dusk is as blue as the night.
+- Places without a roof, such as the garden and the gate, are still only ground with a sign.
+- Bodies are the size they were.
 
 ### S15 — What the settlement lives on — planned
 - Water, energy, materials and medicine as stores of the settlement, produced and used up

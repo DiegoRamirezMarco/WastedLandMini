@@ -6,8 +6,8 @@
   a bar of what the settlement has, a menu down the left, whoever is selected in full down the
   right, and the conversation docked under the map with two large faces and a speech bubble.
 - It stays pixel art, drawn from code and replaceable file by file. It will not look painted.
-- The frame of that picture is in place: see The screen below. The map with height is next, and
-  `docs/roadmap.md` says what follows.
+- The frame of that picture is in place: see The screen below. Buildings are whole pictures
+  that stand up from the ground and can be replaced one by one. `docs/roadmap.md` says what follows.
 
 ## Pixel art
 - The game is pixel art.
@@ -32,8 +32,9 @@
 | Asset | Size | Notes |
 |---|---|---|
 | Tile | 16×16 | The part of the canvas that shows the map is 34 tiles wide and 18 tall |
-| Roof tile, from afar | 16×16 | `sprites/tiles/roofs.png`. Only ever shown at half size, so it is drawn in blocks of 2×2 pixels |
-| Roof tile, from close | 16×16 | `sprites/tiles/roofs_close.png`. The same tiles in the same cells, drawn pixel by pixel |
+| Building | The room and the walls round it, plus 16 above | `sprites/buildings/<room_id>.png`: a roofed building with its roof on, as one picture. `python -m tools.art.buildings` lists the size of each |
+| Roof tile, for the minimap | 16×16 | `sprites/tiles/roofs.png`. Only ever shown small, so it is drawn in blocks of 2×2 pixels |
+| Roof tile, as material | 16×16 | `sprites/tiles/roofs_close.png`. The same tiles in the same cells, drawn pixel by pixel. The starter building pictures are put together from them |
 | Resident body | 16×24 standing at rest | Feet at the bottom centre. Drawn from parts over a skeleton: see Bodies below |
 | Resident parts sheet | 48×36 | `sprites/bodies/<body>.png`: a head, a trunk and limb strips for each of three views |
 | Object | Whole tiles | One PNG per object kind, as wide as its footprint. A taller image rises above the footprint, e.g. the pantry is 16×32 on a 1×1 footprint. A wider one holds animation frames side by side, e.g. the campfire is 48×16 |
@@ -87,6 +88,7 @@ assets/
     sprites/
         tiles/<tileset>.png
         bodies/<body>.png
+        buildings/<room_id>.png
         objects/<kind>.png
         items/<item_id>.png
     faces/
@@ -100,6 +102,7 @@ custom_content/
     items/<item_id>/icon.png
     foods/<item_id>/icon.png
     faces/<resident_or_pack>/<expression>.png
+    buildings/<room_id>.png
 ```
 
 ### Loading
@@ -145,8 +148,12 @@ custom_content/
   on its front wall, or the selected resident or container being inside. Then that one roof comes
   off and the inside shows. A roof hides the objects under it, and whoever is under it is drawn as
   their face on the roof, as from afar. `T` takes all the roofs off for those who prefer it.
-- A roof covers a roofed room and the walls behind and beside it. The wall in front, with the
-  door, stays in view below the eave.
+- A building with its roof on is one picture: the roof over the room and the walls behind and
+  beside it, and a front two tiles high, with the door where the map has it. The picture rises a
+  tile above the wall at the back, so whatever stands behind a building is hidden by its height.
+  It is drawn in among the objects and the residents, by where its foot is.
+- A picture of the same name under `custom_content/buildings/` takes the place of the game's
+  own. It may be of any size and in any colours: it is brought to the size of the building.
 - Walls and fences show their front where they end towards the viewer and their top elsewhere.
 - Objects and residents are drawn back to front, so whatever stands lower on screen is in front.
 - Simple readable bodies, drawn over a skeleton. See Bodies below.

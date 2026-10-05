@@ -112,4 +112,7 @@ python -m tools.skeleton_lab
 
 ## Custom content
 
+To give a building a look of your own, drop a PNG named after it into `custom_content/buildings/`
+(`python -m tools.art.buildings` lists their names and sizes).
+
 See `docs/modding.md` and the examples in `custom_content/`.

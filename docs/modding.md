@@ -93,6 +93,23 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
 - An exchange in `data/social.json` is a fight if it has a `damage` range, e.g. `[8, 18]`.
 - A map's `graves` lists the tiles where the dead are buried, in the order they are used.
 
+## Buildings
+
+Every roofed room of a map is drawn, while its roof is on, as one picture. To give a building a
+look of your own, put a PNG named after the room's ID in `custom_content/buildings/`, for example
+`custom_content/buildings/cantina.png`. It needs no particular size or palette: the game brings it
+to the size of the building. Draw it as seen from the open ground in front, roof at the top and
+the front wall along the bottom.
+
+```bash
+python -m tools.art.buildings
+```
+
+lists every building with the size its picture is shown at and where its door is, so that the door
+of the picture can be put where residents walk in. A building's picture is as wide as the room
+plus a wall on each side, and as tall as the room plus the walls behind and in front, plus one
+tile of headroom, at 16 pixels a tile.
+
 ## Bodies
 
 `data/skeleton.json` is the body every resident has. Distances are in art pixels from the spot

@@ -18,6 +18,7 @@ from graphics.body_renderer import (
     SPRITE_CELLS,
     BodyRenderer,
 )
+from graphics.building_renderer import HEADROOM, BuildingRenderer, building_area, building_size
 from graphics.palette import PALETTE
 from graphics.face_renderer import EXPRESSIONS, FACE_SIZE, MARKER_SIZE, FaceRenderer
 from audio.audio_manager import load_sound_map
@@ -43,6 +44,7 @@ from simulation.registries import DATA_DIR
 from simulation.world import SimulationWorld
 from skeleton.character import Character
 from skeleton.plan import FACINGS, builtin_plan
+from tools.art import buildings
 from tools.art.sounds import SOUNDS, duration_ms
 from tools.make_art import build_all, main as make_art
 
@@ -71,7 +73,10 @@ class ArtContractTests(unittest.TestCase):
             relative = path.relative_to(ASSETS_DIR)
             size = pygame.image.load(str(path)).get_size()
             folder = relative.parts[:2] if relative.parts[0] == "sprites" else relative.parts[:1]
-            if folder == ("sprites", "bodies"):
+            if folder == ("sprites", "buildings"):
+                sizes = {room.room_id: building_size(room) for _, room in buildings.buildings()}
+                self.assertEqual(size, sizes.get(relative.stem), relative)
+            elif folder == ("sprites", "bodies"):
                 self.assertEqual(size, SHEET_SIZE, relative)
             elif folder == ("sprites", "items"):
                 self.assertEqual(size, (TILE_SIZE, TILE_SIZE), relative)
@@ -208,6 +213,68 @@ class SettlementArtCoverageTests(unittest.TestCase):
         for newcomer in self.world.registries.world_events.newcomers:
             for folder in ("sprites/bodies", "faces/base", "faces/hair"):
                 self.assertTrue((ASSETS_DIR / folder / f"{newcomer.newcomer_id}.png").exists(), newcomer.newcomer_id)
+
+
+class BuildingTests(unittest.TestCase):
+    def setUp(self) -> None:
+        logging.disable(logging.WARNING)
+        self.addCleanup(logging.disable, logging.NOTSET)
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.custom_root = Path(self._tmp.name)
+        self.world = SimulationWorld.demo_world()
+
+    def test_every_roofed_building_has_a_picture_that_covers_it_and_rises_above_it(self) -> None:
+        renderer = BuildingRenderer(AssetStore(ASSETS_DIR))
+        roofed = [room for room in self.world.rooms.values() if room.roofed]
+        self.assertGreater(len(roofed), 5)
+        for room in roofed:
+            picture = renderer.picture(room)
+            area = building_area(room)
+            self.assertEqual(picture.get_size(), area.size, room.room_id)
+            self.assertNotIn(PLACEHOLDER_COLORS[0], {tuple(pixel)[:3] for pixel in _pixels(picture)}, room.room_id)
+            # Its foot is the foot of the wall with the door, and it reaches a tile above the wall at the back.
+            self.assertEqual(area.bottom, (room.y + room.height + 1) * TILE_SIZE, room.room_id)
+            self.assertEqual(area.top, (room.y - 1) * TILE_SIZE - HEADROOM, room.room_id)
+            self.assertEqual((area.left, area.right), ((room.x - 1) * TILE_SIZE, (room.x + room.width + 1) * TILE_SIZE))
+            # It is solid: nothing of what is inside shows through.
+            self.assertTrue(all(pixel[3] == 255 for pixel in _pixels(picture)), room.room_id)
+            self.assertIs(renderer.picture(room), picture)
+
+    def test_the_pictures_on_disk_are_the_ones_the_generator_makes_with_a_door_where_the_map_has_one(self) -> None:
+        built = buildings.build()
+        tile_map = self.world.tile_map
+        ground = Tileset(AssetStore(ASSETS_DIR).image(SETTLEMENT_SHEET, size=SETTLEMENT_SHEET_SIZE), SETTLEMENT_CELLS)
+        # Less its top row, where the cloth over it casts a shadow, and its last, along the foot of the picture.
+        door = ground.tile("door").subsurface((0, 1, TILE_SIZE, TILE_SIZE - 2))
+        for _, room in buildings.buildings():
+            path = f"sprites/buildings/{room.room_id}.png"
+            saved = pygame.image.load(str(ASSETS_DIR / path))
+            self.assertEqual(_pixels(saved), _pixels(built[path]), room.room_id)
+            for x in range(room.x - 1, room.x + room.width + 1):
+                # The bottom of the front is the wall the map has there.
+                corner = ((x - room.x + 1) * TILE_SIZE, saved.get_height() - TILE_SIZE + 1)
+                under = saved.subsurface((*corner, TILE_SIZE, TILE_SIZE - 2))
+                is_door = tile_map.terrain_at((x, room.y + room.height)) == "door"
+                self.assertEqual(_pixels(under) == _pixels(door), is_door, (room.room_id, x))
+
+    def test_a_picture_from_a_pack_takes_its_place_whatever_its_size(self) -> None:
+        folder = self.custom_root / "buildings"
+        folder.mkdir()
+        mine = pygame.Surface((300, 200), pygame.SRCALPHA)
+        mine.fill((12, 200, 90))
+        pygame.image.save(mine, str(folder / "shop.png"))
+        renderer = BuildingRenderer(AssetStore(ASSETS_DIR), AssetStore(self.custom_root))
+        shop, cantina = self.world.rooms["shop"], self.world.rooms["cantina"]
+        self.assertEqual(renderer.picture(shop).get_size(), building_size(shop))
+        self.assertEqual(tuple(renderer.picture(shop).get_at((5, 5)))[:3], (12, 200, 90))
+        self.assertNotEqual(tuple(renderer.picture(cantina).get_at((5, 5)))[:3], (12, 200, 90))
+
+    def test_a_building_without_a_picture_is_a_placeholder_of_its_size(self) -> None:
+        renderer = BuildingRenderer(AssetStore(self.custom_root))
+        shop = self.world.rooms["shop"]
+        self.assertEqual(renderer.picture(shop).get_size(), building_size(shop))
+        self.assertIn(tuple(renderer.picture(shop).get_at((0, 0)))[:3], PLACEHOLDER_COLORS)
 
 
 class BodyRendererTests(unittest.TestCase):

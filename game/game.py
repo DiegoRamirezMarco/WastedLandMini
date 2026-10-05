@@ -48,10 +48,10 @@ class Game:
         # Game minutes that real time has earned but the simulation has not played yet.
         self.minutes_owed = 0.0
         self.assets = AssetStore(ASSETS_DIR)
-        custom = AssetStore(CUSTOM_CONTENT_DIR)
+        self.custom = AssetStore(CUSTOM_CONTENT_DIR)
         self.font = BitmapFont(self.assets.image(FONT_SHEET, size=SHEET_SIZE))
-        self.icons = ItemIcons(self.assets, custom)
-        self.faces = FaceRenderer(self.assets, custom)
+        self.icons = ItemIcons(self.assets, self.custom)
+        self.faces = FaceRenderer(self.assets, self.custom)
         self.music = load_music_settings(DATA_DIR / "audio.json")
         self.audio = AudioManager(
             ASSETS_DIR / "sounds",
@@ -67,7 +67,7 @@ class Game:
         self.scene_name = "global"
         self.minutes_owed = 0.0
         self.global_view = GlobalView(
-            self.canvas, self.world, self.assets, self.font, self.icons, self.faces
+            self.canvas, self.world, self.assets, self.font, self.icons, self.faces, self.custom
         )
         # Advice is asked for in the dock under the map, with the settlement left on show around it.
         self.interaction_view = InteractionView(

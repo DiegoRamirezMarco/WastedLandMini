@@ -14,7 +14,7 @@ from pathlib import Path
 import pygame
 
 from graphics.assets import ASSETS_DIR
-from tools.art import faces, font, items, music, objects, residents, sounds, tiles, ui, workplaces
+from tools.art import buildings, faces, font, items, music, objects, residents, sounds, tiles, ui, workplaces
 
 CUSTOM_CONTENT_DIR = ASSETS_DIR.parent / "custom_content"
 Asset = pygame.Surface | bytes
@@ -23,7 +23,7 @@ Asset = pygame.Surface | bytes
 def build_all() -> dict[str, Asset]:
     """Return every generated file keyed by its path relative to `assets/`. Images are surfaces."""
     return {
-        **tiles.build(), **objects.build(), **workplaces.build(), **residents.build(),
+        **tiles.build(), **buildings.build(), **objects.build(), **workplaces.build(), **residents.build(),
         **font.build(), **ui.build(), **faces.build(), **items.build(), **sounds.build(), **music.build(),
     }
 
