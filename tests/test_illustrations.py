@@ -130,7 +130,7 @@ class IllustratedGameTests(unittest.TestCase):
     def _game(self):
         from game.game import Game
 
-        game = Game(illustrations_dir=self.root)
+        game = Game(illustrations_dir=self.root, voices_dir=None)
         self.window = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
         return game
 

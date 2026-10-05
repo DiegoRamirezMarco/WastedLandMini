@@ -1,0 +1,44 @@
+{
+  "models": {
+    "hombre": {"name": "Hombre", "file": "es_ES-sharvard-medium", "speaker": 0},
+    "mujer": {"name": "Mujer", "file": "es_ES-sharvard-medium", "speaker": 1},
+    "hombre_2": {"name": "Hombre 2", "file": "es_ES-davefx-medium", "speaker": 0}
+  },
+  "controls": {
+    "pitch": {"name": "Tono", "min": -12, "max": 12, "default": 0, "step": 0.5, "unit": " st", "decimals": 1},
+    "speed": {"name": "Velocidad", "min": 0.5, "max": 1.8, "default": 1, "step": 0.05, "unit": "x"},
+    "tremble": {"name": "Temblor", "min": 0, "max": 1, "default": 0, "step": 0.05},
+    "growl": {"name": "Aspereza", "min": 0, "max": 1, "default": 0, "step": 0.05},
+    "robot": {"name": "Metal", "min": 0, "max": 1, "default": 0, "step": 0.05},
+    "garble": {"name": "Enredo", "min": 0, "max": 1, "default": 0, "step": 0.05}
+  },
+  "presets": {
+    "chico": {"name": "Chico", "model": "hombre"},
+    "chica": {"name": "Chica", "model": "mujer"},
+    "viejo": {"name": "Viejo", "model": "hombre", "pitch": -2, "speed": 0.85, "tremble": 0.65, "growl": 0.15},
+    "vieja": {"name": "Vieja", "model": "mujer", "pitch": -1.5, "speed": 0.85, "tremble": 0.65, "growl": 0.05},
+    "nino": {"name": "Niño", "model": "mujer", "pitch": 4, "speed": 1.05},
+    "nina": {"name": "Niña", "model": "mujer", "pitch": 6, "speed": 1.1},
+    "monstruo": {"name": "Monstruo", "model": "hombre_2", "pitch": -8, "speed": 0.8, "growl": 0.85, "tremble": 0.15},
+    "robot": {"name": "Robot", "model": "hombre", "pitch": -1, "speed": 0.95, "robot": 0.9},
+    "ininteligible": {"name": "Ininteligible", "model": "hombre", "garble": 1}
+  },
+  "default": "chico",
+  "residents": {
+    "marta": {"preset": "chica", "pitch": -1},
+    "raul": {"preset": "chico", "model": "hombre_2", "pitch": -1, "growl": 0.1},
+    "lucia": {"preset": "chica", "pitch": 1.5, "speed": 1.05},
+    "tomas": {"preset": "chico", "pitch": -2.5, "speed": 0.95},
+    "ines": {"preset": "chica", "pitch": 0.5},
+    "vera": {"preset": "chica", "pitch": -2.5, "speed": 0.9},
+    "paco": {"preset": "chico", "pitch": 1.5},
+    "nuria": {"preset": "chica", "pitch": 2.5, "speed": 1.1},
+    "sergio": {"preset": "chico", "model": "hombre_2", "pitch": 1, "speed": 1.05}
+  },
+  "samples": [
+    "¿Qué tal el día?",
+    "Anoche hizo un frío de mil demonios.",
+    "¡Te vas a enterar!",
+    "No quiero estar a malas contigo."
+  ]
+}

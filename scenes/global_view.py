@@ -27,7 +27,9 @@ from graphics.tileset import (
     Tileset,
 )
 from scenes.body_stage import BodyStage, Remains, ground_spot
+from audio.voice_player import VoicePlayer
 from scenes.hud import (
+    VOICE_INTENT,
     DRAW_INTENT,
     JOBS_INTENT,
     LOG_INTENT,
@@ -144,8 +146,14 @@ class GlobalView:
         illustrations: Illustrations | None = None,
         layers: ScreenLayers | None = None,
         dolls: DollStore | None = None,
+        voices: VoicePlayer | None = None,
     ) -> None:
         self.canvas = canvas
+        # What says out loud what is in the dock's bubble, if there are voices to say it with.
+        self.voices = voices if voices is not None and voices.enabled else None
+        self._spoken_seen: tuple[str, str] | None = None
+        # Resident the player asked to give a voice to. The game shell picks it up.
+        self.requested_voice: str | None = None
         # Residents whose body has been drawn are shown as paper dolls, on the window itself.
         self.dolls = dolls if layers is not None else None
         self._doll_facing: dict[str, str] = {}
@@ -164,7 +172,7 @@ class GlobalView:
         # Everyone's body, and what a blow leaves lying about. Presentation only: nothing of it is saved.
         self.bodies = BodyStage(BodyRenderer(assets, builtin_plan()))
         drawable = self.dolls is not None and illustrations is not None and illustrations.root is not None
-        self.hud = Hud(canvas, world, font, icons, faces, assets, illustrations, layers, drawable)
+        self.hud = Hud(canvas, world, font, icons, faces, assets, illustrations, layers, drawable, self.voices is not None)
         # Real seconds of unpaused play, driving animations that have nothing to do with game state.
         self.time = 0.0
         # How far the current game minute has played out, from 0 to 1. Set by the game shell.
@@ -247,6 +255,8 @@ class GlobalView:
             self._apply(MINIMAP_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_F2:
             self._apply(DRAW_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
+            self._apply(VOICE_INTENT)
         elif event.type == pygame.KEYDOWN and event.key in ZOOM_KEYS:
             self.set_zoom(self.zoom + ZOOM_KEYS[event.key])
         elif event.type == pygame.MOUSEWHEEL:
@@ -289,6 +299,15 @@ class GlobalView:
             if any(pressed[key] for key in keys):
                 self.pan(dx * SCROLL_SPEED * dt, dy * SCROLL_SPEED * dt)
         self._follow(dt)
+        self._voice_the_dock()
+
+    def _voice_the_dock(self) -> None:
+        """Have whoever starts a line in the dock say it out loud. A line that finds another being said goes unsaid."""
+        spoken = self.hud.spoken
+        if spoken != self._spoken_seen:
+            self._spoken_seen = spoken
+            if spoken is not None and self.voices is not None:
+                self.voices.say(*spoken)
 
     def _follow(self, dt: float) -> None:
         """Keep whoever is selected in the middle of the view, catching up with them smoothly."""
@@ -466,6 +485,8 @@ class GlobalView:
         elif intent == DRAW_INTENT and self.dolls is not None:
             # Whoever is selected, or else the first resident there is.
             self.requested_editor = self.hud.selected_id or next(iter(self.world.residents), None)
+        elif intent == VOICE_INTENT and self.voices is not None:
+            self.requested_voice = self.hud.selected_id or next(iter(self.world.residents), None)
         elif intent == ROSTER_INTENT:
             # Nobody in particular: the panel goes back to listing everybody.
             self.hud.select_resident(None)

@@ -53,6 +53,7 @@ STORES_INTENT = ("stores",)
 ROSTER_INTENT = ("roster",)
 MINIMAP_INTENT = ("minimap",)
 DRAW_INTENT = ("draw",)
+VOICE_INTENT = ("voice",)
 ZOOM_OUT_INTENT = ("zoom", -1)
 ZOOM_IN_INTENT = ("zoom", 1)
 NOTICE_SECONDS = 3.0
@@ -107,6 +108,7 @@ class Hud:
         illustrations: Illustrations | None = None,
         layers: ScreenLayers | None = None,
         drawable: bool = False,
+        voiced: bool = False,
     ) -> None:
         self.canvas = canvas
         self.layers = layers
@@ -128,6 +130,8 @@ class Hud:
         # At most one of these is set: the resident or the container whose panel is showing.
         self.selected_id: str | None = None
         self.selected_container: str | None = None
+        # Who is speaking in the dock and what they say, as last drawn. None while nobody is.
+        self.spoken: tuple[str, str] | None = None
         # Where the scene draws its minimap, so that clicks on it do not fall through to the map.
         self.minimap_rect: pygame.Rect | None = None
         self._notice = ""
@@ -169,6 +173,9 @@ class Hud:
         if drawable:
             # Where there is somewhere to keep drawings, residents can be drawn.
             entries.append(("brush", "Dibujar", DRAW_INTENT))
+        if voiced:
+            # And where there are voices to choose from, they can be given one.
+            entries.append(("voice", "Voz", VOICE_INTENT))
         self.menu = [
             MenuButton(pygame.Rect(sidebar.x, sidebar.y + index * MENU_ROW, sidebar.width, MENU_ROW), icon, label, intent)
             for index, (icon, label, intent) in enumerate(entries)
@@ -377,11 +384,14 @@ class Hud:
         activity = resident.activity if resident is not None else None
         partner = self.world.residents.get(activity.partner_id or "") if activity is not None and activity.using else None
         if resident is None or partner is None or resident.away:
+            self.spoken = None
             self.feed.draw_panel(self.canvas, self.font, dock, title=DOCK_TITLE)
             return
         # They take turns to speak, a few minutes each.
         turn = (self.world.clock.total_minutes // 4) % 2
         speaker = resident if turn == 0 else partner
+        line = spoken_line(self.world, speaker)
+        self.spoken = (speaker.resident_id, line) if line else None
         areas = draw_scene(
             self.canvas,
             self.font,
@@ -389,7 +399,7 @@ class Hud:
             dock,
             (resident.resident_id, expression_of(self.world, resident), resident.name),
             (partner.resident_id, expression_of(self.world, partner), partner.name),
-            spoken_line(self.world, speaker) or "...",
+            line or "...",
             speaker=-1 if turn == 0 else 1,
             layers=self.layers,
         )

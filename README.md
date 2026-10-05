@@ -49,6 +49,16 @@ Run the tests:
 python -m unittest discover -s tests
 ```
 
+Voices are optional. To hear the residents speak, each in a voice of their own:
+
+```bash
+pip install -r requirements-voices.txt
+python -m tools.make_voices
+```
+
+The second line fetches two Spanish voice models, about 140 MB, and has them speak every written
+line. `voices/README.md` says what goes where.
+
 Run the simulation without a window and print what happened:
 
 ```bash
@@ -94,11 +104,15 @@ python -m simulation.headless --days 7 --seed 7
   advice. Time stops while you decide; if you never answer, they make up their own mind after a
   while
 - `Tab` again returns to the settlement
+- `Voz` in the menu, or `F3`: give the selected resident a voice. Choose who speaks and a kind
+  of voice (young, old, child, monster, robot, or past understanding), then move the sliders:
+  tone, speed, tremble, roughness, metal and scramble. Letting go of a slider says a line in
+  the voice as it stands. `Guardar` keeps it; `Esc` goes back without
 - `Dibujar` in the menu, or `F2`: draw the selected resident. Paint their body and their head
   over the guide, watch them move as you go, and save: from then on that is how they look, in the
   settlement and in their portrait. `Esc` goes back without saving
 - `F5` saves the game to `saves/quicksave.json`; `F9` loads it
-- `M`: sound on / off
+- `M`: sound on / off, voices and all
 - `Esc`: quit
 
 ## Art

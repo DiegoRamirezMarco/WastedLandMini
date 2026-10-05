@@ -2,6 +2,8 @@ from collections.abc import Callable
 
 import pygame
 
+from audio.voice_player import VoicePlayer
+
 from graphics.face_renderer import FaceRenderer
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
@@ -49,9 +51,12 @@ class InteractionView:
         dock: pygame.Rect | None = None,
         backdrop: Callable[[], None] | None = None,
         layers: ScreenLayers | None = None,
+        voices: VoicePlayer | None = None,
     ) -> None:
         self.canvas = canvas
         self.layers = layers
+        # What says the question out loud, if there are voices to say it with.
+        self.voices = voices
         self.world = world
         self.font = font
         self.faces = faces
@@ -73,6 +78,9 @@ class InteractionView:
         self.expression = DECISION_EXPRESSIONS.get(self.decision.kind if self.decision else "", "angry")
         self.closed = False
         self.buttons = self._option_buttons()
+        if self.decision is not None and self.voices is not None:
+            # They ask it out loud, over whatever was being said.
+            self.voices.say(self.decision.resident_id, self.decision.prompt, interrupt=True)
 
     def _option_buttons(self) -> list[Button]:
         """The advice on offer, one under another down the side of the dock."""

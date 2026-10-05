@@ -200,6 +200,16 @@ ICONS = {
         "oyo.....",
         "oo......",
     ],
+    "voice": [
+        ".oooo...",
+        "oppppo.o",
+        "opkkpo.o",
+        "oppppo.o",
+        ".oppo..o",
+        ".opo..o.",
+        ".oo.....",
+        "........",
+    ],
     "sleep": [
         "....mmmm",
         "......m.",

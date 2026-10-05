@@ -68,7 +68,7 @@ class GameShellTests(unittest.TestCase):
         from game.game import Game
 
         # Whatever pictures have been dropped into `illustrations/` are left out: these tests are about the game's own art.
-        self.game = Game(illustrations_dir=None)
+        self.game = Game(illustrations_dir=None, voices_dir=None)
         self.addCleanup(pygame.quit)
 
     @staticmethod

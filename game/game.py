@@ -5,6 +5,9 @@ import pygame
 
 from audio.audio_manager import AudioManager, load_sound_map
 from audio.music import load_music_settings, track_for
+from audio.voice_player import VoicePlayer
+from audio.voice_synth import VoiceSynth
+from audio.voice_system import CACHE_FOLDER, MODELS_FOLDER, VOICES_DIR, VoiceStore, load_voice_catalog
 from graphics.assets import ASSETS_DIR, AssetStore
 from graphics.doll import DollStore, load_template
 from graphics.face_renderer import FaceRenderer
@@ -16,6 +19,7 @@ from save.save_manager import SaveManager
 from scenes.doll_editor import DollEditor
 from scenes.global_view import GlobalView
 from scenes.interaction_view import InteractionView
+from scenes.voice_editor import VoiceEditor
 from settings import (
     FPS,
     GAME_MINUTES_PER_REAL_SECOND,
@@ -38,10 +42,12 @@ SAVE_PATH = ASSETS_DIR.parent / "saves" / "quicksave.json"
 logger = logging.getLogger(__name__)
 # Upper bound on catching up after a long frame, so a stall never snowballs.
 MAX_MINUTES_PER_FRAME = 60
+# The scenes where a resident is made, in which time stands still and Escape goes back to the map.
+EDITOR_SCENE, VOICE_SCENE = "editor", "voice"
 
 
 class Game:
-    def __init__(self, illustrations_dir: Path | None = ILLUSTRATIONS_DIR) -> None:
+    def __init__(self, illustrations_dir: Path | None = ILLUSTRATIONS_DIR, voices_dir: Path | None = VOICES_DIR) -> None:
         pygame.init()
         pygame.display.set_caption("Wasteland Minis")
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -72,6 +78,16 @@ class Game:
             ASSETS_DIR / "music",
             self.music.tracks.values(),
         )
+        # What residents say is said out loud, each in their own voice, if there is a folder for voices.
+        self.voices: VoicePlayer | None = None
+        if voices_dir is not None:
+            catalog = load_voice_catalog()
+            self.voices = VoicePlayer(
+                catalog,
+                VoiceStore(voices_dir, catalog),
+                VoiceSynth(voices_dir / MODELS_FOLDER, voices_dir / CACHE_FOLDER),
+                self.audio,
+            )
         self.saves = SaveManager()
         self._build_scenes()
 
@@ -81,7 +97,7 @@ class Game:
         self.minutes_owed = 0.0
         self.global_view = GlobalView(
             self.canvas, self.world, self.assets, self.font, self.icons, self.faces, self.custom,
-            self.illustrations, self.layers, self.dolls,
+            self.illustrations, self.layers, self.dolls, self.voices,
         )
         # Advice is asked for in the dock under the map, with the settlement left on show around it.
         self.interaction_view = InteractionView(
@@ -92,6 +108,13 @@ class Game:
             dock=self.global_view.hud.layout.dock,
             backdrop=self.global_view.render,
             layers=self.layers,
+            voices=self.global_view.voices,
+        )
+        # Where residents are given a voice, if there are voices to give.
+        self.voice_editor = (
+            VoiceEditor(self.canvas, self.world, self.font, self.faces, self.voices, self.layers)
+            if self.global_view.voices is not None
+            else None
         )
         # Where residents are drawn, if there is a folder to keep the drawings in.
         self.doll_editor = (
@@ -140,13 +163,15 @@ class Game:
 
     @property
     def active_scene(self):
-        if self.scene_name == "editor" and self.doll_editor is not None:
+        if self.scene_name == EDITOR_SCENE and self.doll_editor is not None:
             return self.doll_editor
+        if self.scene_name == VOICE_SCENE and self.voice_editor is not None:
+            return self.voice_editor
         return self.global_view if self.scene_name == "global" else self.interaction_view
 
     def handle_key(self, key: int) -> None:
-        if key == pygame.K_ESCAPE and self.scene_name == "editor":
-            # Out of the drawing, not out of the game. The editor closes itself on the same key.
+        if key == pygame.K_ESCAPE and self.scene_name in (EDITOR_SCENE, VOICE_SCENE):
+            # Out of the drawing or the voice, not out of the game. The editor closes itself on the same key.
             return
         if key == pygame.K_ESCAPE:
             self.running = False
@@ -180,17 +205,23 @@ class Game:
 
     def sync_scenes(self) -> None:
         """Follow requests from the scenes to switch between them."""
-        if self.scene_name == "editor" and (self.doll_editor is None or self.doll_editor.closed):
+        if self.scene_name == EDITOR_SCENE and (self.doll_editor is None or self.doll_editor.closed):
+            self.scene_name = "global"
+        elif self.scene_name == VOICE_SCENE and (self.voice_editor is None or self.voice_editor.closed):
             self.scene_name = "global"
         elif self.scene_name == "global" and self.global_view.requested_editor is not None and self.doll_editor is not None:
             self.doll_editor.open(self.global_view.requested_editor)
-            self.scene_name = "editor"
+            self.scene_name = EDITOR_SCENE
+        elif self.scene_name == "global" and self.global_view.requested_voice is not None and self.voice_editor is not None:
+            self.voice_editor.open(self.global_view.requested_voice)
+            self.scene_name = VOICE_SCENE
         elif self.scene_name == "global" and self.global_view.requested_decision is not None:
             self.open_interaction(self.global_view.requested_decision)
         elif self.scene_name == "interaction" and self.interaction_view.closed:
             self.scene_name = "global"
         self.global_view.requested_decision = None
         self.global_view.requested_editor = None
+        self.global_view.requested_voice = None
 
     def update_music(self) -> None:
         """Have the music follow the mood of the settlement."""
@@ -232,6 +263,8 @@ class Game:
 
             self.advance_simulation(dt)
             self.update_music()
+            if self.voices is not None:
+                self.voices.update()
             self.active_scene.update(dt)
             self.active_scene.render()
             self.present()

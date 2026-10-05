@@ -358,7 +358,7 @@ class DollEditorTests(unittest.TestCase):
         self.root.mkdir()
         from game.game import Game
 
-        self.game = Game(illustrations_dir=self.root)
+        self.game = Game(illustrations_dir=self.root, voices_dir=None)
         self.addCleanup(pygame.quit)
         self.window = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
 
@@ -563,7 +563,7 @@ class NoDrawingsFolderTests(unittest.TestCase):
         self.addCleanup(lambda: [os.environ.pop(k) if v is None else os.environ.__setitem__(k, v) for k, v in previous.items()])
         from game.game import Game
 
-        game = Game(illustrations_dir=None)
+        game = Game(illustrations_dir=None, voices_dir=None)
         self.addCleanup(pygame.quit)
         view = game.global_view
         self.assertIsNone(game.doll_editor)

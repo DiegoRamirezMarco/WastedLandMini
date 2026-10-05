@@ -1,0 +1,4 @@
+# Only needed to hear residents speak. The game runs without either.
+numpy>=2
+# Speaks the lines. Run as a program of its own, never imported: it is under the GPL.
+piper-tts>=1.3

@@ -370,6 +370,30 @@ Still open here:
 - A drawn building hides nobody: it goes under everything that stands on the map
 - Places without a roof have no picture of their own, and an open building shows its pixel floor
 
+### P14 — Voices — done
+- What is said in the dock is said out loud: whoever starts a line in an exchange says it, and
+  whoever asks for advice asks it, over anything else
+- Lines are spoken by Piper, a neural voice that runs on the machine, with a man, a woman and a
+  second man in Spanish. A line is spoken once and kept; the game asks for the ones it has not
+  heard, on the side, and a tool speaks them all beforehand
+- A voice is a model and six controls applied to what it said: tone, speed, tremble, roughness,
+  metal and scramble. Nine kinds come ready made: young man and woman, old man and woman, boy,
+  girl, monster, robot and one that cannot be understood
+- **An editor in the game** (`Voz`, or `F3`): who speaks, the kind of voice, a slider for each
+  control, and the voice heard as soon as a slider is let go
+- Everyone in the settlement starts with a voice of their own, and a chosen one is kept in
+  `voices/residents/`
+- All of it optional: without Piper, a model, numpy or a sound card, the game is silent
+
+Still open here:
+- Nobody has listened to it with a critical ear: the effects were checked by measuring them,
+  not by hearing them
+- Tone moves the whole voice, pitch and throat together. There is no changing one without the other
+- Only the selected resident's exchange is heard. Nothing is heard of who is far or near, and
+  nobody mutters to themselves
+- A line is said in the same way whatever the mood of whoever says it
+- At x4 and x16 lines change faster than they can be said, and most go unsaid
+
 ### S15 — What the settlement lives on — done
 
 - **Water is a thirst of each resident's own**, a need like hunger: whoever is thirsty goes and
@@ -423,6 +447,5 @@ Each of S15, S16 and S17 is followed by its screen: the counters in the bar, and
 and research entries of the menu.
 
 ## Later
-- Voice/TTS modulation
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it

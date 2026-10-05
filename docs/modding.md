@@ -284,6 +284,32 @@ A mood left out plays nothing, and the game comes with none: `tracks` is empty. 
 or someone waiting for advice on something urgent) is heard over a storm, and a storm over the
 hour. A track must be written to loop: it should end where it begins.
 
+## Voices
+
+`data/voices.json` is everything a voice can be made of. What residents say in the dock, and what
+they ask the player, is said out loud by a model and then made into the voice of whoever says it.
+
+- `models`: who can speak. Each names a Piper voice `file`, kept in `voices/models/`, and which
+  of its `speaker`s. Any Piper voice will do; `voices/README.md` says how to get them.
+- `controls`: what can be turned up or down, in the order the editor shows them, each with a
+  `name`, a `min`, a `max`, a `default` at which it does nothing, and a `step`. The game knows
+  what to do with `pitch` (semitones: the whole voice goes up or down, as a smaller or a larger
+  throat would sound), `speed`, `tremble` (a voice that wavers), `growl` (hoarse, with a rattle
+  under it), `robot` (a hum and a ring) and `garble` (cut up and shuffled, so that it is a voice
+  saying nothing). Changing a range here changes how far the slider goes.
+- `presets`: the kinds of voice the editor offers, each a `name`, a `model` and whatever controls
+  it turns. `default` is the one given to a resident nobody has chosen a voice for.
+- `residents`: the voice each resident starts with, by resident ID: a `preset`, and anything laid
+  over it. Give a new resident a line here, or they will have the default.
+- `samples`: the lines a voice is tried with in the editor.
+
+A voice chosen in the editor is written to `voices/residents/<resident_id>.json`, which is all
+there is to it: the model and a figure for each control. No sound is ever part of a saved game.
+
+A line is spoken by its model once and kept in `voices/cache/`, named after its own words, so a
+line that is reworded is simply spoken anew. `python -m tools.make_voices` has every line in
+`data/dialogue.json` spoken beforehand.
+
 ## Social exchanges
 
 `data/social.json` defines the exchanges two residents can have. The game picks `chat` or
