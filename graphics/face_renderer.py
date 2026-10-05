@@ -5,6 +5,7 @@ from collections import Counter
 import pygame
 
 from graphics.assets import AssetStore
+from graphics.looks import Looks
 from graphics.illustrations import Illustrations
 from graphics.palette import PALETTE
 
@@ -54,9 +55,15 @@ def _reduced(face: pygame.Surface, size: tuple[int, int]) -> pygame.Surface:
 
 class FaceRenderer:
     def __init__(
-        self, assets: AssetStore, custom: AssetStore | None = None, illustrations: Illustrations | None = None
+        self,
+        assets: AssetStore,
+        custom: AssetStore | None = None,
+        illustrations: Illustrations | None = None,
+        looks: Looks | None = None,
     ) -> None:
         self._assets = assets
+        # Which of the game's own faces someone with none of their own is drawn with.
+        self.looks = looks if looks is not None else Looks(assets)
         self._custom = custom
         self._illustrations = illustrations
         self._cache: dict[tuple[str, str], pygame.Surface] = {}
@@ -109,8 +116,9 @@ class FaceRenderer:
 
     def _layered_face(self, face_id: str, expression: str) -> pygame.Surface:
         face = pygame.Surface(FACE_SIZE, pygame.SRCALPHA)
+        look = self.looks.of(face_id)
         for layer in LAYERS:
-            path = layer.replace("{id}", face_id).replace("{expression}", expression)
+            path = layer.replace("{id}", look).replace("{expression}", expression)
             face.blit(self._assets.image(path, size=FACE_SIZE), (0, 0))
         return face
 

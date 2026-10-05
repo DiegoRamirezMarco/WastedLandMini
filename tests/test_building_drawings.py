@@ -41,7 +41,7 @@ class BuildingDrawingTests(unittest.TestCase):
         self.root.mkdir()
         from game.game import Game
 
-        self.game = Game(illustrations_dir=self.root, voices_dir=None)
+        self.game = Game(illustrations_dir=self.root, voices_dir=None, start_in_menu=False)
         self.addCleanup(pygame.quit)
         self.window = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
 

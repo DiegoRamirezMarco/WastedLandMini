@@ -139,7 +139,7 @@ class UrbanismShellTests(unittest.TestCase):
             os.environ[variable] = "dummy"
         from game.game import Game
 
-        self.game = Game(illustrations_dir=None, voices_dir=None)
+        self.game = Game(illustrations_dir=None, voices_dir=None, start_in_menu=False)
         self.addCleanup(pygame.quit)
 
     @staticmethod

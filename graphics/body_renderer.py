@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import pygame
 
 from graphics.assets import AssetStore
+from graphics.looks import Looks
 from graphics.palette import PALETTE
 from skeleton.plan import FACINGS, SKIN_VIEWS, SkeletonPlan, wrapped
 from skeleton.rig import Bone, Skeleton
@@ -118,9 +119,11 @@ def _line(start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]
 
 
 class BodyRenderer:
-    def __init__(self, assets: AssetStore, plan: SkeletonPlan) -> None:
+    def __init__(self, assets: AssetStore, plan: SkeletonPlan, looks: Looks | None = None) -> None:
         self._assets = assets
         self.plan = plan
+        # Which of the game's own bodies someone with none of their own is drawn with.
+        self.looks = looks if looks is not None else Looks(assets)
         self._skins: dict[str, BodySkin] = {}
         self._turned: dict[tuple[int, int], Sprite] = {}
         self._frames: dict[tuple, Frame] = {}
@@ -129,10 +132,11 @@ class BodyRenderer:
 
     def skin(self, body_id: str) -> BodySkin:
         """The parts of a body. A missing sheet yields placeholder parts."""
-        if body_id not in self._skins:
-            sheet = self._assets.image(f"sprites/bodies/{body_id}.png", size=SHEET_SIZE)
-            self._skins[body_id] = read_skin(sheet)
-        return self._skins[body_id]
+        look = self.looks.of(body_id)
+        if look not in self._skins:
+            sheet = self._assets.image(f"sprites/bodies/{look}.png", size=SHEET_SIZE)
+            self._skins[look] = read_skin(sheet)
+        return self._skins[look]
 
     def head(self, body_id: str, facing: str = "down") -> pygame.Surface:
         """The head of a body by itself, as for someone lying under a blanket."""

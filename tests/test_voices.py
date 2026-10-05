@@ -501,7 +501,7 @@ class VoiceEditorTests(_SoundTestCase):
 
         synth = self._synth()
         with mock.patch.object(shell, "VoiceSynth", return_value=synth):
-            self.game = shell.Game(illustrations_dir=None, voices_dir=self.root)
+            self.game = shell.Game(illustrations_dir=None, voices_dir=self.root, start_in_menu=False)
         self.addCleanup(pygame.quit)
         self.voices = self.game.voices
 
@@ -669,7 +669,7 @@ class NoVoicesTests(_SoundTestCase):
     def test_without_a_folder_of_voices_the_game_is_as_it_was(self) -> None:
         from game.game import Game
 
-        game = Game(illustrations_dir=None, voices_dir=None)
+        game = Game(illustrations_dir=None, voices_dir=None, start_in_menu=False)
         self.addCleanup(pygame.quit)
         self.assertIsNone(game.voices)
         self.assertIsNone(game.voice_editor)

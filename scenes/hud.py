@@ -36,6 +36,8 @@ from ui.labels import (
 from ui.layout import Layout, layout_for
 from ui.panel import draw_panel, set_skin
 from ui.resident_panel import draw_resident_panel, draw_roster, inventory_hitboxes, relationship_hitboxes, roster_rows
+from ui.tutorial_panel import PANEL_WIDTH as TUTORIAL_WIDTH
+from ui.tutorial_panel import draw_tutorial, tutorial_button, tutorial_height
 
 MARGIN = 6
 LOG_SIZE = (250, 168)
@@ -60,6 +62,11 @@ VOICE_INTENT = ("voice",)
 ZOOM_OUT_INTENT = ("zoom", -1)
 ZOOM_IN_INTENT = ("zoom", 1)
 NOTICE_SECONDS = 3.0
+# How long what the opening points at stays lit, and then unlit, in seconds.
+BLINK_SECONDS = 0.5
+# What a step of the opening is about, when it is about one of the entries of the menu.
+FOCUS_INTENTS = {"urbanism": URBANISM_INTENT, "jobs": JOBS_INTENT, "save": SAVE_INTENT}
+CLOCK_FOCUS = "clock"
 STORES_TITLE = "Almacén: lo que es de todos"
 STORES_EMPTY = "No queda nada"
 DOCK_TITLE = "Lo último"
@@ -143,6 +150,8 @@ class Hud:
         self.minimap_rect: pygame.Rect | None = None
         self._notice = ""
         self._notice_left = 0.0
+        # Real seconds, for the blink of whatever the opening points at.
+        self._pulse = 0.0
         importance = world.registries.event_settings.get("importance", {})
         self.intervention_from = int(importance.get("noteworthy_max", 49)) + 1
         self.feed = EventFeed(
@@ -209,6 +218,10 @@ class Hud:
     def buttons(self) -> list[Button | MenuButton]:
         """Every button on show, the ones of an open panel included."""
         fixed = [self.pause_button, *self.speed_buttons, *self.zoom_buttons, *self.menu]
+        guide = self.tutorial_rect()
+        step_button = tutorial_button(self.font, guide, self.world) if guide is not None else None
+        if step_button is not None:
+            fixed.append(step_button)
         if not self.jobs_open:
             return fixed
         return fixed + suggest_buttons(self.font, self.jobs_rect(), self.world, self.selected_id)
@@ -237,6 +250,18 @@ class Hud:
 
     def update(self, dt: float) -> None:
         self._notice_left = max(0.0, self._notice_left - dt)
+        self._pulse = (self._pulse + dt) % (BLINK_SECONDS * 2)
+
+    @property
+    def lit(self) -> bool:
+        """The half of a blink in which what the opening points at stands out."""
+        return self._pulse < BLINK_SECONDS
+
+    @property
+    def focus(self) -> str | None:
+        """What the step of the opening the settlement is on is about, if it is on one."""
+        step = self.world.guide.current(self.world)
+        return step.focus if step is not None else None
 
     def select_resident(self, resident_id: str | None) -> None:
         self.selected_id, self.selected_container = resident_id, None
@@ -277,7 +302,7 @@ class Hud:
         """True if `position` is not on the map, or something of the HUD is in front of the map there."""
         if not self.layout.map.collidepoint(position):
             return True
-        panels = [self.minimap_rect, self.outlook_rect()]
+        panels = [self.minimap_rect, self.outlook_rect(), self.tutorial_rect()]
         panels += [self.log_rect()] if self.log_open else []
         panels += [self.jobs_rect()] if self.jobs_open else []
         panels += [self.stores_rect()] if self.stores_open else []
@@ -307,6 +332,15 @@ class Hud:
         area = self.layout.map
         return pygame.Rect(area.x + MARGIN, area.y + MARGIN, OUTLOOK_WIDTH, height)
 
+    def tutorial_rect(self) -> pygame.Rect | None:
+        """Where the step of the opening is shown, while the settlement is on one: under the forecasts."""
+        height = tutorial_height(self.font, self.world, TUTORIAL_WIDTH)
+        if not height:
+            return None
+        area, outlook = self.layout.map, self.outlook_rect()
+        top = outlook.bottom + MARGIN if outlook is not None else area.y + MARGIN
+        return pygame.Rect(area.x + MARGIN, top, TUTORIAL_WIDTH, height)
+
     def card_rect(self) -> pygame.Rect | None:
         """Where the selected resident is shown in full, while one is selected."""
         return self.layout.panel if self.selected_id in self.world.residents else None
@@ -322,8 +356,11 @@ class Hud:
     def render(self) -> None:
         self._render_top()
         draw_panel(self.canvas, self.layout.sidebar, border="ink")
+        pointed = FOCUS_INTENTS.get(self.focus or "")
         for button in self.menu:
             button.draw(self.canvas, self.font, self.assets, active=self._menu_active(button.intent))
+            if button.intent == pointed and self.lit:
+                pygame.draw.rect(self.canvas, PALETTE["glow"], button.rect, 2)
         self._render_panel()
         self._render_dock()
 
@@ -334,6 +371,9 @@ class Hud:
                 text = self.font.truncate(line, outlook.width - OUTLOOK_PADDING * 2)
                 position = (outlook.x + OUTLOOK_PADDING, outlook.y + OUTLOOK_PADDING + index * LINE_HEIGHT)
                 self.font.draw(self.canvas, text, position, PALETTE["sand"])
+        guide = self.tutorial_rect()
+        if guide is not None:
+            draw_tutorial(self.canvas, self.font, guide, self.world, self.lit)
         if self.log_open:
             self.feed.draw_panel(self.canvas, self.font, self.log_rect())
         if self.jobs_open:
@@ -365,6 +405,9 @@ class Hud:
             button.draw(self.canvas, self.font, active=clock.speed == speed and not clock.paused)
         for button in self.zoom_buttons:
             button.draw(self.canvas, self.font)
+        if self.focus == CLOCK_FOCUS and self.lit:
+            controls = self.pause_button.rect.unionall([button.rect for button in self.speed_buttons])
+            pygame.draw.rect(self.canvas, PALETTE["glow"], controls.inflate(4, 2), 1)
 
         x = self.counts_left
         for icon, figure in settlement_counts(self.world):

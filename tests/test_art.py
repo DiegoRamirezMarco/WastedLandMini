@@ -28,6 +28,7 @@ from graphics.font import SHEET_SIZE as FONT_SHEET_SIZE
 from graphics.icons import ICON_SIZE
 from graphics.item_icons import ICON_SIZE as ITEM_ICON_SIZE
 from graphics.item_icons import ItemIcons
+from graphics.looks import Looks
 from graphics.object_sprites import ObjectSprites
 from graphics.map_renderer import render_roofs, render_terrain, roof_names, tile_names
 from graphics.tileset import (
@@ -369,12 +370,31 @@ class BodyRendererTests(unittest.TestCase):
         box = lying.get_bounding_rect()
         self.assertGreater(box.width, box.height)
 
-    def test_an_unknown_body_is_drawn_with_placeholder_parts(self) -> None:
+    def test_an_unknown_body_borrows_one_of_the_game_s_own_and_always_the_same(self) -> None:
+        borrowed = self.renderer.looks.of("nobody")
+        self.assertIn(borrowed, self.renderer.looks.known)
+        self.assertEqual(borrowed, BodyRenderer(AssetStore(ASSETS_DIR), self.plan).looks.of("nobody"))
+        picture, _ = self.renderer.frame("nobody", "down", "idle")
+        self.assertLessEqual(self._colours(picture), self.allowed)
+        self.assertEqual(_pixels(picture), _pixels(self.renderer.frame(borrowed, "down", "idle")[0]))
+        # Whoever has a body of their own keeps it.
+        self.assertEqual(self.renderer.looks.of("marta"), "marta")
+
+    def test_a_look_someone_was_given_comes_before_their_own(self) -> None:
+        given = {"nobody": "tomas", "marta": "raul", "lucia": "no_such_look"}
+        renderer = BodyRenderer(AssetStore(ASSETS_DIR), self.plan, Looks(AssetStore(ASSETS_DIR), given.get))
+        self.assertEqual(renderer.looks.of("nobody"), "tomas")
+        self.assertEqual(renderer.looks.of("marta"), "raul")
+        self.assertEqual(renderer.looks.of("lucia"), "lucia")
+
+    def test_with_no_bodies_to_borrow_an_unknown_one_is_drawn_with_placeholder_parts(self) -> None:
         logging.disable(logging.WARNING)
         self.addCleanup(logging.disable, logging.NOTSET)
-        picture, _ = self.renderer.frame("nobody", "down", "idle")
-        self.assertIn(PLACEHOLDER_COLORS[0], {tuple(pixel)[:3] for pixel in _pixels(picture) if pixel[3]})
-        self.assertEqual(self.renderer.head("nobody").get_size(), SPRITE_CELLS["head"].size)
+        with tempfile.TemporaryDirectory() as empty:
+            renderer = BodyRenderer(AssetStore(Path(empty)), self.plan)
+            picture, _ = renderer.frame("nobody", "down", "idle")
+            self.assertIn(PLACEHOLDER_COLORS[0], {tuple(pixel)[:3] for pixel in _pixels(picture) if pixel[3]})
+            self.assertEqual(renderer.head("nobody").get_size(), SPRITE_CELLS["head"].size)
 
     def test_the_head_alone_is_the_head_of_the_sheet(self) -> None:
         head = self.renderer.head("marta")
@@ -467,10 +487,20 @@ class FaceRendererTests(unittest.TestCase):
                 self.assertTrue((ASSETS_DIR / "faces" / layer / f"{expression}.png").exists(), (layer, expression))
 
     def test_unknown_resident_and_unknown_expression_fall_back_safely(self) -> None:
+        # Someone the game has no face for borrows one of its own, always the same one.
         stranger = self.faces.face("nobody", "angry")
         self.assertEqual(stranger.get_size(), FACE_SIZE)
-        self.assertIn(PLACEHOLDER_COLORS[0], {tuple(p)[:3] for p in _pixels(stranger)})
+        self.assertNotIn(PLACEHOLDER_COLORS[0], {tuple(p)[:3] for p in _pixels(stranger)})
+        borrowed = self.faces.looks.of("nobody")
+        self.assertIn(borrowed, self.faces.looks.known)
+        self.assertEqual(_pixels(stranger), _pixels(self.faces.face(borrowed, "angry")))
         self.assertIs(self.faces.face("marta", "smug"), self.faces.face("marta", "neutral"))
+
+    def test_with_no_faces_to_borrow_an_unknown_one_is_a_placeholder(self) -> None:
+        with tempfile.TemporaryDirectory() as empty:
+            stranger = FaceRenderer(AssetStore(Path(empty))).face("nobody", "angry")
+        self.assertEqual(stranger.get_size(), FACE_SIZE)
+        self.assertIn(PLACEHOLDER_COLORS[0], {tuple(p)[:3] for p in _pixels(stranger)})
 
     def test_a_custom_face_replaces_the_layered_one_for_its_expression(self) -> None:
         self._custom("marta", "neutral.png", "teal")
@@ -498,7 +528,7 @@ class FaceRendererTests(unittest.TestCase):
         self.assertEqual({tuple(p) for p in _pixels(self.faces.marker("lucia"))}, {(*PALETTE["rose"], 255)})
         stranger = self.faces.marker("nobody")
         self.assertEqual(stranger.get_size(), MARKER_SIZE)
-        self.assertIn(PLACEHOLDER_COLORS[0], {tuple(p)[:3] for p in _pixels(stranger)})
+        self.assertEqual(_pixels(stranger), _pixels(self.faces.marker(self.faces.looks.of("nobody"))))
 
     def test_a_single_custom_image_is_used_for_every_expression(self) -> None:
         self._custom("lucia", "portrait.png", "rose")

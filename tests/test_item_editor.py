@@ -22,7 +22,7 @@ class ItemEditorTests(unittest.TestCase):
         from game.game import Game
 
         self.root = Path(self.temporary.name)
-        self.game = Game(illustrations_dir=None, voices_dir=None, custom_content_dir=self.root)
+        self.game = Game(illustrations_dir=None, voices_dir=None, custom_content_dir=self.root, start_in_menu=False)
         self.addCleanup(pygame.quit)
 
     @staticmethod

@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 
 from world.map import Tile
 from world.urbanism import UrbanismResult
@@ -37,6 +38,14 @@ class CommandTarget(Protocol):
         ...
 
     def remove_building(self, room_id: str) -> UrbanismResult:
+        ...
+
+    def found_resident(
+        self, name: str, age: int, personality: Mapping[str, float], traits: Sequence[str], look: str | None = None
+    ) -> str | None:
+        ...
+
+    def acknowledge_tutorial(self) -> bool:
         ...
 
 
@@ -145,3 +154,27 @@ class RemoveBuildingCommand:
 
     def apply(self, world: CommandTarget) -> UrbanismResult:
         return world.remove_building(self.room_id)
+
+
+@dataclass(frozen=True)
+class FoundResidentCommand:
+    """The player's first resident, as they made them. Only a settlement with nobody in it takes one."""
+
+    name: str
+    age: int = 30
+    personality: Mapping[str, float] = field(default_factory=dict)
+    traits: Sequence[str] = ()
+    # ID of the look they are to be drawn with, which is all the simulation knows of it.
+    look: str | None = None
+
+    def apply(self, world: CommandTarget) -> str | None:
+        """Returns the ID of whoever now lives there, or None if the settlement would not have them."""
+        return world.found_resident(self.name, self.age, self.personality, self.traits, self.look)
+
+
+@dataclass(frozen=True)
+class AcknowledgeTutorialCommand:
+    """The player has read the step of the opening that only asks to be read."""
+
+    def apply(self, world: CommandTarget) -> bool:
+        return world.acknowledge_tutorial()

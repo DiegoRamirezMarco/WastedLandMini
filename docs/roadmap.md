@@ -477,6 +477,62 @@ Still to settle:
 Each of S15, S16 and S17 is followed by its screen: the counters in the bar, and the construction
 and research entries of the menu.
 
+### S18 — A beginning — done
+- **A new settlement is an empty plot** (`data/maps/homestead.json`): a fence, a gate, some scrap
+  lying about, and nobody
+- **The first resident is made by the player**: a name, an age, a way of being, up to two traits
+  and a look. Only a settlement nobody has ever lived in takes one. Everyone after comes by the gate
+- **An opening made of steps, as data** (`data/tutorial.json`): what to do, what counts as done,
+  and what the settlement is handed for it. A hoe, scrap, thirty tins and half a tank of water are
+  where a settlement's stores come from
+- A step is done by what the settlement has become, however it got there, and with time stopped
+  too: a building or an object standing, someone in a job, time gone by, an answer given
+- **The world outside keeps away** until the opening is over: no strangers, caravans, storms,
+  vermin or raiders
+- **One stranger is brought on purpose**, for whoever is there to answer, guard or not. It is the
+  step that teaches advice: the player says what they think and the resident decides
+- **Nothing can be put down that leaves something out of reach.** Urbanismo refuses whatever
+  would wall in a bed, a container or a post, block a doorway, or put up a building whose door
+  nobody could get to. What was already out of reach stops nothing else
+- A settlement with no generator is no longer told every night that its fuel ran out
+
+Done when: the opening can be gone through from an empty plot to the last step by commands
+alone; each step hands over what it says; no stranger comes without a bed, and nothing else comes
+from outside until the end; the opening is saved where it was and goes on from there; the two
+people it leaves, one in the garden and one at the water, are both alive and well four weeks on
+(ten were run, with three seeds); and the same seed settles the same way twice.
+
+Still open here:
+- A founder who turns the stranger away is alone, and alone they do not last: after a couple of
+  days they leave the garden for the water, which matters more to the settlement on paper, and
+  starve about three weeks in with the tank full. Whoever has the last hands on what feeds
+  everyone should not be talked out of it by an empty post
+- Someone who cannot get to a bed still goes round in circles by the fire instead of doing
+  anything else. Urbanismo no longer lets it happen, but an old save may have it
+- With everyone dead the settlement simply stands empty: there is no ending, and nothing to do
+  but go back to the menu
+- Everything put down in Urbanismo is free and stands at once (S16)
+- There is one save, and a new settlement saved with `F5` takes its place
+
+### P16 — The way in (needs S18) — done
+- **A main menu**: go on with the settlement being played or the saved one, start a new one,
+  open the settlement that comes ready made, or leave. `Esc` on the map goes there, and no longer
+  out of the game. A settlement being played is only thrown away when asked twice
+- **Where the first resident is made**: a name, an age, a slider for each side of their way of
+  being with what it does, traits, and one of the game's own looks to choose
+- **Nobody is a placeholder**: whoever has no art under their own ID wears the look they were
+  given, or else one of the game's own, always the same for the same ID
+- **The step in hand, on show**: in a panel over the map and above the map in Urbanismo, with
+  the entry of the menu or the controls it is about blinking, and a button where only a button
+  will do
+
+Still open here:
+- The menu is words on black: no picture, no music
+- A look is one of the thirteen the game comes with. Drawing someone of your own is done
+  afterwards, with `Dibujar`
+- The opening says where to click, and opens nothing by itself and locks nothing
+- It is read, not heard: nobody says the steps out loud
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it

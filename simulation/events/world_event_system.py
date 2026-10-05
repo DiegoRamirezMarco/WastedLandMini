@@ -67,6 +67,9 @@ class WorldEventSystem:
         if world.under_raid is not None and not any(d.kind == RAID_DECISION for d in world.decisions.values()):
             # Nobody is left in their way.
             self.answer_raid(world, None, "")
+        if world.tutorial.active:
+            # A settlement still being led through its opening is left alone by the world outside.
+            return
         settings = world.registries.world_events
         now = world.clock.total_minutes
         for upcoming in [each for each in world.upcoming if each.at <= now]:
@@ -213,7 +216,7 @@ class WorldEventSystem:
                     if item.owner_id is None:
                         taken += inventory.take_units(item.instance_id, int(item.quantity * definition.fraction))
         said = f"se llevan {taken} cosas" if taken else "no encuentran nada que llevarse"
-        tile = self._arrival_tile(world)
+        tile = self.arrival_tile(world)
         world.emit_event(
             DomainEvent("raid", RAID_IMPORTANCE, f"{definition.text}: {said}"),
             at=tile,
@@ -239,6 +242,29 @@ class WorldEventSystem:
             None,
         )
 
+    def strangers_left(self, world: "SimulationWorld") -> bool:
+        """Whether anybody could still come to the gate and be given an answer."""
+        return bool(self._unseen(world)) and STRANGER_DECISION in world.registries.decisions
+
+    def gate_is_busy(self, world: "SimulationWorld") -> bool:
+        """Whether someone is at the gate, waiting for an answer."""
+        return world.at_the_gate is not None or self._being_decided(world)
+
+    def call_to_gate(self, world: "SimulationWorld", keeper: Resident) -> bool:
+        """Bring a stranger to the gate for `keeper` to answer, whatever their job is.
+
+        Returns whether one came: nobody does without a bed to spare, or while the gate is busy.
+        """
+        if self.gate_is_busy(world) or not self.strangers_left(world) or self._free_beds(world) <= 0:
+            return False
+        if world.interventions.pending_for(world, keeper.resident_id) is not None:
+            return False
+        world.at_the_gate = world.event_rng.choice(self._unseen(world)).newcomer_id
+        if world.interventions.ask(world, keeper, STRANGER_DECISION) is None:
+            world.at_the_gate = None
+            return False
+        return True
+
     def answer_gate(self, world: "SimulationWorld", choice: str) -> None:
         """Carry out what was decided about the stranger at the gate."""
         newcomer = self.visitor(world)
@@ -251,7 +277,7 @@ class WorldEventSystem:
                 DomainEvent("stranger_turned_away", TURNED_AWAY_IMPORTANCE, f"{newcomer.name} se aleja de la puerta")
             )
             return
-        x, y = self._arrival_tile(world)
+        x, y = self.arrival_tile(world)
         resident = Resident(
             newcomer.newcomer_id,
             newcomer.name,
@@ -317,7 +343,7 @@ class WorldEventSystem:
         )
         return beds - len(world.residents)
 
-    def _arrival_tile(self, world: "SimulationWorld") -> tuple[int, int]:
+    def arrival_tile(self, world: "SimulationWorld") -> tuple[int, int]:
         layout = world.registries.maps.get(world.map_id)
         tiles = [*(layout.arrivals if layout is not None else []), *(layout.spawns if layout is not None else [])]
         passable = world.passable()

@@ -161,6 +161,30 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
 - An exchange in `data/social.json` is a fight if it has a `damage` range, e.g. `[8, 18]`.
 - A map's `graves` lists the tiles where the dead are buried, in the order they are used.
 
+## The opening of a new settlement
+
+`data/tutorial.json` names the `map` a new settlement starts on and lists its `steps`, in order.
+A step has an `id`, a `title`, a `text`, and a `goal`:
+
+| `goal.type` | Done when | Other fields |
+|---|---|---|
+| `residents` | that many people live there | `count` |
+| `building` | that many roofed buildings stand | `count`, `target` (a blueprint ID; any if left out) |
+| `object` | that many objects of a kind stand | `target` (the kind), `count`, `indoors` |
+| `job` | that many residents hold a job | `count`, `target` (a job ID; any if left out) |
+| `elapsed` | that many game minutes have gone by since the step began | `minutes` |
+| `answered` | whatever the step's `opening` set going has been settled | |
+| `acknowledged` | the player presses the step's button | |
+
+Optional: `gifts`, each an `item` and a `count` with either `into` (a kind of container, where it
+is left as nobody's) or `"to": "resident"` (given to whoever has been there longest, as their
+own); `opening`, which is `stranger` to bring someone to the gate; `done`, the line logged when
+the step is finished; and `focus`, which names what the step is about so the screen can point at
+it: `creator`, `urbanism`, `jobs`, `save` or `clock`.
+
+The map, the kinds, blueprints and jobs a goal names, and the containers gifts go into are
+checked when the game starts. A gift of an item that is not defined is left out.
+
 ## Buildings
 
 Urbanismo gets its built-in building blueprints from `data/urbanism.json`. A content pack can add

@@ -352,6 +352,27 @@ Everything here is between adults, and nothing happens to anyone who does not wa
   cancels the pending decision.
 - Every event above the ambient band is appended to `world.history`, which is saved.
 
+## Starting a settlement
+
+- `SimulationWorld.new_settlement` gives an empty plot, the map named in `data/tutorial.json`,
+  with nobody on it. `demo_world` is the settlement that comes ready made, and has no opening.
+- `FoundResidentCommand` makes the first resident, just inside the gate: a name, an age, a
+  personality, up to two traits and the ID of a look. It is refused once anyone lives or has
+  died there. Their ID is made from their name, and never one that a newcomer or the dead have.
+- The opening is a list of steps. A step has a goal: so many `residents`, a `building`, an
+  `object` of a kind (under a roof, if `indoors`), someone with a `job`, minutes `elapsed`,
+  something `answered`, or the step `acknowledged` with `AcknowledgeTutorialCommand`.
+- Goals are checked every minute and after every command, so building with time stopped moves
+  the opening on. Nothing is forced: a step is done by what the settlement has become.
+- A finished step hands over its `gifts`, into the first container of a kind or to whoever has
+  been there longest, and emits `tutorial_step_done`.
+- While a settlement is on a step, nothing is rolled from outside. A step may open with a
+  `stranger`: one comes to the gate for whoever is in and awake to answer, as soon as there is a
+  bed to spare, and the step is done once they have been let in or sent away.
+- Urbanismo refuses any change that would leave out of reach something that is within reach
+  now: an object that is used, holds things or is a post, or the inside of a building. Reach is
+  walked out from the map's `arrivals` and `spawns`. A bed is reached from beside its head.
+
 ## Determinism
 
 All randomness comes from `SimulationRNG`, and its state is saved. The same seed gives the same

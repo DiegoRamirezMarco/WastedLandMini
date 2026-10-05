@@ -1,4 +1,6 @@
+import json
 import logging
+import random
 from pathlib import Path
 
 import pygame
@@ -14,6 +16,7 @@ from graphics.face_renderer import FaceRenderer
 from graphics.font import FONT_SHEET, SHEET_SIZE, BitmapFont
 from graphics.illustrations import ILLUSTRATIONS_DIR, Illustrations
 from graphics.item_icons import ItemIcons
+from graphics.looks import Looks
 from graphics.screen_layers import ScreenLayers
 from save.save_manager import SaveManager
 from scenes.building_editor import BuildingEditor
@@ -21,6 +24,8 @@ from scenes.doll_editor import DollEditor
 from scenes.global_view import GlobalView
 from scenes.interaction_view import InteractionView
 from scenes.item_editor import ItemEditor
+from scenes.main_menu import CONTINUE, DEMO, NEW_GAME, QUIT, MainMenu
+from scenes.resident_creator import ResidentCreator
 from scenes.urbanism import UrbanismEditor
 from scenes.voice_editor import VoiceEditor
 from settings import (
@@ -53,6 +58,9 @@ EDITOR_SCENE, BUILDING_SCENE, ITEM_SCENE, VOICE_SCENE, URBANISM_SCENE = (
     "voice",
     "urbanism",
 )
+# Screens that read the keyboard themselves: the way in, and where the first resident is made.
+MENU_SCENE, CREATOR_SCENE = "menu", "creator"
+LOAD_FAILED = "No se pudo cargar la partida guardada"
 
 
 class Game:
@@ -61,6 +69,8 @@ class Game:
         illustrations_dir: Path | None = ILLUSTRATIONS_DIR,
         voices_dir: Path | None = VOICES_DIR,
         custom_content_dir: Path = CUSTOM_CONTENT_DIR,
+        start_in_menu: bool = True,
+        save_path: Path = SAVE_PATH,
     ) -> None:
         pygame.init()
         pygame.display.set_caption("Wasteland Minis")
@@ -86,7 +96,9 @@ class Game:
         self.custom = AssetStore(self.custom_content_dir)
         self.font = BitmapFont(self.assets.image(FONT_SHEET, size=SHEET_SIZE))
         self.icons = ItemIcons(self.assets, self.custom)
-        self.faces = FaceRenderer(self.assets, self.custom, self.illustrations)
+        # Whoever was made with a look is drawn with it, by faces and bodies alike.
+        looks = Looks(self.assets, self._look_of)
+        self.faces = FaceRenderer(self.assets, self.custom, self.illustrations, looks)
         # Residents whose body has been drawn, cut into parts that move.
         self.dolls = DollStore(self.illustrations, load_template())
         self.music = load_music_settings(DATA_DIR / "audio.json")
@@ -107,11 +119,25 @@ class Game:
                 self.audio,
             )
         self.saves = SaveManager()
+        self.save_path = Path(save_path)
+        # Whether a settlement is being played. Until one is chosen in the menu, the one above is only a stand-in.
+        self.in_session = not start_in_menu
+        self.main_menu = MainMenu(self.canvas, self.font, self.layers)
         self._build_scenes()
+        if start_in_menu:
+            self.open_menu()
+
+    def _look_of(self, resident_id: str) -> str | None:
+        resident = self.world.residents.get(resident_id)
+        return resident.look if resident is not None else None
 
     def _build_scenes(self) -> None:
         """Create the scenes for the current world. Called again whenever the world is replaced."""
         self.scene_name = "global"
+        # Someone of the same name may have looked otherwise in the settlement before this one.
+        for resident_id, resident in self.world.residents.items():
+            if resident.look is not None:
+                self.faces.forget(resident_id)
         self.minutes_owed = 0.0
         self.global_view = GlobalView(
             self.canvas, self.world, self.assets, self.font, self.icons, self.faces, self.custom,
@@ -181,9 +207,60 @@ class Game:
             self.custom,
             self.layers,
         )
+        self.creator = ResidentCreator(self.canvas, self.world, self.font, self.faces, self.layers)
 
-    def save_game(self, path: Path = SAVE_PATH) -> bool:
+    def describe_save(self) -> str | None:
+        """A few words about the saved settlement, for the menu. None if there is none to go on with."""
+        try:
+            data = json.loads(self.save_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        if not isinstance(data, dict):
+            return None
+        clock, residents = data.get("clock"), data.get("residents")
+        day = clock.get("day", 1) if isinstance(clock, dict) else 1
+        count = len(residents) if isinstance(residents, list) else 0
+        return f"Partida guardada: día {day}, {count} {'habitante' if count == 1 else 'habitantes'}"
+
+    def open_menu(self, notice: str = "") -> None:
+        """Show the way in. The settlement being played, if there is one, waits where it is."""
+        self.main_menu.open(self.in_session, self.describe_save(), notice)
+        self.scene_name = MENU_SCENE
+
+    def continue_game(self) -> bool:
+        """Go back to the settlement being played, or else to the saved one. Returns whether there was one."""
+        if self.in_session:
+            self.scene_name = "global"
+            return True
+        if self.load_game():
+            self.in_session = True
+            return True
+        self.open_menu(LOAD_FAILED)
+        return False
+
+    def new_game(self, seed: int | None = None) -> None:
+        """Start on an empty plot, with the opening that leads through settling it, and make its first resident."""
+        if seed is None:
+            # Which settlement this is going to be is the one thing left to chance outside the simulation.
+            seed = random.SystemRandom().randrange(1, 2**31)
+        self.world = SimulationWorld.new_settlement(seed, self.world.registries)
+        self._build_scenes()
+        self.in_session = True
+        self.open_creator()
+
+    def demo_game(self) -> None:
+        """Start on the settlement that comes ready made, with everyone already at their post."""
+        self.world = SimulationWorld.demo_world(registries=self.world.registries)
+        self._build_scenes()
+        self.in_session = True
+
+    def open_creator(self) -> None:
+        self.creator.open()
+        self.scene_name = CREATOR_SCENE
+
+    def save_game(self, path: Path | None = None) -> bool:
         """Write the settlement to disk. Returns whether it worked."""
+        path = path if path is not None else self.save_path
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             self.saves.save(self.world, path)
@@ -194,8 +271,9 @@ class Game:
         self.global_view.hud.notify("Partida guardada")
         return True
 
-    def load_game(self, path: Path = SAVE_PATH) -> bool:
+    def load_game(self, path: Path | None = None) -> bool:
         """Replace the settlement with the saved one. Returns whether it worked."""
+        path = path if path is not None else self.save_path
         if not path.is_file():
             self.global_view.hud.notify("No hay partida guardada")
             return False
@@ -212,6 +290,10 @@ class Game:
 
     @property
     def active_scene(self):
+        if self.scene_name == MENU_SCENE:
+            return self.main_menu
+        if self.scene_name == CREATOR_SCENE:
+            return self.creator
         if self.scene_name == EDITOR_SCENE and self.doll_editor is not None:
             return self.doll_editor
         if self.scene_name == BUILDING_SCENE and self.building_editor is not None:
@@ -225,6 +307,9 @@ class Game:
         return self.global_view if self.scene_name == "global" else self.interaction_view
 
     def handle_key(self, key: int) -> None:
+        if self.scene_name in (MENU_SCENE, CREATOR_SCENE):
+            # There the keys are a choice or a name, not shortcuts.
+            return
         if key == pygame.K_ESCAPE and self.scene_name in (
             EDITOR_SCENE,
             BUILDING_SCENE,
@@ -235,7 +320,8 @@ class Game:
             # Out of the drawing or the voice, not out of the game. The editor closes itself on the same key.
             return
         if key == pygame.K_ESCAPE:
-            self.running = False
+            # Out of the settlement, not out of the game: the menu is where that is done.
+            self.open_menu()
         elif key == pygame.K_TAB:
             if self.scene_name == ITEM_SCENE:
                 # The item editor uses Tab to move between text fields.
@@ -270,8 +356,31 @@ class Game:
             self.global_view.hud.select_resident(asking.resident_id)
         self.scene_name = "interaction"
 
+    def _follow_menu(self) -> None:
+        choice, self.main_menu.requested = self.main_menu.requested, None
+        if choice == CONTINUE:
+            self.continue_game()
+        elif choice == NEW_GAME:
+            self.new_game()
+        elif choice == DEMO:
+            self.demo_game()
+        elif choice == QUIT:
+            self.running = False
+
     def sync_scenes(self) -> None:
         """Follow requests from the scenes to switch between them."""
+        if self.scene_name == MENU_SCENE:
+            self._follow_menu()
+            return
+        if self.scene_name == CREATOR_SCENE:
+            if self.creator.closed:
+                self.scene_name = "global"
+                if self.creator.created is not None:
+                    # Whoever has just been made is who there is to look at.
+                    self.faces.forget(self.creator.created)
+                    self.global_view.hud.select_resident(self.creator.created)
+                    self.global_view.centre_on_resident(self.creator.created)
+            return
         if self.scene_name == EDITOR_SCENE and (self.doll_editor is None or self.doll_editor.closed):
             self.scene_name = "global"
         elif self.scene_name == BUILDING_SCENE and (self.building_editor is None or self.building_editor.closed):
@@ -314,6 +423,8 @@ class Game:
         elif self.scene_name == "global" and self.global_view.requested_urbanism:
             self.urbanism_editor.open()
             self.scene_name = URBANISM_SCENE
+        elif self.scene_name == "global" and self.global_view.requested_creator:
+            self.open_creator()
         elif self.scene_name == "global" and self.global_view.requested_voice is not None and self.voice_editor is not None:
             self.voice_editor.open(self.global_view.requested_voice)
             self.scene_name = VOICE_SCENE
@@ -327,6 +438,7 @@ class Game:
         self.global_view.requested_item_editor = None
         self.global_view.requested_save = False
         self.global_view.requested_urbanism = False
+        self.global_view.requested_creator = False
         self.global_view.requested_voice = None
 
     def update_music(self) -> None:
@@ -356,15 +468,24 @@ class Game:
         """Put the frame the active scene has just drawn on the window, or on another surface of its size."""
         self.layers.compose(screen if screen is not None else self.screen, self.canvas)
 
+    def handle_event(self, event: pygame.event.Event) -> None:
+        """Give one input event to the shell, and then to the scene on show."""
+        if event.type == pygame.QUIT:
+            self.running = False
+            return
+        if event.type == pygame.KEYDOWN:
+            before = self.scene_name
+            self.handle_key(event.key)
+            if self.scene_name == MENU_SCENE and before != MENU_SCENE:
+                # The key that brought the menu up is not also a choice made in it.
+                return
+        self.active_scene.handle_event(event)
+
     def run(self) -> None:
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                elif event.type == pygame.KEYDOWN:
-                    self.handle_key(event.key)
-                self.active_scene.handle_event(event)
+                self.handle_event(event)
             self.sync_scenes()
 
             self.advance_simulation(dt)

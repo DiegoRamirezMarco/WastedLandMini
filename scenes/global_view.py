@@ -46,7 +46,7 @@ from scenes.hud import (
 )
 from scenes.scene import canvas_position
 from settings import SCALE, TILE_SIZE
-from simulation.commands import SetPausedCommand, SetSpeedCommand, SuggestJobCommand
+from simulation.commands import AcknowledgeTutorialCommand, SetPausedCommand, SetSpeedCommand, SuggestJobCommand
 from simulation.events.event import DomainEvent
 from simulation.items.item_system import USE_ITEM_ACTION
 from simulation.work.work_system import WORK_ACTION
@@ -58,6 +58,7 @@ from ui.bubble import MARK_SIZE, MARK_TAIL, draw_mark
 from ui.labels import away_residents
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
 from ui.panel import draw_panel
+from ui.tutorial_panel import ACKNOWLEDGE_INTENT, CREATOR_INTENT
 from world.interactable import Interactable
 from world.map import Tile
 from world.room import Room
@@ -184,6 +185,8 @@ class GlobalView:
         # Infrastructure requests are picked up by the game shell after event handling.
         self.requested_save = False
         self.requested_urbanism = False
+        # The opening of a new settlement asks for the screen where its first resident is made.
+        self.requested_creator = False
         # Pictures made outside the game, and where they are put to go straight on the window.
         self.illustrations = illustrations if layers is not None else None
         self.layers = layers
@@ -194,7 +197,7 @@ class GlobalView:
         self.object_sprites = ObjectSprites(assets, custom)
         self.faces = faces
         # Everyone's body, and what a blow leaves lying about. Presentation only: nothing of it is saved.
-        self.bodies = BodyStage(BodyRenderer(assets, builtin_plan()))
+        self.bodies = BodyStage(BodyRenderer(assets, builtin_plan(), faces.looks))
         drawable = self.dolls is not None and illustrations is not None and illustrations.root is not None
         self.hud = Hud(canvas, world, font, icons, faces, assets, illustrations, layers, drawable, self.voices is not None)
         # Real seconds of unpaused play, driving animations that have nothing to do with game state.
@@ -260,8 +263,12 @@ class GlobalView:
         self._overlays: list[Callable[[], None]] = []
         self._buffers: dict[tuple[tuple[int, int], bool], pygame.Surface] = {}
         commons = world.rooms.get("commons")
+        entry = next(iter(world.entry_tiles()), None)
         if commons is not None:
             self.centre_on((commons.x + commons.width / 2, commons.y + commons.height / 2))
+        elif entry is not None:
+            # A map with no plaza is first seen from where people come in.
+            self.centre_on((entry[0] + 0.5, entry[1] + 0.5))
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
@@ -515,6 +522,10 @@ class GlobalView:
             self.requested_save = True
         elif intent == URBANISM_INTENT:
             self.requested_urbanism = True
+        elif intent == CREATOR_INTENT:
+            self.requested_creator = True
+        elif intent == ACKNOWLEDGE_INTENT:
+            self.world.apply_command(AcknowledgeTutorialCommand())
         elif intent == DRAW_INTENT and self.dolls is not None:
             # Whoever is selected, or else the first resident there is.
             self.requested_editor = self.hud.selected_id or next(iter(self.world.residents), None)

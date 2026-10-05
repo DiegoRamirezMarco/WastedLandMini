@@ -12,6 +12,9 @@ Event types emitted so far:
 
 | Type | When | Importance |
 |---|---|---|
+| `resident_founded` | The player's first resident walks in | 45 |
+| `tutorial_step_done` | A step of a new settlement's opening is done, with its ID in `data.step` | 35 |
+| `tutorial_finished` | The last step is done, and the world outside stops keeping away | 45 |
 | `activity_started` | A resident starts using an object | 5 |
 | `meal_started` | A resident starts eating, with the food ID in `data.item_id` | 5 |
 | `work_started` | A resident takes up their post | 5 |

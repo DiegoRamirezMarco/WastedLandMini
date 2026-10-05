@@ -27,6 +27,7 @@ from simulation.commands import (
 from simulation.world import SimulationWorld
 from ui.button import Button
 from ui.panel import draw_panel
+from ui.tutorial_panel import tutorial_heading
 from world.interactable import InteractableDefinition
 from world.map import Tile
 from world.room import Room
@@ -109,6 +110,9 @@ class UrbanismEditor:
         self.pointer_tile: Tile | None = None
         self.catalog_offset = 0
         self.requested_art_room: str | None = None
+        # Why the thing in hand cannot go where it was last asked about. Time stands still here,
+        # so the answer holds until something is placed, moved or removed.
+        self._judged: tuple[tuple[Held, Tile], str | None] | None = None
         self._layout()
 
     def _layout(self) -> None:
@@ -143,6 +147,7 @@ class UrbanismEditor:
         self.closed = False
         self.requested_art_room = None
         self.drag = None
+        self._judged = None
 
     def _catalog(self) -> list[tuple[str, str]]:
         if self.category == "buildings":
@@ -333,6 +338,11 @@ class UrbanismEditor:
 
     def _held_error(self, held: Held, pointer: Tile) -> str | None:
         """Ask the simulation why the held thing cannot go under the pointer. None means it can."""
+        if self._judged is None or self._judged[0] != (held, pointer):
+            self._judged = ((held, pointer), self._judge(held, pointer))
+        return self._judged[1]
+
+    def _judge(self, held: Held, pointer: Tile) -> str | None:
         target = held.origin(pointer)
         urbanism = self.world.urbanism
         if held.entity_id is not None:
@@ -358,6 +368,7 @@ class UrbanismEditor:
             self.confirm_delete = False
 
     def _accept(self, result: object) -> None:
+        self._judged = None
         if isinstance(result, UrbanismResult):
             self.message = result.message
             if result.ok:
@@ -416,6 +427,7 @@ class UrbanismEditor:
                 or (isinstance(button.intent, tuple) and button.intent[:1] == ("catalog",) and button.intent[1] == self.catalog_id)
             )
             button.draw(self.canvas, self.font, active=active)
+        self._render_step()
         self._render_map()
         self._render_held()
         selected = self._selection_name()
@@ -429,6 +441,18 @@ class UrbanismEditor:
             (PANEL_WIDTH + MARGIN, self.canvas.get_height() - LINE_HEIGHT - 4),
             PALETTE["dust"],
         )
+
+    def _render_step(self) -> None:
+        """Above the map, what the opening of a new settlement asks for next, while it is on a step."""
+        step = self.world.guide.current(self.world)
+        if step is None:
+            return
+        x, y = PANEL_WIDTH + MARGIN, 6
+        width = self.close_button.rect.left - MARGIN - x
+        self.font.draw(self.canvas, tutorial_heading(self.world, step), (x, y), PALETTE["lamp"])
+        for line in self.font.wrap(step.text, width)[: max(0, (self.map_rect.top - y) // LINE_HEIGHT - 1)]:
+            y += LINE_HEIGHT
+            self.font.draw(self.canvas, line, (x, y), PALETTE["paper"])
 
     def _render_map(self) -> None:
         for y, row in enumerate(self.world.tile_map.tiles):

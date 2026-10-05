@@ -1,4 +1,4 @@
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 
 from simulation.ai.activity_system import ActivitySystem
@@ -21,11 +21,14 @@ from simulation.knowledge.fact import Fact, KnowledgeStore
 from simulation.knowledge.knowledge_system import record_fact, witnesses_of
 from simulation.memory.memory_system import MemorySystem
 from simulation.registries import DEFAULT_MAP_ID, BuiltInRegistries, builtin_registries
+from simulation.residents.founding import found_resident
 from simulation.residents.personality import Personality
 from simulation.residents.resident import Resident
 from simulation.rng import SimulationRNG
 from simulation.social.bonds import BondSystem
 from simulation.social.relationship import Relationship
+from simulation.tutorial.tutorial import TutorialState
+from simulation.tutorial.tutorial_system import TutorialSystem
 from simulation.work.expedition_system import ExpeditionSystem
 from simulation.work.staffing import StaffingSystem
 from simulation.work.work_system import WORK_ACTION, WorkSystem
@@ -100,6 +103,9 @@ class SimulationWorld:
     # Day on which each once-a-day notice was last given.
     notices: dict[str, int] = field(default_factory=dict)
     urbanism: UrbanismSystem = field(default_factory=UrbanismSystem)
+    guide: TutorialSystem = field(default_factory=TutorialSystem)
+    # Where a new settlement is in its opening. One that is past it, or never had one, has no step.
+    tutorial: TutorialState = field(default_factory=TutorialState)
 
     def step(self, minutes: int | None = None) -> None:
         if self.clock.paused:
@@ -121,9 +127,13 @@ class SimulationWorld:
             # Someone may die during this very minute.
             if resident.resident_id in self.residents:
                 self.activities.tick(self, resident)
+        self.guide.check(self)
 
     def apply_command(self, command: SimulationCommand) -> object:
-        return command.apply(self)
+        result = command.apply(self)
+        # What the player has just done may be what the opening was waiting for, even with time stopped.
+        self.guide.check(self)
+        return result
 
     def set_paused(self, paused: bool) -> None:
         self.clock.paused = paused
@@ -153,6 +163,16 @@ class SimulationWorld:
 
     def remove_building(self, room_id: str) -> UrbanismResult:
         return self.urbanism.remove_building(self, room_id)
+
+    def found_resident(
+        self, name: str, age: int, personality: Mapping[str, float], traits: Sequence[str], look: str | None = None
+    ) -> str | None:
+        """Take in the player's first resident. Returns their ID, or None if there is already someone."""
+        resident = found_resident(self, name, age, personality, traits, look)
+        return resident.resident_id if resident is not None else None
+
+    def acknowledge_tutorial(self) -> bool:
+        return self.guide.acknowledge(self)
 
     def set_speed(self, speed: int) -> None:
         if speed < 1:
@@ -253,6 +273,11 @@ class SimulationWorld:
             return None
         return min(placed, key=lambda p: (manhattan(tile, (p.x, p.y)), p.object_id)).object_id
 
+    def entry_tiles(self) -> list[Tile]:
+        """Where people come in and first stand: what everything in the settlement has to be reachable from."""
+        layout = self.registries.maps.get(self.map_id)
+        return [*layout.arrivals, *layout.spawns] if layout is not None else []
+
     def room_at(self, tile: Tile) -> Room | None:
         return next((room for room in self.rooms.values() if room.contains(tile)), None)
 
@@ -318,7 +343,10 @@ class SimulationWorld:
             ),
             None,
         )
-        stack = generator.stack_of(POWER_ITEM, None) if generator is not None else None
+        if generator is None:
+            # A settlement with no generator has no power to run out of.
+            return
+        stack = generator.stack_of(POWER_ITEM, None)
         if stack is None:
             if self.notices.get(POWER_OUT_NOTICE) != self.clock.day:
                 self.notices[POWER_OUT_NOTICE] = self.clock.day
@@ -364,6 +392,20 @@ class SimulationWorld:
             return definition is not None and definition.walkable
 
         return is_passable
+
+    @classmethod
+    def new_settlement(cls, seed: int = 7, registries: BuiltInRegistries | None = None) -> "SimulationWorld":
+        """An empty plot with nobody on it, and the opening that leads the player through settling it."""
+        world = cls(
+            rng=SimulationRNG(seed),
+            event_rng=SimulationRNG(seed * 7919 + 13),
+            registries=registries or builtin_registries(),
+        )
+        map_id = world.registries.tutorial.map_id
+        world.load_layout(map_id if map_id in world.registries.maps else DEFAULT_MAP_ID)
+        world.stock_from_layout()
+        world.guide.start(world)
+        return world
 
     @classmethod
     def demo_world(cls, seed: int = 7, registries: BuiltInRegistries | None = None) -> "SimulationWorld":

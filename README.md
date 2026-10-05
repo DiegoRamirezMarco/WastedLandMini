@@ -43,6 +43,11 @@ pip install -r requirements.txt
 python main.py
 ```
 
+The game opens on a menu. `Partida nueva` starts on an empty plot and leads through settling it,
+step by step: making the first resident, a shack, a bed, a crate, food, water, a garden, a job, a
+fire, and the first stranger at the gate. `Asentamiento de ejemplo` opens a settlement that is
+already running, with nine residents. `Continuar` goes on with whatever was last saved.
+
 Run the tests:
 
 ```bash
@@ -122,7 +127,7 @@ python -m simulation.headless --days 7 --seed 7
   editor is open and the changed layout is part of the save
 - `Guardar` in the menu, or `F5`, saves the game to `saves/quicksave.json`; `F9` loads it
 - `M`: sound on / off, voices and all
-- `Esc`: quit
+- `Esc`: back to the menu, where the settlement waits; `Salir` there leaves the game
 
 ## Art
 

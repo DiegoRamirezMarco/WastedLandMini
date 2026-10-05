@@ -18,6 +18,7 @@ from simulation.items.registry import ItemRegistry
 from simulation.residents.personality import Personality
 from simulation.social.bonds import BondSettings, bond_settings_from_data
 from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
+from simulation.tutorial.tutorial import BUILDING, JOB, OBJECT, TutorialDefinition, tutorial_definition_from_data
 from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
 from world.interactable import InteractableDefinition, interactable_definition_from_data
@@ -77,6 +78,9 @@ class JsonDefinitionRegistry:
 
     def find(self, definition_id: str) -> dict[str, Any] | None:
         return self._definitions.get(definition_id)
+
+    def ids(self) -> list[str]:
+        return list(self._definitions)
 
     def load_json_file(self, path: Path) -> None:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -143,6 +147,8 @@ class BuiltInRegistries:
     world_events: WorldEventSettings = field(default_factory=WorldEventSettings)
     event_settings: dict[str, Any] = field(default_factory=dict)
     dialogue: dict[str, list[str]] = field(default_factory=dict)
+    # The steps a new settlement is led through, and the map it starts on.
+    tutorial: TutorialDefinition = field(default_factory=TutorialDefinition)
 
     @classmethod
     def load(cls, data_dir: Path | str = DATA_DIR, custom_dir: Path | str | None = None) -> "BuiltInRegistries":
@@ -219,6 +225,9 @@ class BuiltInRegistries:
         economy_path = root / "economy.json"
         if economy_path.is_file():
             registries.economy = economy_settings_from_data(_read_object(economy_path))
+        tutorial_path = root / "tutorial.json"
+        if tutorial_path.is_file():
+            registries.tutorial = tutorial_definition_from_data(_read_object(tutorial_path))
         registries.validate()
         return registries
 
@@ -301,6 +310,20 @@ class BuiltInRegistries:
                 raise ValueError(f"World event {event_id} names {event.container}, which is not a container kind")
         if self.expeditions.injury_kind not in self.injuries and self.injuries:
             raise ValueError(f"Expeditions leave an unknown kind of injury: {self.expeditions.injury_kind}")
+        if self.tutorial.steps and self.tutorial.map_id not in self.maps:
+            raise ValueError(f"The tutorial starts on an unknown map: {self.tutorial.map_id}")
+        for step in self.tutorial.steps:
+            goal = step.goal
+            known = {OBJECT: self.interactables.find, BUILDING: self.buildings.get, JOB: self.jobs.get}.get(goal.kind)
+            if known is not None and goal.target is not None and known(goal.target) is None:
+                raise ValueError(f"Tutorial step {step.step_id} waits for something unknown: {goal.target}")
+            # Unknown items are tolerated, like unknown stock: a gift may come from an optional pack.
+            for gift in step.gifts:
+                holder = self.interactables.find(gift.into) if gift.into is not None else None
+                if gift.into is not None and (holder is None or not holder.container):
+                    raise ValueError(
+                        f"Tutorial step {step.step_id} leaves a gift in {gift.into}, which is not a container kind"
+                    )
         for map_id, layout in self.maps.items():
             tile_map = layout.tile_map
             unknown = {terrain for row in tile_map.tiles for terrain in row} - self.terrain.keys()

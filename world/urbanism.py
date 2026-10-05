@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING, Any
 
 from simulation.events.event import DomainEvent
 from simulation.items.inventory import Inventory
-from world.interactable import Interactable
+from world.interactable import Interactable, InteractableDefinition
 from world.map import Tile
+from world.pathfinding import NEIGHBOURS
 from world.room import Room
 
 if TYPE_CHECKING:
@@ -148,7 +149,11 @@ class UrbanismSystem:
             return "Ese espacio ya está ocupado"
         if any(not resident.away and resident.tile in footprint for resident in world.residents.values()):
             return "Hay un residente en ese espacio"
-        return None
+        others = [placed for placed in world.interactables.values() if placed.object_id != ignore_object]
+        open_after = self._walkable(world) - self._blocked(world, others)
+        if definition.blocks:
+            open_after -= footprint
+        return self._access_error(world, open_after, others, list(world.rooms.values()), candidate=candidate)
 
     def place_building(
         self, world: SimulationWorld, blueprint_id: str, tile: Tile
@@ -246,7 +251,15 @@ class UrbanismSystem:
             for point in footprint
         ):
             return "Solo se puede construir sobre terreno libre"
-        return None
+        walkable = self._walkable(world)
+        if ignored is not None:
+            # Lifted, it leaves behind the ground it stood on.
+            walkable -= set(ground)
+            walkable |= {point for point, terrain in ground.items() if world.registries.terrain[terrain].walkable}
+        inside = {(x, y) for y in range(tile[1], tile[1] + height) for x in range(tile[0], tile[0] + width)}
+        walkable = (walkable - footprint) | inside | {self._door_of(preview)}
+        placed = list(world.interactables.values())
+        return self._access_error(world, walkable - self._blocked(world, placed), placed, rooms, new_room=preview)
 
     def _construct(self, world: SimulationWorld, room: Room, floor: str) -> None:
         footprint = self._building_tiles(room)
@@ -259,9 +272,111 @@ class UrbanismSystem:
                 room.y + room.height,
             )
             world.tile_map.tiles[y][x] = "wall" if border else floor
-        door = (room.x + room.width // 2, room.y + room.height)
+        door = self._door_of(room)
         world.tile_map.tiles[door[1]][door[0]] = "door"
         world.rooms[room.room_id] = room
+
+    @staticmethod
+    def _door_of(room: Room) -> Tile:
+        """Where a building put up here has its door: the middle of the wall at its front."""
+        return (room.x + room.width // 2, room.y + room.height)
+
+    # ----- keeping everything within reach -----
+
+    @staticmethod
+    def _walkable(world: SimulationWorld) -> set[Tile]:
+        """Every tile whose ground can be walked on, whatever stands on it."""
+        terrain = world.registries.terrain
+        return {
+            (x, y)
+            for y, row in enumerate(world.tile_map.tiles)
+            for x, terrain_id in enumerate(row)
+            if terrain_id in terrain and terrain[terrain_id].walkable
+        }
+
+    @staticmethod
+    def _blocked(world: SimulationWorld, placed: list[Interactable]) -> set[Tile]:
+        return {
+            point
+            for each in placed
+            if world.definition_of(each).blocks
+            for point in each.footprint(world.definition_of(each))
+        }
+
+    @staticmethod
+    def _reached(world: SimulationWorld, open_ground: set[Tile]) -> set[Tile] | None:
+        """Every tile that can be walked to from where people come in. None if they come in nowhere."""
+        frontier = [tile for tile in world.entry_tiles() if tile in open_ground]
+        if not frontier:
+            return None
+        reached = set(frontier)
+        while frontier:
+            x, y = frontier.pop()
+            for dx, dy in NEIGHBOURS:
+                step = (x + dx, y + dy)
+                if step in open_ground and step not in reached:
+                    reached.add(step)
+                    frontier.append(step)
+        return reached
+
+    @staticmethod
+    def _needs_access(world: SimulationWorld, definition: InteractableDefinition) -> bool:
+        """Whether anyone ever has to get to an object of this kind: to use it, fill it or work at it."""
+        return (
+            definition.use is not None
+            or definition.container
+            or any(job.station == definition.kind for job in world.registries.jobs.values())
+        )
+
+    @staticmethod
+    def _within_reach(placed: Interactable, definition: InteractableDefinition, reached: set[Tile]) -> bool:
+        """Whether someone can get to where an object is used from: beside it, or on to it from beside."""
+        footprint = set(placed.footprint(definition))
+        if definition.use is not None and definition.use.position == "on":
+            footprint = {(placed.x, placed.y)}
+        return any((x + dx, y + dy) in reached for x, y in footprint for dx, dy in NEIGHBOURS)
+
+    def _access_error(
+        self,
+        world: SimulationWorld,
+        open_after: set[Tile],
+        placed: list[Interactable],
+        rooms: list[Room],
+        candidate: Interactable | None = None,
+        new_room: Room | None = None,
+    ) -> str | None:
+        """Why a change would leave something out of reach that is within reach now. None if it would not.
+
+        `open_after` is the ground that could still be walked once the change is made, `placed` and
+        `rooms` what would stand unchanged, and `candidate` or `new_room` what the change puts down.
+        """
+        before = self._reached(world, self._walkable(world) - self._blocked(world, list(world.interactables.values())))
+        after = self._reached(world, open_after)
+        if before is None or after is None:
+            return None
+        for each in placed:
+            definition = world.definition_of(each)
+            if (
+                self._needs_access(world, definition)
+                and self._within_reach(each, definition, before)
+                and not self._within_reach(each, definition, after)
+            ):
+                return f"Dejaría sin paso: {definition.name}"
+        for room in rooms:
+            inside = {
+                (x, y)
+                for y in range(room.y, room.y + room.height)
+                for x in range(room.x, room.x + room.width)
+            }
+            if room.roofed and inside & before and not inside & after:
+                return f"Taparía la entrada: {room.name}"
+        if candidate is not None:
+            definition = world.definition_of(candidate)
+            if self._needs_access(world, definition) and not self._within_reach(candidate, definition, after):
+                return "No se podría llegar hasta ahí"
+        if new_room is not None and self._door_of(new_room) not in after:
+            return "La puerta quedaría tapada"
+        return None
 
     def _restore_underlay(self, world: SimulationWorld, room: Room) -> None:
         for point, terrain in self._ground_below(room).items():

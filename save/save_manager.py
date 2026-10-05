@@ -23,6 +23,7 @@ from simulation.rng import SimulationRNG
 from simulation.social.relationship import Relationship
 from simulation.work.expedition import Expedition
 from simulation.work.expedition_system import EXPEDITION_ACTION
+from simulation.tutorial.tutorial import TutorialState
 from simulation.world import SimulationWorld
 from world.interactable import Interactable
 from world.map import TileMap
@@ -50,13 +51,15 @@ FIRST_ECONOMY_VERSION = 8
 # Version 15 added lost limbs, none by default, and the particulars of events, empty by default.
 # Version 16 added thirst, mood, water and generator fuel.
 # Version 17 stores changes made in urbanism mode: terrain, rooms and construction underlays.
+# Version 18 added where a new settlement is in its opening, and the look a resident was made
+# with. Older saves are simply past the opening, and everyone in them looks like themselves.
 LAST_MAP_CHANGE_VERSION = 16
 FIRST_URBANISM_VERSION = 17
 FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 17
+    CURRENT_VERSION = 18
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -129,6 +132,7 @@ class SaveManager:
                     "day_off": resident.day_off,
                     "credits": resident.credits,
                     "age": resident.age,
+                    "look": resident.look,
                     "couple_with": resident.couple_with,
                     "expedition": vars(resident.expedition) if resident.expedition is not None else None,
                     "last_expedition_day": resident.last_expedition_day,
@@ -177,6 +181,13 @@ class SaveManager:
                 for resident_id in world.knowledge.resident_ids()
             },
             "event_log": list(world.event_log),
+            "tutorial": {
+                "step": world.tutorial.step_id,
+                "since": world.tutorial.since,
+                "opened": world.tutorial.opened,
+                "acknowledged": world.tutorial.acknowledged,
+                "done": list(world.tutorial.done),
+            },
         }
 
     def from_data(
@@ -261,6 +272,7 @@ class SaveManager:
                 day_off=int(day_off) if day_off is not None else None,
                 credits=float(resident_data.get("credits", pocket_money)),
                 age=int(resident_data.get("age", 30)),
+                look=_text_or_none(resident_data.get("look")),
                 couple_with=_text_or_none(resident_data.get("couple_with")),
                 expedition=Expedition(
                     returns_at=int(trip.get("returns_at", 0)),
@@ -347,7 +359,21 @@ class SaveManager:
 
         event_log = data.get("event_log", [])
         world.event_log = [str(line) for line in event_log] if isinstance(event_log, list) else []
+        self._restore_tutorial(world, data)
         return world
+
+    def _restore_tutorial(self, world: SimulationWorld, data: dict[str, Any]) -> None:
+        """Put a settlement back where it was in its opening. One saved at a step that is gone is past it."""
+        saved = _object_or_empty(data.get("tutorial"))
+        step_id = _text_or_none(saved.get("step"))
+        known = world.registries.tutorial
+        world.tutorial = TutorialState(
+            step_id=step_id if known.step(step_id) is not None else None,
+            since=int(saved.get("since", 0)),
+            opened=bool(saved.get("opened", False)),
+            acknowledged=bool(saved.get("acknowledged", False)),
+            done=[str(done) for done in _list_or_empty(saved.get("done"))],
+        )
 
     def _restore_items(self, world: SimulationWorld, data: dict[str, Any], version: int) -> None:
         """Put saved items back. An item of a kind no longer defined is kept as an inert placeholder."""
