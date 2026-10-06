@@ -250,6 +250,10 @@ on displays of different resolutions.
   (talking, arguing, asleep, hurt, at work, `!`) is an icon in a small `paper` bubble with a tail.
 - Every named place has its name on a sign, `sand` on `ink` with a `copper` border, on the wall
   at its back. Signs are drawn on the canvas, so they keep their size at any zoom.
+- How a meal, a thing used or a present is taken shows over the head of whoever takes it, in a
+  bubble like the rest, for a couple of seconds: a heart (`relish`) if it was to their liking, a
+  cross (`disgust`) if it was not. If something was learned of their tastes by it, an eye
+  (`insight`) follows for as long again. Taking a thing as any other shows nothing.
 - Animated objects and bobbing icons run on real time and stop while the game is paused.
 - While someone eats or uses an item, its icon floats over their head.
 - What a resident carries for their job is drawn in their hands, or on their back when they walk

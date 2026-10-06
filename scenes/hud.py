@@ -35,7 +35,16 @@ from ui.labels import (
 )
 from ui.layout import Layout, layout_for
 from ui.panel import draw_panel, set_skin
-from ui.resident_panel import draw_resident_panel, draw_roster, inventory_hitboxes, relationship_hitboxes, roster_rows
+from ui.resident_panel import (
+    LIFE_TAB,
+    TASTES_TAB,
+    draw_resident_panel,
+    draw_roster,
+    inventory_hitboxes,
+    relationship_hitboxes,
+    roster_rows,
+    tab_hitbox,
+)
 from ui.tutorial_panel import PANEL_WIDTH as TUTORIAL_WIDTH
 from ui.tutorial_panel import draw_tutorial, tutorial_button, tutorial_height
 
@@ -77,6 +86,10 @@ SKIN_BORDER_PIXELS = 20
 
 def speed_intent(speed: int) -> tuple[str, int]:
     return ("speed", speed)
+
+
+# Switches the lower part of a resident's panel between how they live and what they like.
+PANEL_TAB_INTENT = "panel_tab"
 
 
 def select_intent(resident_id: str) -> tuple[str, str]:
@@ -144,6 +157,8 @@ class Hud:
         # At most one of these is set: the resident or the container whose panel is showing.
         self.selected_id: str | None = None
         self.selected_container: str | None = None
+        # Which of its two faces a resident's panel is showing. It stays as it is from one resident to the next.
+        self.panel_tab = LIFE_TAB
         # Who is speaking in the dock and what they say, as last drawn. None while nobody is.
         self.spoken: tuple[str, str] | None = None
         # Where the scene draws its minimap, so that clicks on it do not fall through to the map.
@@ -269,11 +284,16 @@ class Hud:
     def select_container(self, container_id: str | None) -> None:
         self.selected_id, self.selected_container = None, container_id
 
+    def toggle_panel_tab(self) -> None:
+        self.panel_tab = LIFE_TAB if self.panel_tab == TASTES_TAB else TASTES_TAB
+
     def click(self, position: tuple[int, int]) -> Hashable | None:
         """Return the intent of the button, item or resident under `position`."""
         for button in self.buttons:
             if button.contains(position):
                 return button.intent
+        if self.selected_id in self.world.residents and tab_hitbox(self.layout.panel).collidepoint(position):
+            return PANEL_TAB_INTENT
         for rect, definition_id in self._inventory_items():
             if rect.collidepoint(position):
                 return edit_item_intent(definition_id)
@@ -282,7 +302,8 @@ class Hud:
     def _inventory_items(self) -> list[tuple[pygame.Rect, str]]:
         resident = self.world.residents.get(self.selected_id or "")
         if resident is not None:
-            return inventory_hitboxes(self.layout.panel, self.world, resident)
+            # Their things are not on show while the panel is on what they like.
+            return inventory_hitboxes(self.layout.panel, self.world, resident) if self.panel_tab == LIFE_TAB else []
         if self.selected_container in self.world.containers:
             return container_item_hitboxes(
                 self.layout.panel.topleft, self.world, self.selected_container or "", self.layout.panel.width
@@ -293,7 +314,7 @@ class Hud:
         """Residents named in the panel on the right, each of whom a click there selects."""
         resident = self.world.residents.get(self.selected_id or "")
         if resident is not None:
-            return relationship_hitboxes(self.layout.panel, self.world, resident)
+            return relationship_hitboxes(self.layout.panel, self.world, resident) if self.panel_tab == LIFE_TAB else []
         if self.selected_container in self.world.containers:
             return []
         return roster_rows(self.layout.panel, self.world)
@@ -435,7 +456,16 @@ class Hud:
         resident = self.world.residents.get(self.selected_id or "")
         if resident is not None:
             draw_resident_panel(
-                self.canvas, self.font, self.icons, self.faces, self.assets, panel, self.world, resident, self.layers
+                self.canvas,
+                self.font,
+                self.icons,
+                self.faces,
+                self.assets,
+                panel,
+                self.world,
+                resident,
+                self.layers,
+                self.panel_tab,
             )
         elif self.container_rect() is not None:
             draw_panel(self.canvas, panel)

@@ -39,6 +39,7 @@ from scenes.hud import (
     JOBS_INTENT,
     LOG_INTENT,
     MINIMAP_INTENT,
+    PANEL_TAB_INTENT,
     PAUSE_INTENT,
     ROSTER_INTENT,
     SAVE_INTENT,
@@ -51,6 +52,8 @@ from settings import SCALE, TILE_SIZE
 from simulation.commands import AcknowledgeTutorialCommand, SetPausedCommand, SetSpeedCommand, SuggestJobCommand
 from simulation.events.event import DomainEvent
 from simulation.items.item_system import USE_ITEM_ACTION
+from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
+from simulation.tastes.taste_system import FOUND_OUT_EVENT, REACTION_EVENT
 from simulation.work.work_system import WORK_ACTION
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
@@ -104,6 +107,12 @@ ANIMATION_FPS = 5
 BOBBING_ICONS = ("alert", "sleep")
 # What someone is doing is shown in a bubble over their head. These are not: they mark who it is.
 BARE_ICONS = ("selected", "heart", "friend")
+# How something was taken, and that something was learned of whoever took it, shown over their
+# head for this many seconds each, one after the other.
+TASTE_MARKS = {LOVED: "relish", LIKED: "relish", DISLIKED: "disgust", HATED: "disgust"}
+FOUND_OUT_MARK = "insight"
+MARK_SECONDS = 2.5
+MARKS_WAITING = 3
 # Health below which a resident is shown as hurt.
 HURT_HEALTH = 70.0
 # Where a load is drawn on a body frame, by the way the resident faces: in their arms, or on their back.
@@ -227,6 +236,8 @@ class GlobalView:
         self.tick_progress = 0.0
         # Residents taking part in an event important enough to call for the player's attention.
         self.alerts: set[str] = set()
+        # Marks to show over heads for a moment: per resident, each with when it comes on and goes off.
+        self._marks: dict[str, list[tuple[str, float, float]]] = {}
         # Where each resident was last drawn, for picking them with the mouse.
         self.hitboxes: dict[str, pygame.Rect] = {}
         self.container_hitboxes: dict[str, pygame.Rect] = {}
@@ -446,12 +457,32 @@ class GlobalView:
         for event in events:
             if event.importance >= self.hud.intervention_from:
                 self.alerts.update(event.participants)
+            if event.event_type == REACTION_EVENT:
+                self._mark(str(event.data.get("resident_id")), TASTE_MARKS.get(str(event.data.get("reaction"))))
+            elif event.event_type == FOUND_OUT_EVENT:
+                self._mark(str(event.data.get("resident_id")), FOUND_OUT_MARK)
         # Someone asking for advice may be off screen: bring them into view, unless the view is
         # with somebody the player chose to follow. The notice at the top says who is waiting.
         for decision in self.world.decisions.values():
             if self.following is None and any(decision.resident_id in event.participants for event in events):
                 self.centre_on_resident(decision.resident_id)
                 break
+
+    def _mark(self, resident_id: str, icon: str | None) -> None:
+        """Have a mark shown over a resident for a moment, after any that is waiting to be."""
+        if icon is None:
+            return
+        waiting = [mark for mark in self._marks.get(resident_id, []) if mark[2] > self.time]
+        if len(waiting) >= MARKS_WAITING or any(mark[0] == icon for mark in waiting):
+            return
+        start = max([self.time, *(mark[2] for mark in waiting)])
+        self._marks[resident_id] = [*waiting, (icon, start, start + MARK_SECONDS)]
+
+    def mark_over(self, resident_id: str) -> str | None:
+        """The mark showing over a resident right now, if any."""
+        return next(
+            (icon for icon, start, end in self._marks.get(resident_id, []) if start <= self.time < end), None
+        )
 
     def needing_attention(self) -> list[str]:
         """Residents the player should look at, the most pressing first.
@@ -556,6 +587,8 @@ class GlobalView:
             self.requested_building_editor = self._building_to_draw()
         elif intent == VOICE_INTENT and self.voices is not None:
             self.requested_voice = self.hud.selected_id or next(iter(self.world.residents), None)
+        elif intent == PANEL_TAB_INTENT:
+            self.hud.toggle_panel_tab()
         elif intent == ROSTER_INTENT:
             # Nobody in particular: the panel goes back to listing everybody.
             self.hud.select_resident(None)
@@ -1357,7 +1390,7 @@ class GlobalView:
             y -= CELL_SIZE[1]
             name = self.font.render(resident.name, PALETTE["paper"])
             self.canvas.blit(name, (self._name_left(resident, x, name.get_width()), y))
-        icons = [self._status_icon(resident, resting)]
+        icons = [self._status_icon(resident, resting), self.mark_over(resident.resident_id)]
         if resident.resident_id == self.hud.selected_id:
             icons.append("selected")
         else:

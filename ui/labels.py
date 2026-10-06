@@ -4,6 +4,7 @@ from simulation.items.item import ItemInstance
 from simulation.items.item_system import FOOD_CATEGORY, WATER_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
 from simulation.residents.activity import SHELTER_ACTION
 from simulation.residents.resident import Resident
+from simulation.tastes.settings import DISLIKED, HATED, KNOWN, LIKED, LOVED, NEUTRAL, SUSPECTED
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.work.job import JobDefinition
 from simulation.events.world_event_system import BED_USE_ACTION
@@ -13,6 +14,20 @@ from simulation.world import SimulationWorld
 NEED_LABELS = {"hunger": "Hambre", "thirst": "Sed", "tiredness": "Sueño", "social": "Social", "stress": "Estrés"}
 FEELING_LABELS = {"affection": "afecto", "resentment": "rencor"}
 MINUTES_PER_DAY = 24 * 60
+# What is said of a taste, by how sure it is and which way it goes. There is never a figure.
+TASTE_WORDS = {
+    SUSPECTED: {LIKED: "Parece gustarle", NEUTRAL: "Parece darle igual", DISLIKED: "Parece no gustarle"},
+    KNOWN: {
+        LOVED: "Le encanta",
+        LIKED: "Le gusta",
+        NEUTRAL: "Le da igual",
+        DISLIKED: "No le gusta",
+        HATED: "Lo detesta",
+    },
+}
+UNKNOWN_TASTE = "???"
+NOTHING_FOUND_OUT = "Todavía no se sabe nada"
+MORE_TO_FIND_OUT = "Hay más por descubrir"
 
 
 def format_time(timestamp: int, with_day: bool = False) -> str:
@@ -228,6 +243,27 @@ LOW_HEALTH = 70.0
 PRESSING_NEED = 85.0
 SCRAP_TAG = "scrap"
 FUEL_TAG = "fuel"
+
+
+def taste_rows(world: SimulationWorld, resident: Resident) -> list[tuple[str, str, str | None]]:
+    """A resident's tastes as the player knows them, the surest first.
+
+    Each is what it is a taste for, what is said of it, and which way it goes for whoever
+    colours it. After them comes `???` if they have tastes that have not shown yet, and it
+    stands alone while nothing has. What has not been found out is not here in any form.
+    """
+    found = world.tastes.found_out(world, resident)
+    rows: list[tuple[str, str, str | None]] = []
+    for sure in (KNOWN, SUSPECTED):
+        for key, state, leaning in found:
+            if state == sure:
+                label = world.tastes.label(world, key)
+                rows.append((label[:1].upper() + label[1:], TASTE_WORDS[state][leaning], leaning))
+    shown = {key for key, _, _ in found}
+    hidden = any(key not in shown for key in world.tastes.profile(world, resident).keys())
+    if not rows:
+        return [(UNKNOWN_TASTE, NOTHING_FOUND_OUT, None)]
+    return rows + [(UNKNOWN_TASTE, MORE_TO_FIND_OUT, None)] if hidden else rows
 
 
 def trait_names(world: SimulationWorld, resident: Resident) -> list[str]:

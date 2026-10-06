@@ -12,6 +12,7 @@ from graphics.palette import PALETTE
 from graphics.screen_layers import ScreenLayers
 from simulation.residents.needs import NEED_NAMES
 from simulation.residents.resident import Resident
+from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
 from simulation.world import SimulationWorld
 from ui.dock import draw_face
 from ui.inventory_view import draw_condition
@@ -26,6 +27,7 @@ from ui.labels import (
     expression_of,
     has_shop,
     relationship_rows,
+    taste_rows,
     trait_names,
 )
 from ui.panel import draw_panel
@@ -55,6 +57,14 @@ EMPTY_TEXT = "No lleva nada"
 AFFORDS_LABEL = "Le llega para"
 AFFORDS_NOTHING = "No le llega para nada de la tienda"
 ROSTER_TITLE = "Asentamiento"
+# The lower part of the panel shows one of two things: how they live, or what they like.
+LIFE_TAB, TASTES_TAB = "life", "tastes"
+TASTES_TITLE = "Gustos"
+TAB_LABELS = {LIFE_TAB: "Gustos", TASTES_TAB: "Volver"}
+TAB_WIDTH = 40
+TASTE_ROW = LINE_HEIGHT + 2
+TASTE_ICONS = {LOVED: "relish", LIKED: "relish", DISLIKED: "disgust", HATED: "disgust"}
+TASTE_COLORS = {LOVED: "lichen", LIKED: "lichen", DISLIKED: "ember", HATED: "ember"}
 
 
 def _title(target: pygame.Surface, font: BitmapFont, text: str, x: int, y: int, width: int) -> int:
@@ -92,6 +102,51 @@ def draw_roster(
         doing = "fuera" if resident.away else describe_action(world, resident)
         left += font.width(resident.name) + 6
         font.draw(target, font.truncate(doing, row.right - left), (left, row.y + 2), PALETTE["stone"])
+
+
+def tab_hitbox(panel: pygame.Rect) -> pygame.Rect:
+    """Where the panel is switched between how a resident lives and what they like: at the right
+    end of the first heading under their bars."""
+    top = panel.y + PADDING + FACE_SIZE[1] + 6 + BAR_ROW * (len(NEED_NAMES) + OTHER_BARS) + 4
+    return pygame.Rect(panel.right - PADDING - TAB_WIDTH, top - 1, TAB_WIDTH, LINE_HEIGHT)
+
+
+def _draw_tab(target: pygame.Surface, font: BitmapFont, panel: pygame.Rect, tab: str) -> None:
+    rect = tab_hitbox(panel)
+    draw_panel(target, rect, fill="shadow", border="lamp")
+    label = TAB_LABELS[tab]
+    font.draw(target, label, (rect.centerx - font.width(label) // 2, rect.y), PALETTE["glow"])
+
+
+def _draw_tastes(
+    target: pygame.Surface,
+    font: BitmapFont,
+    assets: AssetStore,
+    panel: pygame.Rect,
+    position: tuple[int, int],
+    world: SimulationWorld,
+    resident: Resident,
+) -> None:
+    """What the player has found out of what a resident likes, one taste to a line."""
+    x, y = position
+    inner = panel.width - PADDING * 2
+    y = _title(target, font, TASTES_TITLE, x, y, inner - TAB_WIDTH - 3)
+    rows = taste_rows(world, resident)
+    room = (panel.bottom - PADDING - y) // TASTE_ROW
+    if len(rows) > room:
+        left_out = len(rows) - (room - 1)
+        rows = rows[: room - 1] + [(f"y {left_out} más", "", None)]
+    for label, words, leaning in rows:
+        icon = TASTE_ICONS.get(leaning or "")
+        if icon is not None:
+            # The marks are drawn for a bubble of paper, so they are given a scrap of it here.
+            target.fill(PALETTE["paper"], (x, y, MARK_SIZE[0] + 2, MARK_SIZE[1] + 1))
+            target.blit(assets.image(icon_path(icon), size=MARK_SIZE), (x + 1, y))
+        left = x + MARK_SIZE[0] + 5
+        said = font.width(words)
+        font.draw(target, font.truncate(label, inner - (left - x) - said - 6), (left, y), PALETTE["bone" if leaning else "stone"])
+        font.draw(target, words, (panel.right - PADDING - said, y), PALETTE[TASTE_COLORS.get(leaning or "", "dust")])
+        y += TASTE_ROW
 
 
 def relationship_hitboxes(panel: pygame.Rect, world: SimulationWorld, resident: Resident) -> list[tuple[pygame.Rect, str]]:
@@ -143,6 +198,7 @@ def draw_resident_panel(
     world: SimulationWorld,
     resident: Resident,
     layers: ScreenLayers | None = None,
+    tab: str = LIFE_TAB,
 ) -> None:
     draw_panel(target, panel)
     x, y = panel.x + PADDING, panel.y + PADDING
@@ -186,6 +242,10 @@ def draw_resident_panel(
         y += BAR_ROW
     y += 4
 
+    if tab == TASTES_TAB:
+        _draw_tastes(target, font, assets, panel, (x, y), world, resident)
+        _draw_tab(target, font, panel, tab)
+        return
     traits = trait_names(world, resident)
     if traits:
         y = _title(target, font, TRAITS_TITLE, x, y, inner)
@@ -200,6 +260,7 @@ def draw_resident_panel(
         y += LINE_HEIGHT + 6
 
     y = _title(target, font, RELATIONSHIPS_TITLE, x, y, inner)
+    _draw_tab(target, font, panel, tab)
     for other, score, label, icon in relationship_rows(world, resident, MAX_RELATIONSHIPS):
         target.blit(faces.marker(other.resident_id), (x, y))
         left = x + MARKER_SIZE[0] + 3

@@ -614,8 +614,8 @@ Still open here:
 - Tastes for kinds of thing the game does not have, such as music beyond the one radio, reading,
   clothes or animals, have nothing to show themselves on
 - A meal is taken the same way every time: nobody tires of the stew they have had all week
-- An item edited in the game before this has no taste tags until they are written into its
-  `data.json` by hand: the editor has no field for them yet (P22)
+- An item edited in the game before this, and that the game does not have of its own, has no
+  taste tags until they are given to it in the item editor (P22)
 
 ### S20 — Tastes in people, and tastes that change (needs S19) — planned
 - **Hidden tastes in people**, as data like the others: liking those sure of themselves,
@@ -802,21 +802,32 @@ Still open here:
 - Lists and inventories still show the 16×16 icon, twice as large in a resident's panel
 - The game's own pixel bodies, on the canvas, hold it at the canvas's resolution
 
-### P22 — What they like, as far as it is known (needs S19) — planned
-- **A resident's tastes in their panel, as the player knows them**: `???` for what is unknown,
-  "Parece gustarle" or "Parece no gustarle" for what is suspected, "Le encanta" or "Lo detesta"
-  for what is known. Never a number, and nothing that has not been found out
-- **A reaction is seen where it happens**: on the face and over the head of whoever eats or is
-  handed something, and as a line in the dock. Today it is a line in the log like any other
-- **Notice when something is found out**, and when what was known is in doubt again (S20). Today
-  that is a line in the log too
-- The tastes in people of S20 go in the same list once there are any
-- **The item editor has a field for taste tags**, beside the one for the tags the game works by,
-  and `docs/modding.md` says which is which
+### P22 — What they like, as far as it is known (needs S19) — done
+- **A resident's tastes in their panel, as the player knows them.** The panel has two faces,
+  switched with a button on the first heading under the bars: how they live, as before, and
+  `Gustos`. There, one taste to a line, the surest first: "Parece gustarle", "Parece darle igual"
+  or "Parece no gustarle" for what is suspected; "Le encanta", "Le gusta", "Le da igual", "No le
+  gusta" or "Lo detesta" for what is known; and `???` for what has not shown, which stands alone
+  while nothing has. Never a number, and nothing that has not been found out
+- **A reaction is seen where it happens**: a heart or a cross in a bubble over the head of
+  whoever eats, uses or is handed something, and a line in the log
+- **Notice when something is found out**: an eye over their head after the reaction, and the
+  line of it in the log in a colour of its own
+- **The item editor has a field for taste tags**, beside the one for the tags the game works by.
+  They are written as they are kept, and one that cannot be a taste tag is not saved.
+  `docs/modding.md` says which is which
 
 Done when: a new settlement shows `???` for everyone; a meal a resident loves is seen to be loved
 on the map, and their panel says so afterwards; and nowhere on the screen is there a figure for
 a taste.
+
+Still open here:
+- The face of whoever eats does not change with how they take it
+- The dock under the map shows a reaction only as one more line of what has been going on
+- Nothing tells what a resident's favourite is: only each taste by itself
+- The list is not sorted by what it is a taste for, and a long one is cut short with a count
+- The tastes in people of S20, and a taste in doubt again, have nowhere to show yet
+- The game's own icons for these are a heart and a cross: nobody has drawn them
 
 ## Later
 - SQLite persistence

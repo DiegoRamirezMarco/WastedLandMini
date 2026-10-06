@@ -9,6 +9,7 @@ from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.item_icons import ItemIcons
 from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
+from simulation.items.item import taste_tags
 from scenes.scene import canvas_position
 from simulation.items.custom_content import merged_item_data, validate_item_data
 from simulation.world import SimulationWorld
@@ -21,7 +22,7 @@ TOOLS_LEFT = 8
 FIELDS_LEFT = 470
 FIELD_WIDTH = 322
 FIELD_HEIGHT = 16
-FIELD_STEP = 38
+FIELD_STEP = 36
 SWATCH = (27, 16)
 SWATCHES_PER_ROW = 6
 BRUSHES = (1, 3, 6, 10)
@@ -34,7 +35,8 @@ FIELDS = (
     ("category", "Categoría"),
     ("base_value", "Valor base"),
     ("description", "Descripción"),
-    ("tags", "Etiquetas (separadas por comas)"),
+    ("tags", "Etiquetas de reglas (separadas por comas)"),
+    ("preference_tags", "Gustos: a qué sabe o qué tiene (por comas)"),
     ("effects", "Efectos (nombre=numero, ... )"),
     ("properties", "Propiedades (nombre=numero, ... )"),
 )
@@ -148,6 +150,7 @@ class ItemEditor:
             "base_value": str(definition.base_value),
             "description": definition.description,
             "tags": ", ".join(definition.tags),
+            "preference_tags": ", ".join(definition.preference_tags),
             "effects": _number_text(definition.effects),
             "properties": _number_text(definition.properties),
         }
@@ -185,8 +188,10 @@ class ItemEditor:
             "tags": [tag.strip() for tag in self.values["tags"].split(",") if tag.strip()],
             "effects": _parse_numbers(self.values["effects"]),
             "properties": _parse_numbers(self.values["properties"]),
-            # There is no field for these yet: what the item has is written back as it is.
-            "preference_tags": list(self.world.registries.items.resolve(self.item_id).preference_tags),
+            # Written as they are kept: lower case, underscores for spaces, each of them once.
+            "preference_tags": list(
+                taste_tags([tag for tag in self.values["preference_tags"].split(",") if tag.strip()])
+            ),
         }
 
     def save(self) -> bool:

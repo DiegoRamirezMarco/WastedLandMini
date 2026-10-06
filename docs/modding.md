@@ -69,7 +69,8 @@ custom_content/items/canned_beans/
 
 `icon.png` replaces the built-in drawing when the IDs match. To replace only the drawing, keep a
 minimal `data.json` containing just `{"id": "canned_beans"}`. The editable definition fields are
-`name`, `article`, `category`, `description`, `base_value`, `tags`, `effects` and `properties`.
+`name`, `article`, `category`, `description`, `base_value`, `tags`, `preference_tags`, `effects`
+and `properties`.
 Lists and mappings supplied by a patch replace that whole field; omitted fields are inherited.
 
 The same files can be made from inside the game. Select a resident or a container placed on the

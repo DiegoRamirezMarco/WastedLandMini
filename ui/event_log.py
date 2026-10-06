@@ -8,11 +8,14 @@ import pygame
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE, Color
 from simulation.events.event import DomainEvent
+from simulation.tastes.taste_system import FOUND_OUT_EVENT
 from ui.labels import format_time
 from ui.panel import draw_panel
 
 HISTORY = 200
 PADDING = 5
+# Something learned about someone is of little weight as an event and worth catching the eye all the same.
+FOUND_OUT_COLOR = "teal"
 
 
 class EventFeed:
@@ -32,6 +35,8 @@ class EventFeed:
 
     def color(self, event: DomainEvent) -> Color:
         """Events that matter more stand out more."""
+        if event.event_type == FOUND_OUT_EVENT:
+            return PALETTE[FOUND_OUT_COLOR]
         if event.importance >= self._intervention_from:
             return PALETTE["ember"]
         if event.importance >= self._noteworthy_from:
