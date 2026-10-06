@@ -4,8 +4,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from simulation.items.item import ItemDefinition
-from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED, NEUTRAL, TasteSettings
+from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED, NEUTRAL, TasteSettings, side_of
 from simulation.tastes.taste import CATEGORY, HIGHEST, ITEM, LOWEST, TAG, TasteProfile, key_of
+
+__all__ = ["Moment", "felt", "liking", "reaction_to", "side_of"]
 
 
 @dataclass(frozen=True)
@@ -73,9 +75,3 @@ def reaction_to(score: float, settings: TasteSettings) -> str:
         return LIKED
     return NEUTRAL
 
-
-def side_of(reaction: str) -> int:
-    """Which way a reaction goes: -1 against, 1 for, 0 neither."""
-    if reaction in (HATED, DISLIKED):
-        return -1
-    return 1 if reaction in (LIKED, LOVED) else 0

@@ -617,12 +617,16 @@ Still open here:
 - An item edited in the game before this, and that the game does not have of its own, has no
   taste tags until they are given to it in the item editor (P22)
 
-### S20 — Tastes in people, and tastes that change (needs S19) — planned
-- **Hidden tastes in people**, as data like the others: liking those sure of themselves,
-  disliking the aggressive, liking gossip, hating to be told what to do, liking the generous,
-  being drawn to the funny, distrusting whoever is in charge. They weigh on how an exchange with
-  someone is taken, and so on what is felt for them, one way only as every relationship is
-- They are found out as tastes for things are, from how an exchange is seen to go
+### S20 — Tastes in people, and tastes that change (needs S19) — done
+- **Hidden tastes in people**, as data like the others: for those sure of themselves, for the
+  aggressive, for the generous, for the lively, for whoever keeps the watch, for gossip, and for
+  being told what to do. Each says what the other has to be like, what post they have to hold or
+  what has to be passing between the two, and which feeling it moves. They weigh on what is felt
+  for someone at the end of a friendly exchange and on being told a rumour, one way only as
+  every relationship is
+- **Being told what to do** counts for more or less with a resident by that taste: the player's
+  advice weighs up to two fifths more or less
+- They are found out as tastes for things are, from what passes between people
 - **What is lived moves what has been learned, and never the leaning**: a taste is the two
   together. It moves by how much the thing mattered, so that one meal like any other hardly
   counts and nearly dying of one counts for a great deal. A good meal with `spicy` in it adds to
@@ -630,20 +634,37 @@ Still open here:
   coming to depend on what is consumed, having a thing often and what it is tied to
 - **The first time of a taste leaves a small mark of its own**: the leaning is made, the meal is
   taken as the two say, and a little is learned from how it went
-- **What moved a taste is remembered** ("Me puse enfermo después de comer comida fermentada"),
-  and the memory does not move it a second time: an event that has had its say has had it,
-  unless a rule says a memory goes on working
-- A taste that has moved is not known any longer for sure: what the player knew goes back to
-  suspected
+- **A meal may turn on whoever eats it**: an item with a `sickens` property does, with that
+  chance. The bundled pizza has one. They are hurt, turn against the thing and, less, against
+  what it tasted of, by how bad it was
+- **What moved a taste is remembered** ("Enfermé después de comer una pizza radiactiva"), and
+  the memory does not move it a second time: nothing reads it back
+- **Nobody knows a taste has moved until they see it**: what the player has of it is how it
+  looked the last time it showed. Seen to go the other way, it is back to being suspected, the
+  new way, and found out again from there. The same goes for each resident who was there
 
-Done when: two residents take the same order, the same joke and the same gift from the same
-person differently, and the relationship shows it; someone taken ill by a meal likes its taste
+Done when: two residents take the same person, the same piece of gossip and the same piece of
+advice differently, and the relationship shows it; someone taken ill by a meal likes its taste
 tags less afterwards, has a memory that says why, and stops choosing what carries them; and ten
 weeks pass with three seeds without anyone's tastes all running to one end of the scale.
 
 Tests it is not done without: something good adding to what is learned and something bad taking
 from it, each by how much it mattered; the leaning left as it was; and a taste moved once by an
 event and its memory together, not twice.
+
+Still open here:
+- Nothing in the game is funny: being drawn to the funny is being drawn to the lively
+- Whoever is in charge is whoever keeps the watch. There is nobody else to distrust
+- A taste in people moves what is felt for someone and nothing else: not who is sought out to
+  talk to, nor who is believed
+- Tastes in people are not learned: nothing lived through moves them yet
+- Nobody tires of what they have every day: having a thing again only ever takes a taste the
+  way it was already going
+- Coming to depend on something is having a taste for it grow faster and farther. Nobody goes
+  looking for it, and nobody misses it
+- A grief, a fight or a death moves no taste: only a meal that turns on someone does
+- Being told what to do is being given advice by the player. No resident orders another about
+- Of the game's own foods none can make anyone ill
 
 ### P16 — The way in (needs S18) — done
 - **A main menu**: go on with the settlement being played or the saved one, start a new one,
@@ -826,7 +847,8 @@ Still open here:
 - The dock under the map shows a reaction only as one more line of what has been going on
 - Nothing tells what a resident's favourite is: only each taste by itself
 - The list is not sorted by what it is a taste for, and a long one is cut short with a count
-- The tastes in people of S20, and a taste in doubt again, have nowhere to show yet
+- Tastes in people are in the list with the rest. A taste in doubt again is told as one newly
+  suspected: nothing says that it was thought otherwise before
 - The game's own icons for these are a heart and a cross: nobody has drawn them
 
 ## Later

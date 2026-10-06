@@ -7,5 +7,6 @@
   "base_value": 18,
   "tags": ["meal", "custom"],
   "preference_tags": ["junk_food", "weird", "salty"],
-  "effects": {"hunger": -35, "stress": -5}
+  "effects": {"hunger": -35, "stress": -5},
+  "properties": {"sickens": 0.08}
 }

@@ -3,9 +3,10 @@
 from dataclasses import dataclass, field
 
 LOWEST, HIGHEST = -100.0, 100.0
-# The kinds of thing a taste can be for: a category of item, a taste tag, one item in particular.
-CATEGORY, TAG, ITEM = "category", "tag", "item"
-KINDS = (CATEGORY, TAG, ITEM)
+# The kinds of thing a taste can be for: a category of item, a taste tag, one item in particular,
+# and something about other people or about what passes between two of them.
+CATEGORY, TAG, ITEM, PEOPLE = "category", "tag", "item", "people"
+KINDS = (CATEGORY, TAG, ITEM, PEOPLE)
 
 
 def key_of(kind: str, name: str) -> str:
@@ -41,6 +42,7 @@ class TasteProfile:
     categories: dict[str, Taste] = field(default_factory=dict)
     tags: dict[str, Taste] = field(default_factory=dict)
     items: dict[str, Taste] = field(default_factory=dict)
+    people: dict[str, Taste] = field(default_factory=dict)
 
     def of(self, kind: str) -> dict[str, Taste]:
         if kind == CATEGORY:
@@ -49,6 +51,8 @@ class TasteProfile:
             return self.tags
         if kind == ITEM:
             return self.items
+        if kind == PEOPLE:
+            return self.people
         raise ValueError(f"Unknown kind of taste: {kind}")
 
     def find(self, kind: str, name: str) -> Taste | None:

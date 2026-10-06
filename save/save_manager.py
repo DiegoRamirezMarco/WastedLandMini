@@ -21,6 +21,7 @@ from simulation.residents.personality import Personality
 from simulation.residents.resident import FACINGS, Resident
 from simulation.rng import SimulationRNG
 from simulation.social.relationship import Relationship
+from simulation.tastes.settings import REACTIONS
 from simulation.tastes.taste import KINDS, Taste, TasteProfile
 from simulation.work.expedition import Expedition
 from simulation.work.expedition_system import EXPEDITION_ACTION
@@ -55,13 +56,15 @@ FIRST_ECONOMY_VERSION = 8
 # Version 18 added where a new settlement is in its opening. Older saves are simply past it.
 # Version 19 added tastes, what has been found out of them, and who made a present of an item.
 # Older saves have none: tastes are made as things are met, as in a settlement just begun.
+# Version 20 added tastes in people and how each taste looked the last time it showed. A save from
+# before has no tastes in people yet, and what was known of the rest is shown as it stands.
 LAST_MAP_CHANGE_VERSION = 16
 FIRST_URBANISM_VERSION = 17
 FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 19
+    CURRENT_VERSION = 20
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -192,6 +195,10 @@ class SaveManager:
             "taste_knowledge": {
                 observer_id: {subject_id: dict(tastes) for subject_id, tastes in subjects.items()}
                 for observer_id, subjects in world.taste_knowledge.seen.items()
+            },
+            "taste_seen_as": {
+                observer_id: {subject_id: dict(tastes) for subject_id, tastes in subjects.items()}
+                for observer_id, subjects in world.taste_knowledge.seen_as.items()
             },
             "tutorial": {
                 "step": world.tutorial.step_id,
@@ -395,6 +402,10 @@ class SaveManager:
                     if isinstance(shown, (int, float)) and not isinstance(shown, bool)
                 }
                 world.taste_knowledge.seen.setdefault(str(observer_id), {})[str(subject_id)] = seen
+        for observer_id, subjects in _object_or_empty(data.get("taste_seen_as")).items():
+            for subject_id, tastes in _object_or_empty(subjects).items():
+                looked = {str(key): str(reaction) for key, reaction in _object_or_empty(tastes).items() if reaction in REACTIONS}
+                world.taste_knowledge.seen_as.setdefault(str(observer_id), {})[str(subject_id)] = looked
 
     def _restore_tutorial(self, world: SimulationWorld, data: dict[str, Any]) -> None:
         """Put a settlement back where it was in its opening. One saved at a step that is gone is past it."""

@@ -24,6 +24,10 @@ Optional fields include `description`, `base_value`, `tags`, `preference_tags` a
 `effects` maps a need (`hunger`, `thirst`, `tiredness`, `social`, `stress`) to the change from
 using or eating the item.
 
+`properties` holds other numbers about the item: `wear` and `damage`, and `sickens`, the chance
+from 0 to 1 that eating or drinking it makes someone ill. Whoever it does turns against it, and
+against what it tastes of.
+
 `tags` and `preference_tags` are two different things:
 
 - `tags` are what the game works by: `food`, `weapon`, `radio`, `custom`. They never make anyone

@@ -289,7 +289,7 @@ room. An argument's importance rises with the resentment between the two.
   not on the resident: how much they like a category of item, a taste tag, or one item in
   particular, from -100 to 100. The rules are in `data/tastes.json`.
 - A taste is two numbers kept apart: the **leaning** they came with, which never changes, and
-  what they have **learned** since, which nothing moves yet. The taste is the two together.
+  what they have **learned** since. The taste is the two together.
 - **Taste tags** are an item's `preference_tags`. They are not its `tags`, which are for rules and
   sorting and never make a taste. There is no list of them: whatever an item carries is one.
 - A profile starts with what the resident's traits give (`tastes` in `data/traits.json`) and
@@ -317,6 +317,27 @@ room. An argument's importance rises with the resentment between the two.
   way it goes. Suspected, it says liked, disliked or neither; known, which of the five. There is
   never a number in it.
 - A taste for something no content brings any longer stays in the save and does nothing.
+- **What is lived moves what is learned**, by how good or bad it was and how much it mattered
+  (`TasteSystem.learn`): a meal like any other hardly counts, and nearly dying of one counts for
+  a great deal. Having a thing again adds a little to the taste for each of its tags, the way
+  the reaction went, less each time and only so far; tags named as `habits` go faster and
+  farther. The first time of a taste leaves a small mark of its own. A present leaves something
+  of what is felt for the giver on the thing given.
+- **A meal may turn on whoever eats it**: an item with a `sickens` property does, with that
+  chance. They are hurt (`sickness`), turn against the thing and, less, against each thing it
+  tasted of, and keep a memory of it. Nothing reads the memory back: what moved the taste has
+  moved it once.
+- **Nobody knows a taste has moved until they see it.** What an onlooker has of a taste is how
+  it looked the last time it showed. Seeing it go the other way puts them back to suspecting
+  it, the new way, however sure they were.
+- **Tastes in people** are tastes like the others, of the kind `people`, defined as data: what
+  the other has to be like (`who`, by their personality), what post they have to hold (`jobs`),
+  or what has to be passing between the two (`when`: a piece of gossip, being given advice), and
+  which feeling it moves. At the end of a friendly exchange, and when told a rumour, each one
+  that comes into it moves what the resident feels for the other, one way only, and shows a
+  little. A leaning for one is made the first time it comes into it.
+- **Being told what to do** counts for more or less by that taste: it scales how much the
+  player's advice weighs when a resident decides.
 
 ## Friendship, romance and couples
 

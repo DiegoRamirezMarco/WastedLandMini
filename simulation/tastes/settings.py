@@ -3,7 +3,9 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from simulation.tastes.taste import CATEGORY, ITEM, TAG
+from simulation.residents.personality import Personality
+from simulation.social.relationship import FEELINGS
+from simulation.tastes.taste import CATEGORY, ITEM, PEOPLE, TAG
 
 HATED, DISLIKED, NEUTRAL, LIKED, LOVED = "hated", "disliked", "neutral", "liked", "loved"
 # From the worst to the best.
@@ -11,6 +13,33 @@ REACTIONS = (HATED, DISLIKED, NEUTRAL, LIKED, LOVED)
 # What a reaction is to: a meal, a drink, a thing used, a thing handed over.
 EATEN, DRUNK, USED, GIVEN = "eaten", "drunk", "used", "given"
 UNKNOWN, SUSPECTED, KNOWN = "unknown", "suspected", "known"
+# What may be passing between two people when a taste in people comes into it: any friendly
+# exchange, a piece of gossip, or being told what to do.
+EXCHANGE, RUMOR, ADVICE = "exchange", "rumor", "advice"
+OCCASIONS = (EXCHANGE, RUMOR, ADVICE)
+
+
+def side_of(reaction: str) -> int:
+    """Which way a reaction goes: -1 against, 1 for, 0 neither."""
+    if reaction in (HATED, DISLIKED):
+        return -1
+    return 1 if reaction in (LIKED, LOVED) else 0
+
+
+@dataclass(frozen=True)
+class PeopleTaste:
+    """Something about another person, or about what passes between two, that a resident may like or not."""
+
+    taste_id: str
+    name: str
+    # What the other has to be like: for each side of their personality, the least and the most.
+    who: dict[str, tuple[float, float]] = field(default_factory=dict)
+    # Jobs any one of which the other has to hold.
+    jobs: tuple[str, ...] = ()
+    # What has to be passing between them. With none given, any friendly exchange.
+    when: tuple[str, ...] = ()
+    # The feeling for the other that it moves.
+    feeling: str = "affection"
 
 
 @dataclass(frozen=True)
@@ -73,11 +102,35 @@ class TasteSettings:
     names: dict[str, dict[str, str]] = field(default_factory=dict)
     # What is said of a reaction, by what it is to and which it is, with `{name}`, `{thing}` and `{giver}`.
     lines: dict[str, dict[str, str]] = field(default_factory=dict)
+    # What there is to like or not about people, by ID.
+    people: dict[str, PeopleTaste] = field(default_factory=dict)
+    # How far the strongest taste in people moves a feeling each time it comes into it, how much
+    # that shows, and how much more or less advice counts with whoever feels strongly about being given it.
+    people_push: float = 2.0
+    people_shows: float = 0.4
+    advice_weight: float = 0.4
+    # How far something lived through that mattered as much as anything can moves what is learned.
+    learning: float = 60.0
+    # How much the first time of a taste matters, and being handed a thing by someone.
+    first_mark: float = 0.05
+    keepsake_mark: float = 0.15
+    # What having a thing again adds to or takes from the taste for each of its tags, and how far
+    # that alone can take it. Tags named in `habits` go that many times as fast and as far.
+    exposure: float = 0.4
+    exposure_cap: float = 12.0
+    habits: dict[str, float] = field(default_factory=dict)
+    # The harm a meal that turns on someone does, and the harm that matters as much as anything can.
+    # Its tags are blamed this much of what the thing itself is.
+    sickness_harm: tuple[int, int] = (8, 30)
+    sickness_full: float = 30.0
+    sickness_tags: float = 0.5
 
     def effects_of(self, reaction: str) -> ReactionEffects:
         return self.effects.get(reaction, ReactionEffects())
 
     def name_of(self, kind: str, name: str) -> str | None:
+        if kind == PEOPLE:
+            return self.people[name].name if name in self.people else None
         return self.names.get(kind, {}).get(name)
 
 
@@ -89,6 +142,9 @@ def taste_settings_from_data(data: dict[str, Any]) -> TasteSettings:
     worth = _object(data.get("worth"))
     found_out = _object(data.get("found_out"))
     quirk = leaning.get("quirk_range", defaults.quirk_range)
+    learned = _object(data.get("learning"))
+    with_people = _object(data.get("with_people"))
+    harm = learned.get("sickness_harm", defaults.sickness_harm)
     thresholds = {**defaults.thresholds, **{str(k): float(v) for k, v in _object(data.get("thresholds")).items()}}
     settings = TasteSettings(
         category_weight=float(weights.get("category", defaults.category_weight)),
@@ -131,7 +187,47 @@ def taste_settings_from_data(data: dict[str, Any]) -> TasteSettings:
             str(how): {str(reaction): str(line) for reaction, line in _object(lines).items()}
             for how, lines in _object(data.get("lines")).items()
         },
+        people={
+            str(taste_id): PeopleTaste(
+                taste_id=str(taste_id),
+                name=str(values.get("name", taste_id)),
+                who={str(side): (float(span[0]), float(span[1])) for side, span in _object(values.get("who")).items()},
+                jobs=tuple(str(job) for job in values.get("jobs", [])),
+                when=tuple(str(occasion) for occasion in values.get("when", [])),
+                feeling=str(values.get("feeling", "affection")),
+            )
+            for taste_id, values in _object(data.get("people")).items()
+            if isinstance(values, dict)
+        },
+        people_push=float(with_people.get("push", defaults.people_push)),
+        people_shows=float(with_people.get("shows", defaults.people_shows)),
+        advice_weight=float(with_people.get("advice", defaults.advice_weight)),
+        learning=float(learned.get("most", defaults.learning)),
+        first_mark=float(learned.get("first_time", defaults.first_mark)),
+        keepsake_mark=float(learned.get("present", defaults.keepsake_mark)),
+        exposure=float(learned.get("exposure", defaults.exposure)),
+        exposure_cap=float(learned.get("exposure_cap", defaults.exposure_cap)),
+        habits={str(tag): float(times) for tag, times in _object(learned.get("habits")).items()},
+        sickness_harm=(int(harm[0]), int(harm[1])),
+        sickness_full=float(learned.get("sickness_full", defaults.sickness_full)),
+        sickness_tags=float(learned.get("sickness_tags", defaults.sickness_tags)),
     )
+    sides = set(vars(Personality()))
+    for taste in settings.people.values():
+        if taste.feeling not in FEELINGS:
+            raise ValueError(f"Taste in people {taste.taste_id} moves an unknown feeling: {taste.feeling}")
+        if set(taste.who) - sides:
+            raise ValueError(f"Taste in people {taste.taste_id} asks for unknown sides of a personality: {sorted(set(taste.who) - sides)}")
+        if set(taste.when) - set(OCCASIONS):
+            raise ValueError(f"Taste in people {taste.taste_id} comes into unknown occasions: {sorted(set(taste.when) - set(OCCASIONS))}")
+        if not (taste.who or taste.jobs or taste.when):
+            raise ValueError(f"Taste in people {taste.taste_id} is for nobody and nothing in particular")
+    if settings.sickness_harm[0] > settings.sickness_harm[1] or settings.sickness_harm[0] < 1 or settings.sickness_full <= 0:
+        raise ValueError("The harm of a meal that turns on someone must be a range of at least 1, and what counts as full harm more than nothing")
+    if min(settings.learning, settings.exposure, settings.exposure_cap, settings.first_mark, settings.keepsake_mark) < 0:
+        raise ValueError("What moves a taste is given as amounts that are not negative")
+    if any(times <= 0 for times in settings.habits.values()):
+        raise ValueError("A habit is so many times as fast as anything else: more than nothing")
     unknown = (set(settings.effects) | set(_object(data.get("thresholds")))) - set(REACTIONS)
     if unknown:
         raise ValueError(f"Unknown reactions in the taste settings: {sorted(unknown)}")
@@ -143,7 +239,7 @@ def taste_settings_from_data(data: dict[str, Any]) -> TasteSettings:
     if not 0 < settings.suspected_at <= settings.known_at:
         raise ValueError("A taste is suspected before it is known")
     if set(settings.names) - {CATEGORY, TAG, ITEM}:
-        raise ValueError("Tastes are named by category and by tag")
+        raise ValueError("Tastes are named by category and by tag, and those in people where they are defined")
     return settings
 
 

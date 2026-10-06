@@ -29,5 +29,10 @@
     "treated_per_day": 30,
     "from_need": "hunger",
     "worsens_per_day": 12
+  },
+  "sickness": {
+    "name": "una intoxicación",
+    "heal_per_day": 30,
+    "treated_per_day": 60
   }
 }

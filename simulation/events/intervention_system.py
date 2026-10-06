@@ -353,6 +353,9 @@ class InterventionSystem:
         if decision.job_id is not None:
             inputs.update(world.staffing.decision_inputs(world, resident, decision.job_id))
         heed = advice_influence(resident, ADVICE_STRENGTH)
+        if option is not None:
+            # Some cannot stand being told what to do, and some would rather be.
+            heed *= world.tastes.heed(world, resident)
         scores: dict[str, float] = {}
         for outcome_id, outcome in definition.outcomes.items():
             score = sum(weight * inputs[name] for name, weight in outcome.score.items())
@@ -391,6 +394,8 @@ class InterventionSystem:
         scores = self.scores(world, decision, option)
         noisy = {outcome_id: score + world.rng.random() * SCORE_NOISE for outcome_id, score in scores.items()}
         chosen = definition.outcomes[max(noisy, key=lambda outcome_id: noisy[outcome_id])]
+        if option is not None:
+            world.tastes.advised(world, resident)
 
         resident.needs.apply(chosen.needs)
         if target is not None:

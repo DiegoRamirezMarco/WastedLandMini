@@ -266,7 +266,7 @@ class MeetingTests(unittest.TestCase):
             taste = profile.find(TAG, tag)
             self.assertIsNotNone(taste, tag)
             self.assertEqual(taste.leaning, leaning_for(7, "marta", TAG, tag, self.world.registries.tastes))
-            self.assertEqual(taste.learned, 0.0)
+            self.assertLess(abs(taste.learned), 5.0, "the first time leaves a small mark at the most")
         self.assertIsNotNone(profile.find(CATEGORY, "food"))
         slimy = profile.tags["slimy"]
         self.tastes.react(self.world, self.marta, self.algae, EATEN)

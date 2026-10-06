@@ -288,6 +288,13 @@ class BuiltInRegistries:
         for item_id in self.items.ids():
             if self.items.get(item_id).properties.get("wear", 0.0) < 0:
                 raise ValueError(f"Item {item_id} has negative wear")
+            if not 0.0 <= self.items.get(item_id).properties.get("sickens", 0.0) <= 1.0:
+                raise ValueError(f"Item {item_id} makes whoever eats it ill with a chance outside 0 to 1")
+        for taste in self.tastes.people.values():
+            # Jobs are tolerated only if they exist: a taste for whoever holds a post nobody can hold is a mistake.
+            unknown = [job for job in taste.jobs if job not in self.jobs]
+            if unknown and self.jobs:
+                raise ValueError(f"Taste in people {taste.taste_id} names unknown jobs: {unknown}")
         for trait_id in self.traits.ids():
             given = self.traits.get(trait_id).get("tastes", {})
             if not isinstance(given, dict) or not all(

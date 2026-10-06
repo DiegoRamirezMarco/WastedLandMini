@@ -14,6 +14,7 @@ from simulation.knowledge.fact import (
 from simulation.memory.memory import Memory
 from simulation.residents.resident import Resident
 from simulation.social.rumor import Rumor
+from simulation.tastes.settings import RUMOR
 from world.map import Tile
 from world.visibility import line_of_sight, within_range
 
@@ -231,4 +232,6 @@ def share_rumor(world: "SimulationWorld", teller: Resident, listener: Resident) 
                 location_id=room.room_id if room is not None else None,
             )
         )
+        # Whoever is fond of gossip is the fonder of whoever brings it, and the other way about.
+        world.tastes.take_to(world, listener, teller, RUMOR)
     return rumor

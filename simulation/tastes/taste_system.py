@@ -1,4 +1,5 @@
-"""Tastes at work in the settlement: made as things are met, shown in how they are taken, and found out."""
+"""Tastes at work in the settlement: made as things are met, shown in how they are taken, moved by
+what is lived through, and found out."""
 
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
@@ -7,6 +8,7 @@ from simulation.ai.utility_ai import need_urgency
 from simulation.events.event import DomainEvent
 from simulation.items.item import ItemDefinition, ItemInstance
 from simulation.items.registry import UNKNOWN_CATEGORY
+from simulation.memory.memory import Memory
 from simulation.residents.needs import NEED_NAMES
 from simulation.residents.resident import Resident
 from simulation.rng import SimulationRNG
@@ -14,14 +16,18 @@ from simulation.tastes.knowledge import PLAYER
 from simulation.tastes.leaning import leaning_for
 from simulation.tastes.reaction import Moment, felt, liking, reaction_to, side_of
 from simulation.tastes.settings import (
+    ADVICE,
     DISLIKED,
+    EXCHANGE,
+    GIVEN,
     KNOWN,
     LIKED,
     NEUTRAL,
     SUSPECTED,
     UNKNOWN,
+    PeopleTaste,
 )
-from simulation.tastes.taste import CATEGORY, ITEM, TAG, Taste, TasteProfile, key_of, parts_of
+from simulation.tastes.taste import CATEGORY, HIGHEST, ITEM, LOWEST, PEOPLE, TAG, Taste, TasteProfile, key_of, parts_of
 
 if TYPE_CHECKING:
     from simulation.world import SimulationWorld
@@ -35,6 +41,8 @@ SUSPECTED_IMPORTANCE = 12
 KNOWN_IMPORTANCE = 22
 MENTION_IMPORTANCE = 10
 REFUSAL_IMPORTANCE = 12
+# What is remembered of a meal that turned on someone: how much it weighs at the least and at the most.
+SICKNESS_MEMORY = (20.0, 60.0)
 # What a spoken taste and a swap turned down are filed under among the lines.
 MENTIONED, REFUSED = "mentioned", "refused"
 FOOD_CATEGORY = "food"
@@ -63,7 +71,12 @@ class TasteSystem:
                     profile.tags[str(tag)] = Taste(leaning=float(value))
                     # A trait is there for anyone to see, and so is the taste that comes of it.
                     world.taste_knowledge.observe(
-                        PLAYER, resident.resident_id, key_of(TAG, str(tag)), settings.known_at, settings
+                        PLAYER,
+                        resident.resident_id,
+                        key_of(TAG, str(tag)),
+                        settings.known_at,
+                        settings,
+                        reaction_to(float(value), settings),
                     )
         return profile
 
@@ -81,14 +94,19 @@ class TasteSystem:
             tastes[name] = Taste(leaning=leaning)
         return tastes[name]
 
-    def meet(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> None:
-        """Have a resident come across an item: whatever of it they had no taste for, they have now."""
+    def meet(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> list[str]:
+        """Have a resident come across an item: whatever of it they had no taste for, they have now.
+
+        Returns the tastes that were made for it, which are the ones it is their first time of.
+        """
         if definition.category == UNKNOWN_CATEGORY:
-            return
+            return []
+        before = set(self.profile(world, resident).keys())
         self.taste(world, resident, CATEGORY, definition.category)
         for tag in definition.preference_tags:
             self.taste(world, resident, TAG, tag)
         self.taste(world, resident, ITEM, definition.item_id)
+        return [key for key in self.profile(world, resident).keys() if key not in before]
 
     def liking(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> float:
         """How much a resident likes an item, by the tastes they have so far. Makes none."""
@@ -195,7 +213,7 @@ class TasteSystem:
         settings = world.registries.tastes
         if definition.category == UNKNOWN_CATEGORY:
             return NEUTRAL
-        self.meet(world, resident, definition)
+        first_time = self.meet(world, resident, definition)
         feelings = world.relationships.get((resident.resident_id, giver.resident_id)) if giver is not None else None
         moment = Moment(
             need=self._need(resident, definition),
@@ -237,7 +255,121 @@ class TasteSystem:
             world.emit_event(event, at=resident.tile)
             onlookers.extend(event.witnesses)
         self._show_reaction(world, resident, definition, reaction, effects.shows, onlookers)
+        self._learn_from(world, resident, definition, reaction, first_time, moment.fondness if how == GIVEN else 0.0)
         return reaction
+
+    # ----- what living does to a taste -----
+
+    def learn(
+        self, world: "SimulationWorld", resident: Resident, kind: str, name: str, push: float, importance: float
+    ) -> float:
+        """Have something lived through move a taste: what was learned, never the leaning.
+
+        `push` is how good or bad it was, from -1 to 1, and `importance` how much it mattered,
+        from 0 to 1: a meal like any other hardly counts, and nearly dying of one counts for a
+        great deal. Returns how far the taste moved.
+        """
+        tastes = self.profile(world, resident).of(kind)
+        taste = tastes.get(name) or self.taste(world, resident, kind, name)
+        if taste is None:
+            # No feeling for the thing itself until now: this is where one begins.
+            taste = tastes[name] = Taste()
+        before = taste.learned
+        moved = max(-1.0, min(1.0, push)) * max(0.0, min(1.0, importance)) * world.registries.tastes.learning
+        # What is learned cannot take the taste past the ends of the scale.
+        taste.learned = max(LOWEST - taste.leaning, min(HIGHEST - taste.leaning, taste.learned + moved))
+        return taste.learned - before
+
+    def _learn_from(
+        self,
+        world: "SimulationWorld",
+        resident: Resident,
+        definition: ItemDefinition,
+        reaction: str,
+        first_time: list[str],
+        fondness: float,
+    ) -> None:
+        """What taking a thing leaves behind: a little for having it again, a little more the
+        first time, and something of who it came from."""
+        settings = world.registries.tastes
+        side = side_of(reaction)
+        profile = self.profile(world, resident)
+        for tag in definition.preference_tags if side else ():
+            taste = profile.tags[tag]
+            habit = settings.habits.get(tag, 1.0)
+            # Having it again adds less each time, and nothing once that alone has taken it as far as it goes.
+            room = max(0.0, 1.0 - abs(taste.learned) / (settings.exposure_cap * habit)) if settings.exposure_cap else 0.0
+            self.learn(world, resident, TAG, tag, side, settings.exposure * habit * room / settings.learning if settings.learning else 0.0)
+            if key_of(TAG, tag) in first_time:
+                self.learn(world, resident, TAG, tag, side, settings.first_mark)
+        if fondness:
+            # Something of the giver stays with the thing.
+            self.learn(world, resident, ITEM, definition.item_id, fondness / 100.0, settings.keepsake_mark)
+
+    def sickened(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition, harm: float) -> None:
+        """A meal has turned on someone. They turn against it, and against what it tasted of, by how bad it was, and remember why."""
+        settings = world.registries.tastes
+        importance = min(1.0, harm / settings.sickness_full)
+        self.learn(world, resident, ITEM, definition.item_id, -1.0, importance)
+        for tag in definition.preference_tags:
+            self.learn(world, resident, TAG, tag, -1.0, importance * settings.sickness_tags)
+        low, high = SICKNESS_MEMORY
+        world.memories.remember(
+            resident.resident_id,
+            Memory(
+                f"Enfermé después de comer {definition.article} {definition.name}.",
+                low + (high - low) * importance,
+                -0.8,
+                tags=["taste", "sickness"],
+                timestamp=world.clock.total_minutes,
+            ),
+        )
+
+    # ----- what they like in people -----
+
+    def _concerns(self, taste: PeopleTaste, other: Resident | None, occasion: str) -> bool:
+        """Whether a taste in people comes into what is passing between a resident and someone."""
+        if occasion not in (taste.when or (EXCHANGE,)):
+            return False
+        if not (taste.who or taste.jobs):
+            return True
+        if other is None:
+            return False
+        if taste.jobs and other.job_id not in taste.jobs:
+            return False
+        return all(low <= getattr(other.personality, side) <= high for side, (low, high) in taste.who.items())
+
+    def take_to(self, world: "SimulationWorld", resident: Resident, other: Resident, occasion: str = EXCHANGE) -> None:
+        """Have what a resident likes and dislikes in people weigh on what they feel for
+        someone, once something has passed between the two. It goes one way only."""
+        settings = world.registries.tastes
+        for definition in settings.people.values():
+            if not self._concerns(definition, other, occasion):
+                continue
+            taste = self.taste(world, resident, PEOPLE, definition.taste_id)
+            if taste is None:
+                continue
+            moved = taste.value / 100.0 * settings.people_push
+            if moved:
+                world.relationship(resident.resident_id, other.resident_id).adjust(definition.feeling, moved)
+            self._shown(world, resident, key_of(PEOPLE, definition.taste_id), settings.people_shows, [other.resident_id])
+
+    def heed(self, world: "SimulationWorld", resident: Resident) -> float:
+        """How much being told what to do counts with a resident, beside anyone else: 1 for no more and no less."""
+        settings = world.registries.tastes
+        factor = 1.0
+        for definition in settings.people.values():
+            if self._concerns(definition, None, ADVICE):
+                taste = self.taste(world, resident, PEOPLE, definition.taste_id)
+                factor += (taste.value if taste is not None else 0.0) / 100.0 * settings.advice_weight
+        return max(0.0, factor)
+
+    def advised(self, world: "SimulationWorld", resident: Resident) -> None:
+        """A resident has been told what to do, and done as they would: something of how they take that shows."""
+        settings = world.registries.tastes
+        for definition in settings.people.values():
+            if self._concerns(definition, None, ADVICE):
+                self._shown(world, resident, key_of(PEOPLE, definition.taste_id), settings.people_shows)
 
     def _show_reaction(
         self,
@@ -281,8 +413,9 @@ class TasteSystem:
     ) -> None:
         """Something of a taste has shown: to the player, and to the residents who were there."""
         settings = world.registries.tastes
+        showing = self._band(world, resident, key)
         for observer_id in dict.fromkeys([PLAYER, *onlookers]):
-            became = world.taste_knowledge.observe(observer_id, resident.resident_id, key, shows, settings)
+            became = world.taste_knowledge.observe(observer_id, resident.resident_id, key, shows, settings, showing)
             if became is not None and observer_id == PLAYER:
                 self._announce(world, resident, key, became)
 
@@ -302,16 +435,24 @@ class TasteSystem:
             )
         )
 
-    def _seen_as(self, world: "SimulationWorld", resident: Resident, key: str, state: str) -> str:
-        """A taste as it shows at that much knowledge of it: which way it goes while it is only
-        suspected, and how far once it is known. Never how much."""
+    def _band(self, world: "SimulationWorld", resident: Resident, key: str) -> str:
+        """The reaction a taste comes to as it stands right now."""
         settings = world.registries.tastes
         kind, name = parts_of(key)
         if kind == ITEM:
-            reaction = reaction_to(self.liking(world, resident, world.registries.items.resolve(name)), settings)
-        else:
-            taste = self.profile(world, resident).find(kind, name)
-            reaction = reaction_to(taste.value if taste is not None else 0.0, settings)
+            return reaction_to(self.liking(world, resident, world.registries.items.resolve(name)), settings)
+        taste = self.profile(world, resident).find(kind, name)
+        return reaction_to(taste.value if taste is not None else 0.0, settings)
+
+    def _seen_as(
+        self, world: "SimulationWorld", resident: Resident, key: str, state: str, observer_id: str = PLAYER
+    ) -> str:
+        """A taste as an onlooker has it, at that much knowledge of it: which way it goes while
+        it is only suspected, and how far once it is known. Never how much.
+
+        It is as it looked the last time it showed. If it has moved since, they do not know.
+        """
+        reaction = world.taste_knowledge.looked(observer_id, resident.resident_id, key) or self._band(world, resident, key)
         if state == KNOWN:
             return reaction
         return (DISLIKED, NEUTRAL, LIKED)[side_of(reaction) + 1]
@@ -330,7 +471,7 @@ class TasteSystem:
         for key in world.taste_knowledge.keys(observer_id, resident.resident_id):
             state = world.taste_knowledge.state(observer_id, resident.resident_id, key, settings)
             if state in (SUSPECTED, KNOWN):
-                found.append((key, state, self._seen_as(world, resident, key, state)))
+                found.append((key, state, self._seen_as(world, resident, key, state, observer_id)))
         return found
 
     def label(self, world: "SimulationWorld", key: str) -> str:
@@ -352,7 +493,7 @@ class TasteSystem:
         profile = self.profile(world, resident)
         strong = [
             (key_of(kind, name), reaction)
-            for kind in (TAG, ITEM)
+            for kind in (TAG, ITEM, PEOPLE)
             for name, taste in sorted(profile.of(kind).items())
             if (reaction := reaction_to(taste.value, settings)) != NEUTRAL
         ]

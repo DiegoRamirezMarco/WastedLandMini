@@ -22,6 +22,27 @@
     "refusal": 1.0,
     "purchase": 0.5
   },
+  "learning": {
+    "most": 60,
+    "first_time": 0.05,
+    "present": 0.15,
+    "exposure": 0.4,
+    "exposure_cap": 12,
+    "habits": {"alcoholic": 2.5, "stimulant": 2.5},
+    "sickness_harm": [8, 30],
+    "sickness_full": 30,
+    "sickness_tags": 0.5
+  },
+  "with_people": {"push": 2.0, "shows": 0.4, "advice": 0.4},
+  "people": {
+    "confident": {"name": "la gente segura de sí misma", "who": {"courage": [65, 100]}},
+    "aggressive": {"name": "la gente agresiva", "who": {"aggression": [65, 100]}},
+    "generous": {"name": "la gente generosa", "who": {"greed": [0, 35]}},
+    "lively": {"name": "la gente con chispa", "who": {"sociability": [65, 100]}, "feeling": "attraction"},
+    "authority": {"name": "quien manda", "jobs": ["guard"], "feeling": "trust"},
+    "gossip": {"name": "los cotilleos", "when": ["rumor"]},
+    "being_told": {"name": "que le digan lo que tiene que hacer", "when": ["advice"]}
+  },
   "names": {
     "category": {
       "food": "la comida",

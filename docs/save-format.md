@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 19 (current)
+## Version 20 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `19` |
+| `version` | `20` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -34,7 +34,8 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `deaths` | Everyone who has died: `resident_id`, `name`, `timestamp`, `cause`, `killer_id`, `grave_id` |
 | `history` | Every noteworthy event so far, in full, with its `data` |
 | `event_log` | Text history of emitted events |
-| `tastes` | Per resident ID, their tastes under `category`, `tag` and `item`: each a name with its `leaning` and what has been `learned` |
+| `tastes` | Per resident ID, their tastes under `category`, `tag`, `item` and `people`: each a name with its `leaning` and what has been `learned` |
+| `taste_seen_as` | The same way round as `taste_knowledge`: the reaction each taste looked like the last time it showed |
 | `taste_knowledge` | Per onlooker (`@player`, or a resident ID), per resident, per taste (`tag:sweet`, `item:stew`, `category:food`): how much of it has been seen |
 | `tutorial` | Where a new settlement is in its opening: `step` (a step ID from `data/tutorial.json`, or `null` once it is over or if it never had one), `since` (game minute the step began), `opened`, `acknowledged`, the `deeds` the player has done of what the step asks them to do themselves, and the IDs of the steps `done` |
 
@@ -60,6 +61,8 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 20** added tastes in `people` and `taste_seen_as`. An older save has no tastes in
+  people yet, and what was known of the rest is shown as it stands until it shows again.
 - **Version 19** added `tastes`, `taste_knowledge` and an item's `given_by`. An older save has no
   tastes but those its residents' traits give: the rest are made as things are met, as in a new
   settlement. Tastes for tags and items that no content defines any longer are kept as they are.

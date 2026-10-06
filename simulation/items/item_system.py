@@ -48,6 +48,9 @@ NO_FOOD_IMPORTANCE = 40
 NO_FOOD_NOTICE = "no_food"
 NO_WATER_NOTICE = "no_water"
 BROKEN_IMPORTANCE = 30
+# The chance, from 0 to 1, that eating or drinking a thing makes whoever does it ill, as a property of the item.
+SICKENS = "sickens"
+SICKNESS = "sickness"
 
 
 def _named(definition: ItemDefinition) -> str:
@@ -77,6 +80,21 @@ class ItemSystem:
             if liked:
                 effects["stress"] = effects.get("stress", 0.0) - liked / 100.0 * world.registries.tastes.meal_stress
         return effects
+
+    def take_in(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> None:
+        """Have a resident eat, drink or use an item: it is taken as their tastes have them, it
+        does what it does to their needs, and what is eaten may turn on them."""
+        # Tastes they did not have for it are made first, so that the pleasure of it is theirs.
+        world.tastes.react(world, resident, definition, self.how_taken(definition))
+        resident.needs.apply(self.use_effects(world, resident, definition))
+        chance = definition.properties.get(SICKENS, 0.0)
+        if chance <= 0.0 or definition.category not in (FOOD_CATEGORY, WATER_CATEGORY):
+            return
+        if world.rng.random() >= chance:
+            return
+        harm = float(world.rng.randint(*world.registries.tastes.sickness_harm))
+        if world.health.hurt(world, resident, harm, SICKNESS, f"comer {_named(definition)}"):
+            world.tastes.sickened(world, resident, definition, harm)
 
     def how_taken(self, definition: ItemDefinition) -> str:
         """What is done with an item when it is put to use: eaten, drunk or used."""
@@ -326,9 +344,7 @@ class ItemSystem:
         if item is None or inventory is None:
             return
         definition = world.registries.items.resolve(item.definition_id)
-        # Taken as their tastes have them, and tastes they did not have for it are made first.
-        world.tastes.react(world, resident, definition, self.how_taken(definition))
-        resident.needs.apply(self.use_effects(world, resident, definition))
+        self.take_in(world, resident, definition)
         if definition.category == FOOD_CATEGORY:
             inventory.take_unit(item.instance_id)
             return

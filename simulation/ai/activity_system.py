@@ -209,9 +209,7 @@ class ActivitySystem:
             return
         if use is not None and activity.item_id is not None and not use.sells and use.repairs <= 0:
             item = world.registries.items.resolve(activity.item_id)
-            # Taken as their tastes have them, and tastes they did not have for it are made first.
-            world.tastes.react(world, resident, item, world.items.how_taken(item))
-            resident.needs.apply(world.items.use_effects(world, resident, item))
+            world.items.take_in(world, resident, item)
         resident.activity = None
         resident.current_action = "idle"
 

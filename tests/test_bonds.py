@@ -12,6 +12,7 @@ from simulation.residents.needs import Needs
 from simulation.residents.resident import Resident
 from simulation.social.bonds import AFFAIR_EVENT, TRYST, TRYST_ACTION, bond_settings_from_data, spark
 from simulation.social.social_system import SocialSystem, feeling_changes
+from simulation.tastes.taste import Taste
 from simulation.world import SimulationWorld
 
 MINUTES_PER_DAY = 24 * 60
@@ -394,6 +395,8 @@ class BreakupTests(unittest.TestCase):
         self.tomas, self.vera = _side_by_side(self.world, "tomas", "vera")
         _couple(self.world, "tomas", "vera")
         _feel(self.world, "vera", "tomas", resentment=60, affection=10, trust=-20)
+        # Someone who makes nothing of being told what to do, so that advice weighs what it weighs.
+        self.world.tastes.profile(self.world, self.vera).people["being_told"] = Taste()
 
     def _open(self):
         self.vera.activity = self.world.interventions.maybe_romance(self.world, self.vera)
