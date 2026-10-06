@@ -37,6 +37,7 @@ from scenes.hud import (
     VOICE_INTENT,
     DRAW_INTENT,
     JOBS_INTENT,
+    MANNERS_INTENT,
     LOG_INTENT,
     MINIMAP_INTENT,
     PANEL_TAB_INTENT,
@@ -53,6 +54,7 @@ from settings import SCALE, TILE_SIZE
 from simulation.commands import AcknowledgeTutorialCommand, SetPausedCommand, SetSpeedCommand, SuggestJobCommand
 from simulation.events.event import DomainEvent
 from simulation.items.item_system import USE_ITEM_ACTION
+from simulation.residents.manner import EAT, FIGHT, WALK
 from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
 from simulation.tastes.taste_system import FOUND_OUT_EVENT, REACTION_EVENT
 from simulation.work.work_system import WORK_ACTION
@@ -79,13 +81,17 @@ from world.room import Room
 # Tiles walked in one turn of the walk clip: a step with each foot.
 TILES_PER_STRIDE = 2
 # What a body does besides standing and walking, and how many times a second its clip goes round.
+# Walking, eating and fighting are done each resident's own way, and those go by their manner.
 WALK_CLIP = "walk"
 WORK_CLIP = "work"
 ARGUE_CLIP = "argue"
 FIGHT_CLIP = "fight"
 CARRY_CLIP = "carry"
 EAT_CLIP = "eat"
+EAT_ACTION = "eat"
 CLIP_RATES = {WORK_CLIP: 1.0, ARGUE_CLIP: 1.2, FIGHT_CLIP: 1.5, EAT_CLIP: 1.15}
+# The clip and the rate of whoever has no manner to go by, as on a game with none defined.
+PLAIN_CLIPS = {WALK: WALK_CLIP, EAT: EAT_CLIP, FIGHT: FIGHT_CLIP}
 # The semantic anchors live in the body plan; these only place the mouth a little below and in
 # front of the head joint for each view.
 MOUTH_OFFSETS = {
@@ -196,6 +202,8 @@ class GlobalView:
         self._spoken_seen: tuple[str, str] | None = None
         # Resident the player asked to give a voice to. The game shell picks it up.
         self.requested_voice: str | None = None
+        # Resident whose manners the player asked to choose.
+        self.requested_manners: str | None = None
         # Residents whose body has been drawn are shown as paper dolls, on the window itself.
         self.dolls = dolls if layers is not None else None
         self._doll_facing: dict[str, str] = {}
@@ -326,6 +334,8 @@ class GlobalView:
             self._apply(BUILD_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
             self._apply(VOICE_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_F6:
+            self._apply(MANNERS_INTENT)
         elif event.type == pygame.KEYDOWN and event.key in ZOOM_KEYS:
             self.set_zoom(self.zoom + ZOOM_KEYS[event.key])
         elif event.type == pygame.MOUSEWHEEL:
@@ -588,6 +598,8 @@ class GlobalView:
             self.requested_building_editor = self._building_to_draw()
         elif intent == VOICE_INTENT and self.voices is not None:
             self.requested_voice = self.hud.selected_id or next(iter(self.world.residents), None)
+        elif intent == MANNERS_INTENT:
+            self.requested_manners = self.hud.selected_id or next(iter(self.world.residents), None)
         elif intent == PANEL_TAB_INTENT:
             self.hud.toggle_panel_tab()
         elif intent == TASTE_DEBUG_INTENT:
@@ -1103,10 +1115,10 @@ class GlobalView:
 
         load = self._load_of(resident)
         overlay = CARRY_CLIP if load is not None else None
-        clip = WALK_CLIP if stride is not None else self._clip_of(resident)
+        clip, rate = self._way_of(resident, WALK) if stride is not None else self._clip_of(resident)
         renderer = self.bodies.renderer
         frames = renderer.frames(clip, facing)
-        turn = stride if stride is not None else self.time * CLIP_RATES.get(clip, 0.0)
+        turn = (stride if stride is not None else self.time) * rate
         index = int(turn * frames) % frames
         character = self.bodies.character(resident)
         # A doll stands and moves by its own measures, so that it is as it was drawn. Physics is
@@ -1137,8 +1149,11 @@ class GlobalView:
             hitbox = self._canvas_rect(body)
             self.hitboxes[resident.resident_id] = hitbox
             meal = self._meal_in_hand(resident)
+            weapon = self._weapon_in_hand(resident) if stride is None else None
             if meal is not None and not character.physical:
                 self._hold(meal, facing, character.pose(), spot[1], turn, self._bites_taken(resident))
+            elif weapon is not None and not character.physical:
+                self._hold(weapon, facing, character.pose(), spot[1])
             elif load is not None and doll is not None and not character.physical:
                 # A doll carries its load in its hands, where the carrying clip holds them out.
                 self._hold(load, facing, character.pose(), spot[1])
@@ -1189,26 +1204,56 @@ class GlobalView:
 
         return (remains.skeleton.ground, 1, draw)
 
-    def _clip_of(self, resident: Resident) -> str:
-        """What the body of someone standing still is doing."""
+    def _way_of(self, resident: Resident, occasion: str) -> tuple[str, float]:
+        """The clip a resident walks, eats or fights with, and how fast it goes: their own manner of it.
+
+        Fighting, it is the manner that goes with whatever weapon they carry.
+        """
+        tags = self.world.health.weapon_of(self.world, resident)[1] if occasion == FIGHT else ()
+        kind = self.world.registries.manners.kind_for(occasion, tags)
+        manner = self.world.manner_of(resident, kind.kind_id) if kind is not None else None
+        if manner is None:
+            clip = PLAIN_CLIPS[occasion]
+            return (clip, CLIP_RATES.get(clip, 1.0))
+        return (manner.clip, manner.rate)
+
+    def _fighting(self, resident: Resident) -> bool:
+        """Whether a resident is coming to blows with someone right now."""
+        activity = resident.activity
+        if activity is None or not activity.using or activity.partner_id is None:
+            return False
+        interaction = self.world.registries.interactions.get(activity.action)
+        return interaction is not None and interaction.hostile and interaction.damage is not None
+
+    def _clip_of(self, resident: Resident) -> tuple[str, float]:
+        """What the body of someone standing still is doing, and how many times a second its clip goes round."""
         activity = resident.activity
         if activity is None or not activity.using:
-            return IDLE_CLIP
+            return (IDLE_CLIP, 0.0)
         if activity.partner_id is not None:
+            if self._fighting(resident):
+                return self._way_of(resident, FIGHT)
             interaction = self.world.registries.interactions.get(activity.action)
             if interaction is None or not interaction.hostile:
-                return IDLE_CLIP
-            return FIGHT_CLIP if interaction.damage is not None else ARGUE_CLIP
-        if activity.action == EAT_CLIP:
-            return EAT_CLIP
-        return WORK_CLIP if activity.action == WORK_ACTION else IDLE_CLIP
+                return (IDLE_CLIP, 0.0)
+            return (ARGUE_CLIP, CLIP_RATES[ARGUE_CLIP])
+        if activity.action == EAT_ACTION:
+            return self._way_of(resident, EAT)
+        return (WORK_CLIP, CLIP_RATES[WORK_CLIP]) if activity.action == WORK_ACTION else (IDLE_CLIP, 0.0)
 
     def _meal_in_hand(self, resident: Resident) -> str | None:
         """Definition ID of the food in a resident's hand during an active meal."""
         activity = resident.activity
-        if activity is None or activity.action != EAT_CLIP:
+        if activity is None or activity.action != EAT_ACTION:
             return None
         return self._item_in_hand(resident)
+
+    def _weapon_in_hand(self, resident: Resident) -> str | None:
+        """Definition ID of what a resident fights with, while they are fighting. None for bare hands."""
+        if not self._fighting(resident):
+            return None
+        weapon = self.world.health.weapon_item(self.world, resident)
+        return weapon.definition_id if weapon is not None else None
 
     def _bites_taken(self, resident: Resident) -> int:
         """How many bites are gone from what a resident is eating, by how far through the meal they are."""

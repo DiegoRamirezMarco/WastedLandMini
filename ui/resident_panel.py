@@ -66,6 +66,9 @@ TAB_WIDTH = 40
 TASTE_ROW = LINE_HEIGHT + 2
 TASTE_ICONS = {LOVED: "relish", LIKED: "relish", DISLIKED: "disgust", HATED: "disgust"}
 TASTE_COLORS = {LOVED: "lichen", LIKED: "lichen", DISLIKED: "ember", HATED: "ember"}
+# Beside it, on how they live, the way to where their manners are chosen.
+MANNERS_LABEL = "Maneras"
+MANNERS_WIDTH = 46
 # A switch on the tastes for looking at the figures the game keeps to itself. Not for play.
 DEBUG_LABEL = "Debug"
 DEBUG_WIDTH = 34
@@ -116,6 +119,12 @@ def tab_hitbox(panel: pygame.Rect) -> pygame.Rect:
     end of the first heading under their bars."""
     top = panel.y + PADDING + FACE_SIZE[1] + 6 + BAR_ROW * (len(NEED_NAMES) + OTHER_BARS) + 4
     return pygame.Rect(panel.right - PADDING - TAB_WIDTH, top - 1, TAB_WIDTH, LINE_HEIGHT)
+
+
+def manners_hitbox(panel: pygame.Rect) -> pygame.Rect:
+    """Where a resident's way of walking, eating and fighting is asked for: beside the way to their tastes."""
+    tab = tab_hitbox(panel)
+    return pygame.Rect(tab.left - MANNERS_WIDTH - 3, tab.y, MANNERS_WIDTH, tab.height)
 
 
 def debug_hitbox(panel: pygame.Rect) -> pygame.Rect:
@@ -321,6 +330,9 @@ def draw_resident_panel(
 
     y = _title(target, font, RELATIONSHIPS_TITLE, x, y, inner)
     _draw_tab(target, font, panel, tab)
+    manners = manners_hitbox(panel)
+    draw_panel(target, manners, fill="shadow", border="lamp")
+    font.draw(target, MANNERS_LABEL, (manners.centerx - font.width(MANNERS_LABEL) // 2, manners.y), PALETTE["glow"])
     for other, score, label, icon in relationship_rows(world, resident, MAX_RELATIONSHIPS):
         target.blit(faces.marker(other.resident_id), (x, y))
         left = x + MARKER_SIZE[0] + 3

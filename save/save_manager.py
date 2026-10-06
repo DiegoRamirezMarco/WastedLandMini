@@ -58,13 +58,15 @@ FIRST_ECONOMY_VERSION = 8
 # Older saves have none: tastes are made as things are met, as in a settlement just begun.
 # Version 20 added tastes in people and how each taste looked the last time it showed. A save from
 # before has no tastes in people yet, and what was known of the rest is shown as it stands.
+# Version 21 added each resident's manners: how they walk, eat and fight. Whoever has none
+# chosen, as in any older save, goes by the ones that are theirs by default.
 LAST_MAP_CHANGE_VERSION = 16
 FIRST_URBANISM_VERSION = 17
 FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 20
+    CURRENT_VERSION = 21
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -131,6 +133,7 @@ class SaveManager:
                     "current_action": resident.current_action,
                     "activity": _activity_to_data(resident.activity),
                     "traits": list(resident.traits),
+                    "manners": dict(resident.manners),
                     "job_id": resident.job_id,
                     "post_id": resident.post_id,
                     "work_progress": resident.work_progress,
@@ -286,6 +289,8 @@ class SaveManager:
                 facing=facing if facing in FACINGS else "down",
                 activity=activity,
                 traits=[str(trait) for trait in resident_data.get("traits", [])],
+                # A manner that is no longer defined is forgotten: they go by their own by default.
+                manners=world.registries.manners.tidy(_object_or_empty(resident_data.get("manners"))),
                 job_id=_text_or_none(resident_data.get("job_id")),
                 post_id=_text_or_none(resident_data.get("post_id")),
                 work_progress=int(resident_data.get("work_progress", 0)),

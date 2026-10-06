@@ -41,8 +41,16 @@ class CommandTarget(Protocol):
         ...
 
     def found_resident(
-        self, name: str, age: int, personality: Mapping[str, float], traits: Sequence[str]
+        self,
+        name: str,
+        age: int,
+        personality: Mapping[str, float],
+        traits: Sequence[str],
+        manners: Mapping[str, str] | None = None,
     ) -> str | None:
+        ...
+
+    def set_manner(self, resident_id: str, kind_id: str, manner_id: str) -> bool:
         ...
 
     def acknowledge_tutorial(self) -> bool:
@@ -167,10 +175,25 @@ class FoundResidentCommand:
     age: int = 30
     personality: Mapping[str, float] = field(default_factory=dict)
     traits: Sequence[str] = ()
+    # Their way of doing each kind of thing, by kind. A kind left out goes by their own by default.
+    manners: Mapping[str, str] = field(default_factory=dict)
 
     def apply(self, world: CommandTarget) -> str | None:
         """Returns the ID of whoever now lives there, or None if the settlement would not have them."""
-        return world.found_resident(self.name, self.age, self.personality, self.traits)
+        return world.found_resident(self.name, self.age, self.personality, self.traits, self.manners)
+
+
+@dataclass(frozen=True)
+class SetMannerCommand:
+    """The player's say on how a resident walks, eats or fights. It changes how it looks and nothing else."""
+
+    resident_id: str
+    kind_id: str
+    manner_id: str
+
+    def apply(self, world: CommandTarget) -> bool:
+        """Returns whether they now have it: it must be a manner of that kind, and they must live there."""
+        return world.set_manner(self.resident_id, self.kind_id, self.manner_id)
 
 
 @dataclass(frozen=True)

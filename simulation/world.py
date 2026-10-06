@@ -22,6 +22,7 @@ from simulation.knowledge.knowledge_system import record_fact, witnesses_of
 from simulation.memory.memory_system import MemorySystem
 from simulation.registries import DEFAULT_MAP_ID, BuiltInRegistries, builtin_registries
 from simulation.residents.founding import found_resident
+from simulation.residents.manner import MannerDefinition
 from simulation.residents.personality import Personality
 from simulation.residents.resident import Resident
 from simulation.rng import SimulationRNG
@@ -173,11 +174,29 @@ class SimulationWorld:
         return self.urbanism.remove_building(self, room_id)
 
     def found_resident(
-        self, name: str, age: int, personality: Mapping[str, float], traits: Sequence[str]
+        self,
+        name: str,
+        age: int,
+        personality: Mapping[str, float],
+        traits: Sequence[str],
+        manners: Mapping[str, str] | None = None,
     ) -> str | None:
         """Take in the player's first resident. Returns their ID, or None if there is already someone."""
-        resident = found_resident(self, name, age, personality, traits)
+        resident = found_resident(self, name, age, personality, traits, manners)
         return resident.resident_id if resident is not None else None
+
+    def manner_of(self, resident: Resident, kind_id: str) -> MannerDefinition | None:
+        """How a resident does one kind of thing: as was chosen for them, or else in their own way."""
+        return self.registries.manners.of(resident.resident_id, resident.manners, kind_id)
+
+    def set_manner(self, resident_id: str, kind_id: str, manner_id: str) -> bool:
+        """Give a resident a manner for its kind. Returns whether there was such a resident and such a manner."""
+        resident = self.residents.get(resident_id)
+        manner = self.registries.manners.manners.get(manner_id)
+        if resident is None or manner is None or manner.kind != kind_id:
+            return False
+        resident.manners[kind_id] = manner_id
+        return True
 
     def acknowledge_tutorial(self) -> bool:
         return self.guide.acknowledge(self)

@@ -164,7 +164,8 @@ class TasteScreenTests(unittest.TestCase):
     def test_a_switch_on_the_tastes_shows_the_figures_the_game_keeps_to_itself(self) -> None:
         self.hud.select_resident("raul")
         switch = debug_hitbox(self.hud.layout.panel)
-        self.assertIsNone(self.hud.click(switch.center), "it is not there until the panel is on what they like")
+        # On how they live that corner is the way to their manners: the switch is not there yet.
+        self.assertNotEqual(self.hud.click(switch.center), TASTE_DEBUG_INTENT, "it is not there until the panel is on what they like")
         self.hud.toggle_panel_tab()
         self.assertFalse(self.hud.taste_debug)
         self.view.render()

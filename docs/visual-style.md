@@ -330,6 +330,10 @@ each bone, and the game draws it in whatever pose it is in.
 - Poses are clips of keyframes in the same file: how far each bone is turned from rest and,
   seen from the front, how much shorter it looks when it points at the viewer. Standing, walking,
   working, arguing, fighting and carrying are clips. Walking keeps step with the ground covered.
+- **Walking, eating and fighting are done each resident's own way.** There are three clips for
+  each, and three more for fighting with a knife and with a gun: which one a body goes through
+  is its resident's manner (`data/manners.json`). A weapon is seen in the hand while its owner
+  fights with it.
 - A posed body is drawn once for each frame of each clip and kept. While nothing happens to it,
   showing it is one blit and no physics runs.
 - **A blow** throws the body off its pose and it reels back to it. **A hard one** knocks it

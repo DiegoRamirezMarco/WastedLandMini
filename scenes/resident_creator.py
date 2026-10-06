@@ -1,4 +1,4 @@
-"""Where the player makes the settlement's first resident: a name, an age and a way of being.
+"""Where the player makes the settlement's first resident: a name, an age, a way of being and a way of moving.
 
 The scene only gathers what was chosen. Whether anyone comes of it is the simulation's to say.
 """
@@ -8,12 +8,14 @@ import pygame
 from graphics.font import FONT_CHARS, LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
 from graphics.screen_layers import ScreenLayers
+from scenes.manner_preview import MannerPreview
 from scenes.scene import canvas_position
 from simulation.commands import FoundResidentCommand
 from simulation.residents.founding import AGE_RANGE, MAX_TRAITS, NAME_LENGTH, tidy_name
 from simulation.residents.personality import Personality
 from simulation.world import SimulationWorld
 from ui.button import Button
+from ui.manner_picker import MannerPicker
 from ui.panel import draw_panel
 from ui.slider import Slider
 
@@ -42,8 +44,22 @@ PERSONALITY_LABELS = {
     "impulsiveness": ("Impulso", "actúa antes de pensarlo"),
     "greed": ("Codicia", "mira por lo suyo antes que por lo de todos"),
 }
+# The two faces of the screen: who they are, and how they go about what everybody does.
+PERSON_PAGE, MANNERS_PAGE = "person", "manners"
+PAGE_LABELS = {PERSON_PAGE: "Quién es", MANNERS_PAGE: "Cómo se mueve"}
+PAGES_AT = (470, 16)
+PICKER_AT = (LEFT + 8, 84)
+PICKER_WIDTH = 400
+PREVIEW = pygame.Rect(470, 58, 300, 300)
+MANNERS_HEADING = "Maneras: una de cada fila"
+MANNERS_NOTES = (
+    "No cambian lo que hace ni lo bien que lo hace: solo cómo se le ve hacerlo.",
+    "La figura es la de ejemplo: en cuanto lo dibujes, será él quien se mueva así.",
+    "Se pueden cambiar más adelante: Maneras en su ficha del mapa, o F6.",
+)
 NOTES_TEXT = (
     "Nada de esto le obliga: decide por su cuenta, y tú le aconsejas.",
+    "En Cómo se mueve eliges su manera de andar, de comer y de pelear.",
     "Más adelante puedes volver a dibujarlo desde el mapa (Dibujar) y darle voz (Voz).",
     "Enter lo crea. Esc vuelve sin crear a nadie.",
 )
@@ -58,11 +74,18 @@ class ResidentCreator:
         world: SimulationWorld,
         font: BitmapFont,
         layers: ScreenLayers | None = None,
+        preview: MannerPreview | None = None,
     ) -> None:
         self.canvas = canvas
         self.world = world
         self.font = font
         self.layers = layers
+        # What shows a manner being tried out, if there is anything to show it with.
+        self.preview = preview
+        self.page = PERSON_PAGE
+        # The manner chosen for each kind, and the kind on show beside them.
+        self.manners: dict[str, str] = {}
+        self.shown_kind: str | None = None
         self.closed = True
         # ID of whoever was made, once someone has been.
         self.created: str | None = None
@@ -98,10 +121,21 @@ class ResidentCreator:
         bottom = canvas.get_height() - 30
         self.create_button = Button.at(font, LEFT, bottom, "Crear habitante", ("create",))
         self.close_button = Button.at(font, self.create_button.rect.right + 6, bottom, "Volver", ("close",))
+        self.page_buttons: list[Button] = []
+        x = PAGES_AT[0]
+        for page, label in PAGE_LABELS.items():
+            button = Button.at(font, x, PAGES_AT[1], label, ("page", page))
+            self.page_buttons.append(button)
+            x = button.rect.right + 3
+        self.picker = MannerPicker(font, world.registries.manners, *PICKER_AT, PICKER_WIDTH)
 
     @property
     def buttons(self) -> list[Button]:
-        return [*self.age_buttons, *self.trait_buttons, self.create_button, self.close_button]
+        """The buttons of the face on show, and the ones that are on both."""
+        shared = [*self.page_buttons, self.create_button, self.close_button]
+        if self.page == MANNERS_PAGE:
+            return [*shared, *self.picker.buttons]
+        return [*self.age_buttons, *self.trait_buttons, *shared]
 
     def open(self) -> None:
         """Start from a blank: nobody in particular, of middling everything."""
@@ -111,6 +145,10 @@ class ResidentCreator:
         self.personality = {trait: 50.0 for trait in self.sliders}
         self.notice = ""
         self._held = None
+        self.page = PERSON_PAGE
+        # Until another is picked, the first way there is of each kind.
+        self.manners = {kind.kind_id: buttons[0].intent[2] for kind, _, buttons in self.picker.rows}
+        self.shown_kind = self.picker.rows[0][0].kind_id if self.picker.rows else None
 
     def set_name(self, name: str) -> None:
         self.name = "".join(char for char in name if char in FONT_CHARS)[:NAME_LENGTH]
@@ -125,13 +163,20 @@ class ResidentCreator:
         elif len(self.traits) < MAX_TRAITS:
             self.traits.append(trait_id)
 
+    def set_manner(self, kind_id: str, manner_id: str) -> None:
+        """Choose a way of doing one kind of thing, and have it shown."""
+        manner = self.world.registries.manners.manners.get(manner_id)
+        if manner is not None and manner.kind == kind_id:
+            self.manners[kind_id] = manner_id
+            self.shown_kind = kind_id
+
     def create(self) -> str | None:
         """Ask the settlement to take in whoever has been described. Returns their ID if it did."""
         if not tidy_name(self.name):
             self.notice = NAMELESS
             return None
         created = self.world.apply_command(
-            FoundResidentCommand(self.name, self.age, dict(self.personality), tuple(self.traits))
+            FoundResidentCommand(self.name, self.age, dict(self.personality), tuple(self.traits), dict(self.manners))
         )
         if not isinstance(created, str):
             self.notice = REFUSED
@@ -144,6 +189,10 @@ class ResidentCreator:
             self.set_age(self.age + intent[1])
         elif intent[0] == "trait":
             self.toggle_trait(intent[1])
+        elif intent[0] == "page":
+            self.page, self._held = intent[1], None
+        elif intent[0] == "manner":
+            self.set_manner(intent[1], intent[2])
         elif intent[0] == "create":
             self.create()
         elif intent[0] == "close":
@@ -155,13 +204,16 @@ class ResidentCreator:
                 self.closed = True
             elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 self.create()
+            elif self.page != PERSON_PAGE:
+                # The name is written where it is seen.
+                return
             elif event.key == pygame.K_BACKSPACE:
                 self.set_name(self.name[:-1])
             else:
                 self.set_name(self.name + getattr(event, "unicode", ""))
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             position = canvas_position(event.pos)
-            for trait, slider in self.sliders.items():
+            for trait, slider in self.sliders.items() if self.page == PERSON_PAGE else ():
                 if slider.contains(position):
                     self._held = trait
                     self.personality[trait] = round(slider.value_at(position[0]))
@@ -177,6 +229,8 @@ class ResidentCreator:
 
     def update(self, dt: float) -> None:
         self._blink = (self._blink + dt) % 1.0
+        if self.preview is not None:
+            self.preview.update(dt)
 
     def render(self) -> None:
         if self.layers is not None:
@@ -185,7 +239,36 @@ class ResidentCreator:
         font, canvas = self.font, self.canvas
         font.draw(canvas, TITLE, (LEFT, 14), PALETTE["lamp"], scale=2)
         font.draw(canvas, SUBTITLE, (LEFT, 14 + LINE_HEIGHT * 2 + 2), PALETTE["bone"])
+        for button in self.page_buttons:
+            button.draw(canvas, font, active=button.intent[1] == self.page)
+        if self.page == MANNERS_PAGE:
+            self._render_manners()
+        else:
+            self._render_person()
+        self.create_button.draw(canvas, font, active=bool(tidy_name(self.name)))
+        self.close_button.draw(canvas, font)
+        if self.notice:
+            font.draw(canvas, self.notice, (self.close_button.rect.right + 12, self.close_button.rect.y + 2), PALETTE["glow"])
 
+    def _render_manners(self) -> None:
+        """How they go about what everybody does: a row to each kind, and the one last picked seen moving."""
+        font, canvas = self.font, self.canvas
+        name = tidy_name(self.name) or NO_NAME_YET
+        font.draw(canvas, f"{MANNERS_HEADING} ({name})", (LEFT, PICKER_AT[1] - LINE_HEIGHT - 6), PALETTE["sand"])
+        self.picker.draw(canvas, self.manners, self.shown_kind)
+        shown = self.manners.get(self.shown_kind or "")
+        self.picker.describe(canvas, shown)
+        y = self.picker.bottom + LINE_HEIGHT * 3 + 6
+        for text in MANNERS_NOTES:
+            for line in font.wrap(text, PICKER_WIDTH):
+                font.draw(canvas, line, (LEFT, y), PALETTE["dust"])
+                y += LINE_HEIGHT
+            y += 3
+        if self.preview is not None:
+            self.preview.draw(PREVIEW, None, self.world.registries.manners.manners.get(shown or ""))
+
+    def _render_person(self) -> None:
+        font, canvas = self.font, self.canvas
         font.draw(canvas, "Nombre", (LEFT, NAME_FIELD.y - LINE_HEIGHT - 1), PALETTE["sand"])
         draw_panel(canvas, NAME_FIELD, fill="shadow", border="lamp")
         caret = "_" if self._blink < 0.5 and len(self.name) < NAME_LENGTH else ""
@@ -211,10 +294,6 @@ class ResidentCreator:
                 button.draw(canvas, font, active=button.intent[1] in self.traits)
 
         self._render_who()
-        self.create_button.draw(canvas, font, active=bool(tidy_name(self.name)))
-        self.close_button.draw(canvas, font)
-        if self.notice:
-            font.draw(canvas, self.notice, (self.close_button.rect.right + 12, self.close_button.rect.y + 2), PALETTE["glow"])
 
     def _render_who(self) -> None:
         """Who they are so far, and what each side of their way of being means. Their looks come after."""

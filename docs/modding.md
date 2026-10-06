@@ -191,7 +191,8 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
   `walk_pace`, above 0 and up to 1). A limb ID must be a part of the body in `data/skeleton.json`
   to be seen coming off. Without the file nobody loses anything.
 - An item is a weapon if its `properties` give it a `damage` multiplier, e.g. `{"damage": 1.8}`.
-  The tag `blade` makes the wounds it leaves cuts.
+  The tag `blade` makes the wounds it leaves cuts. `blade` and `firearm` also say in which of
+  their manners whoever carries it fights (see Manners).
 - An object's use heals with `"heals": true`; `"care_job"` names the job whose worker on duty
   makes it heal at the treated rate.
 - An exchange in `data/social.json` is a fight if it has a `damage` range, e.g. `[8, 18]`.
@@ -284,8 +285,9 @@ between the feet, with `y` growing downwards. Angles are in degrees.
 - `clips`: for each view, a list of keyframes that are run through in a loop. A keyframe gives
   bones an angle from rest, or `[angle, scale]` to make one look shorter as well, and may shift
   the whole body with `root`. A positive angle swings a hanging limb to the right of the screen.
-  The game uses `idle`, `walk`, `work`, `argue`, `fight` and, over any of them, `carry`. A clip
-  that is missing stands still.
+  The game uses `idle`, `work`, `argue` and, over any of them, `carry`; walking, eating and
+  fighting use whichever clip the resident's manner names (see Manners below). A clip that is
+  missing stands still.
 - `doll`: how a body is drawn by hand. `unit` is the pixels of a drawing to one of the skeleton's;
   `canvases` gives the size of the body's and the head's in those units; and each entry of `parts`
   is a bone with the canvas it is drawn on and the two points it runs `from` and `to`. `radius`
@@ -322,6 +324,30 @@ between the feet, with `y` growing downwards. Angles are in degrees.
 
 A resident's look is `assets/sprites/bodies/<resident_id>.png`, laid out as in
 `docs/visual-style.md`. One that is missing is drawn in placeholder parts.
+
+## Manners
+
+`data/manners.json` says in what ways a resident can walk, eat and fight. Each resident has one
+of each kind: chosen by the player where the first resident is made or under `Maneras`, and
+otherwise one that is always the same for the same resident ID. A manner changes how a thing
+looks and nothing of what happens.
+
+- `kinds`: each with a `name` and the `occasion` on which it shows: `walk`, `eat` or `fight`.
+  A kind for fighting may have a `weapon_tag`: whoever fights with an item tagged so does it in
+  their manner of that kind, and with any other weapon, or none, in their manner of the kind
+  that has no `weapon_tag`. The game's own are `blade` for `knife` and `firearm` for `shoot`.
+  `prop_tag` is the tag of an item to put in the hand of the figure that tries a manner out; it
+  is the `weapon_tag` unless given.
+- `manners`: each with its `kind`, a `name`, a `description`, the `clip` of
+  `data/skeleton.json` that shows it, and a `rate`: turns of the clip a second, or for walking,
+  turns to a step with each foot, which must be a whole number. The first manner of a kind is
+  the one the screen that makes the first resident starts on.
+- A new manner needs its clip in `data/skeleton.json`, for the `side` and for the `front`. The
+  hand that holds things is the right one (the `held_item` anchor): a clip for a weapon moves
+  that arm. An eating clip has the hand at the mouth a third of the way through, which is when
+  the bite is taken and the crumbs fly.
+- Nothing in the game is tagged `firearm` yet. Give an item that tag and a `damage` and it is
+  fired the way its owner shoots.
 
 ## Jobs
 

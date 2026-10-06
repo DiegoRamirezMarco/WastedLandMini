@@ -1561,22 +1561,27 @@ class GameShellTests(unittest.TestCase):
         view, world = self.game.global_view, self.game.world
         self._stand_together("raul", "tomas")
         raul = world.residents["raul"]
-        self.assertEqual(view._clip_of(raul), "idle")
+
+        def clip() -> str:
+            return view._clip_of(raul)[0]
+
+        self.assertEqual(clip(), "idle")
         raul.activity = Activity("eat", "pantry_1", minutes_left=10, using=True, item_id="canned_beans")
-        self.assertEqual(view._clip_of(raul), "eat")
+        # Eating, fighting and walking are done their own way: the clip is the one of their manner.
+        self.assertEqual(clip(), world.manner_of(raul, "eat").clip)
         raul.activity = Activity("work", using=True)
-        self.assertEqual(view._clip_of(raul), "work")
+        self.assertEqual(clip(), "work")
         raul.activity = Activity("fight", partner_id="tomas", using=True)
-        self.assertEqual(view._clip_of(raul), "fight")
+        self.assertEqual(clip(), world.manner_of(raul, "fight").clip)
         raul.activity = Activity("argument", partner_id="tomas", using=True)
-        self.assertEqual(view._clip_of(raul), "argue")
+        self.assertEqual(clip(), "argue")
         raul.activity = Activity("chat", partner_id="tomas", using=True)
-        self.assertEqual(view._clip_of(raul), "idle")
+        self.assertEqual(clip(), "idle")
         raul.activity = None
         raul.trail = [(raul.x - 1, raul.y), raul.tile]
         view.tick_progress = 0.5
         view.render()
-        self.assertEqual(view.bodies.characters["raul"].clip, "walk")
+        self.assertEqual(view.bodies.characters["raul"].clip, world.manner_of(raul, "walk").clip)
         self.assertEqual(view.bodies.characters["raul"].facing, "right")
         self.assertEqual(view.bodies.characters["tomas"].clip, "idle")
 

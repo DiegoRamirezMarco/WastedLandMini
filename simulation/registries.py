@@ -16,6 +16,7 @@ from simulation.health.injury import (
 from simulation.items.custom_content import load_custom_items
 from simulation.items.item import TASTE_TAG_PATTERN
 from simulation.items.registry import ItemRegistry
+from simulation.residents.manner import MannerSettings, manner_settings_from_data
 from simulation.residents.personality import Personality
 from simulation.social.bonds import BondSettings, bond_settings_from_data
 from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
@@ -149,6 +150,8 @@ class BuiltInRegistries:
     world_events: WorldEventSettings = field(default_factory=WorldEventSettings)
     # How tastes are made, how they are taken, and what they are called.
     tastes: TasteSettings = field(default_factory=TasteSettings)
+    # The ways there are of walking, eating and fighting, for each resident to have their own.
+    manners: MannerSettings = field(default_factory=MannerSettings)
     event_settings: dict[str, Any] = field(default_factory=dict)
     dialogue: dict[str, list[str]] = field(default_factory=dict)
     # The steps a new settlement is led through, and the map it starts on.
@@ -232,6 +235,9 @@ class BuiltInRegistries:
         tastes_path = root / "tastes.json"
         if tastes_path.is_file():
             registries.tastes = taste_settings_from_data(_read_object(tastes_path))
+        manners_path = root / "manners.json"
+        if manners_path.is_file():
+            registries.manners = manner_settings_from_data(_read_object(manners_path))
         tutorial_path = root / "tutorial.json"
         if tutorial_path.is_file():
             registries.tutorial = tutorial_definition_from_data(_read_object(tutorial_path))

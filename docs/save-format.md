@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 20 (current)
+## Version 21 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `20` |
+| `version` | `21` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -20,7 +20,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `terrain`, `rooms` | The live terrain grid and stable room records after changes made in Urbanismo |
 | `urbanism` | Stable placement counters and the terrain kept below constructed buildings, so they can be moved or removed later |
 | `interactables` | Placed objects: `id`, `kind`, tile `x` and `y` |
-| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `lost_limbs` (limb IDs) |
+| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them) |
 | `containers` | Per container object ID, the items inside |
 | `item_count` | Counter behind item IDs |
 | `thefts`, `theft_cooldowns`, `notices` | Record of every theft; last theft per resident; once-a-day notices already given |
@@ -61,6 +61,9 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 21** added each resident's `manners`. Whoever has none chosen for a kind, as in any
+  older save, goes by the one that is theirs by default: always the same for the same resident
+  ID. A manner that is no longer defined, or is kept under a kind it is not of, is dropped.
 - **Version 20** added tastes in `people` and `taste_seen_as`. An older save has no tastes in
   people yet, and what was known of the rest is shown as it stands until it shows again.
 - **Version 19** added `tastes`, `taste_knowledge` and an item's `given_by`. An older save has no

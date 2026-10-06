@@ -50,6 +50,7 @@ def found_resident(
     age: int,
     personality: Mapping[str, float],
     traits: Sequence[str],
+    manners: Mapping[str, str] | None = None,
 ) -> Resident | None:
     """Put the player's first resident just inside the gate.
 
@@ -74,6 +75,8 @@ def found_resident(
         traits=[trait for trait in dict.fromkeys(traits) if world.registries.traits.find(trait) is not None][
             :MAX_TRAITS
         ],
+        # A manner the game does not define is dropped the same way: they go by their own.
+        manners=world.registries.manners.tidy(manners or {}),
         age=min(max(int(age), youngest), oldest),
         credits=world.registries.economy.starting_credits,
     )

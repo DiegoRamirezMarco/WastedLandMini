@@ -43,6 +43,7 @@ from ui.resident_panel import (
     inventory_hitboxes,
     relationship_hitboxes,
     debug_hitbox,
+    manners_hitbox,
     roster_rows,
     tab_hitbox,
 )
@@ -69,6 +70,7 @@ URBANISM_INTENT = ("urbanism",)
 DRAW_INTENT = ("draw",)
 BUILD_INTENT = ("draw_building",)
 VOICE_INTENT = ("voice",)
+MANNERS_INTENT = ("manners",)
 ZOOM_OUT_INTENT = ("zoom", -1)
 ZOOM_IN_INTENT = ("zoom", 1)
 NOTICE_SECONDS = 3.0
@@ -299,6 +301,12 @@ class Hud:
                 return button.intent
         if self.selected_id in self.world.residents and tab_hitbox(self.layout.panel).collidepoint(position):
             return PANEL_TAB_INTENT
+        if (
+            self.selected_id in self.world.residents
+            and self.panel_tab == LIFE_TAB
+            and manners_hitbox(self.layout.panel).collidepoint(position)
+        ):
+            return MANNERS_INTENT
         if (
             self.selected_id in self.world.residents
             and self.panel_tab == TASTES_TAB

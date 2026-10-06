@@ -115,6 +115,9 @@ python -m simulation.headless --days 7 --seed 7
   of voice (young, old, child, monster, robot, or past understanding), then move the sliders:
   tone, speed, tremble, roughness, metal and scramble. Letting go of a slider says a line in
   the voice as it stands. `Guardar` keeps it; `Esc` goes back without
+- `Maneras` in a resident's panel, or `F6`: choose how they walk, eat, fight, shoot and use a
+  knife, three ways of each, with the one picked seen moving beside them. It changes how they
+  look doing it and nothing else, and is theirs as soon as it is picked. `Esc` goes back
 - `Dibujar` in the menu, or `F2`: draw the selected resident. Paint their body and their head
   over the guide, watch them move as you go, and save: from then on that is how they look, in the
   settlement and in their portrait. `Esc` goes back without saving

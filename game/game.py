@@ -26,6 +26,8 @@ from scenes.interaction_view import InteractionView
 from scenes.item_editor import ItemEditor
 from scenes.object_editor import ObjectEditor
 from scenes.main_menu import CONTINUE, DEMO, NEW_GAME, QUIT, MainMenu
+from scenes.manner_editor import MannerEditor
+from scenes.manner_preview import MannerPreview
 from scenes.resident_creator import ResidentCreator
 from scenes.urbanism import UrbanismEditor
 from scenes.voice_editor import VoiceEditor
@@ -61,6 +63,7 @@ EDITOR_SCENE, BUILDING_SCENE, ITEM_SCENE, VOICE_SCENE, URBANISM_SCENE = (
     "urbanism",
 )
 OBJECT_SCENE = "object_editor"
+MANNER_SCENE = "manners"
 NO_DRAWINGS = "No hay carpeta de ilustraciones disponible"
 # Screens that read the keyboard themselves: the way in, and where the first resident is made.
 MENU_SCENE, CREATOR_SCENE = "menu", "creator"
@@ -226,7 +229,11 @@ class Game:
             self.layers,
             self.global_view.object_art,
         )
-        self.creator = ResidentCreator(self.canvas, self.world, self.font, self.layers)
+        # Whoever tries a manner out is seen doing it: in the screen that makes the first resident,
+        # and in the one where anybody's manners are changed.
+        preview = MannerPreview(self.canvas, self.layers, builtin_plan(), self.dolls, self.world.registries, self.icons)
+        self.creator = ResidentCreator(self.canvas, self.world, self.font, self.layers, preview)
+        self.manner_editor = MannerEditor(self.canvas, self.world, self.font, preview, self.layers)
 
     def _report_deed(self, deed: str) -> None:
         """Tell the simulation of something the player has done in an editor, which only the opening cares about."""
@@ -355,6 +362,8 @@ class Game:
             return self.urbanism_editor
         if self.scene_name == VOICE_SCENE and self.voice_editor is not None:
             return self.voice_editor
+        if self.scene_name == MANNER_SCENE:
+            return self.manner_editor
         return self.global_view if self.scene_name == "global" else self.interaction_view
 
     def handle_key(self, key: int) -> None:
@@ -367,6 +376,7 @@ class Game:
             OBJECT_SCENE,
             ITEM_SCENE,
             VOICE_SCENE,
+            MANNER_SCENE,
             URBANISM_SCENE,
         ):
             # Out of the drawing or the voice, not out of the game. The editor closes itself on the same key.
@@ -476,6 +486,8 @@ class Game:
             self.global_view.hud.notify(notice)
         elif self.scene_name == VOICE_SCENE and (self.voice_editor is None or self.voice_editor.closed):
             self.scene_name = "global"
+        elif self.scene_name == MANNER_SCENE and self.manner_editor.closed:
+            self.scene_name = "global"
         elif self.scene_name == "global" and self.global_view.requested_editor is not None and self.doll_editor is not None:
             self.doll_editor.open(self.global_view.requested_editor)
             self.scene_name = EDITOR_SCENE
@@ -507,6 +519,10 @@ class Game:
         elif self.scene_name == "global" and self.global_view.requested_voice is not None and self.voice_editor is not None:
             self.voice_editor.open(self.global_view.requested_voice)
             self.scene_name = VOICE_SCENE
+        elif self.scene_name == "global" and self.global_view.requested_manners is not None:
+            self.manner_editor.open(self.global_view.requested_manners)
+            if not self.manner_editor.closed:
+                self.scene_name = MANNER_SCENE
         elif self.scene_name == "global" and self.global_view.requested_decision is not None:
             self.open_interaction(self.global_view.requested_decision)
         elif self.scene_name == "interaction" and self.interaction_view.closed:
@@ -520,6 +536,7 @@ class Game:
         self.global_view.requested_creator = False
         self.global_view.requested_object_editor = None
         self.global_view.requested_voice = None
+        self.global_view.requested_manners = None
 
     def update_music(self) -> None:
         """Have the music follow the mood of the settlement."""

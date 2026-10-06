@@ -27,6 +27,9 @@ class Resident:
     activity: Activity | None = None
     # IDs of traits from the trait registry.
     traits: list[str] = field(default_factory=list)
+    # Their way of walking, eating and so on: a manner from the manner registry for each kind
+    # chosen for them. A kind not named here goes by one that is always the same for them.
+    manners: dict[str, str] = field(default_factory=dict)
     # Job from the job registry, and the object that is this resident's post for it.
     job_id: str | None = None
     post_id: str | None = None

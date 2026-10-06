@@ -14,6 +14,7 @@ from graphics.palette import PALETTE
 from scenes.body_stage import ground_spot
 from scenes.global_view import BITES_AT, HELD_SIZE
 from settings import SCALE
+from simulation.commands import SetMannerCommand
 from simulation.residents.activity import Activity
 
 INK, CHEESE, SAUCE = PALETTE["ink"], (230, 190, 60), (190, 40, 40)
@@ -281,6 +282,8 @@ class HeldOnTheMapTests(unittest.TestCase):
         self.world = self.game.world
         self.world.clock.paused = True
         self.raul = self.world.residents["raul"]
+        # He eats the way everybody once did, at the pace these meals are timed by.
+        self.world.apply_command(SetMannerCommand("raul", "eat", "eat_calm"))
         self.raul.x, self.raul.y, self.raul.trail, self.raul.facing = 20, 14, [], "right"
         self.raul.inventory.items.clear()
         self.view.centre_on((20.5, 13.5))

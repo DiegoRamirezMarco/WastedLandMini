@@ -856,6 +856,42 @@ Still open here:
   under the bonnet while the tastes are being tried out, and it is to go or be hidden before
   anyone plays for real: with it on, nothing is left to find out
 
+### P23 — A way of their own (needs P21) — done
+Everybody walked, ate and fought through the same clip. Asked for by hand: that the way of doing
+each be chosen where a resident is made and where they are changed, three ways of each to begin
+with, so that everybody has more of a character.
+- **Five kinds of manner, three of each**, as data in `data/manners.json`: walking (firm,
+  shuffling, swaggering), eating (calm, wolfing it down, fussy), fighting bare-handed (boxer,
+  brawler, kicker), shooting (side on, two-handed, from the hip) and using a knife (lunge,
+  slashes, overhand). Twelve new clips in `data/skeleton.json`, from the side and from the front
+- **Each resident has one of each.** It is kept with them and saved. Whoever was never given one,
+  the people who walk in through the gate and everybody in an older save included, has one that
+  is always the same for them, so nobody moves like everybody else
+- **Chosen where the first resident is made**: the screen has a second face, `Cómo se mueve`,
+  with a row to each kind and the figure of the guide trying out the one last picked
+- **Changed under `Maneras`**, in a resident's panel or with `F6`: the same rows, with their own
+  doll moving if they have been drawn. What is picked is theirs at once
+- **The weapon says which manner a fight is fought in**: something tagged `blade` the knife one,
+  something tagged `firearm` the shooting one, anything else the bare-handed one. **It is seen
+  in the hand** while the fight lasts
+- A manner changes what is seen and nothing of what happens: two settlements that differ only
+  in their manners play out the same
+
+Done when: two residents side by side are seen to walk differently; a new game's first resident
+walks the way that was picked for them before they were drawn; and a fight with a knife in the
+pocket is fought with the knife out.
+
+Still open here:
+- **There is no gun in the game yet.** The shooting manners are chosen and seen tried out, empty
+  handed, and are used by anything tagged `firearm`; nothing is
+- Whoever walks in is not asked: their manners are the ones their ID gives them
+- A manner does not follow from what someone is like: a coward may swagger
+- What is in the hand does not turn with it, so a knife points the same way all through a slash
+- Seen from the front or from behind, on the game's own pixel bodies, the three ways of a kind
+  are hard to tell apart: they were made to be read on a doll, from the side
+- Carrying, working and arguing are still done one way by everybody
+- The opening names `Cómo se mueve` but does not wait for it: it can be passed by without a look
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it

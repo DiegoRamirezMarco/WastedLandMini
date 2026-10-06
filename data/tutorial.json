@@ -4,7 +4,7 @@
     {
       "id": "founder",
       "title": "Alguien que empiece",
-      "text": "Este solar está vacío. Di quién va a levantar aquí un asentamiento: su nombre, su edad y su forma de ser. Su aspecto lo dibujas tú a continuación.",
+      "text": "Este solar está vacío. Di quién va a levantar aquí un asentamiento: su nombre, su edad y su forma de ser, y en Cómo se mueve su manera de andar, de comer y de pelear. Su aspecto lo dibujas tú a continuación.",
       "goal": {"type": "residents", "count": 1},
       "gifts": [{"item": "hoe", "count": 1, "to": "resident"}],
       "focus": "creator",

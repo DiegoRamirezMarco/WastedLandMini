@@ -1,0 +1,71 @@
+{
+  "kinds": {
+    "walk": {"name": "Andar", "occasion": "walk"},
+    "eat": {"name": "Comer", "occasion": "eat", "prop_tag": "food"},
+    "fight": {"name": "Pelear", "occasion": "fight"},
+    "shoot": {"name": "Disparar", "occasion": "fight", "weapon_tag": "firearm"},
+    "knife": {"name": "Cuchillo", "occasion": "fight", "weapon_tag": "blade"}
+  },
+  "manners": {
+    "walk_steady": {
+      "kind": "walk", "name": "Firme", "clip": "walk", "rate": 1,
+      "description": "Paso largo y parejo, los brazos acompasados."
+    },
+    "walk_shuffle": {
+      "kind": "walk", "name": "Arrastrado", "clip": "walk_shuffle", "rate": 2,
+      "description": "Encorvado, a pasitos, sin levantar los pies del suelo."
+    },
+    "walk_swagger": {
+      "kind": "walk", "name": "Chulo", "clip": "walk_swagger", "rate": 1,
+      "description": "Pecho fuera, zancada larga y mucho braceo."
+    },
+    "eat_calm": {
+      "kind": "eat", "name": "Tranquilo", "clip": "eat", "rate": 1.15,
+      "description": "Bocado a bocado, con una mano."
+    },
+    "eat_wolf": {
+      "kind": "eat", "name": "Engullendo", "clip": "eat_wolf", "rate": 2.1,
+      "description": "Con las dos manos y la cabeza metida en la comida."
+    },
+    "eat_dainty": {
+      "kind": "eat", "name": "Con remilgos", "clip": "eat_dainty", "rate": 0.7,
+      "description": "Derecho, despacio y con la otra mano debajo, por las migas."
+    },
+    "fight_boxer": {
+      "kind": "fight", "name": "Boxeador", "clip": "fight", "rate": 1.5,
+      "description": "Guardia alta y golpes cortos con las dos manos."
+    },
+    "fight_brawler": {
+      "kind": "fight", "name": "Camorrista", "clip": "fight_brawl", "rate": 1.2,
+      "description": "Coge impulso y suelta mamporros de lado a lado."
+    },
+    "fight_kicker": {
+      "kind": "fight", "name": "A patadas", "clip": "fight_kick", "rate": 1.1,
+      "description": "Se cubre con los brazos y pega con la pierna."
+    },
+    "shoot_duelist": {
+      "kind": "shoot", "name": "De perfil", "clip": "shoot_aim", "rate": 0.9,
+      "description": "Un brazo estirado, el otro a la espalda, y apunta con calma."
+    },
+    "shoot_braced": {
+      "kind": "shoot", "name": "A dos manos", "clip": "shoot_braced", "rate": 1.1,
+      "description": "Agachado, con las dos manos en el arma."
+    },
+    "shoot_hip": {
+      "kind": "shoot", "name": "Desde la cadera", "clip": "shoot_hip", "rate": 1.7,
+      "description": "Sin apuntar, rápido, echado hacia atrás."
+    },
+    "knife_lunge": {
+      "kind": "knife", "name": "Estocada", "clip": "knife_lunge", "rate": 1.1,
+      "description": "Punta por delante: un paso largo y a fondo."
+    },
+    "knife_slash": {
+      "kind": "knife", "name": "Tajos", "clip": "knife_slash", "rate": 1.3,
+      "description": "Barre el aire de arriba abajo y de vuelta."
+    },
+    "knife_overhand": {
+      "kind": "knife", "name": "Puñalada", "clip": "knife_overhand", "rate": 1.0,
+      "description": "El cuchillo en alto, y lo clava hacia abajo."
+    }
+  }
+}

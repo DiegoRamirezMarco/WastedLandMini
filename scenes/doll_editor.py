@@ -27,6 +27,7 @@ from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from scenes.scene import canvas_position
+from simulation.residents.manner import OCCASIONS
 from simulation.world import SimulationWorld
 from skeleton.plan import SkeletonPlan
 from skeleton.rig import Skeleton
@@ -112,6 +113,7 @@ PREVIEW_FOOT = 40
 # While it is being measured the figure stands still, and is shown larger to be taken hold of.
 MEASURE_DETAIL = 12.0
 PREVIEW_RATE = 1.2
+# What the preview goes through. Walking and fighting are shown the way of whoever is being drawn.
 PREVIEW_CLIPS = ("walk", "idle", "work", "fight")
 PREVIEW_SECONDS = 4.0
 SAVED_TEXT = "Guardado: ya anda así por el asentamiento"
@@ -763,6 +765,13 @@ class DollEditor:
 
         return draw
 
+    def _own_clip(self, name: str) -> str:
+        """The clip for one turn of the preview: their own manner of it, where it is something done in a manner."""
+        resident = self.world.residents.get(self.resident_id or "")
+        kind = self.world.registries.manners.kind_for(name) if name in OCCASIONS else None
+        manner = self.world.manner_of(resident, kind.kind_id) if resident is not None and kind is not None else None
+        return manner.clip if manner is not None else name
+
     def _show_preview(self, screen: pygame.Surface) -> None:
         """The doll going through its clips, facing one way and then the other."""
         place = self.layers.on_screen(PREVIEW)
@@ -770,7 +779,7 @@ class DollEditor:
         if self._preview is None:
             return
         turn = int(self.time / PREVIEW_SECONDS)
-        clip = PREVIEW_CLIPS[turn % len(PREVIEW_CLIPS)]
+        clip = self._own_clip(PREVIEW_CLIPS[turn % len(PREVIEW_CLIPS)])
         facing = DOLL_FACINGS["right" if (turn // len(PREVIEW_CLIPS)) % 2 == 0 else "left"]
         phase, detail = self.time * PREVIEW_RATE, PREVIEW_DETAIL
         if self.tool == MEASURE_TOOL:

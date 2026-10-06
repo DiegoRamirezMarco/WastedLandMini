@@ -543,7 +543,7 @@ class SavedChangesTests(unittest.TestCase):
 
         loaded = manager.from_data(json.loads(json.dumps(manager.to_data(world))), world.registries)
 
-        self.assertEqual(manager.to_data(loaded)["version"], 20)
+        self.assertEqual(manager.to_data(loaded)["version"], manager.CURRENT_VERSION)
         self.assertEqual(loaded.taste_profiles, world.taste_profiles)
         self.assertEqual(loaded.taste_knowledge, world.taste_knowledge)
         self.assertEqual(loaded.tastes.found_out(loaded, loaded.residents["raul"]), world.tastes.found_out(world, raul))
