@@ -16,7 +16,9 @@ UNKNOWN, SUSPECTED, KNOWN = "unknown", "suspected", "known"
 # What may be passing between two people when a taste in people comes into it: any friendly
 # exchange, a piece of gossip, or being told what to do.
 EXCHANGE, RUMOR, ADVICE = "exchange", "rumor", "advice"
-OCCASIONS = (EXCHANGE, RUMOR, ADVICE)
+# Seeing someone with something on them that they have taken.
+UNDER = "under"
+OCCASIONS = (EXCHANGE, RUMOR, ADVICE, UNDER)
 
 
 def side_of(reaction: str) -> int:
@@ -38,6 +40,8 @@ class PeopleTaste:
     jobs: tuple[str, ...] = ()
     # What has to be passing between them. With none given, any friendly exchange.
     when: tuple[str, ...] = ()
+    # Signs of something taken, any one of which the other has to have on them.
+    under: tuple[str, ...] = ()
     # The feeling for the other that it moves.
     feeling: str = "affection"
 
@@ -194,6 +198,7 @@ def taste_settings_from_data(data: dict[str, Any]) -> TasteSettings:
                 who={str(side): (float(span[0]), float(span[1])) for side, span in _object(values.get("who")).items()},
                 jobs=tuple(str(job) for job in values.get("jobs", [])),
                 when=tuple(str(occasion) for occasion in values.get("when", [])),
+                under=tuple(str(sign) for sign in values.get("under", [])),
                 feeling=str(values.get("feeling", "affection")),
             )
             for taste_id, values in _object(data.get("people")).items()

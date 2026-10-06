@@ -304,6 +304,9 @@ class TradeSystem:
         """
         if definition.category == UNKNOWN_CATEGORY or price <= 0:
             return 0.0
+        if definition.substance is not None and world.substances.craves(world, resident, definition.item_id):
+            # What they cannot do without, they want above anything, unless they have some by them.
+            return 0.0 if self._owned_units(world, resident, definition.item_id) else MAX_WANT
         job = world.work.job_of(world, resident)
         if job is not None and job.tool is not None and job.tool.tag in definition.tags:
             return 0.0 if self._carries_tagged(world, resident, job.tool.tag) else MAX_WANT

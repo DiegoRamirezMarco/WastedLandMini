@@ -1,0 +1,32 @@
+{
+  "routes": {
+    "swallowed": "se toma",
+    "sniffed": "esnifa",
+    "injected": "se inyecta",
+    "smoked": "se fuma"
+  },
+  "signs": {
+    "drunk": "había bebido de más",
+    "high": "iba hasta arriba",
+    "smoke": "llenó el sitio de humo"
+  },
+  "fills_the_room": "smoked",
+  "habit_growth": 0.15,
+  "max_chance": 0.6,
+  "passes_after_minutes": 7200,
+  "care_factor": 3,
+  "withdrawal": {
+    "per_minute": {
+      "stress": 0.04
+    },
+    "work_pace": 0.8
+  },
+  "craving_wish": 0.8,
+  "impulse_from": 60,
+  "hooks_from": 0.08,
+  "relapse_minutes": 2880,
+  "allowed_minutes": 180,
+  "resist_minutes": 360,
+  "resist_stress": 8,
+  "overdose_kind": "intoxication"
+}

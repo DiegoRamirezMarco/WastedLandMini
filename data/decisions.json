@@ -760,5 +760,99 @@
         }
       }
     ]
+  },
+  "substance_tempted": {
+    "event_type": "substance_tempted",
+    "window_minutes": 30,
+    "cooldown_minutes": 0,
+    "anger_threshold": 0,
+    "importance": 50,
+    "text": "{name} está a punto de darle a algo que engancha: {thing}",
+    "prompt": "Solo es {thing}. ¿Qué puede pasar?",
+    "outcomes": {
+      "take": {
+        "score": {
+          "bias": 0.45,
+          "impulsiveness": 0.3,
+          "stress": 0.4
+        },
+        "substance": "take",
+        "text": "{name} no se lo piensa más: {thing}"
+      },
+      "resist": {
+        "score": {
+          "bias": 0.4,
+          "courage": 0.25,
+          "mood": 0.25
+        },
+        "substance": "resist",
+        "needs": {
+          "stress": 4
+        },
+        "text": "{name} lo deja estar: {thing}"
+      }
+    },
+    "options": [
+      {
+        "id": "discourage",
+        "text": "Déjalo, no te hace falta",
+        "influence": {
+          "resist": 0.5,
+          "take": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      }
+    ]
+  },
+  "substance_habit": {
+    "event_type": "substance_tempted",
+    "window_minutes": 30,
+    "cooldown_minutes": 4320,
+    "anger_threshold": 0,
+    "importance": 50,
+    "text": "{name} va otra vez a por lo suyo: {thing}",
+    "prompt": "Lo necesito. Es {thing} y ya está.",
+    "outcomes": {
+      "take": {
+        "score": {
+          "bias": 0.45,
+          "impulsiveness": 0.3,
+          "stress": 0.4
+        },
+        "substance": "take",
+        "text": "{name} no se lo piensa más: {thing}"
+      },
+      "resist": {
+        "score": {
+          "bias": 0.4,
+          "courage": 0.25,
+          "mood": 0.25
+        },
+        "substance": "resist",
+        "needs": {
+          "stress": 4
+        },
+        "text": "{name} lo deja estar: {thing}"
+      }
+    },
+    "options": [
+      {
+        "id": "discourage",
+        "text": "Déjalo, no te hace falta",
+        "influence": {
+          "resist": 0.5,
+          "take": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      }
+    ]
   }
 }

@@ -343,9 +343,13 @@ class WorkSystem:
         Raw material is taken from what the worker has fetched.
         """
         rule = job.produces
+        making = rule.item
         if rule.into == INTO_STATION:
             target = world.containers.get(placed.object_id)
-            full = target is None or target.count(rule.item) >= rule.max_stock
+            if target is not None:
+                # Of the things made here, the one there is least of.
+                making = min((rule.item, *rule.also), key=target.count)
+            full = target is None or target.count(making) >= rule.max_stock
         else:
             target = resident.inventory
             full = hauling.carried(resident, rule.item) >= rule.carry
@@ -359,6 +363,7 @@ class WorkSystem:
         speed *= world.health.work_pace(world, resident)
         speed *= self.mood_pace(resident)
         speed *= world.trade.unpaid_pace(world, resident)
+        speed *= world.substances.work_pace(world, resident)
         # What has been worked out about a trade makes it go faster.
         speed *= world.research.factor(world, f"{JOB_PACE}{job.job_id}")
         needed = math.ceil(rule.every_minutes / speed)
@@ -370,7 +375,7 @@ class WorkSystem:
             if material is None:
                 return hauling.errand(world, resident, rule, shift_left) is None
             resident.inventory.take_unit(material.instance_id)
-        world.stock(target, rule.item, 1, None)
+        world.stock(target, making, 1, None)
         resident.work_progress = 0
         if tool is not None:
             world.items.wear(world, resident, tool)

@@ -24,6 +24,9 @@ class ProduceRule:
     skip_tag: str | None = None
     # How many units a worker carries in one trip, to the receiving container or from the source.
     carry: int = 6
+    # Other things made at the same post, in turn with `item`: whichever there is least of. Only
+    # for what stays at the post.
+    also: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -105,9 +108,12 @@ def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition
             source_category=str(rule["from_category"]) if "from_category" in rule else None,
             skip_tag=str(rule["skip_tag"]) if "skip_tag" in rule else None,
             carry=int(rule.get("carry", 6)),
+            also=tuple(str(item) for item in rule.get("also", [])),
         )
         if produces.carry < 1:
             raise ValueError(f"Job {job_id} must carry at least 1 unit per trip")
+        if produces.also and produces.into != INTO_STATION:
+            raise ValueError(f"Job {job_id} can only make several things if they stay at the post")
     supplies = None
     if "supplies" in data:
         rule = data["supplies"]

@@ -62,6 +62,10 @@ Event types emitted so far:
 | `taste_mentioned` | A resident speaks of something they like or cannot stand, at the end of a friendly exchange | 10 |
 | `trade_refused` | A resident will not take a thing in a swap because it is not to their liking (once a day between the two) | 12 |
 | `theft_committed` | A resident takes someone else's thing or credit, or takes from what the settlement holds in common. For credit and the fund, `victim_id` (`@fund` for the settlement) and `amount` in `data` | 45, or 30 for a meal or a drink taken without leave |
+| `substance_taken` | A resident takes a substance, with `item_id` and `route` in `data` | 10 |
+| `substance_seen` | Others see it on them, or are reached by the smoke, with `item_id` and `sign` in `data`. They are its participants after whoever took it | 15 |
+| `substance_tempted` | A resident about to start on something that hooks, to go back to it, or to go for a habit stops and waits for advice | 50 |
+| `dependence_began`, `dependence_passed` | A resident comes to depend on something, or gets over it, with `item_id` in `data` | 55, 45 |
 | `theft_noticed` | An owner sees that something of theirs is gone, or whoever keeps the counter that the fund is short | 40 |
 | `item_returned` | A stolen thing, or stolen credit, is handed back | 25 |
 | `crisis_opened` | A resident boils over and waits for advice | 50 to 69, by anger |

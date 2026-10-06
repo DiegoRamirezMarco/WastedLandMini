@@ -205,7 +205,9 @@ class InterventionSystem:
             return self._open(world, resident, target, definition, anger(world, resident, target))
         return None
 
-    def ask(self, world: "SimulationWorld", resident: Resident, kind: str) -> Decision | None:
+    def ask(
+        self, world: "SimulationWorld", resident: Resident, kind: str, subject: str | None = None
+    ) -> Decision | None:
         """Open a decision for a resident without stopping what they are doing.
 
         For someone who cannot stand and think it over where the player sees them, such as a
@@ -214,13 +216,13 @@ class InterventionSystem:
         definition = world.registries.decisions.get(kind)
         if definition is None or self.pending_for(world, resident.resident_id) is not None:
             return None
-        decision = self._decision(world, resident, None, definition, 0.0)
+        decision = self._decision(world, resident, None, definition, 0.0, subject=subject)
         world.decisions[decision.decision_id] = decision
         world.emit_event(
             DomainEvent(
                 event_type=definition.event_type,
                 importance=decision.crisis.urgency,
-                text=self.fill(world, definition.text, resident, None),
+                text=self.fill(world, definition.text, resident, None, subject=subject),
                 participants=[resident.resident_id],
             )
         )
@@ -515,6 +517,8 @@ class InterventionSystem:
         )
         if chosen.raises is not None:
             world.terms.raised(world, resident, chosen.raises)
+        if chosen.substance is not None:
+            world.substances.decided(world, resident, chosen.substance)
         return chosen.outcome_id
 
     def _grievance_target(self, world: "SimulationWorld", resident: Resident) -> Resident | None:

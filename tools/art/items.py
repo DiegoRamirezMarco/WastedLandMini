@@ -268,6 +268,107 @@ SCRAP = [
 SCRAP_LEGEND = {"o": "ink", "d": "dust", "s": "stone", "i": "iron", "r": "rust", "k": "rust_dark"}
 
 
+LIQUOR = [
+    "................",
+    "......oooo......",
+    "......okko......",
+    "......oooo......",
+    "......oggo......",
+    "......oggo......",
+    ".....oggggo.....",
+    "....oggggggo....",
+    "....ogpppggo....",
+    "....ogpppggo....",
+    "....oaaaaaao....",
+    "....oaaaaaao....",
+    "....oaaaaado....",
+    "....oaaaaddo....",
+    ".....oooooo.....",
+    "................",
+]
+LIQUOR_LEGEND = {"o": "ink", "k": "copper", "g": "moss", "p": "paper", "a": "ochre", "d": "rust"}
+
+CIGARETTE = [
+    "................",
+    "...........m....",
+    "..........m.....",
+    "...........m....",
+    "..........m.....",
+    "................",
+    "................",
+    "..ooooooooooooo.",
+    "..oppppppppkkeo.",
+    "..oppppppppkkeo.",
+    "..ooooooooooooo.",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+]
+CIGARETTE_LEGEND = {"o": "ink", "p": "paper", "k": "ochre", "e": "ember", "m": "mist"}
+
+SEDATIVE = [
+    "................",
+    "................",
+    "....oooooooo....",
+    "....osssssso....",
+    "....oooooooo....",
+    "...oppppppppo...",
+    "...oppppppppo...",
+    "...opttttttpo...",
+    "...opttttttpo...",
+    "...oppppppppo...",
+    "...oppbppbppo...",
+    "...opbbpbbppo...",
+    "...oppppppddo...",
+    "...oddddddddo...",
+    "....oooooooo....",
+    "................",
+]
+SEDATIVE_LEGEND = {"o": "ink", "s": "stone", "p": "paper", "t": "teal", "b": "bone", "d": "dust"}
+
+POWDER = [
+    "................",
+    "................",
+    "................",
+    "....oooooooo....",
+    "...oddddddddo...",
+    "..oddppppppddo..",
+    "..odppppppppdo..",
+    "..odppbppbppdo..",
+    "..odppppppppdo..",
+    "..odpbppppbpdo..",
+    "..odppppppppdo..",
+    "..oddppppppddo..",
+    "...oddddddddo...",
+    "....oooooooo....",
+    "................",
+    "................",
+]
+POWDER_LEGEND = {"o": "ink", "d": "sand", "p": "paper", "b": "bone"}
+
+SYRINGE = [
+    "................",
+    "............oo..",
+    "...........oso..",
+    "..........ooo...",
+    ".........oppo...",
+    "........opbpo...",
+    ".......opbpo....",
+    "......opbpo.....",
+    ".....opbpo......",
+    "....opppo.......",
+    "...ooooo........",
+    "...oso..........",
+    "..os............",
+    ".os.............",
+    ".o..............",
+    "................",
+]
+SYRINGE_LEGEND = {"o": "ink", "s": "steel", "p": "paper", "b": "blood"}
+
+
 def _checked(surface: pygame.Surface, name: str) -> pygame.Surface:
     if surface.get_size() != ICON_SIZE:
         raise ValueError(f"Icon {name} is {surface.get_size()}, expected {ICON_SIZE}")
@@ -288,6 +389,11 @@ def build() -> dict[str, pygame.Surface]:
         builtin_icon_path("rusty_knife"): _checked(paint(RUSTY_KNIFE, RUSTY_KNIFE_LEGEND), "rusty_knife"),
         builtin_icon_path("hoe"): _checked(paint(HOE, HOE_LEGEND), "hoe"),
         builtin_icon_path("scrap"): _checked(paint(SCRAP, SCRAP_LEGEND), "scrap"),
+        builtin_icon_path("liquor"): _checked(paint(LIQUOR, LIQUOR_LEGEND), "liquor"),
+        builtin_icon_path("cigarette"): _checked(paint(CIGARETTE, CIGARETTE_LEGEND), "cigarette"),
+        builtin_icon_path("sedative"): _checked(paint(SEDATIVE, SEDATIVE_LEGEND), "sedative"),
+        builtin_icon_path("powder"): _checked(paint(POWDER, POWDER_LEGEND), "powder"),
+        builtin_icon_path("syringe"): _checked(paint(SYRINGE, SYRINGE_LEGEND), "syringe"),
     }
 
 

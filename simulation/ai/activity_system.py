@@ -88,8 +88,9 @@ class ActivitySystem:
         if resident.resident_id not in world.residents:
             # Going without took them.
             return
-        if not world.health.is_fit_for_work(resident):
-            # Nobody is held to have stopped working for being in no state to.
+        world.substances.tick(world, resident)
+        if not world.health.is_fit_for_work(resident) or world.health.care_use(world, resident) is not None:
+            # Nobody is held to have stopped working for being in no state to, or for lying in care.
             resident.last_worked = world.clock.total_minutes
         world.trade.watch_supply(world, resident)
         if world.trade.supplied(world, resident):
@@ -307,6 +308,11 @@ class ActivitySystem:
                 return False
             activity.item_id = worn.instance_id
         elif use.consumes is not None:
+            served = world.items.best_food(world, resident, activity.target_id, use.consumes)
+            if served is not None and not world.substances.may_take(
+                world, resident, world.registries.items.resolve(served.definition_id)
+            ):
+                return False
             # What they eat is taken off the shelf now, so two residents never eat the same unit.
             activity.item_id = world.items.take_food(world, resident, activity.target_id, use.consumes)
             if activity.item_id is None:
@@ -375,7 +381,8 @@ class ActivitySystem:
             relieved = bool(lowered) and all(getattr(resident.needs, need, 0.0) <= 0.0 for need in lowered)
             if (use.per_minute or use.heals) and self.urgent_needs(world, resident, ignoring=use.per_minute):
                 relieved = True
-            if use.heals and resident.health >= RECOVERED_HEALTH:
+            if use.heals and resident.health >= RECOVERED_HEALTH and not world.substances.seen_through(world, resident, use):
+                # Mended, and with nobody seeing them through anything, they get up.
                 relieved = True
             if use.repairs > 0 and world.trade.repair_minute(world, activity, use):
                 relieved = True

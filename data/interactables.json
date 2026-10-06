@@ -135,6 +135,7 @@
     "name": "barra",
     "article": "una",
     "width": 3,
+    "container": true,
     "use": {
       "action": "drink",
       "text": "toma algo en la cantina",
@@ -150,7 +151,8 @@
         18,
         23
       ],
-      "price": 2
+      "price": 2,
+      "consumes": "drink"
     },
     "light": 4,
     "build": {
@@ -386,6 +388,27 @@
         "scrap": 3
       },
       "minutes": 90
+    }
+  },
+  "lab_bench": {
+    "name": "laboratorio",
+    "article": "un",
+    "width": 2,
+    "container": true,
+    "use": {
+      "action": "shop",
+      "text": "compra {item} en el laboratorio",
+      "minutes": 5,
+      "sells": true,
+      "staffed_by": "chemist",
+      "capacity": 1
+    },
+    "light": 2,
+    "build": {
+      "cost": {
+        "scrap": 4
+      },
+      "minutes": 120
     }
   }
 }

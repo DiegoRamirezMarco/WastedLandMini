@@ -34,5 +34,10 @@
     "name": "una intoxicación",
     "heal_per_day": 30,
     "treated_per_day": 60
+  },
+  "intoxication": {
+    "name": "una intoxicación",
+    "heal_per_day": 15,
+    "treated_per_day": 35
   }
 }

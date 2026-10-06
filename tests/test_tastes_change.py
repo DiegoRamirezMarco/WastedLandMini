@@ -376,7 +376,10 @@ class PeopleTests(unittest.TestCase):
     def test_the_game_knows_what_there_is_to_like_in_people_as_data(self) -> None:
         self.assertEqual(
             set(self.settings.people),
-            {"confident", "aggressive", "generous", "lively", "authority", "gossip", "being_told"},
+            {
+                "confident", "aggressive", "generous", "lively", "authority", "gossip", "being_told",
+                "drunks", "smokers", "users",
+            },
         )
         self.assertEqual(self.settings.people["lively"].feeling, "attraction")
         self.assertEqual(self.settings.people["gossip"].when, (RUMOR,))

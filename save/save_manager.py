@@ -23,6 +23,7 @@ from simulation.residents.personality import Personality
 from simulation.residents.resident import FACINGS, Resident
 from simulation.rng import SimulationRNG
 from simulation.social.relationship import Relationship
+from simulation.substances.substance import Habit, Intake
 from simulation.tastes.settings import REACTIONS
 from simulation.tastes.taste import KINDS, Taste, TasteProfile
 from simulation.work.expedition import Expedition
@@ -83,9 +84,12 @@ FIRST_FUND_VERSION = 26
 # for, and how many swaps each resident has had turned down. In a save from before everybody
 # has just worked, nobody owes anything and nothing waits.
 FIRST_UPKEEP_VERSION = 27
+# Version 28 added what each resident is under and their history with each substance, and made
+# the bar hold what it serves. In a save from before nobody is under anything, and the bar starts
+# with what the map puts in it.
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
-LAST_STOCK_CHANGE_VERSION = 23
+LAST_STOCK_CHANGE_VERSION = 28
 FIRST_MEDICINE_VERSION = 23
 # Objects of a built-in map that were moved after saves had been made with them: where each
 # stood, and where it stands now. A save from before has them moved if they are still there.
@@ -101,7 +105,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 27
+    CURRENT_VERSION = 28
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -219,6 +223,9 @@ class SaveManager:
                     "last_worked": resident.last_worked,
                     "unpaid_on": resident.unpaid_on,
                     "unpaid_days": resident.unpaid_days,
+                    "under": [vars(intake) for intake in resident.under],
+                    "habits": {item_id: vars(habit) for item_id, habit in resident.habits.items()},
+                    "tempted_by": resident.tempted_by,
                     "age": resident.age,
                     "couple_with": resident.couple_with,
                     "expedition": vars(resident.expedition) if resident.expedition is not None else None,
@@ -381,6 +388,33 @@ class SaveManager:
                 last_worked=int(resident_data.get("last_worked", world.clock.total_minutes)),
                 unpaid_on=int(resident_data.get("unpaid_on", 0)),
                 unpaid_days=max(0, int(resident_data.get("unpaid_days", 0))),
+                under=[
+                    Intake(
+                        item_id=str(intake["item_id"]),
+                        until=int(intake.get("until", 0)),
+                        after_until=int(intake.get("after_until", 0)),
+                        sign=str(intake.get("sign", "")),
+                        unaware=bool(intake.get("unaware", False)),
+                    )
+                    for intake in _list_or_empty(resident_data.get("under"))
+                    if isinstance(intake, dict) and "item_id" in intake
+                ],
+                # A habit is kept whatever it is of: one of something no content brings any longer
+                # does nothing, and is there if it comes back.
+                habits={
+                    str(item_id): Habit(
+                        uses=max(0, int(habit.get("uses", 0))),
+                        last_taken=int(habit.get("last_taken", 0)),
+                        dependent=bool(habit.get("dependent", False)),
+                        without=max(0.0, float(habit.get("without", 0.0))),
+                        recovered=bool(habit.get("recovered", False)),
+                        allowed_until=int(habit.get("allowed_until", 0)),
+                        resisting_until=int(habit.get("resisting_until", 0)),
+                    )
+                    for item_id, habit in _object_or_empty(resident_data.get("habits")).items()
+                    if isinstance(habit, dict)
+                },
+                tempted_by=_text_or_none(resident_data.get("tempted_by")),
                 age=int(resident_data.get("age", 30)),
                 couple_with=_text_or_none(resident_data.get("couple_with")),
                 expedition=Expedition(

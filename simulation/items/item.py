@@ -3,6 +3,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
+from simulation.substances.substance import SubstanceDefinition
+
 # A thing in worse condition than this is worth taking to be repaired.
 WORN_CONDITION = 50.0
 TASTE_TAG_PATTERN = re.compile(r"^[a-z0-9]+(_[a-z0-9]+)*$")
@@ -42,6 +44,8 @@ class ItemDefinition:
     properties: dict[str, float] = field(default_factory=dict)
     # What there is to like or loathe about it. `tags` are for rules and sorting, and never make a taste.
     preference_tags: tuple[str, ...] = ()
+    # What taking it does beyond its effects on the spot, for an item that is a substance.
+    substance: SubstanceDefinition | None = None
 
 
 @dataclass

@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from simulation.substances.substance import substance_from_data
 from simulation.items.item import ItemDefinition, taste_tags
 
 # Category of the stand-in definition used for items whose real definition is gone.
@@ -67,6 +68,11 @@ class ItemRegistry:
             effects={str(k): float(v) for k, v in data.get("effects", {}).items()},
             properties={str(k): float(v) for k, v in data.get("properties", {}).items()},
             preference_tags=taste_tags(data.get("preference_tags", [])),
+            substance=(
+                substance_from_data(f"item {data['id']}", data["substance"])
+                if data.get("substance") is not None
+                else None
+            ),
         )
         if replace_existing:
             self.replace(definition)

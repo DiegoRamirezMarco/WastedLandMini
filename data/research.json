@@ -137,6 +137,20 @@
       "effects": {
         "dose_minutes": 1.5
       }
+    },
+    "chemistry": {
+      "name": "Química",
+      "text": "Lo que se saca de hierbas, moho y botiquines viejos: tabaco, calmantes y cosas peores. Con ello se puede montar un laboratorio.",
+      "minutes": 720,
+      "requires": [
+        "still",
+        "first_aid"
+      ],
+      "opens": {
+        "objects": [
+          "lab_bench"
+        ]
+      }
     }
   }
 }

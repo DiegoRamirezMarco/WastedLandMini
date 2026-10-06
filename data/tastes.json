@@ -35,6 +35,9 @@
   },
   "with_people": {"push": 2.0, "shows": 0.4, "advice": 0.4},
   "people": {
+    "drunks": {"name": "la gente que bebe", "under": ["drunk"], "when": ["under"]},
+    "smokers": {"name": "la gente que fuma", "under": ["smoke"], "when": ["under"]},
+    "users": {"name": "la gente que se coloca", "under": ["high"], "when": ["under"]},
     "confident": {"name": "la gente segura de sí misma", "who": {"courage": [65, 100]}},
     "aggressive": {"name": "la gente agresiva", "who": {"aggression": [65, 100]}},
     "generous": {"name": "la gente generosa", "who": {"greed": [0, 35]}},

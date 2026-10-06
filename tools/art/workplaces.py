@@ -96,6 +96,27 @@ def _workbench() -> pygame.Surface:
     return surface
 
 
+def _lab_bench() -> pygame.Surface:
+    surface = _blank(32, 16)
+    # A bench of planks on drums, with a flask over a burner, jars and a tray of what is made there.
+    for x in (3, 26):
+        _box(surface, (x, 9, 3, 6), "rust_dark")
+    fill(surface, "shadow", (6, 12, 20, 2))
+    _box(surface, (1, 5, 30, 4), "copper")
+    fill(surface, "sand", (1, 5, 30, 1))
+    fill(surface, "ink", (5, 0, 5, 5))
+    fill(surface, "teal", (6, 2, 3, 3))
+    fill(surface, "mist", (7, 1, 1, 1))
+    dots(surface, "ember", [(6, 5), (8, 5)])
+    fill(surface, "ink", (13, 1, 4, 4))
+    fill(surface, "moss", (14, 2, 2, 2))
+    fill(surface, "ink", (18, 2, 4, 3))
+    fill(surface, "ochre", (19, 3, 2, 1))
+    fill(surface, "ink", (24, 3, 6, 2))
+    fill(surface, "paper", (25, 3, 4, 1))
+    return surface
+
+
 def _shop_counter() -> pygame.Surface:
     surface = _blank(32, 16)
     # A plank counter with a couple of tins and a pair of scales on it.
@@ -369,6 +390,7 @@ def build() -> dict[str, pygame.Surface]:
         "guard_post": _guard_post,
         "workbench": _workbench,
         "shop_counter": _shop_counter,
+        "lab_bench": _lab_bench,
         "shelf": _shelf,
         "lamp": _lamp,
         "handcart": _handcart,

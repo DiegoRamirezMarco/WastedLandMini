@@ -165,7 +165,7 @@ class RoutineSystem:
             )
             return want - distance_cost if want is not None else None
         if use.heals:
-            care = world.health.care_score(resident)
+            care = max(world.health.care_score(resident), world.substances.care_wish(world, resident, use))
             return care - DISTANCE_COST * manhattan(resident.tile, (placed.x, placed.y)) if care > 0 else None
         relief = dict(use.per_minute)
         item_id = use.item_id
@@ -175,8 +175,12 @@ class RoutineSystem:
                 return None
             item_id = food.definition_id
         quality = 1.0
+        wish = 0.0
         if item_id is not None:
             item = world.registries.items.resolve(item_id)
+            wish = world.substances.wish(world, resident, item)
+            if wish is None:
+                return None
             effects = self.items.use_effects(world, resident, item)
             for need, delta in effects.items():
                 relief[need] = relief.get(need, 0.0) + delta
@@ -189,7 +193,7 @@ class RoutineSystem:
             for need, delta in relief.items()
             if delta < 0 and need in NEED_NAMES
         )
-        score *= quality
+        score = score * quality + wish
         if use.unaware:
             # Nobody settles down to sleep on an empty stomach: the hungrier, the less bed appeals.
             score *= 1.0 - min(1.0, max(0.0, resident.needs.hunger - SUPPER_HUNGER) / SUPPER_RANGE)

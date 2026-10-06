@@ -114,6 +114,10 @@ class ItemSystem:
         # Tastes they did not have for it are made first, so that the pleasure of it is theirs.
         world.tastes.react(world, resident, definition, self.how_taken(definition))
         resident.needs.apply(self.use_effects(world, resident, definition))
+        if definition.substance is not None:
+            world.substances.taken(world, resident, definition)
+            if resident.resident_id not in world.residents:
+                return
         chance = definition.properties.get(SICKENS, 0.0)
         if chance <= 0.0 or definition.category not in (FOOD_CATEGORY, WATER_CATEGORY):
             return
@@ -250,9 +254,12 @@ class ItemSystem:
                     continue
                 definition = world.registries.items.resolve(item.definition_id)
                 relief = self._relief(resident, self.use_effects(world, resident, definition))
-                if relief <= 0:
+                # What they depend on is wanted beside what it does for them, and what they
+                # have made up their mind against is not wanted at all.
+                wish = world.substances.wish(world, resident, definition)
+                if wish is None or relief + wish <= 0:
                     continue
-                score = relief * USE_ITEM_APPEAL - DISTANCE_COST * distance
+                score = (relief + wish) * USE_ITEM_APPEAL - DISTANCE_COST * distance
                 scored.append(ScoredAction(USE_ITEM_ACTION, score, container_id, item_id=item.instance_id))
         return scored
 
@@ -365,9 +372,13 @@ class ItemSystem:
         item = inventory.find(activity.item_id or "") if inventory is not None else None
         if item is None or item.owner_id != resident.resident_id or item.broken:
             return False
-        self._face(world, resident, activity)
         definition = world.registries.items.resolve(item.definition_id)
+        if not world.substances.may_take(world, resident, definition):
+            return False
+        self._face(world, resident, activity)
         verb = "come" if definition.category == FOOD_CATEGORY else "pasa un rato con"
+        if definition.substance is not None:
+            verb = "echa mano de"
         room = world.room_at(resident.tile)
         world.emit_event(
             DomainEvent(
@@ -386,10 +397,12 @@ class ItemSystem:
         if item is None or inventory is None:
             return
         definition = world.registries.items.resolve(item.definition_id)
-        self.take_in(world, resident, definition)
-        if definition.category == FOOD_CATEGORY:
+        if definition.category == FOOD_CATEGORY or definition.substance is not None:
+            # What is eaten or taken is used up, and it is gone before it can do for them.
             inventory.take_unit(item.instance_id)
+            self.take_in(world, resident, definition)
             return
+        self.take_in(world, resident, definition)
         if RADIO_TAG in definition.tags:
             world.happenings.hear_radio(world, resident)
         self.wear(world, resident, item)

@@ -5,6 +5,7 @@ from simulation.events.crisis import Crisis
 from simulation.events.world_event import GATE_CHOICES, RAID_CHOICES
 from simulation.residents.needs import NEED_NAMES
 from simulation.social.relationship import FEELINGS
+from simulation.substances.substance import SUBSTANCE_CHOICES
 from simulation.work.expedition import EXPEDITION_CHOICES
 
 # What an outcome's score may depend on. Each is scaled to run from 0 to 1.
@@ -70,6 +71,8 @@ class OutcomeDefinition:
     agrees: bool = False
     # What choosing this puts to everyone as the way to trade: `currency` or `barter`.
     raises: str | None = None
+    # What choosing this does about what they were about to take: `take` or `resist`.
+    substance: str | None = None
 
 
 @dataclass(frozen=True)
@@ -139,6 +142,9 @@ def _outcome_from_data(kind: str, outcome_id: str, data: dict[str, Any]) -> Outc
     raid = str(data["raid"]) if "raid" in data else None
     if raid is not None and raid not in RAID_CHOICES:
         raise ValueError(f"Unknown raid choice in {where}: {raid}")
+    substance = str(data["substance"]) if "substance" in data else None
+    if substance is not None and substance not in SUBSTANCE_CHOICES:
+        raise ValueError(f"Unknown choice about a substance in {where}: {substance}")
     raises = str(data["raises"]) if "raises" in data else None
     if raises is not None and raises not in ("currency", "barter"):
         raise ValueError(f"Unknown way of trading in {where}: {raises}")
@@ -157,4 +163,5 @@ def _outcome_from_data(kind: str, outcome_id: str, data: dict[str, Any]) -> Outc
         builds=bool(data.get("builds", False)),
         agrees=bool(data.get("agrees", False)),
         raises=raises,
+        substance=substance,
     )

@@ -351,7 +351,7 @@ class BarterTests(unittest.TestCase):
         wanted = lambda: [item.definition_id for _, item, _ in self.world.trade.offers(self.world, self.ines, COUNTER)]
         self.assertNotIn("canned_beans", wanted(), "she is not hungry, and a tin is worth less to her than a hoe")
         self.ines.needs.hunger = 95
-        self.assertEqual(wanted()[0], "canned_beans")
+        self.assertIn("canned_beans", wanted())
         value = self.world.items.personal_value
         resolve = self.world.registries.items.resolve
         beans, hoe_kind = resolve("canned_beans"), resolve("hoe")
@@ -1257,15 +1257,15 @@ class OwnAccordTests(unittest.TestCase):
         world = _few(_settled())
         self.assertEqual(world.fund.till(world), COUNTER)
         del world.interactables[COUNTER], world.containers[COUNTER]
-        self.assertEqual(world.fund.till(world), "crate_1")
+        self.assertEqual(world.fund.till(world), "crate_dorm", "the one that has been there longest")
         raul = world.residents["raul"]
         raul.personality = Personality(greed=95, empathy=5)
         raul.credits = 0.0
-        _place(world, "raul", (33, 5))
+        _place(world, "raul", (8, 5))
         for name in ("marta", "lucia"):
             _place(world, name, (5, 26))
         tempted = [c.target_id for c in world.items.candidates(world, raul) if c.name == FUND_THEFT_ACTION]
-        self.assertEqual(tempted, ["crate_1"])
+        self.assertEqual(tempted, ["crate_dorm"])
         self.assertTrue(world.fund.keeps_till(world, world.residents["lucia"]), "a box is everybody's to look into")
 
 

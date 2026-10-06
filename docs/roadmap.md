@@ -1237,23 +1237,55 @@ Still open here:
   carrying it out
 - A resident who takes up a currency unasked cannot name it: it is `vales` until the player does
 
-### S24 — Substances (needs S20) — planned
-- **A substance is a consumable like any other, as data**: an item with a `substance` property
-  that says how it is taken, what it does and how likely it is to bring dependence. A pack
+### S24 — Substances (needs S20) — done
+Asked first, and answered: the game comes with one for each way of taking them besides drink;
+all of them can be made in the settlement, the drink at the bar and the rest at a post of its
+own that has to be worked out and built; too much harms and can kill, and the clinic sees
+somebody through dependence; and the player has a say when someone starts, when they go back
+to it, and now and then in between.
+
+- **A substance is a consumable like any other, as data**: an item with a `substance` entry
+  that says how it is taken, how long it lasts, what it does meanwhile and afterwards, what it
+  harms, how likely it is to bring dependence and what it looks like on whoever took it. A pack
   brings one with no code of its own
 - **Four ways of taking one**: swallowed, sniffed, injected or smoked
-- **Three kinds of effect, each as data**: the good it does while it lasts; the harm of its own,
-  then or afterwards; and what others make of it
-- **Being seen is part of it.** Someone drunk or high is seen by whoever is near, as anything is
-  (S3), and smoke reaches everyone in the room. Each takes it their own way, by their tastes in
-  people (S20): some cannot stand a drunk, some mind the smoke, some mind neither. It moves what
-  they feel for whoever it was, and what they know of them is passed on like any other fact
-- **Dependence comes by chance**, each time one is taken, and the likelier the more of a habit
-  it is. Whoever depends on something goes looking for it, and is the worse for going without:
-  in mood, in nerves and at work. With long enough without, it passes
+- **Five to begin with**: `aguardiente` and `calmantes`, swallowed; `cigarro liado`, smoked;
+  `polvo blanco`, sniffed; and `jeringa`, injected
+- **Three kinds of effect, each as data**: the good it does on the spot and minute by minute
+  while it lasts, with how fast it has them work; the harm of its own, which is what comes
+  after it wears off, what it takes out of them each time and what too much does; and what
+  others make of it
+- **Being seen is part of it.** Whoever sees it taken knows it of them, as a fact to pass on,
+  and takes it their own way by a taste in people (S20) for whoever drinks, smokes or gets
+  high. Smoke reaches everyone under the same roof and nobody outside it, and bothers nobody
+  in the open
+- **Dependence comes by chance**, each time one is taken, from the settlement's own
+  randomness, and the likelier the more of a habit it is. Whoever depends on something wants
+  it once it is long enough since the last, takes it if they have it, buys it above anything,
+  and is the worse for going without: nerves, and a fifth slower at work. Five days' worth of
+  going without and it passes
+- **The clinic sees somebody through it**: with nothing to take, whoever is going without
+  lies down there while a medic is at it, and it passes three times as fast. Whoever lies in
+  care is not held to have stopped working (S23): found when a medic who had come to depend on
+  drink lay in her own clinic for three days, was no longer kept, and went hungry there
+- **Too much harms, and can kill**: taking something on top of itself is an intoxication, an
+  injury like any other, and a needle costs something every time. Nobody but the rash takes
+  more of what they are already under
+- **Someone under a needle notices nothing** while it lasts
+- **The player's say**: the first time with something that hooks easily, going back to it
+  after two days without, and at most every three days when it is a habit, they stop to think
+  and the player may talk them out of it. Talked out of it, they leave it for six hours. A
+  drink like any other asks nobody
+- **What the bar serves is the first of them**: it holds what it serves, a drink is one unit
+  of it, and whoever keeps the bar makes it, out of water
+- **The rest are made at a laboratory**, a post of its own that has to be worked out first
+  (`Química`, after the bar and the clinic) and built. Whoever holds it makes the four in turn,
+  whichever there is least of, and sells them over its own counter
+- **A job may make several things at its post** (`also`), as data
 - Being under something, and depending on it, are states of a resident's own, and are saved
-- What the bar serves is the first of them
-- Taking one, being seen at it and coming to depend on it are each a domain event
+  (save version 28). In a save from before nobody is under anything
+- Taking one, being seen at it, coming to depend on it and getting over it are each a domain
+  event
 
 Done when: the same drink leaves one resident dependent and another not, and the same way when
 the same seed is run again; someone dependent is seen to go after it and to work worse without
@@ -1261,15 +1293,21 @@ it; two residents who watch the same drunk feel differently about them afterward
 indoors is minded by those in the room and by nobody outside it; and ten weeks pass with three
 seeds without the whole settlement ending up dependent.
 
-Tests it is not done without: each of the three kinds of effect; dependence by chance and from
-the project RNG; going without; a pack's substance working with no code; a witness who minds
-and one who does not; and a save from before, in which nobody is under anything.
-
-Still to settle:
-- Which substances the game comes with besides drink, and where they come from: made in the
-  settlement, brought back from outside, left by caravans
-- Whether too much of one can kill, and whether the medic treats dependence
-- Whether the player is given a say when someone is about to take to something
+Still open here:
+- The settlement that comes ready made has no laboratory and has not worked one out, so only
+  drink is ever seen there unless the player has one studied and built
+- The laboratory makes its four out of nothing, and the bar its drink out of water alone
+- Whoever is under something is seen when they take it, and not for as long as it is on them
+- Nobody is refused a drink for having had enough, and whoever keeps the bar thinks nothing
+  of serving someone who depends on it
+- Nobody tires of somebody's habit, hides their own or tries to talk a friend out of one: it
+  is only the player who does
+- Getting over it leaves nothing behind but that it is asked about if they go back
+- Somebody about to take too much is not stopped for the player to have a say: only the
+  starting, the going back and the habit are
+- What each substance does is a first guess
+- Seen while this was run: a guard who stays up for raiders can be drawn off the watch by their
+  partner, and the raiders walk in (S13)
 
 ### S25 — Families (needs S9) — planned
 - **A couple may marry.** Like a confession and a breakup, it is something the player is given a

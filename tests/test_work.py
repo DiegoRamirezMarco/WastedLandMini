@@ -485,7 +485,10 @@ class WorkDataAndSaveTests(unittest.TestCase):
     def test_the_demo_registries_know_every_job(self) -> None:
         self.assertEqual(
             sorted(builtin_registries().jobs),
-            ["bartender", "cook", "farmer", "guard", "mechanic", "medic", "researcher", "scavenger", "shopkeeper", "water_carrier"],
+            [
+                "bartender", "chemist", "cook", "farmer", "guard", "mechanic", "medic", "researcher", "scavenger",
+                "shopkeeper", "water_carrier",
+            ],
         )
 
 

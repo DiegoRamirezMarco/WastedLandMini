@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 27 (current)
+## Version 28 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `27` |
+| `version` | `28` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -68,6 +68,12 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 28** added what each resident is `under` (what they have taken and are under or
+  coming down from: `item_id`, `until`, `after_until`, `sign` and `unaware`), their `habits` (per
+  item ID: `uses`, `last_taken`, `dependent`, `without`, `recovered`, `allowed_until` and
+  `resisting_until`) and `tempted_by` (the item they stopped to think over). In an older save
+  nobody is under anything or has a habit, and the bar, which holds what it serves from now on,
+  starts with what the map puts in it. A habit of something no content defines any longer is kept.
 - **Version 27** added a resident's `last_worked`, `unpaid_on` and `unpaid_days`, an item's
   `meant_for` (the resident it was bought as a present for, or `@fund` while it is the
   settlement's and on its way to the till), `debts`, `at_gate` and `refusals`. In an older save

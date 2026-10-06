@@ -331,9 +331,11 @@ class TasteSystem:
         """Whether a taste in people comes into what is passing between a resident and someone."""
         if occasion not in (taste.when or (EXCHANGE,)):
             return False
-        if not (taste.who or taste.jobs):
+        if not (taste.who or taste.jobs or taste.under):
             return True
         if other is None:
+            return False
+        if taste.under and not set(taste.under) & {intake.sign for intake in other.under}:
             return False
         if taste.jobs and other.job_id not in taste.jobs:
             return False

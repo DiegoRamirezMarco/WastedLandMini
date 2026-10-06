@@ -5,6 +5,7 @@ from simulation.items.inventory import Inventory
 from simulation.residents.activity import Activity
 from simulation.residents.needs import Needs
 from simulation.residents.personality import Personality
+from simulation.substances.substance import Habit, Intake
 from simulation.work.expedition import Expedition
 from world.map import Tile
 from world.pathfinding import Point
@@ -43,6 +44,12 @@ class Resident:
     # Game minute at which they last worked, or could not have: the settlement keeps whoever
     # has, lately.
     last_worked: int = 0
+    # What they have taken and are still under or coming down from, and their history with
+    # each substance, by item ID.
+    under: list[Intake] = field(default_factory=list)
+    habits: dict[str, Habit] = field(default_factory=dict)
+    # The item they were about to take when they stopped to think it over, while they do.
+    tempted_by: str | None = None
     # The last day on which their wage was not paid in full, and how many days running that makes.
     unpaid_on: int = 0
     unpaid_days: int = 0

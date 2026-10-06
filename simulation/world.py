@@ -32,6 +32,7 @@ from simulation.residents.personality import Personality
 from simulation.residents.resident import Resident
 from simulation.rng import SimulationRNG
 from simulation.social.bonds import BondSystem
+from simulation.substances.substance_system import SubstanceSystem
 from simulation.social.relationship import Relationship
 from simulation.tastes.knowledge import TasteKnowledge
 from simulation.tastes.taste import TasteProfile
@@ -94,6 +95,7 @@ class SimulationWorld:
     # Whoever has stopped by the gate to trade, while they are there.
     merchant: Merchant | None = None
     lending: LendingSystem = field(default_factory=LendingSystem)
+    substances: SubstanceSystem = field(default_factory=SubstanceSystem)
     # What residents have lent one another and not had back yet.
     debts: list[Debt] = field(default_factory=list)
     # Units of what was bought for the settlement that wait at the gate to be carried in, by item ID.
@@ -380,7 +382,10 @@ class SimulationWorld:
         return next((room for room in self.rooms.values() if room.contains(tile)), None)
 
     def is_aware(self, resident: Resident) -> bool:
-        """False while a resident is using something that shuts the world out, such as a bed."""
+        """False while a resident is using something that shuts the world out, such as a bed,
+        or is under something that does."""
+        if resident.under and self.substances.out_of_it(self, resident):
+            return False
         activity = resident.activity
         if activity is None or not activity.using or activity.target_id is None:
             return True

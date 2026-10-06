@@ -487,6 +487,33 @@ settlement is created, in `SimulationWorld.demo_world`.
   outcome's `"gate"` (`let_in` or `turn_away`) is what is done about them.
 - A map's `arrivals` lists the tiles just inside the gate where someone let in first stands.
 
+## Substances
+
+- An item is a substance with a `substance` entry:
+  `{"route": "smoked", "minutes": 30, "dependence": 0.12, "sign": "smoke"}`. `route` is one of
+  the ways of taking one in `data/substances.json`, and `minutes` how long it lasts. The rest
+  are optional: `per_minute` (what it does to needs each minute meanwhile), `work_pace` (how
+  fast it has them work, 1 for no difference), `unaware` (whether they notice nothing),
+  `after` (`minutes` and `per_minute` of what comes once it wears off), `toll` (harm each time)
+  and `harm` (harm when taken on top of itself), `dependence` (the chance of it the first time,
+  from 0 to 1), `craving_minutes` (how long before whoever depends on it wants more) and `sign`
+  (what it looks like on them). What it does on the spot is the item's `effects`, as for any item.
+- A taste in people may be for whoever has a sign on them: in `data/tastes.json`,
+  `{"name": "la gente que fuma", "under": ["smoke"], "when": ["under"]}`.
+- `data/substances.json` holds how they work in general: the `routes` and how each is said,
+  the `signs` and how each is said of someone seen with it, `fills_the_room` (the route whose
+  sign reaches everyone under the same roof), `habit_growth` and `max_chance`,
+  `passes_after_minutes` and `care_factor`, `withdrawal` (`per_minute` and `work_pace`),
+  `craving_wish`, `impulse_from`, `hooks_from`, `relapse_minutes`, `allowed_minutes`,
+  `resist_minutes`, `resist_stress` and `overdose_kind` (an injury from `data/injuries.json`).
+- A use that `consumes` a category gives one unit of what the object holds, substance or not:
+  it is how the bar serves a drink.
+- A job's `produces` may list `"also": ["sedative", "powder"]`: other things made at the same
+  post in turn with `item`, whichever there is least of. Only for what stays at the post.
+- The game opens `substance_tempted` and `substance_habit` by ID. An outcome's `"substance"`
+  (`take` or `resist`) is what is done about what they were about to take, and their texts may
+  use `{thing}`.
+
 ## Wear, prices and the shop
 
 - An item wears out if its `properties` give it `wear`, the condition it loses per use out of 100:

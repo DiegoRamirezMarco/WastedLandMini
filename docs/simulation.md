@@ -230,6 +230,29 @@ room. An argument's importance rises with the resentment between the two.
   bed, and the gate stands empty.
 - **Vermin** get into the pantries by night and eat a share of the food that is everyone's.
 
+## Substances
+
+- **Taking one.** A substance is an item: owned and used like any other, or had over a bar that
+  holds it. It does what it does on the spot, and then it is on whoever took it for as long as
+  it lasts: needs minute by minute, how fast they work, and for some whether they notice
+  anything. When it wears off there is what comes after, for a while longer.
+- **Being seen.** Whoever sees it taken knows it of them, and it weighs on what they feel for
+  them by their own taste for people who drink, smoke or get high: some mind, some like it,
+  some neither. Smoke reaches everyone under the same roof, seen or not, and nobody outside.
+- **Too much.** Taken on top of itself it is an intoxication, an injury like any other, and
+  enough of it kills. Only the rash take more of what they are already under.
+- **Dependence** comes by chance each time, from the settlement's own randomness, likelier the
+  more often it has been taken. Whoever depends on something wants it once enough time has
+  gone by: they take it if they have it, want it above anything at a counter, and until they
+  get it are on edge and slower at work. With enough time without, it passes; lying in the
+  clinic under a medic, three times as fast, and somebody going without with nothing to take
+  goes there of their own accord.
+- **The player's say.** Starting on something that hooks, going back to it after days without,
+  and now and then a habit, are decisions: they stop, the player may advise against it, and
+  they make up their mind. A no lasts some hours; a yes, long enough to go and do it.
+- **Where they come from.** Whoever keeps the bar makes what it serves, from water. The rest
+  are made at a laboratory, which has to be worked out and built, and sold over its counter.
+
 ## Wear, repairs and credits
 
 - **Wear.** An item with a `wear` property loses that much condition each time it is used: a tool

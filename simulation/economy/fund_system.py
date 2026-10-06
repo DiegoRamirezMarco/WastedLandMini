@@ -85,7 +85,8 @@ class FundSystem:
         """ID of where the settlement keeps its takings: the counter it sells from, or with no
         counter the first container of the kind a fund is kept in. None if it has neither."""
         box: str | None = None
-        for object_id in sorted(world.containers):
+        # The one that has been there longest, if there are several.
+        for object_id in world.containers:
             placed = world.interactables.get(object_id)
             if placed is None:
                 continue
@@ -121,11 +122,11 @@ class FundSystem:
     ) -> bool:
         """Have one unit of a thing somebody holds become the settlement's.
 
-        Handed over at a container it stays there. Handed to `carrier`, whoever is serving, it is
-        theirs to carry to the till. Otherwise it goes straight where the fund is kept. False if
-        there is nowhere to keep it.
+        Handed to `carrier`, whoever is serving, it is theirs to carry to the till. Handed over
+        at a container nobody serves at, it stays there. Otherwise it goes straight where the
+        fund is kept. False if there is nowhere to keep it.
         """
-        if into is None and carrier is not None:
+        if carrier is not None:
             self._hand(world, holder, item, carrier)
             return True
         store = into if into is not None else self.store_for(world, near)

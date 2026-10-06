@@ -77,7 +77,16 @@
     "per_minute": {
       "social": -0.08
     },
-    "priority": 1
+    "priority": 1,
+    "produces": {
+      "item": "liquor",
+      "every_minutes": 20,
+      "into": "station",
+      "max_stock": 12,
+      "from": "water_tank",
+      "from_category": "water",
+      "carry": 6
+    }
   },
   "guard": {
     "name": "Guardia",
@@ -241,5 +250,36 @@
     },
     "priority": 2,
     "research": true
+  },
+  "chemist": {
+    "name": "Laboratorio",
+    "station": "lab_bench",
+    "shifts": [
+      [
+        10,
+        14
+      ],
+      [
+        16,
+        19
+      ]
+    ],
+    "text": "se pone con sus mezclas",
+    "interruptible": true,
+    "per_minute": {
+      "social": -0.04
+    },
+    "priority": 1,
+    "produces": {
+      "item": "cigarette",
+      "also": [
+        "sedative",
+        "powder",
+        "syringe"
+      ],
+      "every_minutes": 90,
+      "into": "station",
+      "max_stock": 3
+    }
   }
 }

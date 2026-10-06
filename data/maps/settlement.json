@@ -150,6 +150,7 @@
     {"container": "pantry_2", "item": "canned_beans", "count": 8},
     {"container": "pantry_2", "item": "pizza_radioactiva", "count": 3},
     {"container": "cooking_pot", "item": "stew", "count": 4},
+    {"container": "bar", "item": "liquor", "count": 12},
     {"container": "crate_workshop", "item": "rusty_knife", "count": 1},
     {"container": "scrap_workshop", "item": "scrap", "count": 4},
     {"container": "scrap_yard", "item": "scrap", "count": 4},

@@ -7,6 +7,7 @@ from numbers import Real
 from pathlib import Path
 from typing import Any
 
+from simulation.substances.substance import substance_from_data
 from simulation.items.item import ItemDefinition, taste_tags
 from simulation.items.registry import ItemRegistry
 
@@ -82,6 +83,8 @@ def validate_item_data(
             isinstance(name, str) and _is_number(value) for name, value in numbers.items()
         ):
             raise ValueError(f"'{field_name}' must map names to numbers")
+    if merged.get("substance") is not None:
+        substance_from_data("the item", merged["substance"])
 
 
 def _is_number(value: Any) -> bool:

@@ -171,5 +171,173 @@
     "tags": [
       "scrap"
     ]
+  },
+  {
+    "id": "liquor",
+    "name": "aguardiente",
+    "article": "un",
+    "category": "drink",
+    "base_value": 6,
+    "tags": [
+      "drink",
+      "alcohol"
+    ],
+    "preference_tags": [
+      "strong",
+      "fermented"
+    ],
+    "effects": {
+      "stress": -12,
+      "social": -5
+    },
+    "substance": {
+      "route": "swallowed",
+      "minutes": 120,
+      "per_minute": {
+        "stress": -0.03
+      },
+      "work_pace": 0.85,
+      "after": {
+        "minutes": 180,
+        "per_minute": {
+          "tiredness": 0.03,
+          "stress": 0.02
+        }
+      },
+      "harm": 6,
+      "dependence": 0.03,
+      "sign": "drunk"
+    }
+  },
+  {
+    "id": "cigarette",
+    "name": "cigarro liado",
+    "article": "un",
+    "category": "vice",
+    "base_value": 4,
+    "tags": [
+      "vice",
+      "tobacco"
+    ],
+    "preference_tags": [
+      "smoky"
+    ],
+    "effects": {
+      "stress": -8
+    },
+    "substance": {
+      "route": "smoked",
+      "minutes": 30,
+      "dependence": 0.12,
+      "craving_minutes": 480,
+      "sign": "smoke"
+    }
+  },
+  {
+    "id": "sedative",
+    "name": "calmantes",
+    "article": "unos",
+    "category": "vice",
+    "base_value": 14,
+    "tags": [
+      "vice",
+      "pills"
+    ],
+    "preference_tags": [
+      "bitter"
+    ],
+    "effects": {
+      "stress": -20
+    },
+    "substance": {
+      "route": "swallowed",
+      "minutes": 240,
+      "per_minute": {
+        "stress": -0.05,
+        "tiredness": 0.04
+      },
+      "work_pace": 0.75,
+      "after": {
+        "minutes": 120,
+        "per_minute": {
+          "tiredness": 0.03
+        }
+      },
+      "harm": 10,
+      "dependence": 0.06,
+      "sign": "high"
+    }
+  },
+  {
+    "id": "powder",
+    "name": "polvo blanco",
+    "article": "un",
+    "category": "vice",
+    "base_value": 18,
+    "tags": [
+      "vice",
+      "stimulant"
+    ],
+    "preference_tags": [
+      "bitter"
+    ],
+    "effects": {
+      "tiredness": -30
+    },
+    "substance": {
+      "route": "sniffed",
+      "minutes": 180,
+      "per_minute": {
+        "tiredness": -0.1
+      },
+      "work_pace": 1.25,
+      "after": {
+        "minutes": 240,
+        "per_minute": {
+          "stress": 0.08,
+          "tiredness": 0.1
+        }
+      },
+      "harm": 12,
+      "dependence": 0.18,
+      "sign": "high"
+    }
+  },
+  {
+    "id": "syringe",
+    "name": "jeringa",
+    "article": "una",
+    "category": "vice",
+    "base_value": 25,
+    "tags": [
+      "vice",
+      "injection"
+    ],
+    "preference_tags": [
+      "sharp"
+    ],
+    "effects": {
+      "stress": -40,
+      "hunger": -20
+    },
+    "substance": {
+      "route": "injected",
+      "minutes": 240,
+      "per_minute": {
+        "stress": -0.2
+      },
+      "work_pace": 0.3,
+      "unaware": true,
+      "after": {
+        "minutes": 360,
+        "per_minute": {
+          "stress": 0.1
+        }
+      },
+      "toll": 4,
+      "harm": 25,
+      "dependence": 0.35,
+      "sign": "high"
+    }
   }
 ]

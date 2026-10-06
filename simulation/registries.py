@@ -20,6 +20,7 @@ from simulation.residents.manner import MannerSettings, manner_settings_from_dat
 from simulation.residents.personality import Personality
 from simulation.social.bonds import BondSettings, bond_settings_from_data
 from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
+from simulation.substances.substance import SubstanceSettings, substance_settings_from_data
 from simulation.tastes.settings import TasteSettings, taste_settings_from_data
 from simulation.tutorial.tutorial import BUILDING, JOB, OBJECT, TutorialDefinition, tutorial_definition_from_data
 from simulation.work.construction import ConstructionSettings, construction_settings_from_data
@@ -156,6 +157,8 @@ class BuiltInRegistries:
     world_events: WorldEventSettings = field(default_factory=WorldEventSettings)
     # How tastes are made, how they are taken, and what they are called.
     tastes: TasteSettings = field(default_factory=TasteSettings)
+    # How substances work in general. What each one does is in its own item.
+    substances: SubstanceSettings = field(default_factory=SubstanceSettings)
     # The ways there are of walking, eating and fighting, for each resident to have their own.
     manners: MannerSettings = field(default_factory=MannerSettings)
     event_settings: dict[str, Any] = field(default_factory=dict)
@@ -247,6 +250,9 @@ class BuiltInRegistries:
         tastes_path = root / "tastes.json"
         if tastes_path.is_file():
             registries.tastes = taste_settings_from_data(_read_object(tastes_path))
+        substances_path = root / "substances.json"
+        if substances_path.is_file():
+            registries.substances = substance_settings_from_data(_read_object(substances_path))
         manners_path = root / "manners.json"
         if manners_path.is_file():
             registries.manners = manner_settings_from_data(_read_object(manners_path))
@@ -338,6 +344,12 @@ class BuiltInRegistries:
             for outcome in decision.outcomes.values():
                 if outcome.interaction is not None and outcome.interaction not in self.interactions:
                     raise ValueError(f"Decision {kind} uses unknown interaction: {outcome.interaction}")
+        if self.substances.overdose_kind not in self.injuries and self.injuries:
+            raise ValueError(f"Too much of a substance leaves an unknown kind of injury: {self.substances.overdose_kind}")
+        for job_id, job in self.jobs.items():
+            unknown = [item for item in (job.produces.also if job.produces is not None else ()) if self.items.find(item) is None]
+            if unknown:
+                raise ValueError(f"Job {job_id} also produces unknown items: {unknown}")
         for item_id in self.items.ids():
             if self.items.get(item_id).properties.get("wear", 0.0) < 0:
                 raise ValueError(f"Item {item_id} has negative wear")
