@@ -67,7 +67,9 @@ a warning in the log and without stopping the game, if:
 Fields the game does not know are ignored, so a pack made for a newer version still loads.
 Removing a pack never breaks a save: its items stay as inert unknown objects.
 
-`icon.png` is ideally 16×16; any other size is scaled down to it. A new item without an icon shows
+`icon.png` is 16×16 in lists and inventories; any other size is scaled down to it there. In a
+resident's hand it is shown from the file as it is, so one drawn larger, as the in-game editor's
+64×64 are, is seen in more detail there. A new item without an icon shows
 the magenta checker placeholder; a modified built-in item without one keeps its original drawing.
 Face PNGs must be 64×64. See `docs/visual-style.md` for the art rules and palette.
 

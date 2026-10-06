@@ -96,6 +96,21 @@ class ItemEditorTests(unittest.TestCase):
         self.assertEqual((carried.instance_id, carried.definition_id), (original_instance_id, "hoe"))
         self.assertEqual(self.game.icons.icon("hoe").get_at((0, 0))[:3], PALETTE["ember"])
 
+    def test_an_item_opened_again_is_as_finely_drawn_as_it_was_saved(self) -> None:
+        editor = self.game.item_editor
+        editor.open("hoe")
+        editor.picture.fill((*PALETTE["ember"], 255))
+        # Finer than the 16×16 icon can hold: every other pixel of a row.
+        for x in range(0, 64, 2):
+            editor.picture.set_at((x, 10), (*PALETTE["glow"], 255))
+        self.assertTrue(editor.save(), editor.notice)
+
+        editor.open("hoe")
+
+        self.assertEqual(editor.picture.get_size(), (64, 64))
+        row = [tuple(editor.picture.get_at((x, 10)))[:3] for x in range(64)]
+        self.assertEqual(row, [PALETTE["glow"], PALETTE["ember"]] * 32)
+
     def test_invalid_numeric_data_is_not_written(self) -> None:
         editor = self.game.item_editor
         editor.open("hoe")

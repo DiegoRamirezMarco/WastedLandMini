@@ -133,7 +133,7 @@ class ItemEditor:
         return [*self.top_buttons, *self.tool_buttons, *self.edit_buttons]
 
     def open(self, item_id: str) -> None:
-        """Start from the live definition and the icon currently shown by the game."""
+        """Start from the live definition and the picture of the item as it stands."""
         definition = self.world.registries.items.resolve(item_id)
         self.item_id = item_id
         self.closed = False
@@ -151,7 +151,10 @@ class ItemEditor:
             "effects": _number_text(definition.effects),
             "properties": _number_text(definition.properties),
         }
-        self.picture = pygame.transform.scale(self.icons.icon(item_id), ART_SIZE).convert_alpha()
+        # As it was last drawn, not the small icon of it: what was drawn here is still here to go on with.
+        drawn = self.icons.picture(item_id)
+        fit = pygame.transform.smoothscale if drawn.get_width() > ART_SIZE[0] else pygame.transform.scale
+        self.picture = (drawn.copy() if drawn.get_size() == ART_SIZE else fit(drawn, ART_SIZE)).convert_alpha()
 
     def _remember(self) -> None:
         self._undo.append(self.picture.copy())

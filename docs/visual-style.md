@@ -254,6 +254,14 @@ on displays of different resolutions.
 - While someone eats or uses an item, its icon floats over their head.
 - What a resident carries for their job is drawn in their hands, or on their back when they walk
   away from the viewer: the item's icon at half size.
+- What a drawn resident holds, and what anyone eats, is the item's picture as large as it was
+  made, without the empty paper round it: 11 map pixels along its longer side, a little out in
+  front of the hand, on the window itself where there is one. A larger picture is brought down
+  smoothly; a smaller one is made larger by whole pixels.
+- A meal loses a bite at each fifth of the way through it, out of its own outline on the side of
+  the mouth. Each bite throws a dozen crumbs: chips of the food's own colours, lit from the upper
+  left, with no line round them, which are tossed up, fall to the eater's feet, hop once and fade
+  there before the next bite. From afar a crumb is a square of a pixel or two.
 - An object that displays a container's contents, such as a shop's shelf, is drawn bare and the
   game puts the stock on it, one half-size icon per unit, a little of everything. Its sprite
   leaves room for them: on the 32×32 shelf, three 8×8 places on each of two boards.

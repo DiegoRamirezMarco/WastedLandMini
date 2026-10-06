@@ -672,6 +672,25 @@ Still open here:
 - The trunk still stands over the legs on the paper: a very long trunk and very long legs meet
 - The paper cannot be laid out a third way without losing the way to read the first
 
+### P21 — What is in the hand (needs P20) — done
+Tried by hand, a meal drawn at 64×64 in the item editor was eight pixels across in the hand,
+whatever had been drawn on it, and the crumbs of a bite were four squares of fixed colours.
+- **What is held is the picture as it was drawn**, not its 16×16 icon: without the empty paper
+  round it, 11 map pixels along its longer side, on the window at the window's own resolution
+- **A drawn resident carries their load in their hands** the same way
+- **A meal is seen going**: a bite out of its outline, on the side of the mouth, at each fifth of
+  the way through
+- **Crumbs of the food's own colours**: chips of several shapes and sizes that are tossed up,
+  turn, fall to the feet, hop and fade, the same way at the same moment every time
+- **An item opened again in its editor is as finely drawn as it was saved**: it was being opened
+  from its 16×16 icon, and saving it again lost what had been drawn
+
+Still open here:
+- Everything eaten is bitten and sheds crumbs alike: a tin loses pieces as a slice does
+- What is held does not turn with the hand, and the hand is behind it, not round it
+- Lists and inventories still show the 16×16 icon, twice as large in a resident's panel
+- The game's own pixel bodies, on the canvas, hold it at the canvas's resolution
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it

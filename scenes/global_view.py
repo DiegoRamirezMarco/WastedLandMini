@@ -7,6 +7,7 @@ from graphics.assets import AssetStore
 from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE, BodyRenderer
 from graphics.building_art import BuildingArtStore
 from graphics.building_renderer import FACADE_ROWS, BuildingRenderer, building_area
+from graphics.crumbs import Crumb, CrumbArt, crumbs
 from graphics.doll import DOLL_FACINGS, Doll, DollStore, draw_doll
 from graphics.face_renderer import FaceRenderer
 from graphics.font import CELL_SIZE, BitmapFont
@@ -87,10 +88,13 @@ MOUTH_OFFSETS = {
     "down": (0, 2), "up": (0, 1), "right": (2, 2), "left": (-2, 2),
     "doll_right": (2, 2), "doll_left": (-2, 2),
 }
-# A portion of each eating cycle in which crumbs spring away from the bite.
-BITE_START, BITE_END = 0.28, 0.62
-CRUMB_OFFSETS = ((-3, -2), (2, -3), (4, 0), (-2, 2))
-CRUMB_COLORS = ("sand", "glow", "lichen", "paper")
+# How large a thing in someone's hand is along its longer side, in pixels of the map's art: more
+# than a head, so that what was drawn on it can be made out.
+HELD_SIZE = 11
+# It is held by its back half: this far out in front of the hand, so that it is not over the face.
+HELD_AHEAD = 2
+# A meal is seen with a bite more gone from it at each of these shares of the way through.
+BITES_AT = (0.2, 0.4, 0.6, 0.8)
 # Rows of a head left visible when a resident lies in a bed: hair and eyes above the blanket.
 LYING_HEAD_ROWS = 10
 # Where the corner of that head goes on the bed, so that it rests on the pillow.
@@ -148,6 +152,9 @@ ZOOM_KEYS = {
 }
 
 Draw = tuple[float, int, Callable[[], None]]
+# Something in someone's hand this frame: what, where in map pixels, whether they face left, how
+# many bites are gone from it, and the crumbs flying from their mouth with where that is.
+Held = tuple[str, tuple[float, float], bool, int, list[Crumb], tuple[float, float]]
 # A paper doll to put on the window this frame: how far down the map it stands, the doll, and either
 # the skeleton it is laid over or, for someone lying under a blanket, where their neck is.
 DollDraw = tuple[float, Doll, Skeleton | None, tuple[float, float] | None]
@@ -183,6 +190,8 @@ class GlobalView:
         self.dolls = dolls if layers is not None else None
         self._doll_facing: dict[str, str] = {}
         self._doll_draws: list[DollDraw] = []
+        self._held: list[Held] = []
+        self._crumb_art = CrumbArt()
         self._posed: dict[tuple, Skeleton] = {}
         # Resident the player asked to draw. The game shell picks it up.
         self.requested_editor: str | None = None
@@ -693,6 +702,7 @@ class GlobalView:
         self.container_hitboxes = {}
         self._overlays = []
         self._doll_draws = []
+        self._held = []
         for _, _, draw in sorted(draws, key=lambda entry: entry[:2]):
             draw()
         stormy = self._storm(region)
@@ -712,6 +722,10 @@ class GlobalView:
             if size != region.size:
                 scene = pygame.transform.scale(scene, size, self._buffer(size))
             self.canvas.blit(scene, self._canvas_point(*region.topleft))
+            # With nothing on the window itself, what is held goes on the canvas, as large as a canvas pixel lets it.
+            corner = self._canvas_point(*region.topleft)
+            zoom = self.tile_px / TILE_SIZE
+            self._draw_held(self.canvas, (corner[0] - region.x * zoom, corner[1] - region.y * zoom), zoom)
         # Names, icons and faces go straight on the canvas, so they keep their size at any zoom.
         self._draw_zone_names()
         for overlay in self._overlays:
@@ -830,6 +844,8 @@ class GlobalView:
                 if head is not None:
                     image, joint = head
                     screen.blit(image, (round(origin[0] + neck[0] * detail - joint[0]), round(origin[1] + neck[1] * detail - joint[1])))
+            # What they hold is in front of them, and under the walls and the dark like everything else.
+            self._draw_held(screen, origin, detail)
             for area, picture in foreground_pictures:
                 spot = pygame.Rect(
                     place.x + round((area.x - region.x) * detail),
@@ -1086,10 +1102,10 @@ class GlobalView:
             self.hitboxes[resident.resident_id] = hitbox
             meal = self._meal_in_hand(resident)
             if meal is not None and not character.physical:
-                pose, phase = character.pose(), turn % 1.0
-                self._overlays.append(
-                    lambda: self._draw_meal(meal, facing, pose, phase)
-                )
+                self._hold(meal, facing, character.pose(), spot[1], turn, self._bites_taken(resident))
+            elif load is not None and doll is not None and not character.physical:
+                # A doll carries its load in its hands, where the carrying clip holds them out.
+                self._hold(load, facing, character.pose(), spot[1])
             self._overlays.append(lambda: self._draw_overhead(resident, hitbox.midtop, with_name=True))
 
         return (top + TILE_SIZE, 1, draw)
@@ -1158,34 +1174,49 @@ class GlobalView:
             return None
         return self._item_in_hand(resident)
 
-    def _draw_meal(self, item_id: str, facing: str, pose: dict[str, tuple[float, float]], phase: float) -> None:
-        """Draw food at the body-plan hand anchor and crumbs at its mouth during a bite."""
+    def _bites_taken(self, resident: Resident) -> int:
+        """How many bites are gone from what a resident is eating, by how far through the meal they are."""
+        activity = resident.activity
+        placed = self.world.interactables.get(activity.target_id or "") if activity is not None else None
+        use = self.world.definition_of(placed).use if placed is not None else None
+        if activity is None or use is None or use.minutes <= 0:
+            return 0
+        done = 1.0 - max(0.0, min(1.0, activity.minutes_left / use.minutes))
+        return sum(1 for share in BITES_AT if done >= share)
+
+    def _hold(
+        self,
+        item_id: str,
+        facing: str,
+        pose: dict[str, tuple[float, float]],
+        ground: float,
+        turn: float | None = None,
+        bites: int = 0,
+    ) -> None:
+        """Have something shown in the hand of a resident whose feet are `ground` down the map.
+        With `turn`, how many turns of the eating clip have gone, it is a meal and crumbs fly from each bite."""
         plan = self.bodies.plan
         hand = plan.anchor("held_item", facing, pose)
         mouth = plan.anchor("mouth", facing, pose)
         if hand is None or mouth is None:
             return
-        mouth_offset = MOUTH_OFFSETS.get(facing, (0, 2))
-        mouth = (mouth[0] + mouth_offset[0], mouth[1] + mouth_offset[1])
-        hand_on_canvas = self._canvas_point(*hand)
-        size = max(3, self._scaled(self.icons.small(item_id).get_width()))
-        icon = self.icons.small(item_id)
-        if icon.get_size() != (size, size):
-            icon = pygame.transform.scale(icon, (size, size))
-        self.canvas.blit(icon, icon.get_rect(center=hand_on_canvas))
+        offset = MOUTH_OFFSETS.get(facing, (0, 2))
+        mouth = (mouth[0] + offset[0], mouth[1] + offset[1])
+        left = facing.endswith("left")
+        forward = -1 if left else (1 if facing.endswith("right") else 0)
+        flying = crumbs(turn, forward, ground - mouth[1]) if turn is not None else []
+        self._held.append((item_id, (hand[0] + forward * HELD_AHEAD, hand[1]), left, bites, flying, mouth))
 
-        if not BITE_START <= phase <= BITE_END:
-            return
-        bite = (phase - BITE_START) / (BITE_END - BITE_START)
-        spread = math.sin(math.pi * bite)
-        fall = bite * 2.0
-        mouth_on_canvas = self._canvas_point(*mouth)
-        crumb_size = max(1, self.tile_px // TILE_SIZE)
-        zoom = self.tile_px / TILE_SIZE
-        for (dx, dy), color in zip(CRUMB_OFFSETS, CRUMB_COLORS):
-            x = mouth_on_canvas[0] + round(dx * spread * zoom)
-            y = mouth_on_canvas[1] + round((dy * spread + fall) * zoom)
-            pygame.draw.rect(self.canvas, PALETTE[color], (x, y, crumb_size, crumb_size))
+    def _draw_held(self, target: pygame.Surface, origin: tuple[float, float], detail: float) -> None:
+        """Draw what residents hold, and the crumbs of their meals, on a surface where a map pixel
+        is `detail` of its own and the map's corner is at `origin`."""
+        size = max(3, round(HELD_SIZE * detail))
+        for item_id, hand, left, bites, flying, mouth in self._held:
+            picture = self.icons.held(item_id, size, bites, left)
+            centre = (round(origin[0] + hand[0] * detail), round(origin[1] + hand[1] * detail))
+            target.blit(picture, picture.get_rect(center=centre))
+            at = (origin[0] + mouth[0] * detail, origin[1] + mouth[1] * detail)
+            self._crumb_art.draw(target, flying, self.icons.crumb_colors(item_id), at, detail)
 
     def _marker_draw(self, resident: Resident) -> Draw:
         """From afar a resident is only their face, over the tile they are on, roof or no roof."""
