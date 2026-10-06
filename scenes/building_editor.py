@@ -47,14 +47,24 @@ BRUSH_TOOL, ERASER_TOOL, FILL_TOOL = "brush", "eraser", "fill"
 TOOL_LABELS = {BRUSH_TOOL: "Pincel", ERASER_TOOL: "Goma", FILL_TOOL: "Cubo"}
 GUIDE_UNDER, GUIDE_OVER, GUIDE_OFF = "under", "over", "off"
 GUIDE_LABELS = {GUIDE_UNDER: "Calco: debajo", GUIDE_OVER: "Calco: encima", GUIDE_OFF: "Calco: quitado"}
-GUIDE_ALPHA = {GUIDE_UNDER: 120, GUIDE_OVER: 75}
+GUIDE_ALPHA = {GUIDE_UNDER: 160, GUIDE_OVER: 90}
+# What each stretch of a part is called on the guide.
+ZONE_NAMES = {
+    "floor": "suelo de dentro",
+    "roof": "tejado",
+    "door": "puerta",
+    "back": "muro del fondo",
+    "side": "lateral",
+    "front": "fachada",
+    "gap": "hueco",
+}
 UNDO_STEPS = 30
 PAPER = PALETTE["bone"]
 SAVED_TEXT = "Guardado: el edificio ya usa estos dibujos"
 NOTES_TEXT = (
     "Las cuatro piezas comparten marco: no cambies su sitio al pasar de una a otra.",
     "El interior queda bajo muebles y personas. Muros y puerta quedan delante. El tejado se quita al mirar dentro.",
-    "El calco marca la zona propia de la pieza. Lo que quede transparente deja ver el terreno.",
+    "El calco marca y nombra la zona de cada pieza, con la del juego debajo como ejemplo. Lo que quede sin pintar deja ver el terreno.",
     "Ctrl+Z deshace. Esc vuelve sin guardar.",
 )
 
@@ -206,8 +216,26 @@ class BuildingEditor:
         if part not in BUILDING_PARTS or self.room_id is None:
             return
         self.part = part
-        self.guide_picture = self.buildings.guide(self.world.rooms[self.room_id], part)
+        self.guide_picture = self._named_guide(part)
         self._stroke = None
+
+    def _named_guide(self, part: str) -> pygame.Surface:
+        """The guide of a part with each of its stretches named on it."""
+        room = self.world.rooms[self.room_id]
+        guide = self.buildings.guide(room, part)
+        for name, rect in self.buildings.zones(room, part):
+            label = self.font.render(ZONE_NAMES.get(name, name), PALETTE["ink"])
+            spot = label.get_rect(topleft=(rect.x + 3, rect.y + 3))
+            if rect.height > rect.width or label.get_width() + 6 > rect.width:
+                # Taller than it is wide, or too narrow to be written across: up its side, half way along it.
+                label = pygame.transform.rotate(label, 90)
+                spot = label.get_rect(midleft=(rect.x + 3, rect.centery))
+            spot = spot.clamp(guide.get_rect())
+            backing = pygame.Surface(spot.inflate(2, 2).size, pygame.SRCALPHA)
+            backing.fill((*PALETTE["paper"], 190))
+            guide.blit(backing, spot.inflate(2, 2))
+            guide.blit(label, spot)
+        return guide
 
     def _remember(self) -> None:
         self._undo.append((self.part, self.drawings[self.part].copy()))

@@ -142,40 +142,76 @@ class BuildingArtStore:
         # The old standing picture has no inside.  The map's floor remains the fallback in play.
         return _blank(size)
 
+    def zones(self, room: Room, part: str) -> list[tuple[str, pygame.Rect]]:
+        """The stretches of the canvas one part is drawn in, each by what it is.
+
+        `floor`, `roof` and `door` are a part each. The walls are the one at the `back`, a `side`
+        each way and the `front`, with a `gap` left in it for every door.
+        """
+        size = building_canvas_size(room)
+        tile = TILE_SIZE * BUILDING_DETAIL
+        facade_top = size[1] - FACADE_ROWS * tile
+        doors = [
+            pygame.Rect(column * tile, facade_top, tile, FACADE_ROWS * tile)
+            for column in door_columns(self.tile_map, room)
+        ]
+        if part == INSIDE_PART:
+            return [("floor", pygame.Rect(tile, tile * 2, room.width * tile, room.height * tile))]
+        if part == ROOF_PART:
+            return [("roof", pygame.Rect(0, 0, size[0], facade_top))]
+        if part == DOOR_PART:
+            return [("door", door) for door in doors]
+        if part == WALLS_PART:
+            # Back, sides and front as they sit on the map.  The broad front facade may be drawn
+            # over the last two rows, matching the old standing buildings.
+            return [
+                ("back", pygame.Rect(0, tile, size[0], tile)),
+                ("side", pygame.Rect(0, tile, tile, (room.height + 2) * tile)),
+                ("side", pygame.Rect(size[0] - tile, tile, tile, (room.height + 2) * tile)),
+                ("front", pygame.Rect(0, facade_top, size[0], FACADE_ROWS * tile)),
+                *(("gap", door) for door in doors),
+            ]
+        return []
+
+    def example(self, room: Room, part: str) -> pygame.Surface:
+        """Something to go by when drawing a part: the game's own art of it, or for the inside,
+        which the game has none of, a floor of boards."""
+        if part != INSIDE_PART:
+            return self.starter(room, part)
+        example = _blank(building_canvas_size(room))
+        board = TILE_SIZE * BUILDING_DETAIL // 2
+        for _, floor in self.zones(room, part):
+            pygame.draw.rect(example, PALETTE["copper"], floor)
+            for row, y in enumerate(range(floor.top, floor.bottom, board)):
+                pygame.draw.line(example, PALETTE["rust_dark"], (floor.left, y), (floor.right - 1, y), BUILDING_DETAIL)
+                # Boards end at a different place in each row, as laid boards do.
+                for x in range(floor.left + (row % 3 + 1) * board * 2, floor.right, board * 7):
+                    pygame.draw.line(example, PALETTE["rust_dark"], (x, y), (x, min(floor.bottom, y + board) - 1), BUILDING_DETAIL)
+            pygame.draw.rect(example, PALETTE["rust_dark"], floor, BUILDING_DETAIL)
+        return example
+
     def guide(self, room: Room, part: str) -> pygame.Surface:
-        """A labelled geometric guide for one aligned building part."""
+        """What is traced over for one part: its zones, tinted and edged, with an example of it under them."""
         size = building_canvas_size(room)
         guide = _blank(size)
         tile = TILE_SIZE * BUILDING_DETAIL
         strong = (*PALETTE["teal"], 210)
         faint = (*PALETTE["teal"], 45)
         joint = (*PALETTE["ember"], 230)
-
-        def zone(rect: pygame.Rect) -> None:
-            pygame.draw.rect(guide, faint, rect)
-            pygame.draw.rect(guide, strong, rect, max(1, BUILDING_DETAIL))
-
-        if part == INSIDE_PART:
-            zone(pygame.Rect(tile, tile * 2, room.width * tile, room.height * tile))
-        elif part == ROOF_PART:
-            facade_top = size[1] - FACADE_ROWS * tile
-            zone(pygame.Rect(0, 0, size[0], facade_top))
-            pygame.draw.line(guide, joint, (0, facade_top - 1), (size[0] - 1, facade_top - 1), BUILDING_DETAIL)
-        elif part == DOOR_PART:
-            top = size[1] - FACADE_ROWS * tile
-            for column in door_columns(self.tile_map, room):
-                zone(pygame.Rect(column * tile, top, tile, FACADE_ROWS * tile))
-        elif part == WALLS_PART:
-            # Back, sides and front as they sit on the map.  The broad front facade may be drawn
-            # over the last two rows, matching the old standing buildings.
-            zone(pygame.Rect(0, tile, size[0], tile))
-            zone(pygame.Rect(0, tile, tile, (room.height + 2) * tile))
-            zone(pygame.Rect(size[0] - tile, tile, tile, (room.height + 2) * tile))
-            front = pygame.Rect(0, size[1] - FACADE_ROWS * tile, size[0], FACADE_ROWS * tile)
-            zone(front)
-            for column in door_columns(self.tile_map, room):
-                pygame.draw.rect(guide, (0, 0, 0, 0), (column * tile, front.y, tile, front.height))
-                pygame.draw.rect(guide, joint, (column * tile, front.y, tile, front.height), BUILDING_DETAIL)
+        zones = self.zones(room, part)
+        for name, rect in zones:
+            if name != "gap":
+                pygame.draw.rect(guide, faint, rect)
+        for name, rect in zones:
+            if name == "gap":
+                pygame.draw.rect(guide, (0, 0, 0, 0), rect)
+        guide.blit(self.example(room, part), (0, 0))
+        for name, rect in zones:
+            pygame.draw.rect(guide, joint if name == "gap" else strong, rect, max(1, BUILDING_DETAIL))
+        if part == ROOF_PART:
+            # The eave: under it the front of the building shows.
+            eave = size[1] - FACADE_ROWS * tile - 1
+            pygame.draw.line(guide, joint, (0, eave), (size[0] - 1, eave), BUILDING_DETAIL)
         return guide
 
     def forget(self, room_id: str) -> None:

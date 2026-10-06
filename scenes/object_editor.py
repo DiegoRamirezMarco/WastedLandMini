@@ -6,7 +6,7 @@ from pathlib import Path
 import pygame
 
 from graphics.font import LINE_HEIGHT, BitmapFont
-from graphics.object_art import ObjectArtStore, object_art_path
+from graphics.object_art import ABOVE_FILL, GROUND_FILL, ObjectArtStore, object_art_path
 from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from scenes.scene import canvas_position
@@ -38,15 +38,22 @@ BRUSH_TOOL, ERASER_TOOL, FILL_TOOL = "brush", "eraser", "fill"
 TOOL_LABELS = {BRUSH_TOOL: "Pincel", ERASER_TOOL: "Goma", FILL_TOOL: "Cubo"}
 GUIDE_UNDER, GUIDE_OVER, GUIDE_OFF = "under", "over", "off"
 GUIDE_LABELS = {GUIDE_UNDER: "Calco: debajo", GUIDE_OVER: "Calco: encima", GUIDE_OFF: "Calco: quitado"}
-GUIDE_ALPHA = {GUIDE_UNDER: 150, GUIDE_OVER: 90}
+GUIDE_ALPHA = {GUIDE_UNDER: 160, GUIDE_OVER: 90}
+# What the colours of the guide mean, said beside the paper: a drawing this small has no room for words.
+LEGEND = (
+    (GROUND_FILL, "Suelo que ocupa, casilla a casilla"),
+    (ABOVE_FILL, "Lo que se alza por encima"),
+    (None, "Debajo, el del juego como ejemplo"),
+)
+LEGEND_WIDTH = 150
 UNDO_STEPS = 30
 PAPER = PALETTE["bone"]
 SAVED_TEXT = "Guardado: así se ven ya todos los de su clase"
 NOTES_TEXT = (
     "Se ve desde arriba y un poco de frente, como todo en el mapa.",
     "La zona naranja es el suelo que ocupa, casilla a casilla. La azul es lo que se alza por encima y tapa lo de detrás.",
-    "Lo que quede sin pintar deja ver el suelo.",
-    "Arte de partida pone el del juego. Ctrl+Z deshace, Esc vuelve sin guardar.",
+    "Debajo se ve el del juego, de ejemplo: fíjate en su tamaño y desde dónde se mira. Lo que quede sin pintar deja ver el suelo.",
+    "Arte de partida lo pone sobre el papel. Ctrl+Z deshace, Esc vuelve sin guardar.",
 )
 
 
@@ -319,6 +326,7 @@ class ObjectEditor:
         canvas.fill(TRANSPARENT, self.area)
         self.layers.under(self._show_drawing)
 
+        self._render_legend()
         font.draw(canvas, "Así se ve en el mapa", (PREVIEW.x, PREVIEW.y - LINE_HEIGHT - 1), PALETTE["dust"])
         pygame.draw.rect(canvas, PALETTE["stone"], PREVIEW.inflate(2, 2), 1)
         canvas.fill(TRANSPARENT, PREVIEW)
@@ -335,6 +343,23 @@ class ObjectEditor:
                 font.draw(canvas, line, (NOTES.x, y), PALETTE["bone"])
                 y += LINE_HEIGHT
             y += 4
+
+    def _render_legend(self) -> None:
+        """Say what the guide shows: beside the paper where there is room, or else under it."""
+        beside = self.area.right + 12 + LEGEND_WIDTH <= PREVIEW.x
+        x, y = (self.area.right + 12, self.area.y) if beside else (self.area.x, self.area.bottom + 6)
+        for fill, text in LEGEND:
+            if fill is not None:
+                swatch = pygame.Rect(x, y + 1, 9, 9)
+                pygame.draw.rect(self.canvas, PAPER, swatch)
+                tint = pygame.Surface(swatch.size, pygame.SRCALPHA)
+                tint.fill((*fill[:3], 200))
+                self.canvas.blit(tint, swatch)
+                pygame.draw.rect(self.canvas, PALETTE["stone"], swatch, 1)
+            for line in self.font.wrap(text, LEGEND_WIDTH - 14):
+                self.font.draw(self.canvas, line, (x + 14, y), PALETTE["bone"])
+                y += LINE_HEIGHT
+            y += 3
 
     def _show_drawing(self, screen: pygame.Surface) -> None:
         place = self.layers.on_screen(self.area)

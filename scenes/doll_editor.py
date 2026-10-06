@@ -7,6 +7,7 @@ import pygame
 
 from graphics.body_renderer import BodyRenderer
 from graphics.doll import BODY_CANVAS, DOLL_FACINGS, HEAD_CANVAS, Doll, DollStore, doll_path, draw_doll
+from graphics.doll_guide import label_spots, reference
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
@@ -41,7 +42,24 @@ TOOL_LABELS = {BRUSH_TOOL: "Pincel", ERASER_TOOL: "Goma", FILL_TOOL: "Cubo"}
 # Where the guide is shown: under the drawing, over it, or not at all.
 GUIDE_UNDER, GUIDE_OVER, GUIDE_OFF = "under", "over", "off"
 GUIDE_LABELS = {GUIDE_UNDER: "Calco: debajo", GUIDE_OVER: "Calco: encima", GUIDE_OFF: "Calco: quitado"}
-GUIDE_ALPHA = {GUIDE_UNDER: 120, GUIDE_OVER: 70}
+GUIDE_ALPHA = {GUIDE_UNDER: 170, GUIDE_OVER: 90}
+# What each part is called on the guide, by the bone it goes with whichever side it is on, and
+# what the two sides of the body are called.
+PART_NAMES = {
+    "neck": "cuello", "spine": "tronco", "hips": "cadera", "upper_arm": "brazo", "forearm": "antebrazo",
+    "hand": "mano", "thigh": "muslo", "shin": "pierna", "foot": "pie",
+}
+SIDE_NAMES = {"_left": "DETRÁS", "_right": "DELANTE"}
+# Parts whose name does not go up their left edge: one is too thin for it, the other lies flat.
+NAMES_BESIDE = ("neck",)
+NAMES_BELOW = ("foot",)
+# The first and last part of a limb, over and under which the side it is on is written.
+LIMB_TOPS = ("upper_arm",)
+LIMB_BOTTOMS = ("foot",)
+FACING_NOTE = "mira a la derecha >>"
+NECK_NOTE = "aquí gira sobre el cuello"
+EXAMPLE_PREVIEW = "Así se mueve el ejemplo"
+OWN_PREVIEW = "Así se mueve"
 UNDO_STEPS = 30
 PAPER = PALETTE["bone"]
 # Window pixels to one of the skeleton's in the preview, and how fast it goes through its clips.
@@ -51,10 +69,10 @@ PREVIEW_CLIPS = ("walk", "idle", "work", "fight")
 PREVIEW_SECONDS = 4.0
 SAVED_TEXT = "Guardado: ya anda así por el asentamiento"
 NOTES_TEXT = (
-    "Cada marco es una pieza: lo que pintes dentro se mueve con ella.",
-    "La figura fina es solo un ejemplo. Hazlo más gordo o con la forma que quieras, hasta el marco.",
-    "Naranja: lado de delante. Azul: el de detrás. Puntos rojos: articulaciones. El cuello va aparte, sobre los hombros.",
-    "Mira a la derecha. Ctrl+Z deshace, Esc vuelve sin guardar.",
+    "Cada zona de color es una pieza, con su nombre: lo que pintes dentro se mueve con ella.",
+    "Las rayas rojas son los cortes, por donde se dobla. Un brazo o una pierna se dibuja de un tirón, cruzándolas.",
+    "El muñeco de debajo es un ejemplo para fijarte o calcar. Hazlo más gordo o como quieras, hasta el borde de la zona.",
+    "Naranja: lado de delante. Azul: el de detrás. Ctrl+Z deshace, Esc vuelve sin guardar.",
 )
 
 
@@ -96,7 +114,10 @@ class DollEditor:
             BODY_CANVAS: pygame.Rect(BODY_AT, self.template.canvases[BODY_CANVAS]),
             HEAD_CANVAS: pygame.Rect(HEAD_AT, self.template.canvases[HEAD_CANVAS]),
         }
-        self.guides = {name: self.template.guide(name) for name in self.areas}
+        self.guides = {name: self._named_guide(name) for name in self.areas}
+        # The figure of the guide, cut as a drawing would be: what moves in the preview until something is drawn.
+        self._example = Doll(self.template, {name: reference(self.template, name) for name in self.areas})
+        self._showing_example = True
         self.colors = list(PALETTE.values())
         self.color = PALETTE["ink"]
         self.size = BRUSHES[1]
@@ -175,8 +196,55 @@ class DollEditor:
             return next(button.rect for button in self.top_buttons if button.intent == ("save",))
         return None
 
+    def _named_guide(self, canvas: str) -> pygame.Surface:
+        """The guide of a canvas with every part named on it, and the side of the body each limb is on."""
+        guide = self.template.guide(canvas)
+        width, height = guide.get_size()
+        ink = PALETTE["ink"]
+
+        def write(text: str, position: tuple[int, int], upright: bool = False) -> None:
+            label = self.font.render(text, ink)
+            if upright:
+                label = pygame.transform.rotate(label, 90)
+            spot = label.get_rect(topleft=position).clamp(guide.get_rect())
+            backing = pygame.Surface(spot.inflate(2, 2).size, pygame.SRCALPHA)
+            backing.fill((*PALETTE["paper"], 170))
+            guide.blit(backing, spot.inflate(2, 2))
+            guide.blit(label, spot)
+
+        for bone, spot in label_spots(self.template, canvas).items():
+            side = next((suffix for suffix in SIDE_NAMES if bone.endswith(suffix)), "")
+            part = bone.removesuffix(side)
+            name = PART_NAMES.get(part, part)
+            if part in NAMES_BESIDE:
+                write(name, (spot.right + 4, spot.top + 8))
+            elif part in NAMES_BELOW:
+                write(name, (spot.left + 4, spot.bottom - LINE_HEIGHT))
+            else:
+                write(name, (spot.left + 3, spot.centery - self.font.width(name) // 2), upright=True)
+            if side and part in LIMB_TOPS:
+                # Over the round end the game gives a limb where nothing else begins.
+                top = spot.top - round(self.template.parts[bone].radius) - LINE_HEIGHT - 10
+                write(SIDE_NAMES[side], (spot.centerx - self.font.width(SIDE_NAMES[side]) // 2, top))
+            if side and part in LIMB_BOTTOMS:
+                write(SIDE_NAMES[side], (spot.centerx - self.font.width(SIDE_NAMES[side]) // 2, spot.bottom + 3))
+        whole = [spec for spec in self.template.parts.values() if spec.canvas == canvas and spec.whole]
+        # Which way it faces goes at the foot of the paper, or at its head where the foot is taken.
+        write(FACING_NOTE, ((width - self.font.width(FACING_NOTE)) // 2, 4 if whole else height - LINE_HEIGHT - 2))
+        for spec in whole:
+            x = round(spec.start[0]) - self.font.width(NECK_NOTE) // 2
+            write(NECK_NOTE, (x, round(spec.start[1]) + 7))
+        return guide
+
     def _cut(self) -> None:
-        """Cut the drawings as they stand into a doll, to be seen moving in the preview."""
+        """Cut the drawings as they stand into a doll, to be seen moving in the preview.
+
+        With nothing drawn yet it is the figure of the guide that moves, to show what the parts add up to.
+        """
+        self._showing_example = not any(pygame.mask.from_surface(drawing).count() for drawing in self.drawings.values())
+        if self._showing_example:
+            self._preview = self._example
+            return
         self._preview = Doll(self.template, self.drawings)
 
     def _remember(self, name: str) -> None:
@@ -377,7 +445,8 @@ class DollEditor:
             pygame.draw.rect(canvas, PALETTE["stone"], area.inflate(2, 2), 1)
             canvas.fill(TRANSPARENT, area)
             self.layers.under(self._show_drawing(name, area))
-        font.draw(canvas, "Así se mueve", (PREVIEW.x, PREVIEW.y - LINE_HEIGHT - 1), PALETTE["dust"])
+        caption = EXAMPLE_PREVIEW if self._showing_example else OWN_PREVIEW
+        font.draw(canvas, caption, (PREVIEW.x, PREVIEW.y - LINE_HEIGHT - 1), PALETTE["dust"])
         pygame.draw.rect(canvas, PALETTE["stone"], PREVIEW.inflate(2, 2), 1)
         canvas.fill(TRANSPARENT, PREVIEW)
         self.layers.under(self._show_preview)

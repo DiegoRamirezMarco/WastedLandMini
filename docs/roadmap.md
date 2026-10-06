@@ -566,6 +566,40 @@ Still open here:
 - What is carried, worn or grown is still the game's own art, and so is the ground
 - Nobody is taught to give a resident a voice
 
+### P18 — Paper that can be read (needs P17) — done
+Tried by hand, the paper of the editors could not be made out: frames one over another and
+patches of colour with no shape to them. What is traced over now says what it is.
+
+- **Each part of a body has a zone of its own**, where the old frames ran over one another: a
+  limb is three zones in a row, tinted by the side of the body it is on, every other one a
+  little darker
+- **The cuts are drawn**: a dashed line across the limb at every joint a drawing is cut at,
+  which is also where it bends
+- **Every part is named on the paper**, and each limb says whether it is the one in front or
+  the one behind, and the figure which way it faces
+- **A figure to go by, not patches of colour**: under the zones stands someone drawn with a
+  dark line round them, in a shirt, trousers and shoes, with hands and a face. It is put
+  together from what each part is said to wear in the template (`wears`), and cut straight at
+  the cuts, with the round end the game gives a limb where nothing else begins
+- **Until something is drawn, it is that figure that walks in the preview**, to show what the
+  parts add up to
+- **A building's guide names its stretches** (back wall, sides, front, the gap for the door,
+  floor, roof, door) and shows the game's own art of the part under them. For the inside,
+  which the game has no picture of, a floor of boards
+- **An object's guide shows the game's own picture of it under its zones**, and what the two
+  colours mean is said beside the paper
+
+Still open here:
+- The figure is put together from shapes by code. It reads as a person, and it is no
+  illustration: a better one would be drawn by hand and kept as a picture
+- There is one figure, of one build, in one set of clothes. Nothing shows a stout body, a
+  skirt, long hair or a hat, which the zones leave room for
+- The parts of a limb still lie in a row touching each other, so that a limb can be drawn in
+  one go. Nothing shows them pulled apart
+- While one part of a building is drawn the other three are not seen under it, only in the
+  small picture beside
+- The example of an object is the game's own pixel art, enlarged
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it

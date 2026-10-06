@@ -68,7 +68,8 @@ class ObjectArtStore:
         return starter
 
     def guide(self, definition: InteractableDefinition) -> pygame.Surface:
-        """What is traced over: the tiles the object stands on, and the room it has above them."""
+        """What is traced over: the tiles the object stands on, the room it has above them, and
+        the game's own picture of it as an example."""
         size = self.canvas_size(definition)
         guide = pygame.Surface(size, pygame.SRCALPHA)
         tile = TILE_SIZE * OBJECT_DETAIL
@@ -76,6 +77,8 @@ class ObjectArtStore:
         if ground.top > 0:
             guide.fill(ABOVE_FILL, pygame.Rect(0, 0, size[0], ground.top))
         guide.fill(GROUND_FILL, ground)
+        # The game's own picture of it, to go by: how large it sits on its tiles, and from where it is seen.
+        guide.blit(self.starter(definition), (0, 0))
         for x in range(0, size[0] + 1, tile):
             pygame.draw.line(guide, PALETTE["ember"], (min(x, size[0] - 1), ground.top), (min(x, size[0] - 1), size[1] - 1))
         for y in range(ground.top, size[1] + 1, tile):

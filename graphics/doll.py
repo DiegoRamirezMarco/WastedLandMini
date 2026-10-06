@@ -39,9 +39,6 @@ GUIDE_MIDDLE = PALETTE["dust"]
 GUIDE_JOINT = PALETTE["ember"]
 # Pixels either side of a joint over which a limb is measured to see how wide it is drawn there.
 JOINT_BAND = 2
-# How solid the inside of a zone is on the guide, out of 255, and how thick its edge.
-ZONE_FILL = 60
-ZONE_EDGE = 2
 # Pixels to one of the skeleton's at which a doll is laid out to see how much room it takes.
 BOX_DETAIL = 4.0
 
@@ -76,6 +73,8 @@ class PartSpec:
     # Nor is it cut round at its second joint, though another part starts there: the shoulders of the
     # trunk are left as drawn, with the neck coming out of them.
     free_end: bool = False
+    # What the part is on the example figure the guide shows: a sleeve, a shoe, a head.
+    wears: str = ""
 
     def zone(self) -> list[Point]:
         """The corners of the zone: a box along the part, wider than it and reaching past both joints."""
@@ -120,13 +119,25 @@ class DollTemplate:
         corner of either sticks out and no gap opens.
         """
         spec = self.parts[bone]
+        mask = self.region(bone)
+        for joint, keep in self.cuts(spec):
+            width = self._width_at(drawing, joint, keep, self.reach_at(spec, joint))
+            if width > 0:
+                pygame.draw.circle(mask, (255, 255, 255, 255), joint, width + 1)
+        return mask
+
+    def region(self, bone: str) -> pygame.Surface:
+        """Where on its canvas a part is its own: its zone, as far as the joints it is cut at.
+
+        White and solid there, clear elsewhere. Next to each other, the regions of a limb show where
+        one part ends and the next begins.
+        """
+        spec = self.parts[bone]
         if spec.whole:
             return self.mask(bone)
         mask = pygame.Surface(self.canvases[spec.canvas], pygame.SRCALPHA)
-        solid = (255, 255, 255, 255)
-        self._zone(mask, spec, solid)
-        cuts = [(joint, keep) for joint, keep in ((spec.start, self._kept(spec, True)), (spec.end, self._kept(spec, False))) if keep]
-        for joint, keep in cuts:
+        self._zone(mask, spec, (255, 255, 255, 255))
+        for joint, keep in self.cuts(spec):
             # Everything on the far side of the cut is somebody else's.
             across = (-keep[1] * FAR, keep[0] * FAR)
             away = (-keep[0] * FAR, -keep[1] * FAR)
@@ -136,28 +147,31 @@ class DollTemplate:
                 (joint[0] - across[0] + away[0], joint[1] - across[1] + away[1]),
                 (joint[0] + across[0] + away[0], joint[1] + across[1] + away[1]),
             ])
-        for joint, keep in cuts:
-            width = self._width_at(drawing, joint, keep, self._reach_at(spec, joint))
-            if width > 0:
-                pygame.draw.circle(mask, solid, joint, width + 1)
         return mask
 
-    def _sharing(self, spec: PartSpec, joint: Point) -> list[PartSpec]:
+    def cuts(self, spec: PartSpec) -> list[tuple[Point, Point]]:
+        """The joints a part is cut at, each with the side of the cut it keeps, as a direction."""
+        if spec.whole:
+            return []
+        ends = ((spec.start, self._kept(spec, True)), (spec.end, self._kept(spec, False)))
+        return [(joint, keep) for joint, keep in ends if keep]
+
+    def sharing(self, spec: PartSpec, joint: Point) -> list[PartSpec]:
         """The other parts of the same canvas that have a joint at the same place."""
         return [
             other for other in self.parts.values()
             if other is not spec and other.canvas == spec.canvas and not other.whole and joint in (other.start, other.end)
         ]
 
-    def _reach_at(self, spec: PartSpec, joint: Point) -> float:
+    def reach_at(self, spec: PartSpec, joint: Point) -> float:
         """How far from a joint a limb is measured: no further than the narrowest zone that meets there."""
-        return min([spec.reach, *(other.reach for other in self._sharing(spec, joint))])
+        return min([spec.reach, *(other.reach for other in self.sharing(spec, joint))])
 
     def _kept(self, spec: PartSpec, at_start: bool) -> Point | None:
         """Which side of the cut through one of its joints a part keeps, as a direction. None if it is not cut there."""
         joint = spec.start if at_start else spec.end
         own = _direction(spec)
-        others = self._sharing(spec, joint)
+        others = self.sharing(spec, joint)
         if not at_start:
             # At its far end a part is only cut if another goes on from there.
             starting = [other for other in others if other.start == joint]
@@ -193,30 +207,11 @@ class DollTemplate:
         pygame.draw.circle(target, color, spec.end, radius)
 
     def guide(self, canvas: str) -> pygame.Surface:
-        """What is shown under a canvas to draw over.
+        """What is shown under a canvas to draw over: every part in a zone of its own, the cuts
+        between them, a dot at each joint, and a figure to take as a reference."""
+        from graphics.doll_guide import build_guide
 
-        For every part, a slim example of it, the frame of the zone it may be drawn in, faintly
-        filled, and a dot at each joint.
-        """
-        guide = pygame.Surface(self.canvases[canvas], pygame.SRCALPHA)
-        mine = [(bone, spec) for bone, spec in self.parts.items() if spec.canvas == canvas]
-        tints = {
-            bone: GUIDE_NEAR if bone.endswith("_right") else (GUIDE_FAR if bone.endswith("_left") else GUIDE_MIDDLE)
-            for bone, _ in mine
-        }
-        for bone, spec in mine:
-            if not spec.whole:
-                self._zone(guide, spec, (*tints[bone], ZONE_FILL))
-        for bone, spec in mine:
-            if not spec.whole:
-                self._zone(guide, spec, (*tints[bone], 255), ZONE_EDGE)
-        for bone, spec in mine:
-            guide.blit(self.example(bone, tints[bone]), (0, 0))
-        for spec in self.parts.values():
-            if spec.canvas == canvas:
-                for joint in (spec.start, spec.end):
-                    pygame.draw.circle(guide, GUIDE_JOINT, joint, max(2, self.unit // 5))
-        return guide
+        return build_guide(self, canvas)
 
     def example(self, bone: str, color: Color, outline: Color | None = None) -> pygame.Surface:
         """The slim example of one part on a clear canvas, kept inside its zone.
@@ -280,6 +275,7 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
             bool(values.get("whole", False)),
             bool(values.get("free_start", False)),
             bool(values.get("free_end", False)),
+            str(values.get("wears", "")),
         )
     return DollTemplate(unit, canvases, parts)
 

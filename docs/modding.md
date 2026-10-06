@@ -255,8 +255,10 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   is a bone with the canvas it is drawn on and the two points it runs `from` and `to`. `radius`
   is half the width of the slim example the guide shows. `reach` is half the width of the zone
   the part may be drawn in and `ends` how far that zone goes beyond each joint; give them room,
-  so that people can draw other builds than the example. `whole` is for a part that is
-  everything on its canvas. Every other part is cut round at the joints it shares, but for
+  so that people can draw other builds than the example. `wears` says what the part is on the
+  figure the guide shows, so that it is drawn as one: `skin`, `sleeve`, `hand`, `shirt`, `waist`,
+  `leg`, `shin`, `shoe` or `head`; anything else is a plain rounded strip. `whole` is for a part
+  that is everything on its canvas. Every other part is cut round at the joints it shares, but for
   `free_start`, a part that does not turn about its first joint, and `free_end`, one left as
   drawn at its second though another starts there, as the trunk at the shoulders. A part need
   not be as long as its bone is in the `doll` view: it is drawn out between its two joints to

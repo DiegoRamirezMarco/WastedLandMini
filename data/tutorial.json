@@ -22,7 +22,7 @@
     {
       "id": "draw_stroke",
       "title": "El pincel",
-      "text": "Pinta sobre el papel con el botón apretado. Cada marco del calco es una pieza del cuerpo: lo que pintes dentro se moverá con ella. Los cuatro círculos cambian el grosor del pincel.",
+      "text": "Pinta sobre el papel con el botón apretado. Cada zona de color es una pieza del cuerpo, con su nombre, y las rayas rojas son los cortes por donde se dobla. El muñeco de debajo es un ejemplo para fijarte o calcar. Los cuatro círculos cambian el grosor.",
       "goal": {"type": "deed", "target": "stroke"},
       "focus": "doll",
       "hint": "canvas",
