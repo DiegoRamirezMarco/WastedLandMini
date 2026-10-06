@@ -266,10 +266,13 @@ room. An argument's importance rises with the resentment between the two.
   it is reported, once a day, only when there is nothing to eat anywhere else either.
 - **Belongings.** A resident uses their own things, carried or kept in a container, when the
   item's effects would help: food is eaten and used up, anything else is kept.
-- **Worth** is personal: base value times the multiplier of any trait whose tags fit the item.
+- **Worth** is personal: base value, more or less by how much they like the thing, more if it
+  answers a need that presses, if someone dear gave it to them, or if it is the only one there is
+  (see Tastes). Trade, gifts, theft and buying all go by it.
 - **Gifts and swaps** happen at the end of a friendly exchange. Someone fond enough and not too
-  grasping may give away something they carry; otherwise two residents swap one item each if one
-  gains by it and the other does not lose.
+  grasping may give away something they carry, the one that looks the best present by what they
+  have seen of the other's tastes; otherwise two residents swap one item each if one gains by it
+  and the other does not lose.
 - **Theft.** A resident tempted enough takes someone else's thing from a container that nobody
   can see at that moment. Temptation grows with the item's worth to them, their greed and their
   resentment of the owner, and shrinks with empathy. The item changes hands but not owner.
@@ -279,6 +282,41 @@ room. An argument's importance rises with the resentment between the two.
   seeing it or being told. An owner who merely sees the empty spot knows something is missing,
   and is upset, but not who to blame.
 - Talking things out after a crisis gives stolen things back.
+
+## Tastes
+
+- Every resident has a **profile of tastes** of their own, kept in `world.taste_profiles` and
+  not on the resident: how much they like a category of item, a taste tag, or one item in
+  particular, from -100 to 100. The rules are in `data/tastes.json`.
+- A taste is two numbers kept apart: the **leaning** they came with, which never changes, and
+  what they have **learned** since, which nothing moves yet. The taste is the two together.
+- **Taste tags** are an item's `preference_tags`. They are not its `tags`, which are for rules and
+  sorting and never make a taste. There is no list of them: whatever an item carries is one.
+- A profile starts with what the resident's traits give (`tastes` in `data/traits.json`) and
+  **fills as they meet things**. The first time they eat, use or are handed an item, a leaning
+  is made for its category and for each taste tag they had none for, and kept. It comes from the
+  settlement's seed, the resident's ID and the tag, so it is always the same for the same three,
+  and making it draws nothing from the settlement's own randomness. Most are mild. About one
+  item in seven is also something a resident loves or cannot stand for itself.
+- **How much they like an item** is the mean of their tastes for its tags, plus a share of the
+  one for its category. A taste for the item itself counts over those the stronger it is, without
+  silencing them. Weighing things up uses the tastes there are and makes none.
+- **A reaction** is one of hated, disliked, neutral, liked, loved. It is that liking as the
+  moment colours it: a pressing need answered, their mood, and fondness for whoever handed it
+  over. It moves their mood; a meal to their taste eases stress and one that is not adds to it;
+  a present moves what they feel for the giver, down as well as up.
+- **Choosing.** Among foods that answer their hunger they take what does most and what they like.
+- **What is found out** is kept apart from the tastes, in `world.taste_knowledge`: how much has
+  been *seen* of each taste of each resident, by the player and by each resident who was there.
+  A taste is unknown, then suspected, then known. It moves on what happens: a reaction to a
+  meal, a thing used or a present; something bought; a swap turned down over the thing offered;
+  a taste spoken of in a friendly exchange. A reaction only shows the tastes that pulled the way
+  it went: one that was outweighed, or that hunger got the better of, stays hidden. The taste a
+  trait gives is known to the player from the start, as the trait is.
+- `TasteSystem.found_out` is what a screen may show: each taste with how sure it is and which
+  way it goes. Suspected, it says liked, disliked or neither; known, which of the five. There is
+  never a number in it.
+- A taste for something no content brings any longer stays in the save and does nothing.
 
 ## Friendship, romance and couples
 
@@ -379,7 +417,9 @@ Everything here is between adults, and nothing happens to anyone who does not wa
 
 ## Determinism
 
-All randomness comes from `SimulationRNG`, and its state is saved. The same seed gives the same
+All randomness comes from `SimulationRNG`, and its state is saved. What has to come out the same
+whenever it is asked, such as a leaning for a taste, comes from `SimulationRNG.keyed`: a
+generator of its own for that one question, which moves no other on. The same seed gives the same
 event log, and a world saved mid-activity continues exactly as if it had never been saved. Both are
 covered by tests. Player advice is part of the input: the same advice at the same minute gives
 the same history.

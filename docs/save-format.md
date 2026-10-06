@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 18 (current)
+## Version 19 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `18` |
+| `version` | `19` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -34,6 +34,8 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `deaths` | Everyone who has died: `resident_id`, `name`, `timestamp`, `cause`, `killer_id`, `grave_id` |
 | `history` | Every noteworthy event so far, in full, with its `data` |
 | `event_log` | Text history of emitted events |
+| `tastes` | Per resident ID, their tastes under `category`, `tag` and `item`: each a name with its `leaning` and what has been `learned` |
+| `taste_knowledge` | Per onlooker (`@player`, or a resident ID), per resident, per taste (`tag:sweet`, `item:stew`, `category:food`): how much of it has been seen |
 | `tutorial` | Where a new settlement is in its opening: `step` (a step ID from `data/tutorial.json`, or `null` once it is over or if it never had one), `since` (game minute the step began), `opened`, `acknowledged`, the `deeds` the player has done of what the step asks them to do themselves, and the IDs of the steps `done` |
 
 A resident's `activity` is `null` or `action`, `target_id` (an object ID), `partner_id` (a resident
@@ -42,7 +44,8 @@ remaining `path` as tiles, `minutes_left` and `using`.
 
 A resident's `expedition` is `null` or `returns_at`, `finds`, `danger` and `find_at`.
 
-An item is saved as `id`, `definition_id`, `owner_id`, `condition` and `quantity`, inside whichever
+An item is saved as `id`, `definition_id`, `owner_id`, `condition`, `quantity` and `given_by` (the
+resident who made a present of it, or `null`), inside whichever
 inventory holds it. An activity's `item_id` names the item involved.
 
 Definitions (terrain kinds, object kinds, building blueprints and items) are not saved; they are
@@ -57,6 +60,9 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 19** added `tastes`, `taste_knowledge` and an item's `given_by`. An older save has no
+  tastes but those its residents' traits give: the rest are made as things are met, as in a new
+  settlement. Tastes for tags and items that no content defines any longer are kept as they are.
 - **Version 18** added `tutorial`. An older save is past its opening, and so is one made on a step
   that is no longer defined. Drawings are not part of a save: they are kept as pictures, by ID.
 - **Version 17** added the editable terrain, rooms and construction underlays. Older saves use the

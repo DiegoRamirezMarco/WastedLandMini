@@ -14,10 +14,12 @@ from simulation.health.injury import (
     limb_definition_from_data,
 )
 from simulation.items.custom_content import load_custom_items
+from simulation.items.item import TASTE_TAG_PATTERN
 from simulation.items.registry import ItemRegistry
 from simulation.residents.personality import Personality
 from simulation.social.bonds import BondSettings, bond_settings_from_data
 from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
+from simulation.tastes.settings import TasteSettings, taste_settings_from_data
 from simulation.tutorial.tutorial import BUILDING, JOB, OBJECT, TutorialDefinition, tutorial_definition_from_data
 from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
@@ -145,6 +147,8 @@ class BuiltInRegistries:
     bonds: BondSettings = field(default_factory=BondSettings)
     expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
     world_events: WorldEventSettings = field(default_factory=WorldEventSettings)
+    # How tastes are made, how they are taken, and what they are called.
+    tastes: TasteSettings = field(default_factory=TasteSettings)
     event_settings: dict[str, Any] = field(default_factory=dict)
     dialogue: dict[str, list[str]] = field(default_factory=dict)
     # The steps a new settlement is led through, and the map it starts on.
@@ -225,6 +229,9 @@ class BuiltInRegistries:
         economy_path = root / "economy.json"
         if economy_path.is_file():
             registries.economy = economy_settings_from_data(_read_object(economy_path))
+        tastes_path = root / "tastes.json"
+        if tastes_path.is_file():
+            registries.tastes = taste_settings_from_data(_read_object(tastes_path))
         tutorial_path = root / "tutorial.json"
         if tutorial_path.is_file():
             registries.tutorial = tutorial_definition_from_data(_read_object(tutorial_path))
@@ -281,6 +288,17 @@ class BuiltInRegistries:
         for item_id in self.items.ids():
             if self.items.get(item_id).properties.get("wear", 0.0) < 0:
                 raise ValueError(f"Item {item_id} has negative wear")
+        for trait_id in self.traits.ids():
+            given = self.traits.get(trait_id).get("tastes", {})
+            if not isinstance(given, dict) or not all(
+                isinstance(tag, str)
+                and TASTE_TAG_PATTERN.match(tag)
+                and isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and -100 <= value <= 100
+                for tag, value in given.items()
+            ):
+                raise ValueError(f"Trait {trait_id} must give tastes as taste tags with a liking from -100 to 100")
         for kind in self.interactables.kinds():
             use = self.interactables.get(kind).use
             source = self.interactables.find(use.material_from) if use is not None and use.material_from else None

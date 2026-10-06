@@ -34,6 +34,10 @@ Event types emitted so far:
 | `privation` | A resident falls ill of a need left at its worst: thirst or hunger | 60 |
 | `power_failed` | Night falls and the generator has no fuel (once a day) | 25 |
 | `gift_given`, `trade_made` | Something changes hands after a friendly exchange | 20, 15 |
+| `taste_reaction` | A resident takes a meal, a drink, a thing used or a present well or badly, with `resident_id`, `item_id`, `reaction` (`hated`, `disliked`, `liked`, `loved`), `how` and `giver_id` in `data`. Taking it as any other is not an event | 8 |
+| `taste_found_out` | The player comes to suspect or to know a taste of a resident, with `resident_id`, `taste`, `state` and `leaning` in `data`. Never a number | 12 suspected, 22 known |
+| `taste_mentioned` | A resident speaks of something they like or cannot stand, at the end of a friendly exchange | 10 |
+| `trade_refused` | A resident will not take a thing in a swap because it is not to their liking (once a day between the two) | 12 |
 | `theft_committed` | A resident takes someone else's thing | 45 |
 | `theft_noticed` | An owner sees that something of theirs is gone | 40 |
 | `item_returned` | A stolen thing is handed back | 25 |

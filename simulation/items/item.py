@@ -1,7 +1,31 @@
+import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
+from typing import Any
 
 # A thing in worse condition than this is worth taking to be repaired.
 WORN_CONDITION = 50.0
+TASTE_TAG_PATTERN = re.compile(r"^[a-z0-9]+(_[a-z0-9]+)*$")
+_BETWEEN_WORDS = re.compile(r"[\s\-]+")
+
+
+def taste_tags(raw: Any) -> tuple[str, ...]:
+    """Taste tags as they are kept: lower case, words joined by underscores, each of them once.
+
+    There is no list they must come from. Raises ValueError for what cannot be made into one.
+    """
+    if isinstance(raw, str) or not isinstance(raw, Iterable):
+        raise ValueError("'preference_tags' must be a list of strings")
+    tidy: list[str] = []
+    for tag in raw:
+        if not isinstance(tag, str):
+            raise ValueError("'preference_tags' must be a list of strings")
+        tag = _BETWEEN_WORDS.sub("_", tag.strip().lower())
+        if not TASTE_TAG_PATTERN.match(tag):
+            raise ValueError(f"'{tag}' is not a taste tag: lowercase letters, digits and single underscores")
+        if tag not in tidy:
+            tidy.append(tag)
+    return tuple(tidy)
 
 
 @dataclass(frozen=True)
@@ -16,6 +40,8 @@ class ItemDefinition:
     effects: dict[str, float] = field(default_factory=dict)
     # Other numbers about the item, such as `damage` for a weapon.
     properties: dict[str, float] = field(default_factory=dict)
+    # What there is to like or loathe about it. `tags` are for rules and sorting, and never make a taste.
+    preference_tags: tuple[str, ...] = ()
 
 
 @dataclass
@@ -25,6 +51,8 @@ class ItemInstance:
     owner_id: str | None = None
     condition: float = 100.0
     quantity: int = 1
+    # ID of the resident who made a present of it to its owner, if anyone did.
+    given_by: str | None = None
 
     @property
     def broken(self) -> bool:

@@ -17,6 +17,7 @@ from simulation.memory.memory import Memory
 from simulation.residents.activity import Activity
 from simulation.residents.needs import NEED_NAMES
 from simulation.residents.resident import Resident
+from simulation.tastes.settings import DISLIKED, DRUNK, EATEN, GIVEN, USED
 from world.pathfinding import manhattan
 
 if TYPE_CHECKING:
@@ -56,25 +57,32 @@ def _named(definition: ItemDefinition) -> str:
 class ItemSystem:
     # ----- what things are worth to someone -----
 
-    def personal_value(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> float:
-        """What an item is worth to this resident: its base value, raised by traits that fit its tags."""
-        value = float(definition.base_value)
-        for trait in self._matching_traits(world, resident, definition):
-            value *= float(trait.get("item_value_multiplier", 1.0))
-        return value
+    def personal_value(
+        self,
+        world: "SimulationWorld",
+        resident: Resident,
+        definition: ItemDefinition,
+        item: ItemInstance | None = None,
+    ) -> float:
+        """What an item is worth to this resident: its base value as their tastes, their needs
+        and its scarcity make it. With `item`, one in particular, which may be a keepsake."""
+        return world.tastes.worth(world, resident, definition, item)
 
     def use_effects(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> dict[str, float]:
-        """Need changes from using or eating the item, including the pleasure of a favourite food."""
+        """Need changes from using or eating the item, including the pleasure of a food to their
+        taste and the displeasure of one that is not, by the tastes they have so far."""
         effects = dict(definition.effects)
         if definition.category == FOOD_CATEGORY:
-            for trait in self._matching_traits(world, resident, definition):
-                bonus = float(trait.get("food_reaction_bonus", 0.0))
-                effects["stress"] = effects.get("stress", 0.0) - bonus / 3.0
+            liked = world.tastes.liking(world, resident, definition)
+            if liked:
+                effects["stress"] = effects.get("stress", 0.0) - liked / 100.0 * world.registries.tastes.meal_stress
         return effects
 
-    def _matching_traits(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> list[dict]:
-        traits = (world.registries.traits.find(trait_id) for trait_id in resident.traits)
-        return [trait for trait in traits if trait and set(trait.get("tags", [])) & set(definition.tags)]
+    def how_taken(self, definition: ItemDefinition) -> str:
+        """What is done with an item when it is put to use: eaten, drunk or used."""
+        if definition.category == FOOD_CATEGORY:
+            return EATEN
+        return DRUNK if definition.category == WATER_CATEGORY else USED
 
     def definition_for(self, world: "SimulationWorld", item_id: str) -> ItemDefinition:
         """The definition behind an ID that names either a kind of item or one item in particular."""
@@ -123,11 +131,14 @@ class ItemSystem:
         if not choices:
             return None
         resolve = world.registries.items.resolve
+        taste = world.registries.tastes.food_choice
+        # What answers their needs comes first. Among those, what does most, and what they like.
         return max(
             choices,
             key=lambda item: (
                 self._relief(resident, self.use_effects(world, resident, resolve(item.definition_id))),
-                -sum(resolve(item.definition_id).effects.values()),
+                -sum(resolve(item.definition_id).effects.values())
+                + world.tastes.liking(world, resident, resolve(item.definition_id)) * taste,
                 item.instance_id,
             ),
         )
@@ -195,7 +206,14 @@ class ItemSystem:
                 scored.append(ScoredAction(USE_ITEM_ACTION, score, container_id, item_id=item.instance_id))
         return scored
 
-    def temptation(self, world: "SimulationWorld", thief: Resident, owner: Resident, definition: ItemDefinition) -> float:
+    def temptation(
+        self,
+        world: "SimulationWorld",
+        thief: Resident,
+        owner: Resident,
+        definition: ItemDefinition,
+        item: ItemInstance | None = None,
+    ) -> float:
         """How much a resident wants to take something of someone else's.
 
         Greed and a grudge against the owner push towards it; empathy holds back.
@@ -203,7 +221,7 @@ class ItemSystem:
         feelings = world.relationships.get((thief.resident_id, owner.resident_id))
         resentment = feelings.resentment if feelings is not None else 0.0
         drive = (thief.personality.greed - 50.0) / 50.0 + resentment / 100.0 - thief.personality.empathy / 200.0
-        return self.personal_value(world, thief, definition) / 50.0 * max(0.0, drive)
+        return self.personal_value(world, thief, definition, item) / 50.0 * max(0.0, drive)
 
     def _theft_candidates(self, world: "SimulationWorld", resident: Resident) -> list[ScoredAction]:
         """Other people's things in containers nobody is watching."""
@@ -221,7 +239,7 @@ class ItemSystem:
                 if owner is None or owner is resident:
                     continue
                 definition = world.registries.items.resolve(item.definition_id)
-                temptation = self.temptation(world, resident, owner, definition)
+                temptation = self.temptation(world, resident, owner, definition, item)
                 if temptation < THEFT_THRESHOLD:
                     continue
                 if watched is None:
@@ -308,6 +326,8 @@ class ItemSystem:
         if item is None or inventory is None:
             return
         definition = world.registries.items.resolve(item.definition_id)
+        # Taken as their tastes have them, and tastes they did not have for it are made first.
+        world.tastes.react(world, resident, definition, self.how_taken(definition))
         resident.needs.apply(self.use_effects(world, resident, definition))
         if definition.category == FOOD_CATEGORY:
             inventory.take_unit(item.instance_id)
@@ -434,18 +454,20 @@ class ItemSystem:
         if world.rng.random() >= GIFT_CHANCE:
             return False
         resolve = world.registries.items.resolve
-        item = max(gifts, key=lambda i: (self.personal_value(world, receiver, resolve(i.definition_id)), i.instance_id))
+        item = max(
+            gifts,
+            key=lambda i: (self._gift_appeal(world, giver, receiver, resolve(i.definition_id)), i.instance_id),
+        )
         definition = resolve(item.definition_id)
         if item.quantity > 1:
             item.quantity -= 1
-            world.stock(receiver.inventory, item.definition_id, 1, receiver.resident_id)
+            given = world.stock(receiver.inventory, item.definition_id, 1, receiver.resident_id)
         else:
             giver.inventory.remove(item.instance_id)
             item.owner_id = receiver.resident_id
             receiver.inventory.add(item)
-        gratitude = world.relationship(receiver.resident_id, giver.resident_id)
-        gratitude.adjust("affection", min(12.0, self.personal_value(world, receiver, definition) / 3.0))
-        gratitude.adjust("trust", 2.0)
+            given = item
+        given.given_by = giver.resident_id
         now = world.clock.total_minutes
         thing = _named(definition)
         world.memories.remember(
@@ -465,7 +487,17 @@ class ItemSystem:
             ),
             at=giver.tile,
         )
+        # How it is taken is what it does to what the receiver feels for the giver.
+        world.tastes.react(world, receiver, definition, GIVEN, giver)
         return True
+
+    def _gift_appeal(
+        self, world: "SimulationWorld", giver: Resident, receiver: Resident, definition: ItemDefinition
+    ) -> float:
+        """How good a present something looks to the giver: what it is worth, and what they
+        have seen of the receiver's tastes. What they have not seen, they cannot choose by."""
+        believed = world.tastes.believed_liking(world, giver, receiver, definition)
+        return definition.base_value * (1.0 + believed / 100.0 * world.registries.tastes.worth_taste)
 
     def propose_trade(self, world: "SimulationWorld", proposer: Resident, receiver: Resident) -> TradeOffer | None:
         """The swap of one item each that the proposer gains most from and the receiver does not lose by."""
@@ -476,8 +508,12 @@ class ItemSystem:
                 if mine.definition_id == theirs.definition_id:
                     continue
                 mine_def, theirs_def = resolve(mine.definition_id), resolve(theirs.definition_id)
-                gain = self.personal_value(world, proposer, theirs_def) - self.personal_value(world, proposer, mine_def)
-                other_gain = self.personal_value(world, receiver, mine_def) - self.personal_value(world, receiver, theirs_def)
+                gain = self.personal_value(world, proposer, theirs_def, theirs) - self.personal_value(
+                    world, proposer, mine_def, mine
+                )
+                other_gain = self.personal_value(world, receiver, mine_def, mine) - self.personal_value(
+                    world, receiver, theirs_def, theirs
+                )
                 if gain > 0 and other_gain >= 0 and (best is None or gain + other_gain > best[0]):
                     best = (gain + other_gain, mine.instance_id, theirs.instance_id)
         if best is None:
@@ -487,6 +523,7 @@ class ItemSystem:
     def _maybe_trade(self, world: "SimulationWorld", proposer: Resident, receiver: Resident) -> bool:
         offer = self.propose_trade(world, proposer, receiver)
         if offer is None:
+            self._turned_down(world, proposer, receiver)
             return False
         names = []
         for giver, taker, instance_ids in (
@@ -510,6 +547,30 @@ class ItemSystem:
             at=proposer.tile,
         )
         return True
+
+    def _turned_down(self, world: "SimulationWorld", proposer: Resident, receiver: Resident) -> None:
+        """A swap the proposer wants, and that the receiver would not lose by were the thing
+        offered not so little to their liking: it is said, once a day between the two."""
+        notice = f"refused:{proposer.resident_id}:{receiver.resident_id}"
+        if world.notices.get(notice) == world.clock.day:
+            return
+        resolve = world.registries.items.resolve
+        dislike = world.registries.tastes.thresholds[DISLIKED]
+        for mine in self._owned(world, proposer):
+            mine_def = resolve(mine.definition_id)
+            if world.tastes.liking(world, receiver, mine_def) > dislike:
+                continue
+            for theirs in self._owned(world, receiver):
+                theirs_def = resolve(theirs.definition_id)
+                if mine.definition_id == theirs.definition_id or mine_def.base_value < theirs_def.base_value:
+                    continue
+                wanted = self.personal_value(world, proposer, theirs_def, theirs) > self.personal_value(
+                    world, proposer, mine_def, mine
+                )
+                if wanted:
+                    world.notices[notice] = world.clock.day
+                    world.tastes.refused(world, receiver, proposer, mine_def)
+                    return
 
     # ----- the settlement's supplies -----
 

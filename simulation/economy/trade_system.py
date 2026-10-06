@@ -145,6 +145,7 @@ class TradeSystem:
             ),
             at=resident.tile,
         )
+        world.tastes.bought(world, resident, definition)
         return item.definition_id
 
     def _carries_tagged(self, world: "SimulationWorld", resident: Resident, tag: str) -> bool:

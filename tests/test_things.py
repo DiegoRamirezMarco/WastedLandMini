@@ -365,10 +365,12 @@ class BelongingsTests(unittest.TestCase):
         radio = self.world.registries.items.get("old_radio")
         marta, raul = self.world.residents["marta"], self.world.residents["raul"]
         self.assertGreater(self.items.personal_value(self.world, marta, radio), self.items.personal_value(self.world, raul, radio))
-        self.assertEqual(self.items.personal_value(self.world, raul, radio), radio.base_value)
+        # To Raúl, who makes nothing of music, it is worth what the only radio there is is worth to anyone.
+        self.assertGreaterEqual(self.items.personal_value(self.world, raul, radio), radio.base_value)
+        self.assertLess(self.items.personal_value(self.world, raul, radio), radio.base_value * 1.4)
 
     def test_a_favourite_food_also_lifts_the_mood(self) -> None:
-        sweet = ItemDefinition("cake", "tarta", "una", "food", tags=("sweet",), effects={"hunger": -20})
+        sweet = ItemDefinition("cake", "tarta", "una", "food", preference_tags=("sweet",), effects={"hunger": -20})
         plain = self.items.use_effects(self.world, self.world.residents["raul"], sweet)
         loved = self.items.use_effects(self.world, self.lucia, sweet)
         self.assertNotIn("stress", plain)
@@ -455,7 +457,7 @@ class GiftAndTradeTests(unittest.TestCase):
         ring_item = world.new_item("silver_ring", owner_id="marta")
         marta.inventory.add(ring_item)
 
-        # Marta loves music: the radio is worth 52 to her and the ring 40. To Lucía the ring is worth more.
+        # Marta loves music: the radio is worth more to her than the ring. To Lucía the ring is worth more.
         offer = items.propose_trade(world, marta, lucia)
         self.assertEqual((offer.offered_instance_ids, offer.requested_instance_ids), ([ring_item.instance_id], [radio.instance_id]))
 

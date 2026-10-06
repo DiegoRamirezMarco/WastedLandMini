@@ -5,6 +5,7 @@
   "category": "food",
   "description": "Una pizza sospechosamente brillante.",
   "base_value": 18,
-  "tags": ["meal", "junk_food", "weird", "custom"],
+  "tags": ["meal", "custom"],
+  "preference_tags": ["junk_food", "weird", "salty"],
   "effects": {"hunger": -35, "stress": -5}
 }

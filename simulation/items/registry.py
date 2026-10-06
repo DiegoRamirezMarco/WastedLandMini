@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from simulation.items.item import ItemDefinition
+from simulation.items.item import ItemDefinition, taste_tags
 
 # Category of the stand-in definition used for items whose real definition is gone.
 UNKNOWN_CATEGORY = "unknown"
@@ -66,6 +66,7 @@ class ItemRegistry:
             tags=tuple(str(tag) for tag in data.get("tags", [])),
             effects={str(k): float(v) for k, v in data.get("effects", {}).items()},
             properties={str(k): float(v) for k, v in data.get("properties", {}).items()},
+            preference_tags=taste_tags(data.get("preference_tags", [])),
         )
         if replace_existing:
             self.replace(definition)

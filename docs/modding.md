@@ -20,8 +20,34 @@ Minimal `data.json`:
 }
 ```
 
-Optional fields include `description`, `base_value`, `tags` and `effects`. `effects` maps a need
-(`hunger`, `thirst`, `tiredness`, `social`, `stress`) to the change from using or eating the item.
+Optional fields include `description`, `base_value`, `tags`, `preference_tags` and `effects`.
+`effects` maps a need (`hunger`, `thirst`, `tiredness`, `social`, `stress`) to the change from
+using or eating the item.
+
+`tags` and `preference_tags` are two different things:
+
+- `tags` are what the game works by: `food`, `weapon`, `radio`, `custom`. They never make anyone
+  like or dislike the item.
+- `preference_tags` are what there is to like or loathe about it: `sweet`, `salty`, `slimy`,
+  `cute`. Residents have tastes for these, and react to the item by them.
+
+There is no list of taste tags. Use the ones the game's own items have (see `data/items.json`
+and the names in `data/tastes.json`) or make up your own: the first time a resident meets
+`alien` or `crunchy` they come to like or loathe it, each in their own way, and it is kept in
+the save. They are written in lower case with underscores (`very_spicy`, `old_world`); capitals,
+spaces and hyphens are put right, duplicates are dropped, and anything else is refused.
+
+```json
+{
+  "id": "sopa_algas",
+  "name": "sopa de algas fosforescentes",
+  "article": "una",
+  "category": "food",
+  "tags": ["food", "custom"],
+  "preference_tags": ["salty", "seafood", "radioactive", "slimy"],
+  "effects": {"hunger": -30}
+}
+```
 
 Every built-in item can be modified in exactly the same place. For an existing ID, `data.json` is
 a partial patch: omitted fields keep their built-in value. This changes only the name and value of
@@ -61,11 +87,14 @@ a warning in the log and without stopping the game, if:
 - `name`, `article` or `category` is missing or empty for a new item, or a food's effective
   `category` is not `food`;
 - `base_value` is negative, `tags` is not a list of strings, or `effects` has non-numeric values;
+- `preference_tags` is not a list of strings, or one of them cannot be written as lowercase
+  letters, digits and single underscores;
 - the same `id` has already been modified by an earlier pack. A built-in ID itself is allowed and
   means that the pack modifies it.
 
 Fields the game does not know are ignored, so a pack made for a newer version still loads.
-Removing a pack never breaks a save: its items stay as inert unknown objects.
+Removing a pack never breaks a save: its items stay as inert unknown objects, and the tastes
+residents had for them and for their taste tags are kept, in case it comes back.
 
 `icon.png` is 16×16 in lists and inventories; any other size is scaled down to it there. In a
 resident's hand it is shown from the file as it is, so one drawn larger, as the in-game editor's

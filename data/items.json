@@ -9,6 +9,10 @@
       "food",
       "canned"
     ],
+    "preference_tags": [
+      "salty",
+      "tinned"
+    ],
     "effects": {
       "hunger": -25
     }
@@ -21,7 +25,9 @@
     "base_value": 35,
     "tags": [
       "radio",
-      "communication",
+      "communication"
+    ],
+    "preference_tags": [
       "music"
     ],
     "effects": {
@@ -41,6 +47,10 @@
       "food",
       "fresh"
     ],
+    "preference_tags": [
+      "fresh",
+      "bitter"
+    ],
     "effects": {
       "hunger": -20
     }
@@ -55,6 +65,10 @@
       "food",
       "cooked",
       "meal"
+    ],
+    "preference_tags": [
+      "hot",
+      "homemade"
     ],
     "effects": {
       "hunger": -45,
@@ -95,6 +109,9 @@
       "weapon",
       "blunt"
     ],
+    "preference_tags": [
+      "violent"
+    ],
     "properties": {
       "damage": 1.4,
       "wear": 8
@@ -110,6 +127,9 @@
       "weapon",
       "blade"
     ],
+    "preference_tags": [
+      "violent"
+    ],
     "properties": {
       "damage": 1.8,
       "wear": 10
@@ -124,6 +144,9 @@
     "tags": [
       "tool",
       "hoe"
+    ],
+    "preference_tags": [
+      "practical"
     ],
     "properties": {
       "wear": 2

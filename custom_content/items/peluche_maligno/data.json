@@ -5,6 +5,7 @@
   "category": "gift",
   "description": "Adorable, salvo por la mirada.",
   "base_value": 25,
-  "tags": ["toy", "cute", "creepy", "custom"],
+  "tags": ["toy", "custom"],
+  "preference_tags": ["cute", "creepy"],
   "effects": {"stress": -4}
 }

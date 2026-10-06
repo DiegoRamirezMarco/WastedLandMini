@@ -21,6 +21,7 @@ from simulation.residents.personality import Personality
 from simulation.residents.resident import FACINGS, Resident
 from simulation.rng import SimulationRNG
 from simulation.social.relationship import Relationship
+from simulation.tastes.taste import KINDS, Taste, TasteProfile
 from simulation.work.expedition import Expedition
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.tutorial.tutorial import TutorialState
@@ -52,13 +53,15 @@ FIRST_ECONOMY_VERSION = 8
 # Version 16 added thirst, mood, water and generator fuel.
 # Version 17 stores changes made in urbanism mode: terrain, rooms and construction underlays.
 # Version 18 added where a new settlement is in its opening. Older saves are simply past it.
+# Version 19 added tastes, what has been found out of them, and who made a present of an item.
+# Older saves have none: tastes are made as things are met, as in a settlement just begun.
 LAST_MAP_CHANGE_VERSION = 16
 FIRST_URBANISM_VERSION = 17
 FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 18
+    CURRENT_VERSION = 19
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -179,6 +182,17 @@ class SaveManager:
                 for resident_id in world.knowledge.resident_ids()
             },
             "event_log": list(world.event_log),
+            "tastes": {
+                resident_id: {
+                    kind: {name: {"leaning": taste.leaning, "learned": taste.learned} for name, taste in profile.of(kind).items()}
+                    for kind in KINDS
+                }
+                for resident_id, profile in world.taste_profiles.items()
+            },
+            "taste_knowledge": {
+                observer_id: {subject_id: dict(tastes) for subject_id, tastes in subjects.items()}
+                for observer_id, subjects in world.taste_knowledge.seen.items()
+            },
             "tutorial": {
                 "step": world.tutorial.step_id,
                 "since": world.tutorial.since,
@@ -358,7 +372,29 @@ class SaveManager:
         event_log = data.get("event_log", [])
         world.event_log = [str(line) for line in event_log] if isinstance(event_log, list) else []
         self._restore_tutorial(world, data)
+        self._restore_tastes(world, data)
         return world
+
+    def _restore_tastes(self, world: SimulationWorld, data: dict[str, Any]) -> None:
+        """Tastes are kept whatever they are for: one for a tag or an item that no content brings
+        any longer does nothing, and is there if the content comes back."""
+        for resident_id, kinds in _object_or_empty(data.get("tastes")).items():
+            profile = TasteProfile()
+            for kind in KINDS:
+                for name, taste in _object_or_empty(_object_or_empty(kinds).get(kind)).items():
+                    if isinstance(taste, dict):
+                        profile.of(kind)[str(name)] = Taste(
+                            leaning=float(taste.get("leaning", 0.0)), learned=float(taste.get("learned", 0.0))
+                        )
+            world.taste_profiles[str(resident_id)] = profile
+        for observer_id, subjects in _object_or_empty(data.get("taste_knowledge")).items():
+            for subject_id, tastes in _object_or_empty(subjects).items():
+                seen = {
+                    str(key): float(shown)
+                    for key, shown in _object_or_empty(tastes).items()
+                    if isinstance(shown, (int, float)) and not isinstance(shown, bool)
+                }
+                world.taste_knowledge.seen.setdefault(str(observer_id), {})[str(subject_id)] = seen
 
     def _restore_tutorial(self, world: SimulationWorld, data: dict[str, Any]) -> None:
         """Put a settlement back where it was in its opening. One saved at a step that is gone is past it."""
@@ -684,6 +720,7 @@ def _inventory_to_data(inventory: Inventory) -> list[dict[str, Any]]:
             "owner_id": item.owner_id,
             "condition": item.condition,
             "quantity": item.quantity,
+            "given_by": item.given_by,
         }
         for item in inventory.items
     ]
@@ -702,6 +739,7 @@ def _inventory_from_data(data: Any) -> Inventory:
                 owner_id=str(owner_id) if owner_id is not None else None,
                 condition=float(item.get("condition", 100.0)),
                 quantity=max(1, int(item.get("quantity", 1))),
+                given_by=_text_or_none(item.get("given_by")),
             )
         )
     return inventory

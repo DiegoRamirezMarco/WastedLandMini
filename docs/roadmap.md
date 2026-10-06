@@ -534,6 +534,117 @@ Still open here:
 - Everything put down in Urbanismo is free and stands at once (S16)
 - There is one save, and a new settlement saved with `F5` takes its place
 
+### S19 — Tastes of their own — done
+Until now what a resident liked was what their traits said, and so the same for everyone who
+had the trait: a trait whose tags matched an item's raised what it was worth to them and the
+pleasure of eating it.
+- **A profile of tastes for each resident**, kept apart from `Resident`: how much they like or
+  loathe a category, a taste tag, and one item in particular, from -100 to 100. It starts with
+  what their traits give them and fills as they meet things. It is saved, and a save from
+  before loads with profiles that are empty and fill the same way
+- **A taste has two parts, kept apart**: the leaning they came with, and what they have learned
+  since. Only the leaning is made here; what is learned stays at nothing until S20 moves it.
+  Both are in the save from the first day, so that S20 changes no save
+- **A leaning is made the first time it is needed**, and kept. Asked for a taste they do not
+  have, the profile makes one from the settlement's seed, the resident and the tag: the same
+  three always give the same leaning, two residents may well get opposite ones, and nothing is
+  drawn from the stream the rest of the simulation draws from, so that meeting a new taste
+  changes nothing else that happens
+- **Taste tags are apart from the tags the game works by.** An item's `preference_tags`
+  (`sweet`, `slimy`, `fermented`) are what tastes go by. Its `tags` (`food`, `weapon`, `custom`)
+  are for rules, searching and sorting, and never make a taste. The game's own items are given
+  their taste tags in their data, and whatever among their `tags` was only ever a taste goes
+  there
+- **There is no list of taste tags.** Whatever an item carries is one: a pack that brings
+  `alien` or `crunchy` needs no code, and residents come to like or loathe it as they meet it.
+  They are checked like the rest of an item's data, the game's own and a pack's alike: text, not
+  empty, lower case with underscores, put in that form where they can be and each counted once
+- **Tastes go by stable IDs, categories and taste tags**, never by names. A taste for a kind of
+  thing the game does not have yet does nothing until something carries it
+- **A reaction in five steps**: hated, disliked, neutral, liked, loved. It is worked out from
+  the item itself, its category and its taste tags, and then from the state the resident is in,
+  who it came from, and what the thing means to them. The item itself counts for more than its
+  tags, the more so the stronger the feeling for it, without silencing them: someone who loathes
+  `slimy` may love one slimy thing. About one item in seven is such a thing to any one resident
+- **A reaction does something**: to mood and stress, to the affection and trust felt for whoever
+  gave it, and to whether it is asked for again, traded away or stolen
+- **What a thing is worth to someone** is its base value with their tastes, their needs, what it
+  means to them and how scarce it is, in place of the traits' multiplier. Trade, gifts, theft and
+  what is chosen to eat all go by it
+- **A favourite and a loathed food, and a favourite and a loathed thing**, read off the profile
+- **What the player has found out is kept apart from the taste itself**, for each resident and
+  each taste: unknown, suspected, known. That a taste has been made does not make it known. It
+  moves on what is seen to happen and never on the numbers: a meal eaten with relish, a gift
+  taken badly, a thing asked for by name, a trade turned down over it, something said about it
+  unprompted, each by how much it shows. A reaction shows only the tastes that pulled the way it
+  went: one that was outweighed, or that hunger got the better of, stays out of sight. The taste
+  a trait gives is known from the start, as the trait is
+- **A taste nothing carries any longer stays in the save.** With the pack that brought `alien`
+  taken out, the tastes for it load as they were, do nothing, and are there if it comes back
+- A resident chooses a gift by what they know of the other, not by what the world knows
+- A reaction, and a taste found out, are each a domain event
+- The profile, the working out of a reaction, what the player has found out and the ties to
+  items are separate small classes. None of it needs a language model
+
+Done when: with one seed two residents take the same meal differently, and it shows in their mood
+and in how they feel about whoever handed it over; an item added by a pack with a taste tag the
+game has never had is reacted to by everyone who eats it, differently, and the same way when the
+same seed is run again; a favourite is worth more to its owner than its base value and is the
+last thing they trade; over a four-week headless run at least one taste of every resident goes
+from unknown to known through what happened; a save from before loads; and a save made with a
+pack loads without it.
+
+Tests it is not done without: a liking by taste tag and a loathing; a taste made on meeting a new
+tag; the same resident and tag always giving the same leaning, and two residents different ones;
+a pack's taste tag working with no code of its own; a tag the game works by making no taste; one
+item liked over taste tags that are loathed; finding out step by step, and what the player knows
+kept apart from what is so; what a thing is worth to someone; tastes made on the way kept by
+saving and loading; a save with tastes for a pack that is gone; and the module imported without
+pygame.
+
+Still open here:
+- A taste is made by eating, using or being handed a thing. Buying it, carrying it or stealing it
+  makes none, and nobody has a taste for what they have never had
+- The player sees everything that is taken well or badly, wherever it happens and in the dark
+- What a resident has seen of another's tastes is used for choosing a present and for nothing
+  else: not for what to offer in a swap, and not for what to cook
+- Nobody passes on what they know of someone's tastes
+- A taste tag a pack brings is spoken of by its ID, with spaces for its underscores: a pack has
+  nowhere to give it a name
+- Tastes for kinds of thing the game does not have, such as music beyond the one radio, reading,
+  clothes or animals, have nothing to show themselves on
+- A meal is taken the same way every time: nobody tires of the stew they have had all week
+- An item edited in the game before this has no taste tags until they are written into its
+  `data.json` by hand: the editor has no field for them yet (P22)
+
+### S20 — Tastes in people, and tastes that change (needs S19) — planned
+- **Hidden tastes in people**, as data like the others: liking those sure of themselves,
+  disliking the aggressive, liking gossip, hating to be told what to do, liking the generous,
+  being drawn to the funny, distrusting whoever is in charge. They weigh on how an exchange with
+  someone is taken, and so on what is felt for them, one way only as every relationship is
+- They are found out as tastes for things are, from how an exchange is seen to go
+- **What is lived moves what has been learned, and never the leaning**: a taste is the two
+  together. It moves by how much the thing mattered, so that one meal like any other hardly
+  counts and nearly dying of one counts for a great deal. A good meal with `spicy` in it adds to
+  the liking for it; being taken ill by `seafood` takes from it; so do who a thing came from,
+  coming to depend on what is consumed, having a thing often and what it is tied to
+- **The first time of a taste leaves a small mark of its own**: the leaning is made, the meal is
+  taken as the two say, and a little is learned from how it went
+- **What moved a taste is remembered** ("Me puse enfermo después de comer comida fermentada"),
+  and the memory does not move it a second time: an event that has had its say has had it,
+  unless a rule says a memory goes on working
+- A taste that has moved is not known any longer for sure: what the player knew goes back to
+  suspected
+
+Done when: two residents take the same order, the same joke and the same gift from the same
+person differently, and the relationship shows it; someone taken ill by a meal likes its taste
+tags less afterwards, has a memory that says why, and stops choosing what carries them; and ten
+weeks pass with three seeds without anyone's tastes all running to one end of the scale.
+
+Tests it is not done without: something good adding to what is learned and something bad taking
+from it, each by how much it mattered; the leaning left as it was; and a taste moved once by an
+event and its memory together, not twice.
+
 ### P16 — The way in (needs S18) — done
 - **A main menu**: go on with the settlement being played or the saved one, start a new one,
   open the settlement that comes ready made, or leave. `Esc` on the map goes there, and no longer
@@ -690,6 +801,22 @@ Still open here:
 - What is held does not turn with the hand, and the hand is behind it, not round it
 - Lists and inventories still show the 16×16 icon, twice as large in a resident's panel
 - The game's own pixel bodies, on the canvas, hold it at the canvas's resolution
+
+### P22 — What they like, as far as it is known (needs S19) — planned
+- **A resident's tastes in their panel, as the player knows them**: `???` for what is unknown,
+  "Parece gustarle" or "Parece no gustarle" for what is suspected, "Le encanta" or "Lo detesta"
+  for what is known. Never a number, and nothing that has not been found out
+- **A reaction is seen where it happens**: on the face and over the head of whoever eats or is
+  handed something, and as a line in the dock. Today it is a line in the log like any other
+- **Notice when something is found out**, and when what was known is in doubt again (S20). Today
+  that is a line in the log too
+- The tastes in people of S20 go in the same list once there are any
+- **The item editor has a field for taste tags**, beside the one for the tags the game works by,
+  and `docs/modding.md` says which is which
+
+Done when: a new settlement shows `???` for everyone; a meal a resident loves is seen to be loved
+on the map, and their panel says so afterwards; and nowhere on the screen is there a figure for
+a taste.
 
 ## Later
 - SQLite persistence

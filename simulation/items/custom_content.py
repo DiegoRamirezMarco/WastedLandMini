@@ -7,7 +7,7 @@ from numbers import Real
 from pathlib import Path
 from typing import Any
 
-from simulation.items.item import ItemDefinition
+from simulation.items.item import ItemDefinition, taste_tags
 from simulation.items.registry import ItemRegistry
 
 logger = logging.getLogger(__name__)
@@ -31,6 +31,7 @@ def _definition_data(definition: ItemDefinition) -> dict[str, Any]:
         "tags": list(definition.tags),
         "effects": dict(definition.effects),
         "properties": dict(definition.properties),
+        "preference_tags": list(definition.preference_tags),
     }
 
 
@@ -74,6 +75,7 @@ def validate_item_data(
     tags = merged.get("tags", [])
     if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
         raise ValueError("'tags' must be a list of strings")
+    taste_tags(merged.get("preference_tags", []))
     for field_name in ("effects", "properties"):
         numbers = merged.get(field_name, {})
         if not isinstance(numbers, dict) or not all(

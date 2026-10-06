@@ -185,6 +185,8 @@ class ItemEditor:
             "tags": [tag.strip() for tag in self.values["tags"].split(",") if tag.strip()],
             "effects": _parse_numbers(self.values["effects"]),
             "properties": _parse_numbers(self.values["properties"]),
+            # There is no field for these yet: what the item has is written back as it is.
+            "preference_tags": list(self.world.registries.items.resolve(self.item_id).preference_tags),
         }
 
     def save(self) -> bool:

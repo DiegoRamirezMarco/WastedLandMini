@@ -27,6 +27,9 @@ from simulation.residents.resident import Resident
 from simulation.rng import SimulationRNG
 from simulation.social.bonds import BondSystem
 from simulation.social.relationship import Relationship
+from simulation.tastes.knowledge import TasteKnowledge
+from simulation.tastes.taste import TasteProfile
+from simulation.tastes.taste_system import TasteSystem
 from simulation.tutorial.tutorial import TutorialState
 from simulation.tutorial.tutorial_system import TutorialSystem
 from simulation.work.expedition_system import ExpeditionSystem
@@ -103,6 +106,11 @@ class SimulationWorld:
     # Day on which each once-a-day notice was last given.
     notices: dict[str, int] = field(default_factory=dict)
     urbanism: UrbanismSystem = field(default_factory=UrbanismSystem)
+    tastes: TasteSystem = field(default_factory=TasteSystem)
+    # What each resident likes and loathes, by resident ID. Kept apart from the resident.
+    taste_profiles: dict[str, TasteProfile] = field(default_factory=dict)
+    # What the player and each resident have found out of anyone's tastes.
+    taste_knowledge: TasteKnowledge = field(default_factory=TasteKnowledge)
     guide: TutorialSystem = field(default_factory=TutorialSystem)
     # Where a new settlement is in its opening. One that is past it, or never had one, has no step.
     tutorial: TutorialState = field(default_factory=TutorialState)

@@ -1,4 +1,4 @@
 {
-  "music_lover": {"name": "Le pierde la música", "tags": ["music"], "item_value_multiplier": 1.5},
-  "sweet_tooth": {"name": "Le pierde el dulce", "tags": ["sweet"], "food_reaction_bonus": 15}
+  "music_lover": {"name": "Le pierde la música", "tastes": {"music": 70}},
+  "sweet_tooth": {"name": "Le pierde el dulce", "tastes": {"sweet": 80}}
 }

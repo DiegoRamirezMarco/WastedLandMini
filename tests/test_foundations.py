@@ -14,7 +14,7 @@ class FoundationTests(unittest.TestCase):
         registries = BuiltInRegistries.load()
         self.assertEqual(registries.items.get("canned_beans").category, "food")
         self.assertGreater(registries.personalities.get("hotheaded").aggression, 70)
-        self.assertEqual(registries.traits.get("music_lover")["tags"], ["music"])
+        self.assertEqual(registries.traits.get("music_lover")["tastes"], {"music": 70})
 
     def test_commands_advance_pause_and_speed_simulation_time(self) -> None:
         world = SimulationWorld.demo_world()

@@ -1,3 +1,4 @@
+import hashlib
 import random
 from collections.abc import Sequence
 from typing import Any
@@ -30,6 +31,16 @@ class SimulationRNG:
             self._rng.seed(self.seed)
             return
         self._rng.setstate(_tuplify(raw_state))
+
+    @classmethod
+    def keyed(cls, seed: int, *parts: object) -> "SimulationRNG":
+        """A generator of its own for one question, always the same for the same seed and parts.
+
+        For what has to come out the same whenever it is asked, and in whatever order: drawing
+        from it moves no other generator on.
+        """
+        text = "\x1f".join([str(seed), *(str(part) for part in parts)])
+        return cls(int.from_bytes(hashlib.sha256(text.encode("utf-8")).digest()[:8], "big"))
 
     @classmethod
     def from_state(cls, state: dict[str, Any]) -> "SimulationRNG":

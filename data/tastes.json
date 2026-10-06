@@ -1,0 +1,98 @@
+{
+  "weights": {"category": 0.35, "item": 0.7},
+  "leaning": {"category_scale": 0.5, "quirk_chance": 0.15, "quirk_range": [60, 100]},
+  "thresholds": {"hated": -60, "disliked": -20, "liked": 20, "loved": 60},
+  "moment": {"need": 15, "mood": 8, "fondness": 20},
+  "effects": {
+    "hated": {"mood": -4, "affection": -2, "trust": -1, "shows": 1.0},
+    "disliked": {"mood": -1.5, "affection": 1, "trust": 0, "shows": 0.6},
+    "neutral": {"mood": 0, "affection": 5, "trust": 2, "shows": 0.4},
+    "liked": {"mood": 1.5, "affection": 8, "trust": 2, "shows": 0.6},
+    "loved": {"mood": 4, "affection": 12, "trust": 3, "shows": 1.0}
+  },
+  "meal_stress": 6,
+  "food_choice": 0.3,
+  "worth": {"taste": 0.6, "need": 0.5, "keepsake": 0.5, "scarcity": 0.3},
+  "found_out": {
+    "suspected": 1.0,
+    "known": 3.0,
+    "category_share": 0.25,
+    "mention_chance": 0.1,
+    "mention": 1.5,
+    "refusal": 1.0,
+    "purchase": 0.5
+  },
+  "names": {
+    "category": {
+      "food": "la comida",
+      "water": "el agua",
+      "tool": "las herramientas",
+      "gift": "los regalos",
+      "material": "los materiales"
+    },
+    "tag": {
+      "sweet": "lo dulce",
+      "salty": "lo salado",
+      "spicy": "lo picante",
+      "bitter": "lo amargo",
+      "hot": "la comida caliente",
+      "fresh": "lo fresco",
+      "tinned": "las conservas",
+      "homemade": "lo casero",
+      "junk_food": "la comida basura",
+      "weird": "lo raro",
+      "slimy": "lo viscoso",
+      "crunchy": "lo crujiente",
+      "fermented": "lo fermentado",
+      "music": "la música",
+      "cute": "lo adorable",
+      "creepy": "lo siniestro",
+      "violent": "lo violento",
+      "practical": "lo práctico",
+      "romantic": "lo romántico",
+      "luxurious": "el lujo"
+    }
+  },
+  "lines": {
+    "eaten": {
+      "hated": "{name} come {thing} con asco",
+      "disliked": "{name} come {thing} sin ganas",
+      "liked": "{name} come {thing} a gusto",
+      "loved": "{name} come {thing} con verdadero deleite"
+    },
+    "used": {
+      "hated": "{name} no aguanta {thing}",
+      "disliked": "{name} se aburre con {thing}",
+      "liked": "{name} pasa un buen rato con {thing}",
+      "loved": "{name} disfruta de lo lindo con {thing}"
+    },
+    "given": {
+      "hated": "{name} recibe {thing} de {giver} con mala cara",
+      "disliked": "{name} recibe {thing} de {giver} sin entusiasmo",
+      "liked": "{name} agradece {thing} a {giver}",
+      "loved": "{name} recibe {thing} de {giver} con una alegría enorme"
+    },
+    "mentioned": {
+      "hated": "{name} le cuenta a {other} que detesta {label}",
+      "disliked": "{name} le cuenta a {other} que evita {label}",
+      "liked": "{name} le cuenta a {other} que aprecia {label}",
+      "loved": "{name} le cuenta a {other} que adora {label}"
+    },
+    "refused": {
+      "hated": "{name} no quiere {thing} de {giver}: no puede ni verlo",
+      "disliked": "{name} no quiere {thing} de {giver}: no es de su gusto"
+    },
+    "suspected": {
+      "disliked": "{name} parece evitar {label}",
+      "neutral": "{name} no parece inmutarse ante {label}",
+      "liked": "{name} parece apreciar {label}"
+    },
+    "known": {
+      "hated": "{name} detesta {label}",
+      "disliked": "{name} evita {label}",
+      "neutral": "{name} ni busca ni rechaza {label}",
+      "liked": "{name} aprecia {label}",
+      "loved": "{name} adora {label}"
+    }
+  }
+}

@@ -354,6 +354,7 @@ class SocialSystem:
             if not definition.hostile:
                 share_rumor(world, resident, partner)
                 world.items.after_exchange(world, resident, partner, definition)
+                world.tastes.after_exchange(world, resident, partner)
         resident.activity = None
         resident.current_action = "idle"
         if partner is None or not definition.hostile:

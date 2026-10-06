@@ -416,7 +416,9 @@ class ConsequencesInTheSettlementTests(unittest.TestCase):
                 world.apply_command(ChooseOptionCommand(decision.decision_id, option))
         self.assertNotIn("fight_started", _types(world))
         self.assertEqual(world.deaths, [])
-        self.assertEqual([r.health for r in world.residents.values()], [100.0] * len(world.residents))
+        # A trip outside may still leave its mark on someone: nobody inside laid a hand on anybody.
+        hurts = [event for event in world.history if event.event_type in ("injured", "limb_lost")]
+        self.assertEqual([event.data["by"] for event in hurts if event.data.get("by") is not None], [])
 
     def test_egging_everyone_on_fills_the_clinic_but_needs_stay_in_hand(self) -> None:
         world = SimulationWorld.demo_world(seed=99)
