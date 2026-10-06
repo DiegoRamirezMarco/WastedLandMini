@@ -189,11 +189,25 @@ class StrangerTests(unittest.TestCase):
         self.tomas.personality.empathy, self.tomas.personality.aggression = 90, 10
         self.assertEqual(self.world.interventions.resolve(self.world, self._arrive().decision_id, None), "let_in")
 
-    def test_nobody_comes_while_the_guard_is_off_and_with_no_guard_they_find_the_gate_shut(self) -> None:
+    def test_nobody_comes_while_the_guard_is_off_and_with_no_guard_whoever_is_in_answers(self) -> None:
         self.tomas.activity = Activity("wander", minutes_left=600, using=True)
         self.assertIsNone(self._arrive())
         self.assertNotIn("stranger_unanswered", _types(self.world))
+        # A settlement that keeps no gate at all still hears a knock: whoever has been there longest goes.
         self.tomas.job_id = self.tomas.post_id = None
+        decision = self._arrive()
+        self.assertIsNotNone(decision)
+        self.assertEqual(decision.resident_id, next(iter(self.world.residents)))
+        self.assertNotIn("stranger_unanswered", _types(self.world))
+        self.assertEqual(self.world.apply_command(ChooseOptionCommand(decision.decision_id, "open")), "let_in")
+        self.assertIn(self.world.newcomers_seen[0], self.world.residents)
+
+    def test_with_no_guard_and_nobody_in_they_find_the_gate_shut(self) -> None:
+        self.tomas.job_id = self.tomas.post_id = None
+        for resident in self.world.residents.values():
+            # Asleep, and tired enough to stay so, they hear nothing.
+            resident.needs.tiredness = 100.0
+            resident.activity = Activity("sleep", "bed_1", minutes_left=600, using=True)
         self.assertIsNone(self._arrive())
         self.assertEqual(_types(self.world).count("stranger_unanswered"), 1)
         self.assertEqual(self.world.newcomers_seen, [], "they may try again another day")

@@ -242,6 +242,19 @@ class WorldEventSystem:
             None,
         )
 
+    def anyone_home(self, world: "SimulationWorld") -> Resident | None:
+        """Whoever has been here longest among those who are in, awake and with nothing to decide."""
+        return next(
+            (
+                resident
+                for resident in world.residents.values()
+                if not resident.away
+                and world.is_aware(resident)
+                and world.interventions.pending_for(world, resident.resident_id) is None
+            ),
+            None,
+        )
+
     def strangers_left(self, world: "SimulationWorld") -> bool:
         """Whether anybody could still come to the gate and be given an answer."""
         return bool(self._unseen(world)) and STRANGER_DECISION in world.registries.decisions
@@ -378,6 +391,9 @@ class WorldEventSystem:
     def _stranger(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
         newcomer = world.event_rng.choice(self._unseen(world))
         keeper = self._keeper(world, definition)
+        if keeper is None and not any(resident.job_id == definition.asks for resident in world.residents.values()):
+            # Nobody keeps the gate, as in a settlement of two or three: whoever is in goes to see who it is.
+            keeper = self.anyone_home(world)
         if keeper is None:
             # They may try again another day: nobody has seen them.
             world.emit_event(

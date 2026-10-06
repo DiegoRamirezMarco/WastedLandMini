@@ -63,6 +63,7 @@ def settle(world: SimulationWorld, until: str | None = None) -> None:
             world.apply_command(PlaceObjectCommand("bed", SECOND_SHACK_AT)),
         ],
         "stranger": lambda: world.apply_command(ChooseOptionCommand(next(iter(world.decisions)), "open")),
+        "outside": lambda: world.apply_command(AcknowledgeTutorialCommand()),
         "free": lambda: world.apply_command(AcknowledgeTutorialCommand()),
     }
     for _ in range(len(moves) + 1):
@@ -192,7 +193,7 @@ class NewSettlementTests(unittest.TestCase):
         self.world.step(61)
         self.assertFalse([each for each in self.world.decisions.values() if each.kind == "stranger"])
         self.assertIsNone(self.world.at_the_gate)
-        self.assertEqual(self.world.tutorial.step_id, "free")
+        self.assertEqual(self.world.tutorial.step_id, "outside")
 
     def test_no_stranger_comes_until_there_is_a_bed_for_them(self) -> None:
         settle(self.world, until="second_bed")
@@ -267,6 +268,62 @@ class NewSettlementTests(unittest.TestCase):
             world.step(MINUTES_PER_DAY * 3)
             logs.append(world.event_log)
         self.assertEqual(logs[0], logs[1])
+
+
+class AfterTheOpeningTests(unittest.TestCase):
+    """What a small settlement can do once it is left to itself: take people in, and send someone out."""
+
+    def setUp(self) -> None:
+        self.world = SimulationWorld.new_settlement(seed=7)
+        settle(self.world)
+        self.assertFalse(self.world.tutorial.active)
+
+    def _kinds(self) -> list[str]:
+        return [line.split(" | ")[1] for line in self.world.event_log]
+
+    def _room_for_more(self) -> None:
+        self.assertTrue(self.world.apply_command(PlaceBuildingCommand("house", (20, 3))).ok)
+        for x in (20, 22, 24):
+            self.assertTrue(self.world.apply_command(PlaceObjectCommand("bed", (x, 3))).ok)
+        for x in (24, 26):
+            self.assertTrue(self.world.apply_command(PlaceObjectCommand("crop_bed", (x, 16))).ok)
+
+    def test_with_no_bed_to_spare_nobody_comes_however_long_it_is(self) -> None:
+        self.world.step(MINUTES_PER_DAY * 30)
+        self.assertEqual(len(self.world.residents), 2)
+        self.assertNotIn("stranger_at_gate", self._kinds()[self._kinds().index("tutorial_finished") :])
+
+    def test_people_keep_coming_to_a_settlement_with_beds_and_no_guard_and_all_of_them_live(self) -> None:
+        self._room_for_more()
+        self.assertFalse([resident for resident in self.world.residents.values() if resident.job_id == "guard"])
+        self.world.step(MINUTES_PER_DAY * 42)
+        self.assertGreater(len(self.world.residents), 2, "whoever is in answers the gate")
+        self.assertNotIn("stranger_unanswered", self._kinds())
+        self.assertFalse(self.world.deaths)
+        self.assertTrue(all(resident.health > 90 for resident in self.world.residents.values()))
+        # Nobody was let in without a bed for them.
+        beds = sum(1 for placed in self.world.interactables.values() if placed.kind == "bed")
+        self.assertLessEqual(len(self.world.residents), beds)
+
+    def test_whoever_takes_the_cart_goes_out_and_what_they_bring_ends_up_where_the_settlement_keeps_things(self) -> None:
+        self._room_for_more()
+        self.assertTrue(self.world.apply_command(PlaceObjectCommand("handcart", (28, 24))).ok)
+        # No shop, no scrap pile, no generator: only a crate, a pantry and a tank.
+        kinds = {placed.kind for placed in self.world.interactables.values()}
+        self.assertFalse(kinds & {"shop_counter", "scrap_pile", "generator"})
+        self.world.step(MINUTES_PER_DAY * 42)
+        # With two there are no hands to spare for it. One of those who come takes it up unasked.
+        scavengers = [resident for resident in self.world.residents.values() if resident.job_id == "scavenger"]
+        self.assertEqual(len(scavengers), 1)
+        self.assertGreaterEqual(self._kinds().count("expedition_left"), 10, "and goes out day after day, hands free")
+        self.assertGreaterEqual(self._kinds().count("expedition_returned"), 10)
+        self.assertFalse(self.world.deaths)
+        stock: dict[str, int] = {}
+        for object_id, inventory in self.world.containers.items():
+            kind = self.world.interactables[object_id].kind
+            for item in inventory.items:
+                stock[kind] = stock.get(kind, 0) + item.quantity
+        self.assertGreater(stock.get("crate", 0), 6, "what has no place of its own goes in a crate")
 
 
 class TutorialDataTests(unittest.TestCase):

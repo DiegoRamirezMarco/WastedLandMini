@@ -312,7 +312,9 @@ settlement is created, in `SimulationWorld.demo_world`.
   the oftener found. `deliveries` says where finds go, the first match winning:
   `{"tag": "water", "to": "water_tank"}`, `{"tag": "fuel", "to": "generator"}`,
   `{"tag": "scrap", "to": "scrap_pile"}` for items with a tag, `{"to": "shop_counter"}` for the
-  rest. `to` must be a container kind. `injury` and `injury_kind` are what a bad trip does.
+  rest. A rule whose kind of container does not stand anywhere in the settlement is passed over
+  for the next that fits, which is what the rules after the catch-all are for: food to a
+  `pantry`, anything to a `crate`. `to` must be a container kind. `injury` and `injury_kind` are what a bad trip does.
   `find_chance`, `push_on_finds`, `push_on_danger`, `push_on_minutes` and `turn_back_minutes`
   shape the risky find.
 - In `data/decisions.json` the game opens `risky_find` by ID, and an outcome's `"expedition"`

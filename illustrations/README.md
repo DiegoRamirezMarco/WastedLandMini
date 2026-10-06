@@ -1,5 +1,8 @@
 # Illustrations
 
+What is drawn inside the game (`dolls/`, `objects/` and the folders under `buildings/`) belongs to
+a game being played, as a save does, and is not kept in the repository.
+
 Pictures made outside the game go here. The game shows them at the resolution of the window, in
 place of its own pixel art, and draws whatever is missing as it always has. Nothing in this folder
 has to follow the style contract: any size, any colours. A picture is brought to the size it is

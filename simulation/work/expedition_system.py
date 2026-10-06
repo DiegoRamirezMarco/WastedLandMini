@@ -154,11 +154,14 @@ class ExpeditionSystem:
         return [item for item in resident.inventory.items if item.owner_id is None]
 
     def _goes_to(self, world: "SimulationWorld", item: ItemInstance) -> str | None:
-        """The kind of container a find is taken to."""
+        """The kind of container a find is taken to: the first it belongs in that the settlement has.
+
+        A settlement with no shop or scrap pile yet still has somewhere to put what is brought
+        back, so that nobody is left holding it and unable to set out again.
+        """
         tags = world.registries.items.resolve(item.definition_id).tags
-        return next(
-            (rule.to for rule in world.registries.expeditions.deliveries if rule.tag is None or rule.tag in tags), None
-        )
+        fitting = [rule.to for rule in world.registries.expeditions.deliveries if rule.tag is None or rule.tag in tags]
+        return next((kind for kind in fitting if containers_of_kind(world, kind)), fitting[0] if fitting else None)
 
     def errand(self, world: "SimulationWorld", resident: Resident) -> str | None:
         """The container to walk to with what was brought back: the nearest that takes the first find."""

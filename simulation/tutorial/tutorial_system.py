@@ -24,7 +24,6 @@ from simulation.tutorial.tutorial import (
 from simulation.work.hauling import containers_of_kind
 
 if TYPE_CHECKING:
-    from simulation.residents.resident import Resident
     from simulation.world import SimulationWorld
 
 STEP_DONE_EVENT = "tutorial_step_done"
@@ -110,22 +109,8 @@ class TutorialSystem:
                 # Nobody is left to knock: there is nothing to wait for.
                 state.opened = True
                 return
-            keeper = self._host(world)
+            keeper = world.happenings.anyone_home(world)
             state.opened = keeper is not None and world.happenings.call_to_gate(world, keeper)
-
-    @staticmethod
-    def _host(world: "SimulationWorld") -> "Resident | None":
-        """Whoever has been here longest among those who are in, awake and with nothing to decide."""
-        return next(
-            (
-                resident
-                for resident in world.residents.values()
-                if not resident.away
-                and world.is_aware(resident)
-                and world.interventions.pending_for(world, resident.resident_id) is None
-            ),
-            None,
-        )
 
     # ----- whether it is done -----
 

@@ -505,7 +505,24 @@ from outside until the end; the opening is saved where it was and goes on from t
 people it leaves, one in the garden and one at the water, are both alive and well four weeks on
 (ten were run, with three seeds); and the same seed settles the same way twice.
 
+Added once it had been played:
+- **A settlement too small to keep its gate still hears a knock.** With nobody whose job it is,
+  whoever is in and awake answers a stranger, where before the stranger found the gate shut and
+  nobody could ever join a settlement of two. With a guard it is still the guard, on their shift
+- **What is brought back from outside goes where the settlement has room for it.** Finds went
+  only to the shop, the scrap piles and the generator, and whoever had none of those was left
+  holding them and never set out again. Now food goes to a pantry and the rest to a crate when
+  the place a find belongs is not there
+- The opening says both things before it ends: that people keep coming while there is a bed,
+  and that a cart and the scavenging post send someone out
+
+Done when: ten weeks on from the opening, with three seeds, a settlement given beds to spare
+and no guard has taken in everyone there is to come and lost nobody; with a cart, one of them
+takes it up unasked and goes out most days; and with no bed to spare nobody comes at all.
+
 Still open here:
+- Four people may ever come to the gate, the four the game has by name. After them nobody does
+- Nobody is sent anywhere: a post is proposed and whoever holds it goes out when their shift says
 - A founder who turns the stranger away is alone, and alone they do not last: after a couple of
   days they leave the garden for the water, which matters more to the settlement on paper, and
   starve about three weeks in with the tank full. Whoever has the last hands on what feeds

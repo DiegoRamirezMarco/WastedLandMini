@@ -5,3 +5,7 @@ __pycache__/
 .ruff_cache/
 .DS_Store
 saves/
+# What is drawn in the game belongs to a game being played, as a save does.
+illustrations/dolls/
+illustrations/objects/
+illustrations/buildings/*/

@@ -172,9 +172,17 @@
       "done": "La puerta ya tiene respuesta. Así se decide todo lo que importa"
     },
     {
+      "id": "outside",
+      "title": "Más gente, y lo de fuera",
+      "text": "Mientras haya una cama libre seguirá llamando gente a la puerta: si nadie hace guardia, abre quien esté en casa. Para mandar a alguien a buscar cosas fuera, pon un carro (Muebles) y propónle el puesto de Rebusca: sale por la mañana y vuelve con lo que encuentre.",
+      "goal": {"type": "acknowledged"},
+      "focus": "jobs",
+      "done": "Fuera hay gente, y cosas que traer"
+    },
+    {
       "id": "free",
       "title": "A tu aire",
-      "text": "Desde ahora llegan forasteros, caravanas, tormentas y merodeadores. Lo que pongas se dibuja igual: Arte en Urbanismo para casas y muebles, Dibujar para quien llegue. F5 guarda y Esc vuelve al menú.",
+      "text": "Desde ahora pasan también caravanas, tormentas y merodeadores: a estos les planta cara quien esté en un puesto de guardia. Lo que pongas se dibuja igual: Arte en Urbanismo, y Dibujar para quien llegue. F5 guarda y Esc vuelve al menú.",
       "goal": {"type": "acknowledged"},
       "focus": "save",
       "done": "El solar ya es un asentamiento"

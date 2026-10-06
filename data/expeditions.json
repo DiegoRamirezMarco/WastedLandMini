@@ -48,6 +48,13 @@
     },
     {
       "to": "shop_counter"
+    },
+    {
+      "tag": "food",
+      "to": "pantry"
+    },
+    {
+      "to": "crate"
     }
   ],
   "injury": [

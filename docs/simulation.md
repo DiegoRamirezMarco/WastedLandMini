@@ -109,9 +109,10 @@ room. An argument's importance rises with the resentment between the two.
   oftenest. Things from a pack that is not installed are never found. With the trip's `danger` as
   the chance, they come back hurt.
 - **Putting it away.** What was found is carried to where it goes before anything else: the first
-  rule in `deliveries` that fits says which kind of container. Scrap goes to a scrap pile; the
-  rest goes on the shop's counter, where it is sold. Apart from a passing caravan, nothing reaches
-  the shop any other way.
+  rule in `deliveries` that fits, and whose kind of container the settlement has, says where.
+  Scrap goes to a scrap pile; the rest goes on the shop's counter, where it is sold. Apart from
+  a passing caravan, nothing reaches the shop any other way. A settlement with no shop or scrap
+  pile yet puts food in a pantry and everything else in a crate.
 - **A risky find.** Some trips come on something that promises more and looks dangerous. That is
   a decision, and the player may advise, but the resident is not stopped by it: they are still out
   there, and they do not come home until it is settled. Going for it means more finds, more danger
@@ -161,8 +162,9 @@ room. An argument's importance rises with the resentment between the two.
   while there is a bed for them and while whoever keeps the gate is on duty. It is that resident's
   decision, and the player may advise: the kind open the gate, the gruff shut it. Let in, the
   stranger becomes a resident on the spot, hungry and tired and with nothing. Turned away, they
-  never come back. If the settlement has no gatekeeper at all, they knock and nobody answers, and
-  may try again another day.
+  never come back. If the settlement has no gatekeeper at all, as one of two or three has not,
+  whoever has been there longest among those in and awake goes to the gate and decides. If
+  nobody is in a state to, they knock, nobody answers, and they may try again another day.
 - **Looking for work.** Someone newly arrived looks for a job without waiting to be asked: the
   one most missed that has a free post. It is put to them as any job offer is, and they take it
   unless they are talked out of it.
