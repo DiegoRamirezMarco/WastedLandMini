@@ -82,6 +82,12 @@ class GameShellTests(unittest.TestCase):
         clock = self.game.world.clock
         return (clock.day - 1) * 24 * 60 + clock.hour * 60 + clock.minute
 
+    def test_the_game_fills_the_desktop_but_keeps_its_logical_resolution(self) -> None:
+        from settings import SCREEN_HEIGHT, SCREEN_WIDTH
+
+        self.assertEqual(self.game.screen.get_size(), (SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.assertEqual(pygame.display.get_window_size(), pygame.display.get_desktop_sizes()[0])
+
     def _look_into(self, room_id: str) -> None:
         """Rest the mouse on a building, which takes its roof off, and draw the result."""
         view = self.game.global_view

@@ -196,6 +196,10 @@ cut apart where the body bends, each part laid along its bone and turned as the 
   map as their doll at once. The files are ordinary PNGs: they can be touched up in any program.
 
 ## The screen
+The game opens full-screen at the desktop's native size. Pygame keeps the 1600×900 logical
+surface underneath and maps input back to it, so the canvas, illustrations and pointer stay aligned
+on displays of different resolutions.
+
 `ui/layout.py` cuts the canvas into five parts, and nothing is drawn across their edges.
 
 | Part | Where | What it holds |

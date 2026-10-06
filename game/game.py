@@ -78,7 +78,12 @@ class Game:
     ) -> None:
         pygame.init()
         pygame.display.set_caption("Wasteland Minis")
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        # Keep the game's fixed logical surface, while SDL fits the physical window to the
+        # desktop. Pygame maps input back to these logical coordinates, so scenes, illustrations
+        # and the drawing editors stay aligned at every monitor resolution.
+        self.screen = pygame.display.set_mode(
+            (SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SCALED | pygame.FULLSCREEN
+        )
         # Pictures made outside the game go straight on the window, under the canvas.
         self.illustrations = Illustrations(illustrations_dir)
         self.layers = ScreenLayers(SCALE)
