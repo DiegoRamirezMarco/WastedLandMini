@@ -1,3 +1,4 @@
+import math
 import unittest
 
 from save.save_manager import SaveManager
@@ -7,9 +8,14 @@ from simulation.registries import builtin_registries
 from simulation.residents.activity import Activity
 from simulation.residents.needs import NEED_NAMES, Needs
 from simulation.world import SimulationWorld
-from world.pathfinding import find_path, manhattan
+from world.pathfinding import find_path, line, manhattan, sight, straight_ahead
 
 MINUTES_PER_DAY = 24 * 60
+
+
+def _tile_of(point: tuple[float, float]) -> tuple[int, int]:
+    """The tile a point of a trail is on."""
+    return (math.floor(point[0] + 0.5), math.floor(point[1] + 0.5))
 
 
 def _grid_passable(rows: list[str]):
@@ -17,30 +23,103 @@ def _grid_passable(rows: list[str]):
 
 
 class PathfindingTests(unittest.TestCase):
-    def test_path_goes_around_a_wall_by_the_shortest_route(self) -> None:
+    def assertWalkable(self, start, path, passable) -> None:
+        """Every step is onto a free tile beside the last one, and none squeezes past a corner."""
+        previous = start
+        for step in path:
+            dx, dy = step[0] - previous[0], step[1] - previous[1]
+            self.assertEqual(max(abs(dx), abs(dy)), 1, (previous, step))
+            self.assertTrue(passable(step), step)
+            if dx and dy:
+                self.assertTrue(passable((step[0], previous[1])) and passable((previous[0], step[1])), (previous, step))
+            previous = step
+
+    def test_path_goes_around_a_wall_by_a_short_route(self) -> None:
         rows = [
             ".....",
             ".###.",
             ".....",
         ]
-        path = find_path((0, 2), (4, 0), _grid_passable(rows))
+        passable = _grid_passable(rows)
+        path = find_path((0, 2), (4, 0), passable)
         self.assertIsNotNone(path)
-        self.assertEqual(len(path), manhattan((0, 2), (4, 0)))
+        self.assertEqual(len(path), manhattan((0, 2), (4, 0)), "the corner of the wall is gone round, not cut")
         self.assertEqual(path[-1], (4, 0))
-        self.assertNotIn((2, 1), path)
+        self.assertWalkable((0, 2), path, passable)
 
     def test_steps_are_adjacent_and_exclude_the_start(self) -> None:
-        path = find_path((0, 0), (3, 2), _grid_passable(["....", "....", "...."]))
-        previous = (0, 0)
-        for step in path:
-            self.assertEqual(manhattan(previous, step), 1)
-            previous = step
+        passable = _grid_passable(["....", "....", "...."])
+        path = find_path((0, 0), (3, 2), passable)
+        self.assertNotIn((0, 0), path)
+        self.assertWalkable((0, 0), path, passable)
 
     def test_unreachable_goal_has_no_path(self) -> None:
         self.assertIsNone(find_path((0, 0), (2, 0), _grid_passable([".#."])))
 
     def test_start_equal_to_goal_is_an_empty_path(self) -> None:
         self.assertEqual(find_path((1, 0), (1, 0), _grid_passable(["..."])), [])
+
+    def test_open_ground_is_crossed_in_a_straight_line_at_any_angle(self) -> None:
+        passable = _grid_passable(["........"] * 6)
+        for goal in ((7, 0), (0, 5), (5, 5), (7, 3), (2, 5), (7, 1)):
+            path = find_path((0, 0), goal, passable)
+            self.assertEqual(len(path), max(goal), "no further than going straight there")
+            self.assertEqual(path, line((0, 0), goal))
+            for x, y in path:
+                # Never more than half a tile from the line itself.
+                self.assertLessEqual(abs(x * goal[1] - y * goal[0]) / max(goal), 0.5, (goal, (x, y)))
+            # And back again, the other way.
+            back = find_path(goal, (0, 0), passable)
+            self.assertEqual(len(back), max(goal))
+            self.assertWalkable(goal, back, passable)
+
+    def test_nobody_squeezes_between_two_things_that_touch_at_a_corner(self) -> None:
+        rows = [
+            ".#.",
+            "#..",
+            "...",
+        ]
+        self.assertIsNone(find_path((0, 0), (2, 2), _grid_passable(rows)))
+        rows = [
+            "..#.",
+            ".#..",
+            "....",
+        ]
+        passable = _grid_passable(rows)
+        path = find_path((0, 0), (3, 0), passable)
+        self.assertWalkable((0, 0), path, passable)
+        self.assertEqual(path[-1], (3, 0))
+
+    def test_a_way_round_turns_only_where_something_is_in_the_way(self) -> None:
+        rows = [
+            "..........",
+            "..........",
+            "....#.....",
+            "....#.....",
+            "....#.....",
+            "..........",
+        ]
+        passable = _grid_passable(rows)
+        path = find_path((0, 3), (9, 3), passable)
+        self.assertWalkable((0, 3), path, passable)
+        self.assertLess(len(path), manhattan((0, 3), (9, 3)) + 4, "shorter than going round it square")
+        turns, start, rest = 0, (0, 3), list(path)
+        while rest:
+            stretch = straight_ahead(start, rest)
+            start, rest, turns = rest[len(stretch) - 1], rest[len(stretch) :], turns + 1
+        self.assertLessEqual(turns, 3)
+
+    def test_what_is_straight_ahead_is_a_point_for_each_tile_of_the_stretch(self) -> None:
+        path = line((2, 2), (9, 5)) + line((9, 5), (9, 8))
+        stretch = straight_ahead((2, 2), path)
+        self.assertEqual(len(stretch), 7)
+        self.assertEqual(stretch[-1], (9.0, 5.0))
+        for tile, (x, y) in zip(path, stretch):
+            self.assertLessEqual(max(abs(x - tile[0]), abs(y - tile[1])), 0.5)
+            # On the line from one end of the stretch to the other.
+            self.assertAlmostEqual((x - 2) * 3, (y - 2) * 7)
+        self.assertEqual(straight_ahead((0, 0), [(5, 5)]), [(5.0, 5.0)], "a jump is no stretch at all")
+        self.assertEqual(straight_ahead((0, 0), []), [])
 
 
 class SettlementMapTests(unittest.TestCase):
@@ -192,10 +271,59 @@ class LifeInTheSettlementTests(unittest.TestCase):
             world.step(1)
             for resident in world.residents.values():
                 self.assertLessEqual(len(resident.trail) - 1, MOVE_TILES_PER_MINUTE)
-                self.assertEqual(resident.trail[-1], resident.tile)
+                # They may be part-way along a line that does not run through the middle of their tile.
+                self.assertEqual(_tile_of(resident.trail[-1]), resident.tile)
                 for previous, step in zip(resident.trail, resident.trail[1:]):
-                    self.assertEqual(manhattan(previous, step), 1)
-                    self.assertTrue(walkable(step) or step in beds, step)
+                    before, after = _tile_of(previous), _tile_of(step)
+                    self.assertLessEqual(max(abs(after[0] - before[0]), abs(after[1] - before[1])), 1)
+                    self.assertLess(math.dist(previous, step), 1.5)
+                    self.assertTrue(walkable(after) or after in beds, step)
+                    if after[0] != before[0] and after[1] != before[1]:
+                        for corner in ((after[0], before[1]), (before[0], after[1])):
+                            self.assertTrue(walkable(corner) or corner in beds, f"{before} to {after} cuts a corner")
+
+    def test_a_walk_across_open_ground_is_seen_to_go_straight(self) -> None:
+        world = SimulationWorld.demo_world(seed=3)
+        passable = world.passable()
+        marta = world.residents["marta"]
+        # The longest slanting walk there is from where she stands with nothing in the way.
+        goal = max(
+            (
+                (x, y)
+                for x in range(world.tile_map.width)
+                for y in range(world.tile_map.height)
+                if abs(x - marta.x) > 2 * abs(y - marta.y) > 4 and sight(marta.tile, (x, y), passable)
+            ),
+            key=lambda tile: (abs(tile[0] - marta.x), tile),
+        )
+        start = marta.tile
+        marta.activity = Activity("wander", path=find_path(start, goal, passable), minutes_left=5)
+        walked = [(float(start[0]), float(start[1]))]
+        while marta.tile != goal:
+            world.activities.tick(world, marta)
+            self.assertEqual(marta.trail[0], walked[-1], "each minute goes on from where the last one ended")
+            self.assertEqual(_tile_of(marta.trail[-1]), marta.tile)
+            walked.extend(marta.trail[1:])
+        self.assertEqual(walked[-1], goal)
+        rise = (goal[1] - start[1]) / (goal[0] - start[0])
+        for x, y in walked:
+            self.assertAlmostEqual(y, start[1] + (x - start[0]) * rise, msg="every point of it is on the one line")
+        self.assertGreater(len({y for _, y in walked}), 3)
+
+    def test_whoever_stops_part_way_along_a_line_steps_onto_their_tile(self) -> None:
+        world = SimulationWorld.demo_world(seed=3)
+        marta = world.residents["marta"]
+        marta.needs = Needs(hunger=0, tiredness=0, social=0, stress=0)
+        marta.trail = [(marta.x - 1.0, marta.y - 0.25), (marta.x + 0.0, marta.y + 0.5)]
+        marta.activity = Activity("wander", minutes_left=5, using=True)
+        world.activities.tick(world, marta)
+        self.assertEqual(marta.trail, [(marta.x, marta.y + 0.5), marta.tile])
+        world.activities.tick(world, marta)
+        self.assertEqual(marta.trail, [marta.tile])
+        # Put somewhere else outright, they do not slide there.
+        marta.x += 6
+        world.activities.tick(world, marta)
+        self.assertEqual(marta.trail, [marta.tile])
 
     def test_a_week_passes_without_any_need_reaching_its_maximum(self) -> None:
         for seed in (7, 42):

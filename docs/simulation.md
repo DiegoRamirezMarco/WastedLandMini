@@ -35,13 +35,27 @@ The simulation runs without Pygame. Important state changes emit domain events. 
    - bed loses its appeal with hunger: nobody settles down to sleep on an empty stomach;
    - distance costs a little, and a small random amount from the project RNG breaks ties;
    - wandering has a low constant score, so it wins when nothing is pressing.
-3. `ActivitySystem` walks the resident along the path (2 tiles per minute), then applies the use
+3. `ActivitySystem` walks the resident along the path (2 tiles per minute, each to any of the
+   eight around; see "Getting there" below), then applies the use
    until its minutes run out or the needs it lowers reach zero. A use with `until` ends when
    that one need reaches zero: sleep eases stress too, but only tiredness decides when to wake.
    Any other bodily need reaching 85 cuts a long restful use short: hunger or thirst wakes a sleeper.
 
 Starting a use emits an `activity_started` event with low importance. Eating emits the more
 specific `meal_started` event so presentation can animate and sound the meal without owning it.
+
+## Getting there
+
+- A walk is a list of tiles, each beside the last, sideways or diagonally (`world/pathfinding.py`).
+  Where a resident is, at the end of every minute, is one tile.
+- The way is the straight line to where they are going, at whatever angle, if nothing is on it.
+  Otherwise it is a way round, pulled straight between the corners it has to turn. A line is
+  walked by the tiles nearest to it, none further than half a tile from it.
+- A diagonal step needs both tiles it passes between to be free: nobody cuts the corner of a
+  wall, and where two things touch at a corner there is no way through.
+- Standing next to something, to use it or to talk, is beside it and never at its corner.
+- `Resident.trail` is where they walked in the last minute: for each tile, the point of the line
+  that is on it. It is there for whoever draws them. It is not saved and nothing goes by it.
 
 ## Social life
 

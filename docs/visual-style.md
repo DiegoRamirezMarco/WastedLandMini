@@ -175,7 +175,8 @@ cut apart where the body bends, each part laid along its bone and turned as the 
   only tools and tests now do, a drawing is still drawn out between its joints: there the torso
   is lengthened between chest and waist and the arms gain a little reach.
 - **Moving.** The doll is posed from the side by the same clips as any body. Facing left it is
-  the same drawing in a mirror, and walking up or down the map it keeps the side it last faced.
+  the same drawing in a mirror. Walking at a slant it faces the side it is going towards, and
+  only straight up or down the map does it keep the side it last faced.
   It reels, falls, loses limbs and lies still exactly as the game's own bodies do, since it is the
   same skeleton underneath.
 - **Showing.** Dolls go on the window itself, at its full resolution and with smooth edges, over

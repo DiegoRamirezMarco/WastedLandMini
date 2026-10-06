@@ -1585,6 +1585,29 @@ class GameShellTests(unittest.TestCase):
         self.assertEqual(view.bodies.characters["raul"].facing, "right")
         self.assertEqual(view.bodies.characters["tomas"].clip, "idle")
 
+    def test_a_walk_at_a_slant_is_drawn_along_its_line_and_seen_from_the_nearest_side(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        self._stand_together("raul")
+        raul = world.residents["raul"]
+        view.tick_progress = 0.75
+        # Mostly across and a little down; mostly up and a little back; and neither more than the other.
+        for step, facing in (((1.0, 0.25), "right"), ((-0.25, -1.0), "up"), ((-1.0, 1.0), "left")):
+            raul.trail = [(raul.x - 2 * step[0], raul.y - 2 * step[1]), (raul.x - step[0], raul.y - step[1]), raul.tile]
+            x, y, seen, stride = view._walk_state(raul)
+            self.assertAlmostEqual(x, raul.x - step[0] / 2)
+            self.assertAlmostEqual(y, raul.y - step[1] / 2)
+            self.assertEqual(seen, facing)
+            self.assertAlmostEqual(stride, 0.75)
+            view.render()
+            self.assertEqual(view.bodies.characters["raul"].facing, facing)
+            # Their feet are where the line is, between the middles of two tiles.
+            feet = view.hitboxes["raul"].midbottom
+            raul.trail = []
+            view.render()
+            there = view.hitboxes["raul"].midbottom
+            self.assertAlmostEqual((feet[0] - there[0]) / view.tile_px, -step[0] / 2, delta=0.1)
+            self.assertAlmostEqual((feet[1] - there[1]) / view.tile_px, -step[1] / 2, delta=0.1)
+
     def test_a_blow_staggers_whoever_takes_it_and_a_hard_one_knocks_them_down(self) -> None:
         view, world = self.game.global_view, self.game.world
         self._stand_together("raul", "tomas", "lucia")

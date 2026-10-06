@@ -528,6 +528,14 @@ class DollEditorTests(unittest.TestCase):
         raul.trail, raul.facing = [], "up"
         self._show()
         self.assertEqual(view.bodies.characters["raul"].facing, "doll_left")
+        # Walking up the map at a slant he turns to the side he is going towards, however little.
+        raul.trail = [(19.5, 16), (20, 14)]
+        self._show()
+        self.assertEqual(view.bodies.characters["raul"].facing, "doll_right")
+        raul.trail = [(20, 16), (20, 14)]
+        self._show()
+        self.assertEqual(view.bodies.characters["raul"].facing, "doll_right", "straight up, he keeps it")
+        raul.trail = []
         # The head he was drawn is his face from now on. Nobody else has changed.
         self.assertIsNotNone(game.faces.portrait("raul", "neutral", (64, 64)))
         self.assertNotEqual(pygame.image.tobytes(game.faces.face("raul", "neutral"), "RGBA"), pygame.image.tobytes(pixel_face, "RGBA"))

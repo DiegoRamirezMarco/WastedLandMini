@@ -7,6 +7,7 @@ from simulation.residents.needs import Needs
 from simulation.residents.personality import Personality
 from simulation.work.expedition import Expedition
 from world.map import Tile
+from world.pathfinding import Point
 
 FACINGS = ("down", "left", "right", "up")
 
@@ -52,9 +53,13 @@ class Resident:
     injuries: list[Injury] = field(default_factory=list)
     # IDs of the limbs they have lost for good, from the limb registry.
     lost_limbs: list[str] = field(default_factory=list)
-    # Tiles walked during the last tick, starting where the tick began. Lets the
-    # presentation animate movement; it is not saved.
-    trail: list[Tile] = field(default_factory=list, compare=False, repr=False)
+    # Where they walked during the last tick, starting where the tick began: a point for each
+    # tile stepped on, on the straight line they were following, so up to half a tile off the
+    # middle of it. Lets the presentation animate movement; it is not saved, and nothing that
+    # happens goes by it.
+    trail: list[Point] = field(default_factory=list, compare=False, repr=False)
+    # The points of the stretch they are walking that are still ahead of them. Not saved either.
+    ahead: list[Point] = field(default_factory=list, compare=False, repr=False)
 
     @property
     def health(self) -> float:

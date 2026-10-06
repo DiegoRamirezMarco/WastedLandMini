@@ -666,6 +666,33 @@ Still open here:
 - Being told what to do is being given advice by the player. No resident orders another about
 - Of the game's own foods none can make anyone ill
 
+### S21 — Walking at any angle — done
+Everybody walked like a rook: along the rows and the columns of the map, turning square corners
+on open ground. Asked for by hand: that they go in every direction.
+- **A way is straight wherever nothing is in it.** `find_path` first tries the line from where
+  someone stands to where they are going, at whatever angle that is, and only looks for a way
+  round when something is on it. That way round is then pulled straight between its corners
+- **A step is to any of the eight tiles around**, and a walk is still a list of tiles, each
+  beside the last: where a resident is, what they are next to and what is saved are tiles as
+  before. Nobody cuts the corner of a wall or squeezes between two things that touch at one
+- **The trail says where the line runs.** For each tile stepped on, `Resident.trail` gives the
+  point of the line that is on it, up to half a tile off its middle. It is for whoever draws
+  them, it is not saved, and nothing that happens goes by it. Stopped short part-way along a
+  line, they take the next minute to step onto the middle of their tile
+- Standing next to something to use it, or to someone to talk to them, is still beside it and
+  not at its corner
+
+Done when: across open ground a resident's whole walk lies on one line that is neither along the
+map nor square to it, and two days of the settlement pass with nobody cutting a corner.
+
+Still open here:
+- **A step at a slant covers more ground in the same minute**: going diagonally they are up to
+  four tenths faster than going along a row
+- How far something is, when it is weighed against how much it is wanted, is still counted in
+  rows and columns
+- The way round something is a good one, not always the shortest there is
+- Nobody steps aside for anybody: two residents can still walk through one another
+
 ### P16 — The way in (needs S18) — done
 - **A main menu**: go on with the settlement being played or the saved one, start a new one,
   open the settlement that comes ready made, or leave. `Esc` on the map goes there, and no longer
@@ -891,6 +918,20 @@ Still open here:
   are hard to tell apart: they were made to be read on a doll, from the side
 - Carrying, working and arguing are still done one way by everybody
 - The opening names `Cómo se mueve` but does not wait for it: it can be passed by without a look
+
+### P24 — Seen to walk at any angle (needs S21) — done
+- **A figure follows the line it walks**, between the middles of the tiles and not from one to
+  the next, so a walk at a slant is not seen as a staircase
+- **The game's own bodies are seen from the nearest of their four sides**: from the side when
+  they go more across than up or down, and when they go as much of one as of the other
+- **A doll turns to the side it is going towards**, however little that is, and keeps it only
+  when it goes straight up or down the map
+
+Done when: a resident sent across open ground at a slant is seen to go straight there.
+
+Still open here:
+- There is no drawing of a body seen from a corner: at a slant it is the side or the front
+- The stride is as long as the step, so going diagonally the feet cover more than they seem to
 
 ## Later
 - SQLite persistence

@@ -80,6 +80,8 @@ from world.room import Room
 
 # Tiles walked in one turn of the walk clip: a step with each foot.
 TILES_PER_STRIDE = 2
+# How far across a step has to take someone, in tiles, for a doll to turn to that side.
+LEAN = 0.05
 # What a body does besides standing and walking, and how many times a second its clip goes round.
 # Walking, eating and fighting are done each resident's own way, and those go by their manner.
 WALK_CLIP = "walk"
@@ -1101,7 +1103,7 @@ class GlobalView:
         x, y, facing, stride = self._walk_state(resident)
         doll = self._doll_of(resident.resident_id)
         if doll is not None:
-            facing = self._side_facing(resident.resident_id, facing)
+            facing = self._side_facing(resident.resident_id, self._lean(resident) or facing)
         top = round(y * TILE_SIZE)
         spot = ground_spot(x, y)
         # Where a body stands at rest, which is what is picked with the mouse whatever it is doing.
@@ -1331,12 +1333,24 @@ class GlobalView:
         index = min(int(distance), len(trail) - 2)
         fraction = distance - index
         (from_x, from_y), (to_x, to_y) = trail[index], trail[index + 1]
-        if to_x != from_x:
+        # They walk at any angle, and are seen from whichever of the four sides is nearest to it.
+        if abs(to_x - from_x) >= abs(to_y - from_y):
             facing = "right" if to_x > from_x else "left"
         else:
             facing = "down" if to_y > from_y else "up"
         stride = distance / TILES_PER_STRIDE % 1.0
         return (from_x + (to_x - from_x) * fraction, from_y + (to_y - from_y) * fraction, facing, stride)
+
+    def _lean(self, resident: Resident) -> str | None:
+        """The side someone walking is going towards, however slightly. None if they stand or go straight up or down."""
+        trail = resident.trail
+        if len(trail) < 2:
+            return None
+        index = min(int(min(self.tick_progress, 1.0) * (len(trail) - 1)), len(trail) - 2)
+        across = trail[index + 1][0] - trail[index][0]
+        if abs(across) < LEAN:
+            return None
+        return "right" if across > 0 else "left"
 
     def _lying_in(self, resident: Resident) -> Interactable | None:
         """The object a resident is lying in, if they are using one from on top of it."""

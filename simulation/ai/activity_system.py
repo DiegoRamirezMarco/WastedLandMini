@@ -16,6 +16,7 @@ from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
 from world.interactable import UseDefinition
 from world.map import Tile
+from world.pathfinding import Point, straight_ahead
 
 if TYPE_CHECKING:
     from simulation.world import SimulationWorld
@@ -28,9 +29,15 @@ def facing_towards(origin: Tile, target: Tile) -> str | None:
     dx, dy = target[0] - origin[0], target[1] - origin[1]
     if dx == 0 and dy == 0:
         return None
-    if abs(dx) > abs(dy):
+    # Going diagonally they are seen from the side.
+    if abs(dx) >= abs(dy):
         return "right" if dx > 0 else "left"
     return "down" if dy > 0 else "up"
+
+
+def _within(point: Point, tile: Tile) -> bool:
+    """Whether a point is on a tile: no further than half a tile from the middle of it."""
+    return abs(point[0] - tile[0]) <= 0.5 and abs(point[1] - tile[1]) <= 0.5
 
 
 @dataclass
@@ -39,6 +46,20 @@ class ActivitySystem:
     social: SocialSystem = field(default_factory=SocialSystem)
 
     def tick(self, world: "SimulationWorld", resident: Resident) -> None:
+        # The trail goes on from where the last one left them, which is the middle of their tile
+        # unless they are part-way along a stretch that is not in line with it.
+        last = resident.trail[-1] if resident.trail else resident.tile
+        resident.trail = [last if _within(last, resident.tile) else resident.tile]
+        self._act(world, resident)
+        if len(resident.trail) == 1:
+            # They walked no further. Left off the middle of their tile, they step onto it;
+            # moved somewhere else outright, they are simply there.
+            if resident.trail[0] != resident.tile and _within(resident.trail[0], resident.tile):
+                resident.trail.append(resident.tile)
+            else:
+                resident.trail = [resident.tile]
+
+    def _act(self, world: "SimulationWorld", resident: Resident) -> None:
         # Asleep, the body runs slow. So it does for someone out there, who eats as they go from what they took.
         resident.needs.step(1, resting=resident.away or not world.is_aware(resident))
         self._settle_mood(resident)
@@ -46,7 +67,6 @@ class ActivitySystem:
         if resident.resident_id not in world.residents:
             # Going without took them.
             return
-        resident.trail = [resident.tile]
         for need in self.unanswerable(world, resident):
             world.items.report_nothing_for(world, resident, need)
         if resident.activity is None:
@@ -101,10 +121,13 @@ class ActivitySystem:
         for _ in range(tiles):
             if not activity.path:
                 break
+            if not resident.ahead or not _within(resident.ahead[0], activity.path[0]):
+                # A new stretch, or a way that is not the one they were on.
+                resident.ahead = straight_ahead(resident.tile, activity.path)
             step = activity.path.pop(0)
             resident.facing = facing_towards(resident.tile, step) or resident.facing
             resident.x, resident.y = step
-            resident.trail.append(step)
+            resident.trail.append(resident.ahead.pop(0))
         resident.current_action = "walking"
 
     def _use_of(self, world: "SimulationWorld", activity: Activity) -> UseDefinition | None:
