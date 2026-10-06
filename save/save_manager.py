@@ -26,6 +26,7 @@ from simulation.tastes.taste import KINDS, Taste, TasteProfile
 from simulation.work.expedition import Expedition
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.tutorial.tutorial import TutorialState
+from simulation.work.research import ResearchState
 from simulation.world import SimulationWorld
 from world.build import BuildSite
 from world.interactable import Interactable
@@ -68,6 +69,9 @@ FIRST_ECONOMY_VERSION = 8
 # the furniture of the south house moved to where nobody is walled in by it.
 # Version 24 added building: the sites that are being worked on. A save from before has none,
 # and what stands in it stands as it did.
+# Version 25 added what the settlement knows and what it is working out. A save from before
+# knows how to make whatever it has standing, and is working nothing out.
+FIRST_RESEARCH_VERSION = 25
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 23
@@ -86,7 +90,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 24
+    CURRENT_VERSION = 25
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -155,6 +159,12 @@ class SaveManager:
                 for site in world.sites.values()
             ],
             "site_count": world.site_count,
+            "research": {
+                "subject": world.studies.subject_id,
+                "known": list(world.studies.known),
+                "progress": dict(world.studies.progress),
+                "supplied": list(world.studies.supplied),
+            },
             "residents": [
                 {
                     "id": resident.resident_id,
@@ -422,7 +432,31 @@ class SaveManager:
         world.event_log = [str(line) for line in event_log] if isinstance(event_log, list) else []
         self._restore_tutorial(world, data)
         self._restore_tastes(world, data)
+        self._restore_research(world, data, version)
         return world
+
+    def _restore_research(self, world: SimulationWorld, data: dict[str, Any], version: int) -> None:
+        """Put back what is known and what is being worked out. A subject that is gone is forgotten."""
+        subjects = world.registries.research.subjects
+        if version < FIRST_RESEARCH_VERSION:
+            world.research.grant_what_stands(world)
+            return
+        saved = _object_or_empty(data.get("research"))
+        known = [str(each) for each in dict.fromkeys(_list_or_empty(saved.get("known"))) if each in subjects]
+        in_hand = _text_or_none(saved.get("subject"))
+        world.studies = ResearchState(
+            subject_id=in_hand if in_hand in subjects and in_hand not in known else None,
+            known=known,
+            progress={
+                str(subject_id): max(0.0, float(minutes))
+                for subject_id, minutes in _object_or_empty(saved.get("progress")).items()
+                if subject_id in subjects
+                and subject_id not in known
+                and isinstance(minutes, (int, float))
+                and not isinstance(minutes, bool)
+            },
+            supplied=[str(each) for each in _list_or_empty(saved.get("supplied")) if each in subjects and each not in known],
+        )
 
     def _restore_tastes(self, world: SimulationWorld, data: dict[str, Any]) -> None:
         """Tastes are kept whatever they are for: one for a tag or an item that no content brings

@@ -11,6 +11,7 @@ from simulation.residents.resident import Resident
 from simulation.work.expedition import PUSH_ON, TURN_BACK, Expedition
 from simulation.work.hauling import containers_of_kind
 from simulation.work.job import JobDefinition
+from simulation.work.research import EXPEDITION_DANGER, EXPEDITION_FINDS
 from world.interactable import Interactable
 from world.pathfinding import manhattan
 
@@ -70,12 +71,13 @@ class ExpeditionSystem:
         rule, settings = job.expedition, world.registries.expeditions
         now = world.clock.total_minutes
         minutes = world.rng.randint(*rule.minutes)
-        finds = world.rng.randint(*rule.finds)
+        # What has been worked out about going outside brings more back, and brings it back safer.
+        finds = round(world.rng.randint(*rule.finds) * world.research.factor(world, EXPEDITION_FINDS))
         comes_on_something = world.rng.random() < settings.find_chance
         resident.expedition = Expedition(
             returns_at=now + minutes,
             finds=finds,
-            danger=rule.danger,
+            danger=rule.danger * world.research.factor(world, EXPEDITION_DANGER),
             find_at=now + minutes // 2 if comes_on_something else None,
         )
         resident.last_expedition_day = world.clock.day

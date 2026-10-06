@@ -170,6 +170,16 @@ ICONS = {
         "ohhhhhho",
         "oooooooo",
     ],
+    "study": [
+        ".oo..oo.",
+        "oppooppo",
+        "opkookpo",
+        "oppooppo",
+        "opkookpo",
+        "oppooppo",
+        ".oooooo.",
+        "........",
+    ],
     "eat": [
         "k.k.k..k",
         "k.k.k.kk",

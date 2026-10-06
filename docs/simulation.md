@@ -471,6 +471,30 @@ Everything here is between adults, and nothing happens to anyone who does not wa
 - What somebody is left holding when a site no longer wants it is taken back to where such
   things are kept. Whoever goes outside does not put away as a find what a site is waiting for.
 
+## Research
+
+- `data/research.json` lists the subjects. A settlement knows some, has one in hand or none,
+  and keeps the minutes done on each of the rest.
+- `SetResearchCommand` says which is in hand. It is the player's to say and nobody is asked: it
+  is refused only for a subject that is known already, that does not exist, or that waits for
+  another. Choosing another keeps what was done on the first.
+- A job marked `research` is the post where it is done. Each minute a worker is on duty there
+  adds to the subject in hand, slower for a missing limb or low spirits. Two desks with two
+  workers go twice as fast.
+- A subject that `needs` an item is not worked on until every unit of it is at the post. The
+  worker fetches it as any worker fetches what their post is kept supplied with: from the
+  container that holds most of it as nobody's, the shop included. Once it is all there it is
+  used up, and is not asked for again if the subject is left and taken up later.
+- When the minutes are done the subject is known, `research_finished` is emitted and nothing
+  is in hand. What it `opens` can be proposed from then on; before, `PlaceObjectCommand`,
+  `ProposeObjectCommand` and their like for buildings refuse it, the opening included.
+- What it makes go better is asked for where the figure is used: `world.research.factor` is
+  the product of that effect over every subject known, and 1 when none touches it.
+- `demo_world`, and a save from before, start knowing every subject that opens up something
+  they have standing, and whatever those require.
+- Once an hour, while somebody holds the post, notice is given once a day if nothing has been
+  chosen and something could be, or if the item the subject studies is nowhere to be had.
+
 ## Crises and advice
 
 - A resident who resents someone enough, and is stressed or hot-tempered enough, reaches a

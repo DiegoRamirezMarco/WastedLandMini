@@ -100,6 +100,18 @@
       "minutes": 30
     }
   },
+  "study_desk": {
+    "name": "mesa de estudio",
+    "article": "una",
+    "container": true,
+    "light": 2,
+    "build": {
+      "cost": {
+        "scrap": 2
+      },
+      "minutes": 60
+    }
+  },
   "cooking_pot": {
     "name": "olla",
     "article": "una",

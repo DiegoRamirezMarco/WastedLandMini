@@ -35,6 +35,7 @@ from simulation.tutorial.tutorial import TutorialState
 from simulation.tutorial.tutorial_system import TutorialSystem
 from simulation.work.construction import ConstructionSystem
 from simulation.work.expedition_system import ExpeditionSystem
+from simulation.work.research import ResearchResult, ResearchState, ResearchSystem
 from simulation.work.staffing import StaffingSystem
 from simulation.work.work_system import WORK_ACTION, WorkSystem
 from world.build import BUILDING_SITE, OBJECT_SITE, BuildSite
@@ -113,6 +114,9 @@ class SimulationWorld:
     # Ground marked out for what somebody has agreed to put up, by site ID.
     sites: dict[str, BuildSite] = field(default_factory=dict)
     site_count: int = 0
+    research: ResearchSystem = field(default_factory=ResearchSystem)
+    # What the settlement knows, and what it is working out.
+    studies: ResearchState = field(default_factory=ResearchState)
     tastes: TasteSystem = field(default_factory=TasteSystem)
     # What each resident likes and loathes, by resident ID. Kept apart from the resident.
     taste_profiles: dict[str, TasteProfile] = field(default_factory=dict)
@@ -138,6 +142,7 @@ class SimulationWorld:
         self.items.tick_world(self)
         self.staffing.tick(self)
         self.construction.tick(self)
+        self.research.tick(self)
         self.happenings.tick(self)
         self.activities.begin_minute(self)
         for resident in list(self.residents.values()):
@@ -187,6 +192,10 @@ class SimulationWorld:
 
     def cancel_site(self, site_id: str) -> UrbanismResult:
         return self.construction.cancel(self, site_id)
+
+    def set_research(self, subject_id: str | None) -> ResearchResult:
+        """Say what is to be worked out next. Whoever holds the post for it works on that."""
+        return self.research.choose(self, subject_id)
 
     def move_building(self, room_id: str, tile: Tile) -> UrbanismResult:
         return self.urbanism.move_building(self, room_id, tile)
@@ -469,6 +478,8 @@ class SimulationWorld:
         )
         world.load_layout(DEFAULT_MAP_ID)
         world.stock_from_layout()
+        # A settlement that is already running knows how to make what it has.
+        world.research.grant_what_stands(world)
         residents = [
             Resident("marta", "Marta", personality=Personality(empathy=75, sociability=65), traits=["music_lover"]),
             Resident("raul", "Raúl", personality=Personality(aggression=72, impulsiveness=68)),

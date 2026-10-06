@@ -25,6 +25,7 @@ from simulation.tutorial.tutorial import BUILDING, JOB, OBJECT, TutorialDefiniti
 from simulation.work.construction import ConstructionSettings, construction_settings_from_data
 from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
+from simulation.work.research import EFFECTS, JOB_PACE, ResearchSettings, research_settings_from_data
 from world.interactable import InteractableDefinition, interactable_definition_from_data
 from world.custom_content import load_custom_buildings, load_custom_interactables
 from world.map import TerrainDefinition
@@ -150,6 +151,8 @@ class BuiltInRegistries:
     expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
     # How building is gone about. What each thing takes is in its own definition.
     construction: ConstructionSettings = field(default_factory=ConstructionSettings)
+    # What there is to work out, and what each subject opens up.
+    research: ResearchSettings = field(default_factory=ResearchSettings)
     world_events: WorldEventSettings = field(default_factory=WorldEventSettings)
     # How tastes are made, how they are taken, and what they are called.
     tastes: TasteSettings = field(default_factory=TasteSettings)
@@ -232,6 +235,9 @@ class BuiltInRegistries:
         construction_path = root / "construction.json"
         if construction_path.is_file():
             registries.construction = construction_settings_from_data(_read_object(construction_path))
+        research_path = root / "research.json"
+        if research_path.is_file():
+            registries.research = research_settings_from_data(_read_object(research_path))
         bonds_path = root / "relationships.json"
         if bonds_path.is_file():
             registries.bonds = bond_settings_from_data(_read_object(bonds_path))
@@ -274,6 +280,17 @@ class BuiltInRegistries:
             unknown = sorted(tag for tag in rule.cost if tag not in material_tags)
             if unknown:
                 raise ValueError(f"{label} is built with what no item is tagged as: {unknown}")
+        for subject_id, subject in self.research.subjects.items():
+            if subject.item is not None and self.items.find(subject.item) is None:
+                raise ValueError(f"Research subject {subject_id} studies an unknown item: {subject.item}")
+            unknown = [kind for kind in subject.objects if self.interactables.find(kind) is None]
+            unknown += [blueprint for blueprint in subject.buildings if blueprint not in self.buildings]
+            if unknown:
+                raise ValueError(f"Research subject {subject_id} opens up what is not defined: {unknown}")
+            for effect in subject.effects:
+                paced = effect.removeprefix(JOB_PACE) if effect.startswith(JOB_PACE) else None
+                if effect not in EFFECTS and (paced is None or (paced not in self.jobs and self.jobs)):
+                    raise ValueError(f"Research subject {subject_id} has an unknown effect: {effect}")
         for interaction_id, interaction in self.interactions.items():
             if interaction.dialogue is not None and interaction.dialogue not in self.dialogue:
                 raise ValueError(f"Interaction {interaction_id} uses unknown dialogue: {interaction.dialogue}")
@@ -285,6 +302,9 @@ class BuiltInRegistries:
             station = self.interactables.find(job.station)
             if station is None:
                 raise ValueError(f"Job {job_id} is worked at unknown object kind: {job.station}")
+            if job.research and not station.container:
+                # What is studied is left at the post, so the post has to be able to hold it.
+                raise ValueError(f"Job {job_id} studies at {job.station}, which is not a container kind")
             if job.tool is not None and not any(
                 job.tool.tag in self.items.get(item_id).tags for item_id in self.items.ids()
             ):

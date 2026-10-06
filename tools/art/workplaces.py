@@ -341,8 +341,28 @@ def _grave() -> pygame.Surface:
     return surface
 
 
+def _study_desk() -> pygame.Surface:
+    surface = _blank(16, 32)
+    # A plank across two crates, with an open book on it and a stub of candle to read by.
+    for x in (2, 11):
+        _box(surface, (x, 24, 3, 7), "rust_dark")
+    fill(surface, "shadow", (5, 26, 6, 3))
+    _box(surface, (1, 20, 14, 4), "copper")
+    fill(surface, "sand", (1, 20, 14, 1))
+    fill(surface, "ink", (2, 15, 9, 5))
+    fill(surface, "paper", (3, 16, 3, 3))
+    fill(surface, "bone", (7, 16, 3, 3))
+    dots(surface, "dust", [(4, 17), (8, 17), (8, 18)])
+    fill(surface, "ink", (11, 14, 4, 6))
+    fill(surface, "bone", (12, 15, 2, 5))
+    dots(surface, "lamp", [(12, 12), (13, 13)])
+    dots(surface, "ember", [(12, 13), (13, 14)])
+    return surface
+
+
 def build() -> dict[str, pygame.Surface]:
     painters = {
+        "study_desk": _study_desk,
         "cooking_pot": _cooking_pot,
         "bar": _bar,
         "crop_bed": _crop_bed,

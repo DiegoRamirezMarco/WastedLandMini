@@ -34,6 +34,8 @@ from ui.labels import (
     spoken_line,
 )
 from ui.layout import Layout, layout_for
+from ui.research_board import PANEL_WIDTH as RESEARCH_WIDTH
+from ui.research_board import draw_research_board, research_board_height, study_buttons
 from ui.panel import draw_panel, set_skin
 from ui.resident_panel import (
     LIFE_TAB,
@@ -63,6 +65,7 @@ PAUSE_INTENT = ("pause",)
 LOG_INTENT = ("log",)
 JOBS_INTENT = ("jobs",)
 STORES_INTENT = ("stores",)
+RESEARCH_INTENT = ("research",)
 ROSTER_INTENT = ("roster",)
 MINIMAP_INTENT = ("minimap",)
 SAVE_INTENT = ("save",)
@@ -77,7 +80,9 @@ NOTICE_SECONDS = 3.0
 # How long what the opening points at stays lit, and then unlit, in seconds.
 BLINK_SECONDS = 0.5
 # What a step of the opening is about, when it is about one of the entries of the menu.
-FOCUS_INTENTS = {"urbanism": URBANISM_INTENT, "jobs": JOBS_INTENT, "save": SAVE_INTENT}
+FOCUS_INTENTS = {
+    "urbanism": URBANISM_INTENT, "jobs": JOBS_INTENT, "save": SAVE_INTENT, "research": RESEARCH_INTENT,
+}
 CLOCK_FOCUS = "clock"
 STORES_TITLE = "Almacén: lo que es de todos"
 STORES_EMPTY = "No queda nada"
@@ -155,10 +160,12 @@ class Hud:
         self._skinned = {tuple(part) for part in (self.layout.top, self.layout.sidebar, self.layout.panel, self.layout.dock)}
         self._skins: dict[tuple[int, int, int, int], pygame.Surface] = {}
         set_skin(self._dress if self._skin_source is not None else None)
-        # The log, the job board and the stores share a corner of the map, so only one is open at a time.
+        # The log, the job board, the stores and what is studied share a corner of the map, so only
+        # one of them is open at a time.
         self.log_open = False
         self.jobs_open = False
         self.stores_open = False
+        self.research_open = False
         # At most one of these is set: the resident or the container whose panel is showing.
         self.selected_id: str | None = None
         self.selected_container: str | None = None
@@ -204,6 +211,7 @@ class Hud:
         entries = [
             ("people", "Residentes", ROSTER_INTENT),
             ("work", "Puestos", JOBS_INTENT),
+            ("study", "Estudio", RESEARCH_INTENT),
             ("scrap", "Almacén", STORES_INTENT),
             ("log", "Eventos", LOG_INTENT),
             ("map", "Mapa", MINIMAP_INTENT),
@@ -221,8 +229,9 @@ class Hud:
             MenuButton(pygame.Rect(sidebar.x, sidebar.y + index * MENU_ROW, sidebar.width, MENU_ROW), icon, label, intent)
             for index, (icon, label, intent) in enumerate(entries)
         ]
-        self.jobs_button = self.menu[1]
-        self.log_button = self.menu[3]
+        self.jobs_button = next(button for button in self.menu if button.intent == JOBS_INTENT)
+        self.log_button = next(button for button in self.menu if button.intent == LOG_INTENT)
+        self.research_button = next(button for button in self.menu if button.intent == RESEARCH_INTENT)
 
     def _dress(self, target: pygame.Surface, rect: pygame.Rect) -> bool:
         """Put the skin under one of the large parts of the screen, and clear the canvas there to show it."""
@@ -244,18 +253,28 @@ class Hud:
         step_button = tutorial_button(self.font, guide, self.world) if guide is not None else None
         if step_button is not None:
             fixed.append(step_button)
+        if self.research_open:
+            return fixed + study_buttons(self.font, self.research_rect(), self.world)
         if not self.jobs_open:
             return fixed
         return fixed + suggest_buttons(self.font, self.jobs_rect(), self.world, self.selected_id)
 
+    def _open_only(self, panel: str) -> None:
+        """Open one of the panels that share a corner, or shut it if it is the one open, and shut the rest."""
+        for name in ("log_open", "jobs_open", "stores_open", "research_open"):
+            setattr(self, name, name == panel and not getattr(self, name))
+
     def toggle_log(self) -> None:
-        self.log_open, self.jobs_open, self.stores_open = not self.log_open, False, False
+        self._open_only("log_open")
 
     def toggle_jobs(self) -> None:
-        self.jobs_open, self.log_open, self.stores_open = not self.jobs_open, False, False
+        self._open_only("jobs_open")
 
     def toggle_stores(self) -> None:
-        self.stores_open, self.log_open, self.jobs_open = not self.stores_open, False, False
+        self._open_only("stores_open")
+
+    def toggle_research(self) -> None:
+        self._open_only("research_open")
 
     def on_events(self, events: Iterable[DomainEvent]) -> None:
         self.feed.add(events)
@@ -346,6 +365,7 @@ class Hud:
         panels += [self.log_rect()] if self.log_open else []
         panels += [self.jobs_rect()] if self.jobs_open else []
         panels += [self.stores_rect()] if self.stores_open else []
+        panels += [self.research_rect()] if self.research_open else []
         return any(rect is not None and rect.collidepoint(position) for rect in panels)
 
     def _float(self, width: int, height: int) -> pygame.Rect:
@@ -358,6 +378,9 @@ class Hud:
 
     def jobs_rect(self) -> pygame.Rect:
         return self._float(BOARD_WIDTH, job_board_height(self.world))
+
+    def research_rect(self) -> pygame.Rect:
+        return self._float(RESEARCH_WIDTH, research_board_height(self.world, self.font))
 
     def stores_rect(self) -> pygame.Rect:
         rows = max(1, len(settlement_stock(self.world)))
@@ -420,13 +443,21 @@ class Hud:
             draw_job_board(self.canvas, self.font, self.jobs_rect(), self.world, self.selected_id)
         if self.stores_open:
             self._render_stores(self.stores_rect())
+        if self.research_open:
+            draw_research_board(self.canvas, self.font, self.research_rect(), self.world)
 
     def _menu_active(self, intent: Hashable) -> bool:
         if intent == ROSTER_INTENT:
             return self.card_rect() is None and self.container_rect() is None
         if intent == MINIMAP_INTENT:
             return self.minimap_rect is not None
-        return {JOBS_INTENT: self.jobs_open, STORES_INTENT: self.stores_open, LOG_INTENT: self.log_open}.get(intent, False)
+        open_panels = {
+            JOBS_INTENT: self.jobs_open,
+            STORES_INTENT: self.stores_open,
+            LOG_INTENT: self.log_open,
+            RESEARCH_INTENT: self.research_open,
+        }
+        return open_panels.get(intent, False)
 
     def _render_top(self) -> None:
         top, clock = self.layout.top, self.world.clock

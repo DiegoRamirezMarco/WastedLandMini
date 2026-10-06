@@ -14,6 +14,7 @@ from simulation.items.item import ItemInstance
 from simulation.memory.memory import Memory
 from simulation.residents.activity import Activity
 from simulation.residents.resident import Resident
+from simulation.work.research import BUILD_PACE, NOT_KNOWN
 from simulation.work.work_system import HAUL_MINUTES, PRESSING_NEED
 from world.build import BUILDING_SITE, OBJECT_SITE, SITE_KINDS, BuildRule, BuildSite
 from world.map import Tile
@@ -124,17 +125,28 @@ class ConstructionSystem:
     # ----- what the player does -----
 
     def place(self, world: "SimulationWorld", kind: str, what: str, tile: Tile) -> UrbanismResult:
-        """Put something down at once. Only what is free can be."""
+        """Put something down at once. Only what is free can be, and what is known how to make."""
+        unknown = self.not_known(world, kind, what)
+        if unknown is not None:
+            return UrbanismResult(False, unknown)
         if self.needs_building(world, kind, what):
             return UrbanismResult(False, NEEDS_BUILDING)
         if kind == BUILDING_SITE:
             return world.urbanism.place_building(world, what, tile)
         return world.urbanism.place_object(world, what, tile)
 
+    def not_known(self, world: "SimulationWorld", kind: str, what: str) -> str | None:
+        """Why this cannot be put up anywhere yet, for want of knowing how. None if it is known."""
+        subject = world.research.lock_on(world, kind, what)
+        return NOT_KNOWN.format(subject=subject.name) if subject is not None else None
+
     def site_error(self, world: "SimulationWorld", kind: str, what: str, tile: Tile) -> str | None:
         """Why this cannot be built there. None means it can."""
         if self.thing(world, kind, what) is None:
             return UNAVAILABLE[kind]
+        unknown = self.not_known(world, kind, what)
+        if unknown is not None:
+            return unknown
         if kind == BUILDING_SITE:
             building = world.registries.buildings[what]
             return world.urbanism.building_error(world, building.width, building.height, tile)
@@ -386,7 +398,8 @@ class ConstructionSystem:
                 )
             )
         resident.needs.apply(world.registries.construction.per_minute)
-        site.progress += world.health.work_pace(world, resident) * world.work.mood_pace(resident)
+        pace = world.health.work_pace(world, resident) * world.work.mood_pace(resident)
+        site.progress += pace * world.research.factor(world, BUILD_PACE)
         activity.minutes_left -= 1
         if site.progress >= rule.minutes and self._finish(world, site, resident):
             return

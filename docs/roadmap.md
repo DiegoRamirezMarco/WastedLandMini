@@ -548,9 +548,48 @@ Still open here:
 - What each thing takes is a first guess, and tools do not come into it
 - Everybody knows of every site there is, without having seen it or been told
 
-### S17 — Research — planned
-- Things to work out, as data: what each needs and what it opens up
-- A post where it is done, and time on shift that goes towards it
+### S17 — Research — done
+Asked first, and answered: what is worked out opens up things to build and makes other things
+go better; the player says what is studied, with nobody asked; it is done at a post of its
+own; and a subject takes time, other subjects before it, and now and then a thing to study.
+
+- **Subjects are data** (`data/research.json`): the minutes each takes, the subjects that have
+  to be known first, the item it studies and uses up, the kinds of object and the blueprints
+  that nobody can put up until it is known, and what goes better for knowing it
+- **Twelve to begin with.** Six open up what a new settlement cannot make: the workshop, the
+  generator and its lamps, the radio, the clinic, the shop and the cantina. Six make things go
+  better: the garden, the water, building, and trips outside, which come back safer and with
+  more, and medicine, which lasts longer
+- **What is studied is the player's to say**, and theirs alone: it is the one thing in the
+  settlement nobody is asked about. What was done on a subject left for another is kept
+- **A post of its own**: a study desk and the job that goes with it, with a shift like any
+  other. Time at the desk goes towards whatever is in hand. It matters as much as the shop or
+  the workshop, so whoever holds it is called away to the water or the watch before they are
+- **A thing to study is fetched** by whoever holds the post, from wherever one lies that is
+  nobody's, the shop included, and is used up. Until it is at the desk nothing is done, and
+  notice is given once a day; so it is when somebody is at the desk and nothing has been chosen
+- **A settlement that is already running knows how to make what it has standing**, and so does
+  a save from before. A new one knows nothing, and can put up only what takes no knowing,
+  during its opening as after it
+- **The opening says so** before it ends, in a step of its own
+- On screen: `Estudio` in the menu, or `E`, lists what is in hand, what can be chosen and what
+  waits for something else, each with what it is for, and names what is known. Urbanismo lists
+  what nobody knows how to make yet, marked as such, and says what it waits for
+
+Done when: in the settlement that comes ready made, with somebody at a desk, a subject chosen
+is known within three days and what it makes go better goes better; one that studies a thing
+has it fetched and used up, and without it waits and says so; a new settlement cannot put up a
+generator until electricity is known; three weeks of study, with three seeds, work three
+things out and leave nobody dead; and a save keeps what is known and what is half worked out.
+
+Still open here:
+- Nobody is sent for the thing a subject studies: it is whatever a trip happens to bring, and
+  an old radio turns up seldom
+- Whoever studies is no better or worse at it than anybody else, and nothing of what they are
+  like comes into it
+- Subjects are the game's alone: a content pack cannot add one yet
+- No building waits to be worked out, only furniture
+- What each subject takes and gives is a first guess
 
 Each of S15, S16 and S17 is followed by its screen: the counters in the bar, and the construction
 and research entries of the menu.

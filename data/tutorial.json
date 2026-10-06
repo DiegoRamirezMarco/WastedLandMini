@@ -197,6 +197,14 @@
       "done": "Construir cuesta chatarra y trabajo"
     },
     {
+      "id": "study",
+      "title": "Lo que no se sabe hacer",
+      "text": "En el catálogo hay cosas marcadas como por averiguar: un taller, un generador, una enfermería. Para eso pon una mesa de estudio (Muebles), propón a alguien el puesto de Estudio y elige el tema en Estudio (tecla E). Algunos piden algo que estudiar, que hay que traer de fuera.",
+      "goal": {"type": "acknowledged"},
+      "focus": "research",
+      "done": "Lo que falta por saber se puede averiguar"
+    },
+    {
       "id": "free",
       "title": "A tu aire",
       "text": "Desde ahora pasan también caravanas, tormentas y merodeadores: a estos les planta cara quien esté en un puesto de guardia. Lo que pongas se dibuja igual: Arte en Urbanismo, y Dibujar para quien llegue. F5 guarda y Esc vuelve al menú.",

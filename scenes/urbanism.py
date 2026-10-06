@@ -66,6 +66,8 @@ TERRAIN_COLORS = {
 GHOST_ALPHA = 150
 DEFAULT_MESSAGE = "Arrastra algo del catálogo al mapa"
 WHO_MESSAGE = "¿A quién se lo propones?"
+NOT_KNOWN_MARK = "(por averiguar)"
+MORE_BELOW = "Rueda del ratón: hay más"
 # Where the message goes, and how many lines of it there is room for above the buttons.
 MESSAGE_TOP = 357
 MESSAGE_LINES = 2
@@ -190,14 +192,19 @@ class UrbanismEditor:
     def _catalog(self) -> list[tuple[str, str]]:
         if self.category == "buildings":
             return [
-                (blueprint_id, definition.name)
+                (blueprint_id, self._catalog_name(BUILDING_SITE, blueprint_id, definition.name))
                 for blueprint_id, definition in self.world.registries.buildings.items()
             ]
         return [
-            (kind, self.world.registries.interactables.get(kind).name)
+            (kind, self._catalog_name(OBJECT_SITE, kind, self.world.registries.interactables.get(kind).name))
             for kind in self.world.registries.interactables.kinds()
             if self.world.registries.interactables.get(kind).urbanism_category == self.category
         ]
+
+    def _catalog_name(self, site_kind: str, catalog_id: str, name: str) -> str:
+        """What nobody knows how to make yet is in the catalogue all the same, and says so."""
+        unknown = self.world.research.lock_on(self.world, site_kind, catalog_id) is not None
+        return f"{name} {NOT_KNOWN_MARK}" if unknown else name
 
     def _catalog_buttons(self) -> list[Button]:
         visible = (CATALOG_BOTTOM - CATALOG_TOP) // ROW_HEIGHT
@@ -311,6 +318,12 @@ class UrbanismEditor:
             self.catalog_id, self.selection, self.confirm_delete = None, None, False
             self.message = DEFAULT_MESSAGE
         elif intent[0] == "catalog":
+            site_kind = BUILDING_SITE if self.category == "buildings" else OBJECT_SITE
+            unknown = self.world.construction.not_known(self.world, site_kind, str(intent[1]))
+            if unknown is not None:
+                # It is not taken in hand: there is nothing to put down until somebody knows how.
+                self.catalog_id, self.drag, self.message = None, None, unknown
+                return
             self.catalog_id = str(intent[1])
             self.selection, self.confirm_delete = None, False
             self.drag = self._catalog_held()
@@ -608,6 +621,9 @@ class UrbanismEditor:
             selected = f"Seleccionado: {selected}"
         # What is selected is said above the message, and gives way to the catalogue where they meet.
         lines = self.font.wrap(selected, width) if selected else []
+        visible = (CATALOG_BOTTOM - CATALOG_TOP) // ROW_HEIGHT
+        if self.proposal is None and len(self._catalog()) > visible and len(lines) < 2:
+            self.font.draw(self.canvas, MORE_BELOW, (MARGIN, CATALOG_BOTTOM + 1), PALETTE["dust"])
         top = MESSAGE_TOP - LINE_HEIGHT * len(lines)
         for index, line in enumerate(lines):
             self.font.draw(self.canvas, line, (MARGIN, top + index * LINE_HEIGHT), PALETTE["paper"])

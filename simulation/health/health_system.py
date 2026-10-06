@@ -9,6 +9,7 @@ from simulation.residents.activity import MOVE_TILES_PER_MINUTE
 from simulation.residents.resident import Resident
 from simulation.social.interaction import InteractionDefinition
 from simulation.work.hauling import containers_of_kind
+from simulation.work.research import DOSE_MINUTES
 from world.interactable import Interactable, UseDefinition
 
 if TYPE_CHECKING:
@@ -121,7 +122,7 @@ class HealthSystem:
                 if item.owner_id is not None or care.care_item not in definition.tags:
                     continue
                 inventory.take_unit(item.instance_id)
-                resident.dosed_until = now + care.dose_minutes
+                resident.dosed_until = now + round(care.dose_minutes * world.research.factor(world, DOSE_MINUTES))
                 room = world.room_at(resident.tile)
                 world.emit_event(
                     DomainEvent(

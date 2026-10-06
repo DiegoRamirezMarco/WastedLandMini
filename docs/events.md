@@ -24,6 +24,9 @@ Event types emitted so far:
 | `post_vacant` | A job has been short of people too long (once per vacancy) | 35 |
 | `job_offered` | A resident is asked to take a vacant job and waits for advice | 50 |
 | `job_changed` | A resident takes up a job | 40 |
+| `research_chosen` | The player says what is to be worked out next, with `subject` in `data` | 20 |
+| `research_waiting` | Somebody holds the post and nothing has been chosen, or what the subject studies is nowhere to be had (once a day each) | 30 |
+| `research_finished` | A subject is known, with `subject` in `data` | 45 |
 | `site_laid` | Somebody has agreed to build something and its ground is marked out, with `site_id` in `data` | 20 |
 | `build_started` | A resident sets to work on a site, with `site_id` in `data` | 5 |
 | `site_waiting` | A site cannot be got on with: nothing to build it with, or nobody holding the job it asks for (once a day) | 30 |

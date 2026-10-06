@@ -234,11 +234,40 @@ Optional: `gifts`, each an `item` and a `count` with either `into` (a kind of co
 is left as nobody's) or `"to": "resident"` (given to whoever has been there longest, as their
 own); `opening`, which is `stranger` to bring someone to the gate; `done`, the line logged when
 the step is finished; `focus`, which names what the step is about so the screen can point at
-it: `creator`, `doll`, `building_art`, `urbanism`, `jobs`, `save` or `clock`; and `hint`, what
+it: `creator`, `doll`, `building_art`, `urbanism`, `jobs`, `research`, `save` or `clock`; and `hint`, what
 inside a drawing screen it is about: `palette`, `canvas`, `tools`, `edit`, `parts` or `save`.
 
 The map, the kinds, blueprints and jobs a goal names, and the containers gifts go into are
 checked when the game starts. A gift of an item that is not defined is left out.
+
+## Research
+
+`data/research.json` lists what there is to work out, under `subjects`, by ID:
+
+```json
+"radio": {
+  "name": "Radio",
+  "text": "Hay que abrir una radio vieja para entender cómo se hace una que alcance lejos.",
+  "minutes": 480,
+  "requires": ["electricity"],
+  "needs": {"item": "old_radio", "count": 1},
+  "opens": {"objects": ["radio_set"]}
+}
+```
+
+- `minutes` is time on shift at the post. `requires` names the subjects that come first; they
+  may not lead back round to each other.
+- `needs` is an item that is studied and used up, by item ID. Whoever holds the post fetches it.
+- `opens` lists the object kinds and the building blueprints that cannot be put up until the
+  subject is known. Whatever no subject opens can be put up from the start.
+- `effects` are factors on figures of the simulation: `build_pace`, `expedition_danger`,
+  `expedition_finds`, `dose_minutes`, and `pace:<job ID>` for what a job turns out. The factors
+  of every subject known are multiplied together.
+- A job with `"research": true` in `data/jobs.json` is one whose time at the post goes towards
+  the subject in hand. Its `station` has to be a kind of container, to hold what is studied.
+
+A subject that names an item, a kind, a blueprint, a job or an effect that does not exist is
+refused when the game starts.
 
 ## Buildings
 

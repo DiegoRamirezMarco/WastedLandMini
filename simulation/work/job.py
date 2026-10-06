@@ -80,6 +80,8 @@ class JobDefinition:
     # Kind of world event this job keeps watch for: a worker who knows one is on its way stays at
     # the post until it has come, whatever their shift.
     watch_for: str | None = None
+    # Whether time at the post goes towards working out whatever the settlement is studying.
+    research: bool = False
 
 
 def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition:
@@ -146,4 +148,5 @@ def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition
         expedition=expedition_rule_from_data(job_id, data["expedition"]) if "expedition" in data else None,
         outdoors=bool(data.get("outdoors", False)),
         watch_for=str(data["watch_for"]) if "watch_for" in data else None,
+        research=bool(data.get("research", False)),
     )

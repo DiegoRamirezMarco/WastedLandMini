@@ -1,0 +1,142 @@
+{
+  "subjects": {
+    "mechanics": {
+      "name": "Mecánica",
+      "text": "Cómo se arregla lo que se rompe. Con ello se puede montar un taller.",
+      "minutes": 480,
+      "opens": {
+        "objects": [
+          "workbench"
+        ]
+      }
+    },
+    "electricity": {
+      "name": "Electricidad",
+      "text": "Sacar luz de un motor viejo: el generador y los faroles que alimenta.",
+      "minutes": 720,
+      "requires": [
+        "mechanics"
+      ],
+      "opens": {
+        "objects": [
+          "generator",
+          "lamp"
+        ]
+      }
+    },
+    "radio": {
+      "name": "Radio",
+      "text": "Hay que abrir una radio vieja para entender cómo se hace una que alcance lejos.",
+      "minutes": 480,
+      "requires": [
+        "electricity"
+      ],
+      "needs": {
+        "item": "old_radio",
+        "count": 1
+      },
+      "opens": {
+        "objects": [
+          "radio_set"
+        ]
+      }
+    },
+    "first_aid": {
+      "name": "Primeros auxilios",
+      "text": "Qué hacer con una herida, y con qué. Con ello se puede montar una enfermería.",
+      "minutes": 600,
+      "needs": {
+        "item": "medicine",
+        "count": 1
+      },
+      "opens": {
+        "objects": [
+          "clinic_bed",
+          "medicine_cabinet"
+        ]
+      }
+    },
+    "trade": {
+      "name": "Comercio",
+      "text": "Cuentas, pesas y vales. Con ello se puede abrir una tienda.",
+      "minutes": 360,
+      "opens": {
+        "objects": [
+          "shop_counter",
+          "shelf"
+        ]
+      }
+    },
+    "still": {
+      "name": "Alambique",
+      "text": "Sacar de casi cualquier cosa algo que se pueda beber. Con ello se puede abrir una cantina.",
+      "minutes": 360,
+      "opens": {
+        "objects": [
+          "bar"
+        ]
+      }
+    },
+    "irrigation": {
+      "name": "Riego",
+      "text": "Surcos y acequias: el huerto da una cuarta parte más.",
+      "minutes": 600,
+      "effects": {
+        "pace:farmer": 1.25
+      }
+    },
+    "pump": {
+      "name": "Bomba de agua",
+      "text": "Una bomba de mano en el depósito: se saca el agua la mitad más deprisa.",
+      "minutes": 480,
+      "requires": [
+        "mechanics"
+      ],
+      "effects": {
+        "pace:water_carrier": 1.5
+      }
+    },
+    "scaffolding": {
+      "name": "Andamios",
+      "text": "Poleas, cuñas y andamios: las obras van la mitad más deprisa.",
+      "minutes": 480,
+      "effects": {
+        "build_pace": 1.5
+      }
+    },
+    "safe_routes": {
+      "name": "Rutas seguras",
+      "text": "Por dónde se puede pasar y por dónde no: quien sale vuelve herido menos veces.",
+      "minutes": 600,
+      "effects": {
+        "expedition_danger": 0.6
+      }
+    },
+    "salvage": {
+      "name": "Desguace",
+      "text": "Saber qué merece la pena cargar: de cada salida se trae un tercio más.",
+      "minutes": 600,
+      "requires": [
+        "mechanics"
+      ],
+      "effects": {
+        "expedition_finds": 1.34
+      }
+    },
+    "dosage": {
+      "name": "Dosis justas",
+      "text": "Cuánto hace falta de verdad: cada dosis de medicina dura la mitad más.",
+      "minutes": 600,
+      "requires": [
+        "first_aid"
+      ],
+      "needs": {
+        "item": "medicine",
+        "count": 2
+      },
+      "effects": {
+        "dose_minutes": 1.5
+      }
+    }
+  }
+}

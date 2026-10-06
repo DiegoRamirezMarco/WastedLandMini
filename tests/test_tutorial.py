@@ -67,6 +67,7 @@ def settle(world: SimulationWorld, until: str | None = None) -> None:
         "stranger": lambda: world.apply_command(ChooseOptionCommand(next(iter(world.decisions)), "open")),
         "outside": lambda: world.apply_command(AcknowledgeTutorialCommand()),
         "building": lambda: world.apply_command(AcknowledgeTutorialCommand()),
+        "study": lambda: world.apply_command(AcknowledgeTutorialCommand()),
         "free": lambda: world.apply_command(AcknowledgeTutorialCommand()),
     }
     for _ in range(len(moves) + 1):

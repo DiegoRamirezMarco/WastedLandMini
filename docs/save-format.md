@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 24 (current)
+## Version 25 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `24` |
+| `version` | `25` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -30,6 +30,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `facts` | Recorded facts: `fact_id`, `event_type`, `text`, `subject_ids`, `importance`, `timestamp`, `location_id`, `expires_at` |
 | `beliefs` | Per resident ID, the facts they know: `fact_id`, `credibility`, `source`, `learned_at`, `told_by` |
 | `vacancies` | Per job ID, the game minute since which it has been short of people |
+| `research` | What the settlement knows and is working out: `subject` (the subject in hand, or `null`), `known` (subject IDs from `data/research.json`, oldest first), `progress` (minutes done per subject not yet known) and `supplied` (subjects whose item has been handed over and used up) |
 | `decisions` | Open decisions with their options, deadline, crisis and, for a job offer, `job_id`; for one about a thing, its `subject` and the `inputs` that weigh on it |
 | `decision_count`, `crisis_cooldowns` | Counter for decision IDs; game minute of each resident's last crisis, and of the last time each vacant job was offered |
 | `deaths` | Everyone who has died: `resident_id`, `name`, `timestamp`, `cause`, `killer_id`, `grave_id` |
@@ -63,6 +64,9 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 25** added `research`. An older save knows every subject that opens up something
+  it has standing, and whatever those take knowing, and is working nothing out. A subject that
+  is no longer defined is forgotten.
 - **Version 24** added `sites`. An older save has nothing being built, and what stands in it
   stands as it did. A site for an object kind or a blueprint that is no longer defined, or that
   no longer fits on the map, is dropped along with what had been brought to it.

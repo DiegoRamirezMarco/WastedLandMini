@@ -1,6 +1,7 @@
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
+from simulation.work.research import ResearchResult
 from world.map import Tile
 from world.urbanism import UrbanismResult
 from typing import Protocol
@@ -47,6 +48,9 @@ class CommandTarget(Protocol):
         ...
 
     def cancel_site(self, site_id: str) -> UrbanismResult:
+        ...
+
+    def set_research(self, subject_id: str | None) -> ResearchResult:
         ...
 
     def found_resident(
@@ -218,6 +222,20 @@ class CancelSiteCommand:
 
     def apply(self, world: CommandTarget) -> UrbanismResult:
         return world.cancel_site(self.site_id)
+
+
+@dataclass(frozen=True)
+class SetResearchCommand:
+    """The player's say on what is to be worked out next. None for nothing at all.
+
+    It is theirs to say: whoever holds the post works on whatever has been chosen. What was done
+    on a subject that is left for another is kept.
+    """
+
+    subject_id: str | None
+
+    def apply(self, world: CommandTarget) -> ResearchResult:
+        return world.set_research(self.subject_id)
 
 
 @dataclass(frozen=True)

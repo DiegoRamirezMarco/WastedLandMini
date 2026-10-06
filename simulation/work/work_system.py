@@ -11,7 +11,8 @@ from simulation.residents.activity import Activity
 from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
 from simulation.residents.resident import Resident
 from simulation.work import hauling
-from simulation.work.job import INTO_STATION, JobDefinition
+from simulation.work.job import INTO_STATION, JobDefinition, SupplyRule
+from simulation.work.research import JOB_PACE
 from world.interactable import Interactable
 
 if TYPE_CHECKING:
@@ -54,6 +55,10 @@ def minutes_left_in_shift(job: JobDefinition, hour: int, minute: int) -> int:
 class WorkSystem:
     def job_of(self, world: "SimulationWorld", resident: Resident) -> JobDefinition | None:
         return world.registries.jobs.get(resident.job_id or "")
+
+    def supplies_of(self, world: "SimulationWorld", job: JobDefinition) -> SupplyRule | None:
+        """What a worker sees to it that their post has: what the job says, or what is being studied calls for."""
+        return job.supplies or world.research.supply_rule(world, job)
 
     def on_duty(self, world: "SimulationWorld", resident: Resident) -> bool:
         """True while a resident is at their post, working."""
@@ -121,8 +126,9 @@ class WorkSystem:
             errand = hauling.errand(world, resident, job.produces, remaining)
             if errand is not None:
                 return ScoredAction(HAUL_ACTION, WORK_SCORE, errand)
-        if job.supplies is not None:
-            errand = hauling.supply_errand(world, resident, job.supplies, remaining)
+        supplies = self.supplies_of(world, job)
+        if supplies is not None:
+            errand = hauling.supply_errand(world, resident, supplies, remaining)
             if errand is not None:
                 return ScoredAction(HAUL_ACTION, WORK_SCORE, errand)
         if job.expedition is not None:
@@ -196,7 +202,10 @@ class WorkSystem:
             # Hands full, or nothing left to work with: off on an errand.
             self._leave(resident)
             return
-        if job.supplies is not None and self._called_away(world, resident, job, placed, activity.minutes_left):
+        if job.research:
+            world.research.work(world, resident, placed)
+        supplies = self.supplies_of(world, job)
+        if supplies is not None and self._called_away(world, resident, supplies, placed, activity.minutes_left):
             self._leave(resident)
             return
         if activity.minutes_left <= 0 or world.activities.urgent_needs(world, resident):
@@ -211,8 +220,9 @@ class WorkSystem:
             return
         if not activity.using:
             done = hauling.exchange(world, resident, job.produces, placed) if job.produces is not None else None
-            if done is None and job.supplies is not None:
-                done = hauling.supply_exchange(world, resident, job.supplies, placed)
+            supplies = self.supplies_of(world, job)
+            if done is None and supplies is not None:
+                done = hauling.supply_exchange(world, resident, supplies, placed)
             if done is None and job.expedition is not None:
                 done = world.expeditions.unload(world, resident, placed)
             if done is None:
@@ -255,12 +265,12 @@ class WorkSystem:
         )
 
     def _called_away(
-        self, world: "SimulationWorld", resident: Resident, job: JobDefinition, placed: Interactable, shift_left: int
+        self, world: "SimulationWorld", resident: Resident, supplies: SupplyRule, placed: Interactable, shift_left: int
     ) -> bool:
         """Whether a worker should leave the post to fetch what they keep supplied. Nobody being served is left."""
         if world.users_of(placed.object_id) > 0:
             return False
-        return hauling.supply_errand(world, resident, job.supplies, shift_left) is not None
+        return hauling.supply_errand(world, resident, supplies, shift_left) is not None
 
     def _leave(self, resident: Resident) -> None:
         resident.activity = None
@@ -295,6 +305,8 @@ class WorkSystem:
         # Short of an arm the work still gets done, in more minutes.
         speed *= world.health.work_pace(world, resident)
         speed *= self.mood_pace(resident)
+        # What has been worked out about a trade makes it go faster.
+        speed *= world.research.factor(world, f"{JOB_PACE}{job.job_id}")
         needed = math.ceil(rule.every_minutes / speed)
         resident.work_progress = min(resident.work_progress + 1, needed)
         if resident.work_progress < needed:

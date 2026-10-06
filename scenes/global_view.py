@@ -37,6 +37,7 @@ from scenes.hud import (
     VOICE_INTENT,
     DRAW_INTENT,
     JOBS_INTENT,
+    RESEARCH_INTENT,
     MANNERS_INTENT,
     LOG_INTENT,
     MINIMAP_INTENT,
@@ -51,7 +52,13 @@ from scenes.hud import (
 )
 from scenes.scene import canvas_position
 from settings import SCALE, TILE_SIZE
-from simulation.commands import AcknowledgeTutorialCommand, SetPausedCommand, SetSpeedCommand, SuggestJobCommand
+from simulation.commands import (
+    AcknowledgeTutorialCommand,
+    SetPausedCommand,
+    SetResearchCommand,
+    SetSpeedCommand,
+    SuggestJobCommand,
+)
 from simulation.events.event import DomainEvent
 from simulation.items.item_system import USE_ITEM_ACTION
 from simulation.residents.manner import EAT, FIGHT, WALK
@@ -308,6 +315,8 @@ class GlobalView:
             self._apply(LOG_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_j:
             self._apply(JOBS_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_e:
+            self._apply(RESEARCH_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
             self.centre_on_resident(self.hud.selected_id)
             self.following = self.hud.selected_id
@@ -592,6 +601,8 @@ class GlobalView:
             self.hud.toggle_jobs()
         elif intent == STORES_INTENT:
             self.hud.toggle_stores()
+        elif intent == RESEARCH_INTENT:
+            self.hud.toggle_research()
         elif intent == SAVE_INTENT:
             self.requested_save = True
         elif intent == URBANISM_INTENT:
@@ -631,6 +642,9 @@ class GlobalView:
             self.requested_item_editor = intent[1]
         elif isinstance(intent, tuple) and intent[0] == "suggest":
             self._suggest_job(intent[1])
+        elif isinstance(intent, tuple) and intent[0] == "study":
+            # What is studied is the player's to say. Whoever holds the post gets on with it.
+            self.hud.notify(self.world.apply_command(SetResearchCommand(intent[1])).message)
         elif isinstance(intent, tuple) and intent[0] == "speed":
             self.world.apply_command(SetSpeedCommand(intent[1]))
         elif isinstance(intent, tuple) and intent[0] == "zoom":
