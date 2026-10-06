@@ -55,8 +55,8 @@ class Resident:
     lost_limbs: list[str] = field(default_factory=list)
     # Where they walked during the last tick, starting where the tick began: a point for each
     # tile stepped on, on the straight line they were following, so up to half a tile off the
-    # middle of it. Lets the presentation animate movement; it is not saved, and nothing that
-    # happens goes by it.
+    # middle of it. Lets the presentation animate movement, and tells the others which tiles
+    # were walked over this minute. It is not saved: it starts again every minute.
     trail: list[Point] = field(default_factory=list, compare=False, repr=False)
     # The points of the stretch they are walking that are still ahead of them. Not saved either.
     ahead: list[Point] = field(default_factory=list, compare=False, repr=False)

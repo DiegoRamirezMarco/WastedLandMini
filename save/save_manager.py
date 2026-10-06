@@ -60,13 +60,15 @@ FIRST_ECONOMY_VERSION = 8
 # before has no tastes in people yet, and what was known of the rest is shown as it stands.
 # Version 21 added each resident's manners: how they walk, eat and fight. Whoever has none
 # chosen, as in any older save, goes by the ones that are theirs by default.
+# Version 22 added how long somebody on a walk has been held up by whoever is in their way. A
+# save from before has nobody held up, and may have two people on one tile: they walk apart.
 LAST_MAP_CHANGE_VERSION = 16
 FIRST_URBANISM_VERSION = 17
 FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 21
+    CURRENT_VERSION = 22
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -706,6 +708,7 @@ def _activity_to_data(activity: Activity | None) -> dict[str, Any] | None:
         "partner_id": activity.partner_id,
         "intent": activity.intent,
         "item_id": activity.item_id,
+        "held_up": activity.held_up,
     }
 
 
@@ -725,6 +728,7 @@ def _activity_from_data(data: Any) -> Activity | None:
         partner_id=str(partner_id) if partner_id is not None else None,
         intent=str(intent) if intent is not None else None,
         item_id=str(item_id) if item_id is not None else None,
+        held_up=int(data.get("held_up", 0)),
     )
 
 

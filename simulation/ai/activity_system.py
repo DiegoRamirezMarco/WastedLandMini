@@ -4,11 +4,13 @@ from collections.abc import Collection
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from simulation.ai.crowd import Crowd, spots_taken, walking
+from simulation.ai.navigation import path_beside
 from simulation.ai.routine_system import RoutineSystem
 from simulation.events.event import DomainEvent
 from simulation.health.health_system import RECOVERED_HEALTH
 from simulation.items.item_system import ITEM_ACTIONS
-from simulation.residents.activity import MOVE_TILES_PER_MINUTE, SHELTER_ACTION, Activity
+from simulation.residents.activity import MOVE_TILES_PER_MINUTE, SHELTER_ACTION, WANDER_ACTION, Activity
 from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
 from simulation.residents.resident import Resident
 from simulation.social.social_system import SocialSystem
@@ -16,13 +18,22 @@ from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
 from world.interactable import UseDefinition
 from world.map import Tile
-from world.pathfinding import Point, straight_ahead
+from world.pathfinding import Point, find_path, reach, straight_ahead
 
 if TYPE_CHECKING:
     from simulation.world import SimulationWorld
 
 ROUTINE_EVENT_IMPORTANCE = 5
 MOOD_DRIFT = 0.002
+# Minutes somebody waits for whoever is passing in front of them before looking for a way round.
+WAIT_MINUTES = 1
+# Minutes with no way on and no way round after which they give up, and walk a little way off
+# for a while so as not to be in the way themselves.
+PATIENCE_MINUTES = 2
+BACK_OFF_TILES = 3
+BACK_OFF_MINUTES = (2, 6)
+# How far somebody with nothing to keep them where they stand will go to be out of the way.
+ASIDE_TILES = 4
 
 
 def facing_towards(origin: Tile, target: Tile) -> str | None:
@@ -45,11 +56,19 @@ class ActivitySystem:
     routine: RoutineSystem = field(default_factory=RoutineSystem)
     social: SocialSystem = field(default_factory=SocialSystem)
 
-    def tick(self, world: "SimulationWorld", resident: Resident) -> None:
+    def begin_minute(self, world: "SimulationWorld") -> None:
+        """Start everybody's trail again before anybody moves: what is on one after this was walked this minute."""
+        for resident in world.residents.values():
+            self._begin_trail(resident)
+
+    def _begin_trail(self, resident: Resident) -> None:
         # The trail goes on from where the last one left them, which is the middle of their tile
         # unless they are part-way along a stretch that is not in line with it.
         last = resident.trail[-1] if resident.trail else resident.tile
         resident.trail = [last if _within(last, resident.tile) else resident.tile]
+
+    def tick(self, world: "SimulationWorld", resident: Resident) -> None:
+        self._begin_trail(resident)
         self._act(world, resident)
         if len(resident.trail) == 1:
             # They walked no further. Left off the middle of their tile, they step onto it;
@@ -85,7 +104,10 @@ class ActivitySystem:
             return
 
         if activity.path:
-            self._walk(resident, activity, world.health.walk_tiles(world, resident))
+            self._walk(world, resident, world.health.walk_tiles(world, resident))
+            if resident.activity is not activity:
+                # With no way through, they gave it up.
+                return
             if activity.intent is not None:
                 # Chasing someone counts against the time they will keep at it.
                 activity.minutes_left -= 1
@@ -117,10 +139,16 @@ class ActivitySystem:
             activity.using = True
         self._spend_minute(world, resident, activity, use)
 
-    def _walk(self, resident: Resident, activity: Activity, tiles: int = MOVE_TILES_PER_MINUTE) -> None:
+    def _walk(self, world: "SimulationWorld", resident: Resident, tiles: int = MOVE_TILES_PER_MINUTE) -> None:
+        crowd = Crowd(world, resident)
+        moved = False
         for _ in range(tiles):
-            if not activity.path:
+            activity = resident.activity
+            if not activity.path or not self._way_clear(world, resident, activity, crowd):
                 break
+            # It may be another walk by now, or a stroll for having given this one up.
+            activity = resident.activity
+            moved = True
             if not resident.ahead or not _within(resident.ahead[0], activity.path[0]):
                 # A new stretch, or a way that is not the one they were on.
                 resident.ahead = straight_ahead(resident.tile, activity.path)
@@ -128,7 +156,107 @@ class ActivitySystem:
             resident.facing = facing_towards(resident.tile, step) or resident.facing
             resident.x, resident.y = step
             resident.trail.append(resident.ahead.pop(0))
+        activity = resident.activity
+        activity.held_up = activity.held_up + 1 if activity.path and not moved else 0
         resident.current_action = "walking"
+
+    def _way_clear(self, world: "SimulationWorld", resident: Resident, activity: Activity, crowd: Crowd) -> bool:
+        """Whether the next step of a walk can be taken this minute.
+
+        With somebody in the way it may come to be a step somewhere else: round them, to another
+        place that does as well, or off to one side for having given up.
+        """
+        step = activity.path[0]
+        if crowd.free(resident.tile, step):
+            return True
+        other = crowd.at.get(step)
+        passing = other is None or (walking(other) and other.activity.path[0] != resident.tile)
+        if passing and activity.held_up < WAIT_MINUTES:
+            # Whoever it is will be gone in a moment.
+            return False
+        path = self._way_round(world, resident, activity, crowd)
+        if path is None and other is not None and self._make_room(world, resident, activity, other):
+            # They are asked to step aside, and do.
+            return False
+        if path is None and activity.held_up >= PATIENCE_MINUTES:
+            self._back_off(world, resident, crowd)
+            path = resident.activity.path
+        elif path is not None:
+            activity.path, resident.ahead = path, []
+        return bool(path) and crowd.free(resident.tile, path[0])
+
+    def _way_round(
+        self, world: "SimulationWorld", resident: Resident, activity: Activity, crowd: Crowd
+    ) -> list[Tile] | None:
+        """Another walk to what a resident is after, round whoever is in the way. None if there is none.
+
+        To where they were going, if nobody has stopped there. If somebody has, to another place
+        that does as well: beside the same person, or beside the same thing. Out for a stroll,
+        where they are does as well as anywhere.
+        """
+        goal = activity.path[-1]
+        holder = crowd.at.get(goal)
+        if holder is None or walking(holder):
+            return find_path(resident.tile, goal, crowd.passable(() if crowd.open(goal) else (goal,)))
+        if activity.partner_id is not None:
+            partner = world.residents.get(activity.partner_id)
+            planned = self.social.approach(world, resident, partner, crowd.passable()) if partner is not None else None
+            return planned.path if planned is not None else None
+        placed = world.interactables.get(activity.target_id or "")
+        if placed is not None:
+            return path_beside(world, resident, placed, crowd.passable())
+        return [] if activity.action == WANDER_ACTION else None
+
+    def _make_room(self, world: "SimulationWorld", resident: Resident, activity: Activity, other: Resident) -> bool:
+        """Have whoever stands in a resident's way step aside, if nothing keeps them where they are.
+
+        Somebody strolling about or waiting out the weather moves, to the nearest place that is
+        not on the way of whoever wants to get by, and goes on with what they were at: under a
+        roof still, if they were sheltering. Somebody at work, at table, in bed or in talk stays.
+        False if they stay.
+        """
+        theirs = other.activity
+        if theirs is not None and (
+            theirs.path
+            or theirs.partner_id is not None
+            or theirs.target_id is not None
+            or theirs.action not in (WANDER_ACTION, SHELTER_ACTION)
+        ):
+            return False
+        passable = Crowd(world, other).passable()
+        keep_clear = {resident.tile, *activity.path} | spots_taken(world, other)
+        dry = theirs is not None and theirs.action == SHELTER_ACTION
+        spot = next(
+            (
+                tile
+                for tile in reach(other.tile, ASIDE_TILES, passable)
+                if tile not in keep_clear and (not dry or world.under_roof(tile))
+            ),
+            None,
+        )
+        path = find_path(other.tile, spot, passable) if spot is not None else None
+        if not path:
+            return False
+        if theirs is None:
+            other.activity = Activity(WANDER_ACTION, path=path, minutes_left=world.rng.randint(*BACK_OFF_MINUTES))
+        else:
+            # Once there they settle down to it again.
+            theirs.path, theirs.using = path, False
+        other.ahead = []
+        return True
+
+    def _back_off(self, world: "SimulationWorld", resident: Resident, crowd: Crowd) -> None:
+        """Give up what a resident was on their way to, and have them walk a little way off if there is anywhere to."""
+        passable = crowd.passable()
+        taken = spots_taken(world, resident)
+        near = {tile: steps for tile, steps in reach(resident.tile, BACK_OFF_TILES, passable).items() if tile not in taken}
+        path: list[Tile] = []
+        if near:
+            furthest = max(near.values())
+            goal = world.rng.choice([tile for tile, steps in near.items() if steps == furthest])
+            path = find_path(resident.tile, goal, passable) or []
+        resident.activity = Activity(WANDER_ACTION, path=path, minutes_left=world.rng.randint(*BACK_OFF_MINUTES))
+        resident.ahead = []
 
     def _use_of(self, world: "SimulationWorld", activity: Activity) -> UseDefinition | None:
         placed = world.interactables.get(activity.target_id) if activity.target_id else None

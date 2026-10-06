@@ -21,6 +21,11 @@ def manhattan(a: Tile, b: Tile) -> int:
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
+def tile_of(point: Point) -> Tile:
+    """The tile a point is on."""
+    return (int((point[0] + 0.5) // 1), int((point[1] + 0.5) // 1))
+
+
 def line(start: Tile, goal: Tile) -> list[Tile]:
     """The tiles stepped on going straight from `start` to `goal`, at whatever angle that is.
 
@@ -89,6 +94,29 @@ def find_path(start: Tile, goal: Tile, passable: Callable[[Tile], bool]) -> list
             counter += 1
             heapq.heappush(frontier, (new_cost + _distance(neighbour, goal), counter, neighbour))
     return None
+
+
+def reach(start: Tile, steps: int, passable: Callable[[Tile], bool]) -> dict[Tile, int]:
+    """The tiles that can be walked to from `start` in no more than so many steps, nearest first.
+
+    Each comes with how many steps it takes. `start` is not among them, and need not be passable.
+    """
+    found = {start: 0}
+    edge = [start]
+    for count in range(1, steps + 1):
+        further: list[Tile] = []
+        for current in edge:
+            for dx, dy in NEIGHBOURS + DIAGONALS:
+                neighbour = (current[0] + dx, current[1] + dy)
+                if neighbour in found or not passable(neighbour):
+                    continue
+                if dx and dy and not (passable((neighbour[0], current[1])) and passable((current[0], neighbour[1]))):
+                    continue
+                found[neighbour] = count
+                further.append(neighbour)
+        edge = further
+    del found[start]
+    return found
 
 
 def straight_ahead(start: Tile, path: Sequence[Tile]) -> list[Point]:

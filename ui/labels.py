@@ -193,6 +193,8 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
     activity = resident.activity
     if activity is None:
         return "sin hacer nada"
+    if activity.path and activity.held_up:
+        return "espera a que le dejen pasar"
     partner = world.residents.get(activity.partner_id) if activity.partner_id else None
     if partner is not None:
         if not activity.using:

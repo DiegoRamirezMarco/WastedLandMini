@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING
 
+from simulation.ai.crowd import free_tile
 from simulation.events.event import DomainEvent
 from simulation.events.world_event import WEATHER
 from simulation.items.item import ItemInstance
@@ -122,6 +123,8 @@ class ExpeditionSystem:
         resident.expedition = None
         resident.activity = None
         resident.current_action = "idle"
+        # Somebody may be standing where they set out from.
+        resident.x, resident.y = free_tile(world, resident.tile, resident)
         loot = [entry for entry in settings.loot if world.registries.items.find(entry.item) is not None]
         found: dict[str, int] = {}
         for _ in range(trip.finds if loot else 0):

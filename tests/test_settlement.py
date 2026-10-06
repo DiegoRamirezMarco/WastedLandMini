@@ -276,7 +276,9 @@ class LifeInTheSettlementTests(unittest.TestCase):
                 for previous, step in zip(resident.trail, resident.trail[1:]):
                     before, after = _tile_of(previous), _tile_of(step)
                     self.assertLessEqual(max(abs(after[0] - before[0]), abs(after[1] - before[1])), 1)
-                    self.assertLess(math.dist(previous, step), 1.5)
+                    # A step is to the next tile. Turned off a line part-way along it to get round
+                    # somebody, it may begin and end half a tile off the middles of the two.
+                    self.assertLess(math.dist(previous, step), 2.3)
                     self.assertTrue(walkable(after) or after in beds, step)
                     if after[0] != before[0] and after[1] != before[1]:
                         for corner in ((after[0], before[1]), (before[0], after[1])):

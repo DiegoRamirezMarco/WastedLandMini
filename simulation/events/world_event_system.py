@@ -6,6 +6,7 @@ never changes what the residents would otherwise have done.
 
 from typing import TYPE_CHECKING
 
+from simulation.ai.crowd import free_tile, spots_taken
 from simulation.events.event import DomainEvent
 from simulation.knowledge.fact import SOURCE_PARTICIPANT
 from simulation.knowledge.knowledge_system import learn
@@ -360,7 +361,12 @@ class WorldEventSystem:
         layout = world.registries.maps.get(world.map_id)
         tiles = [*(layout.arrivals if layout is not None else []), *(layout.spawns if layout is not None else [])]
         passable = world.passable()
-        return next((tile for tile in tiles if passable(tile)), (0, 0))
+        ways_in = [tile for tile in tiles if passable(tile)]
+        if not ways_in:
+            return (0, 0)
+        # The first way in that nobody stands on. With somebody on every one, as near to the first as there is room.
+        taken = spots_taken(world)
+        return next((tile for tile in ways_in if tile not in taken), free_tile(world, ways_in[0]))
 
     def _happen(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
         if definition.kind == STRANGER:

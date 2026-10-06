@@ -1,7 +1,9 @@
 """Conversations and arguments between two residents standing next to each other."""
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from simulation.ai.crowd import spots_taken
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency
 from simulation.events.event import DomainEvent
 from simulation.knowledge.knowledge_system import share_rumor
@@ -12,6 +14,7 @@ from simulation.social.bonds import AFFAIR_EVENT, AFFAIR_IMPORTANCE, TRYST
 from simulation.social.interaction import InteractionDefinition
 from simulation.social.relationship import SIGNED_FEELINGS, Relationship
 from simulation.work.work_system import WORK_ACTION
+from world.map import Tile
 from world.pathfinding import NEIGHBOURS, find_path, manhattan
 
 if TYPE_CHECKING:
@@ -126,21 +129,28 @@ class SocialSystem:
             scored.append(ScoredAction(TALK_ACTION, score, partner_id=partner.resident_id))
         return scored
 
-    def approach(self, world: "SimulationWorld", resident: Resident, partner: Resident) -> Activity | None:
-        """Plan a walk to a free tile next to `partner`."""
-        passable = world.passable()
-        taken = {
-            other.destination for other in world.residents.values() if other is not resident
-        }
+    def approach(
+        self,
+        world: "SimulationWorld",
+        resident: Resident,
+        partner: Resident,
+        passable: Callable[[Tile], bool] | None = None,
+    ) -> Activity | None:
+        """Plan a walk to a free tile next to `partner`: one nobody else stands on or is heading to.
+
+        `passable` says where can be walked, for a walk that has to go round more than the map itself.
+        """
+        passable = passable or world.passable()
+        ground = world.passable()
+        taken = spots_taken(world, resident)
         spots = sorted(
             (
                 (partner.x + dx, partner.y + dy)
                 for dx, dy in NEIGHBOURS
-                if passable((partner.x + dx, partner.y + dy))
+                if ground((partner.x + dx, partner.y + dy)) and (partner.x + dx, partner.y + dy) not in taken
             ),
             # Standing beside the partner comes first: two people on the same row face each other.
             key=lambda spot: (
-                spot in taken,
                 spot[1] != partner.y,
                 manhattan(resident.tile, spot),
                 spot[1],

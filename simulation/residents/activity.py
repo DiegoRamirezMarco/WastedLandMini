@@ -16,7 +16,8 @@ class Activity:
     `target_id` names the object being used, `partner_id` the resident being talked to.
     `intent` is the exchange a resident has made up their mind to have with that partner.
     `item_id` is the item involved: the kind of food while eating from a container, otherwise
-    the one item instance being used or taken.
+    the one item instance being used or taken. `held_up` is how many minutes running they have
+    not got a step further along `path`, for somebody being in the way.
     """
 
     action: str
@@ -27,3 +28,4 @@ class Activity:
     partner_id: str | None = None
     intent: str | None = None
     item_id: str | None = None
+    held_up: int = 0

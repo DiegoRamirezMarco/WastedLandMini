@@ -55,7 +55,25 @@ specific `meal_started` event so presentation can animate and sound the meal wit
   wall, and where two things touch at a corner there is no way through.
 - Standing next to something, to use it or to talk, is beside it and never at its corner.
 - `Resident.trail` is where they walked in the last minute: for each tile, the point of the line
-  that is on it. It is there for whoever draws them. It is not saved and nothing goes by it.
+  that is on it. It is there for whoever draws them, and it is not saved. The one thing that
+  goes by it is who may step where during the minute it was walked in.
+
+### In each other's way
+
+- Nobody steps onto a tile that somebody else is on or has walked over this minute, or
+  diagonally between two people (`simulation/ai/crowd.py`). Whoever is out of the settlement,
+  or lying on a bed, is in nobody's way.
+- Nobody plans to end up on a tile that somebody stands on or is heading for.
+- A walk is planned as if nobody else were about. With somebody in the way of the next step:
+  1. if they are passing, wait a minute for them to be gone;
+  2. otherwise look for a way round, counting as obstacles everybody who stands still and
+     whoever is walking within two tiles. If somebody has stopped on the very tile being made
+     for, another place beside the same thing or person does as well;
+  3. with no way round, whoever is in the way steps aside if they are only strolling or
+     sheltering, to the nearest free tile off the walker's path;
+  4. failing that, after two minutes held up the walk is given up for a short stroll a few
+     tiles off, and whatever they wanted is thought of again afterwards.
+- `Activity.held_up` counts the minutes running without a step along the path. It is saved.
 
 ## Social life
 

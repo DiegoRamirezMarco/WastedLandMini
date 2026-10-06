@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from simulation.ai.crowd import spots_taken
 from simulation.ai.navigation import adjacent_spots
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency, ranked
 from simulation.items.item_system import ITEM_ACTIONS, ItemSystem
@@ -210,7 +211,7 @@ class RoutineSystem:
     def _shelter(self, world: "SimulationWorld", resident: Resident) -> Activity | None:
         """A walk to the nearest free spot under a roof, to wait there for the weather to pass."""
         passable = world.passable()
-        taken = {other.destination for other in world.residents.values() if other is not resident}
+        taken = spots_taken(world, resident)
         rooms = sorted(
             (room for room in world.rooms.values() if room.roofed),
             key=lambda room: (
@@ -236,6 +237,7 @@ class RoutineSystem:
     def _wander(self, world: "SimulationWorld", resident: Resident) -> Activity:
         minutes = world.rng.randint(*WANDER_MINUTES)
         passable = world.passable()
+        taken = spots_taken(world, resident)
         # Nobody who is in the dry strolls out into a storm.
         indoors_only = world.happenings.is_stormy(world) and world.under_roof(resident.tile)
         for _ in range(WANDER_ATTEMPTS):
@@ -243,7 +245,7 @@ class RoutineSystem:
                 resident.x + world.rng.randint(-WANDER_RANGE, WANDER_RANGE),
                 resident.y + world.rng.randint(-WANDER_RANGE, WANDER_RANGE),
             )
-            if not passable(target) or (indoors_only and not world.under_roof(target)):
+            if not passable(target) or target in taken or (indoors_only and not world.under_roof(target)):
                 continue
             path = find_path(resident.tile, target, passable)
             if path is not None:

@@ -132,6 +132,7 @@ class SimulationWorld:
         self.items.tick_world(self)
         self.staffing.tick(self)
         self.happenings.tick(self)
+        self.activities.begin_minute(self)
         for resident in list(self.residents.values()):
             # Someone may die during this very minute.
             if resident.resident_id in self.residents:

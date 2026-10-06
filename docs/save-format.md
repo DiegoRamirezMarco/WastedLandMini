@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 21 (current)
+## Version 22 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `21` |
+| `version` | `22` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -41,7 +41,8 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 A resident's `activity` is `null` or `action`, `target_id` (an object ID), `partner_id` (a resident
 ID, when talking or walking over to talk), `intent` (the exchange they are set on having), the
-remaining `path` as tiles, `minutes_left` and `using`.
+remaining `path` as tiles, `minutes_left`, `using` and `held_up` (minutes running that somebody
+in the way has kept them from a step along that path).
 
 A resident's `expedition` is `null` or `returns_at`, `finds`, `danger` and `find_at`.
 
@@ -61,6 +62,8 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 22** added `held_up` to an activity. An older save has nobody held up. It may have
+  two residents on one tile, as could happen before: nothing moves them, and they walk apart.
 - **Version 21** added each resident's `manners`. Whoever has none chosen for a kind, as in any
   older save, goes by the one that is theirs by default: always the same for the same resident
   ID. A manner that is no longer defined, or is kept under a kind it is not of, is dropped.

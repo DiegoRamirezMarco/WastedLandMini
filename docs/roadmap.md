@@ -677,8 +677,8 @@ on open ground. Asked for by hand: that they go in every direction.
   before. Nobody cuts the corner of a wall or squeezes between two things that touch at one
 - **The trail says where the line runs.** For each tile stepped on, `Resident.trail` gives the
   point of the line that is on it, up to half a tile off its middle. It is for whoever draws
-  them, it is not saved, and nothing that happens goes by it. Stopped short part-way along a
-  line, they take the next minute to step onto the middle of their tile
+  them and it is not saved. Stopped short part-way along a line, they take the next minute to
+  step onto the middle of their tile
 - Standing next to something to use it, or to someone to talk to them, is still beside it and
   not at its corner
 
@@ -691,7 +691,42 @@ Still open here:
 - How far something is, when it is weighed against how much it is wanted, is still counted in
   rows and columns
 - The way round something is a good one, not always the shortest there is
-- Nobody steps aside for anybody: two residents can still walk through one another
+
+### S22 — In each other's way (needs S21) — done
+People walked through one another, and stood two to a tile. Asked for by hand: that they must
+not.
+- **Nobody steps onto a tile somebody else is on**, nor one that somebody has walked over
+  this same minute, nor diagonally between two people. So no two are ever on one tile, and no
+  two cross through each other, on the map or in what is drawn of the minute
+- **Nobody plans to end up where somebody stands or is heading.** Beside a thing or a person,
+  out for a stroll or in out of the rain, a place that is taken is no place: with every side
+  of somebody taken, there is no going over to talk to them
+- **Met on the way, they sort it out**: they wait a minute for whoever is passing in front,
+  and walk round whoever is standing or coming straight at them. If somebody has stopped
+  where they were going, they go to another place beside the same thing or person
+- **Whoever has nothing to keep them where they stand steps aside** when there is no way round
+  them: somebody strolling or waiting out the weather moves to the nearest place out of the
+  way, and goes on as they were. Somebody at work, at table, in bed or in talk does not move
+- **With no way through at all they give it up** after two minutes, walk a little way off, and
+  think again in a while. That is what gets two people past each other in a doorway
+- Whoever comes onto the map, through the gate or back from beyond the fence, is put where
+  nobody stands
+- How long somebody has been held up is on their activity and in the save (version 22). Their
+  panel says `espera a que le dejen pasar` while they are
+
+Done when: days of the settlement pass with no two residents on one tile and no two crossing
+in a minute; two who meet in a doorway both get where they were going; and the first one in
+out of a storm does not keep everybody else out in it.
+
+Still open here:
+- Two lines that cross between tiles can still bring two walking figures very close for a
+  moment: it is tiles that are kept apart, and a figure may be half a tile off the middle of its own
+- Somebody at work or at table in a narrow place keeps everybody else out for as long as they
+  are at it. Nobody asks them to move, and nobody thinks of another way in beforehand: they
+  walk up, wait, and give up
+- Giving way is not a matter of who anybody is: a brute and a coward stand aside alike, and
+  nobody takes it badly
+- In an older save two people may be on one tile. Nothing moves them: they walk apart
 
 ### P16 — The way in (needs S18) — done
 - **A main menu**: go on with the settlement being played or the saved one, start a new one,
