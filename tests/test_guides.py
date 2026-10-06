@@ -148,7 +148,7 @@ class EditorGuideTests(unittest.TestCase):
     def test_the_guide_of_a_resident_names_its_parts_and_the_example_moves_until_something_is_drawn(self) -> None:
         editor = self.game.doll_editor
         editor.open("paco")
-        bare = self.game.dolls.template.guide(BODY_CANVAS)
+        bare = editor.template.guide(BODY_CANVAS)
         named = editor.guides[BODY_CANVAS]
         self.assertEqual(named.get_size(), bare.get_size())
         self.assertGreater(_mask(named).count(), _mask(bare).count(), "names are written on it, each on a patch of paper")

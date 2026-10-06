@@ -178,6 +178,13 @@ class DollTemplate:
     # Size in pixels of each canvas.
     canvases: dict[str, tuple[int, int]]
     parts: dict[str, PartSpec]
+    # The measures a doll nobody has drawn yet starts from. The parts above say where the guide's
+    # joints are before any measures: drawings made before there were measures are cut by those.
+    start: DollBuild = field(default_factory=DollBuild)
+
+    def starting(self) -> DollBuild:
+        """The measures a new doll is given to begin with: the template's, if a doll can have them."""
+        return self.start.copy() if self.takes(self.start) else DollBuild()
 
     def joint_keys(self) -> dict[tuple[str, Point], tuple[str, Point | None]]:
         """Every joint of the guide that can be moved, by canvas and place: what the measures call
@@ -231,7 +238,7 @@ class DollTemplate:
             bone: replace(spec, start=at(spec.canvas, spec.start), end=at(spec.canvas, spec.end))
             for bone, spec in self.parts.items()
         }
-        return DollTemplate(self.unit, self.canvases, parts)
+        return DollTemplate(self.unit, self.canvases, parts, self.start)
 
     def handles(self, built: "DollTemplate") -> list[JointHandle]:
         """The joints of a doll's guide that can be taken hold of, where its own measures have them."""
@@ -486,7 +493,7 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
             bool(values.get("free_end", False)),
             str(values.get("wears", "")),
         )
-    return DollTemplate(unit, canvases, parts)
+    return DollTemplate(unit, canvases, parts, build_from_data(data.get("build")))
 
 
 def load_template(path: Path = PLAN_PATH) -> DollTemplate:
@@ -656,13 +663,18 @@ class DollStore:
         self._dolls: dict[str, Doll | None] = {}
 
     def build(self, body_id: str) -> DollBuild:
-        """The measures kept for a body. Those of the template if it has none of its own that can be used."""
+        """The measures of a body: its own if it has any that can be used.
+
+        Someone nobody has drawn yet has the ones every doll starts from. A drawing kept without
+        measures was made before there were any, over the guide as the template has it, and is
+        left as it is.
+        """
         root = self._illustrations.root if self._illustrations is not None else None
         if root is None:
-            return DollBuild()
+            return self.template.starting()
         path = (root / build_path(body_id)).resolve()
         if not path.is_relative_to(root) or not path.is_file():
-            return DollBuild()
+            return DollBuild() if self.drawings(body_id) else self.template.starting()
         try:
             build = build_from_data(json.loads(path.read_text(encoding="utf-8")))
         except (OSError, ValueError) as error:

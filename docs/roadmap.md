@@ -630,6 +630,10 @@ longer than it was drawn. Now the paper is the measure.
   shoulders, the legs and the head are dragged to their place, and the head's neck can be moved
   on its own paper too
 - Both sides of a body share their measures, and they are kept beside the drawings
+- **The measures a doll starts from are data** (`doll.build`), and are the ones the player set
+  for Raúl: a longer trunk and longer limbs than the guide first had. Someone not drawn yet
+  begins with them, and `Medidas de partida` goes back to them. Whoever was drawn before there
+  were measures is left exactly as drawn
 - A joint goes no further than the doll can have it: no part shorter than a sliver, none off
   its paper, none over a part it does not meet
 - The guide, the figure under it and the walking figure all follow as a joint is dragged, and

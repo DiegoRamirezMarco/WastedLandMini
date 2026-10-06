@@ -272,6 +272,10 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   moved (`skull.start`, where a head sits on its neck); and `attach` how far from where the
   `doll` view has them the bones that join a limb on end (`clavicle`, `pelvis`). Names carry no
   side: both arms are one. Measures a doll cannot have are ignored whole.
+- `doll.build`, in `data/skeleton.json`, is the same three tables: the measures every doll
+  starts from. Whoever has not been drawn yet is given them, and `Medidas de partida` goes back
+  to them. The `from` and `to` of the parts stay as they are under them: a drawing kept without
+  a `build.json` was made before there were measures, and is still cut where those say.
 - `physics`: gravity in pixels per second squared, how much speed is kept each step (`damping`),
   lost along the ground (`friction`) and given back on landing (`bounce`), how hard limits push
   back, and when a body that lies still goes to sleep.

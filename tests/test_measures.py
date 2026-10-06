@@ -5,6 +5,7 @@ import math
 import os
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 import pygame
@@ -181,11 +182,41 @@ class DollBuildTests(unittest.TestCase):
         self.assertEqual(build_from_data({"joints": "long", "points": {"a": [1]}, "attach": {"b": ["x", 2]}}), DollBuild())
         self.assertEqual(build_from_data({"joints": {"shin.end": 1, "odd": "two"}}), DollBuild(joints={"shin.end": 1.0}))
 
+    def test_the_measures_a_new_doll_starts_from_are_data_and_a_doll_can_have_them(self) -> None:
+        start = self.template.start
+        self.assertTrue(self.template.takes(start))
+        self.assertEqual(self.template.starting(), start)
+        self.assertIsNot(self.template.starting(), start, "whoever is given them may change their own")
+        # They are measures like any others: the template under them is what drawings without any are cut by.
+        built = self.template.built(start)
+        self.assertEqual(built.start, start)
+        self.assertEqual(set(built.parts), set(self.template.parts))
+        plan = doll_plan(self.plan, built, start)
+        for bone, spec in built.parts.items():
+            self.assertAlmostEqual(plan.length(DOLL_VIEW, bone), _length(spec) / self.template.unit, places=6, msg=bone)
+        # A template whose start no doll could have gives the plain one instead of a broken doll.
+        broken = replace(self.template, start=DollBuild(joints={"shin.end": -40.0}))
+        self.assertEqual(broken.starting(), DollBuild())
+
+    def test_someone_not_drawn_yet_starts_from_those_and_an_old_drawing_is_left_as_it_was(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            store = DollStore(Illustrations(root), self.template, self.plan)
+            self.assertEqual(store.build("new"), self.template.starting())
+            # Drawn before there were measures, over the guide as the template has it.
+            old = root / build_path("old")
+            old.parent.mkdir(parents=True)
+            pygame.image.save(reference(self.template, BODY_CANVAS), str(old.with_name("body.png")))
+            self.assertEqual(store.build("old"), DollBuild())
+            doll = store.get("old")
+            self.assertEqual(doll.template.parts, self.template.parts)
+            self.assertEqual(set(doll.parts), {bone for bone, spec in self.template.parts.items() if spec.canvas == BODY_CANVAS})
+        self.assertEqual(DollStore(None, self.template, self.plan).build("anyone"), self.template.starting())
+
     def test_a_store_gives_each_doll_its_own_measures_and_the_template_s_when_they_are_no_good(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             store = DollStore(Illustrations(root), self.template, self.plan)
-            self.assertEqual(store.build("ada"), DollBuild())
             for body_id, text in (
                 ("ada", json.dumps({"joints": {"shin.end": -2.0}})),
                 ("ben", "{ not json"),
@@ -198,7 +229,7 @@ class DollBuildTests(unittest.TestCase):
             with self.assertLogs("graphics.doll", level="WARNING"):
                 self.assertEqual(store.build("ben"), DollBuild())
                 ben = store.get("ben")
-            self.assertEqual(store.build("cal"), DollBuild(), "legs inside out are no legs")
+            self.assertEqual(store.build("cal"), DollBuild(), "legs inside out are no legs: cut as the template has it")
             self.assertEqual(store.build("ada"), DollBuild(joints={"shin.end": -2.0}))
             ada = store.get("ada")
             self.assertAlmostEqual(ada.plan.length(DOLL_VIEW, "shin_left"), 1.0)
@@ -230,6 +261,11 @@ class MeasuringInTheEditorTests(unittest.TestCase):
         self.addCleanup(pygame.quit)
         self.editor = self.game.doll_editor
         self.editor.open("paco")
+        # Nobody has drawn Paco, so he has the measures every doll starts from.
+        self.start = self.editor.base_template.starting()
+        self.assertEqual(self.editor.build, self.start)
+        # From here on he is measured from the plain template, whatever the game's start is.
+        self.assertTrue(self.editor.set_build(DollBuild()))
 
     @staticmethod
     def _restore_driver(variable: str, previous: str | None) -> None:
@@ -330,15 +366,17 @@ class MeasuringInTheEditorTests(unittest.TestCase):
         doll = self.game.dolls.get("paco")
         self.assertAlmostEqual(doll.plan.length(DOLL_VIEW, "thigh_left"), 1.5)
         self.assertAlmostEqual(doll.drawn["thigh_left"], 1.5)
-        # Somebody else is as the template has them, and Paco is found again as he was left.
+        # Somebody not drawn yet has the measures to start from, and Paco is found again as he was left.
         self.editor.open("marta")
-        self.assertEqual(self.editor.build, DollBuild())
-        self.assertAlmostEqual(self.editor.doll_plan.length(DOLL_VIEW, "thigh_left"), 3.0)
+        self.assertEqual(self.editor.build, self.start)
         self.editor.open("paco")
         self.assertEqual(self.editor.build.joints, {"thigh.end": -1.5})
         # The measures to start from are a button away.
         self._click(self._button(("measures",)))
-        self.assertEqual(self.editor.build, DollBuild())
+        self.assertEqual(self.editor.build, self.start)
+        self.assertAlmostEqual(
+            self.editor.doll_plan.length(DOLL_VIEW, "thigh_left"), 3.0 + self.start.joints.get("thigh.end", 0.0)
+        )
         self._frame()
 
 

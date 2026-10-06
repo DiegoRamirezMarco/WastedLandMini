@@ -515,9 +515,8 @@ class DollEditorTests(unittest.TestCase):
         self.assertIs(view.bodies.characters["raul"].plan, doll.plan)
         left, high, right, low = doll.standing(doll.plan)
         crown = doll.plan.rests["doll"]["head"][1] + 0.5 - editor.template.parts["skull"].radius / editor.template.unit
-        self.assertGreater(
-            doll.plan.rests["doll"]["head"][1], view.bodies.plan.rests["doll"]["head"][1], "a trunk as short as it was drawn"
-        )
+        for bone in ("spine", "thigh_left", "upper_arm_right"):
+            self.assertAlmostEqual(doll.plan.length("doll", bone), doll.drawn[bone], msg=f"{bone} is as long as it was drawn")
         self.assertAlmostEqual(high, crown, delta=0.5, msg="the plain head of the mannequin, and no hair")
         self.assertEqual(-left, right)
         self.assertAlmostEqual(low, 0.0, delta=1.0)

@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import tempfile
 import unittest
@@ -754,9 +755,12 @@ class DrawingLessonsTests(unittest.TestCase):
         self._stroke((body.x + 150, body.y + 200), (body.x + 170, body.y + 220))
         self.assertEqual(pygame.mask.from_surface(editor.drawings["body"]).count(), painted)
         self.assertEqual(self.step, "draw_measures")
+        start = editor.base_template.starting()
+        self.assertEqual(editor.build, start, "someone new has the measures every doll starts from")
         self._measure(editor)
         self.assertEqual(self.step, "draw_resident")
-        self.assertEqual(editor.build.joints, {"shin.end": -1.0})
+        shorter = {**start.joints, "shin.end": round(start.joints.get("shin.end", 0.0) - 1.0, 2)}
+        self.assertEqual(editor.build.joints, shorter)
         self._click(self._button(editor, ("tool", "brush")))
         self._click(self._button(editor, ("mannequin",)))
         self._frame()
@@ -772,10 +776,14 @@ class DrawingLessonsTests(unittest.TestCase):
         doll = self.game.dolls.get(resident_id)
         self.assertIsNotNone(doll)
         # On the map their legs are as short as they were made on the paper, and no shorter or longer.
-        base = self.game.global_view.bodies.plan
-        self.assertAlmostEqual(doll.plan.length("doll", "shin_left"), 2.0)
-        self.assertAlmostEqual(doll.plan.length("doll", "thigh_left"), 3.0)
-        self.assertLess(doll.plan.rests["doll"]["pelvis"][1] * -1, base.rests["doll"]["pelvis"][1] * -1)
+        template = self.game.dolls.template
+        begun = template.built(start)
+        unit = template.unit
+        shin = math.dist(begun.parts["shin_left"].start, begun.parts["shin_left"].end) / unit
+        thigh = math.dist(begun.parts["thigh_left"].start, begun.parts["thigh_left"].end) / unit
+        self.assertAlmostEqual(doll.plan.length("doll", "shin_left"), shin - 1.0, places=2)
+        self.assertAlmostEqual(doll.plan.length("doll", "thigh_left"), thigh, places=2)
+        self.assertAlmostEqual(doll.drawn["shin_left"], shin - 1.0, places=2)
         self._frame()
         self.assertIs(self.game.global_view.bodies.characters[resident_id].plan, doll.plan)
 

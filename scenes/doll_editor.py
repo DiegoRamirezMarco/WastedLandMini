@@ -144,8 +144,8 @@ class DollEditor:
         # The template every doll starts from, and this one's own: its measures, the template with
         # its joints where they put them, and the body plan that stands as they say.
         self.base_template = dolls.template
-        self.build = DollBuild()
-        self.template = self.base_template
+        self.build = self.base_template.starting()
+        self.template = self.base_template.built(self.build)
         self.doll_plan = doll_plan(plan, self.template, self.build)
         # What of the measures the mouse has hold of, and how they stood when it took hold.
         self._grab: tuple | None = None
@@ -223,7 +223,8 @@ class DollEditor:
                 surface.blit(picture if picture.get_size() == size else pygame.transform.smoothscale(picture, size), (0, 0))
             self.drawings[name] = surface
         self._grab = None
-        self.set_build(self.dolls.build(self.resident_id) if self.resident_id is not None else DollBuild())
+        start = self.base_template.starting()
+        self.set_build(self.dolls.build(self.resident_id) if self.resident_id is not None else start)
 
     def set_build(self, build: DollBuild, settled: bool = True) -> bool:
         """Give the doll other measures, if it can have them. Returns whether it could.
@@ -340,15 +341,22 @@ class DollEditor:
         width, height = guide.get_size()
         ink = PALETTE["ink"]
 
-        def write(text: str, position: tuple[int, int], upright: bool = False) -> None:
+        written: list[pygame.Rect] = []
+
+        def write(text: str, position: tuple[int, int], upright: bool = False, yielding: bool = False) -> bool:
+            """Write a name on the guide. One that is `yielding` is left out where another already is."""
             label = self.font.render(text, ink)
             if upright:
                 label = pygame.transform.rotate(label, 90)
             spot = label.get_rect(topleft=position).clamp(guide.get_rect())
+            if yielding and spot.inflate(4, 2).collidelist(written) >= 0:
+                return False
+            written.append(spot)
             backing = pygame.Surface(spot.inflate(2, 2).size, pygame.SRCALPHA)
             backing.fill((*PALETTE["paper"], 170))
             guide.blit(backing, spot.inflate(2, 2))
             guide.blit(label, spot)
+            return True
 
         for bone, spot in label_spots(self.template, canvas).items():
             side = next((suffix for suffix in SIDE_NAMES if bone.endswith(suffix)), "")
@@ -368,11 +376,14 @@ class DollEditor:
             if side and part in LIMB_BOTTOMS:
                 write(SIDE_NAMES[side], (spot.centerx - self.font.width(SIDE_NAMES[side]) // 2, spot.bottom + 3))
         whole = [spec for spec in self.template.parts.values() if spec.canvas == canvas and spec.whole]
-        # Which way it faces goes at the foot of the paper, or at its head where the foot is taken.
-        write(FACING_NOTE, ((width - self.font.width(FACING_NOTE)) // 2, 4 if whole else height - LINE_HEIGHT - 2))
         for spec in whole:
             x = round(spec.start[0]) - self.font.width(NECK_NOTE) // 2
             write(NECK_NOTE, (x, round(spec.start[1]) + 7))
+        # Which way it faces goes at the foot of the paper, or at its head where the foot is taken.
+        middle = (width - self.font.width(FACING_NOTE)) // 2
+        for y in (4, height - LINE_HEIGHT - 2) if whole else (height - LINE_HEIGHT - 2, 4):
+            if write(FACING_NOTE, (middle, y), yielding=True):
+                break
         return guide
 
     def _cut(self) -> None:
@@ -469,7 +480,8 @@ class DollEditor:
         elif intent[0] == "mannequin":
             self.mannequin()
         elif intent[0] == "measures":
-            self.set_build(DollBuild())
+            # Back to what every doll starts from.
+            self.set_build(self.base_template.starting())
         elif intent[0] == "step":
             self.step(intent[1])
         elif intent[0] == "save":
