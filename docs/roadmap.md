@@ -99,7 +99,8 @@ This also closed what S7 left open: a frightened resident buys a weapon on purpo
 post is offered round until someone takes it.
 
 Still open here:
-- Residents buy but never sell, and credits spent are simply gone: there is no settlement fund.
+- Residents buy but never sell, and credits spent are simply gone: there is no settlement fund
+  (S23).
 
 S10 closed the rest: trips outside restock the shop, and a repair now uses up a piece of scrap.
 
@@ -116,7 +117,8 @@ that their partner was with another turns on both; and a couple that has soured 
 the player given a say before each confession and each breakup.
 
 Still open here:
-- Who is drawn to whom is fixed per pair, with no notion of what kind of person anyone is drawn to.
+- Who is drawn to whom is fixed per pair, with no notion of what kind of person anyone is drawn
+  to (S25).
 - A couple changes nothing about where the two sleep or how they spend the day.
 - Jealousy only comes from learning of an affair, never from mere suspicion.
 - On the map a couple shows only while one of the two is selected or they are alone together (P9).
@@ -136,6 +138,8 @@ looks dangerous is never gone for without the player having had a say.
 Still open here:
 - Only one resident goes out, alone, and always to the same nowhere: there are no places out there.
 - A trip is not seen: the scavenger simply stops being on the map until they are back.
+- A trip is as dangerous one day as another, short of a storm, and there is nothing for the
+  settlement to know or not know about it. S15 left it for when there are places out there.
 
 ### S11 — What comes from outside — done
 - World events as data, rolled hourly with a random generator of their own
@@ -151,7 +155,7 @@ the settlement still feeds everyone.
 
 Still open here:
 - A stranger is a name at the gate until let in. Nobody sees them wait, and nobody else has a say.
-- Nobody ever leaves the settlement for good.
+- Nobody ever leaves the settlement for good (S28).
 
 S13 closed the rest: residents take shelter from a storm, and raiders come by night.
 
@@ -321,10 +325,12 @@ The first step towards `docs/concept/visual-target.png`, the look the game is me
 - On the map: a sign with the name of every place, and a bubble for what each resident is doing
 
 Still open here:
-- The bar counts only what exists: there is no water, energy or medicine to count yet (S15).
+- The bar counts what exists. S15 has since given it water, fuel and medicine to count.
 - The menu has no construction or research, because there is none (S16, S17), and no radio screen.
 - Traits are two. The panel has room for more than the settlement has.
-- The speech in the dock is drawn from a handful of lines per kind of exchange.
+- The speech in the dock is drawn from a handful of lines per kind of exchange. Wanted, by
+  hand: lines for sleepwalking, before and after a meal, being hurt, losing a limb, falling in
+  love, being sleepy, being sad, somebody new arriving, greeting, getting angry, and so on.
 
 ### P12 — Buildings that stand up — done
 - A roofed building is one picture, with a front two tiles high, a cloth over its door and its
@@ -454,16 +460,42 @@ tank and the generator never run out, the pantries never empty and nobody dies; 
 with no water at all goes on working and sleeping, is told so every day, and loses people to it
 only after days.
 
-Still open here:
-- Whoever takes up the water leaves the bar, and nobody takes the bar after them.
-- Nobody feeds the generator as a job: it lives on what trips outside happen to bring.
-- A save from before keeps the south house as it was, with the beds that wall people in.
+Closed since, along with what had been left to settle:
+- **The mechanic feeds the generator.** Fuel brought in from outside is left in a crate, and it
+  is whoever holds the workshop that carries it on: a load at a time, or at once when the
+  generator is running low, and never while someone is at the bench having a thing mended.
+  With nobody at the workshop the fuel waits and the lamps go out. Where there is no workbench
+  at all there is nobody to wait for, and fuel goes straight in as before
+- **Medicine**, an item like any other. The clinic's care uses up a unit for every half day
+  someone is under it, out of the cabinet, which is a container now and starts with six. With
+  none left the medic can only let them rest, and notice is given once a day. None is spent on
+  what comes of thirst or hunger. Trips outside bring a little back, to the cabinet; a caravan
+  may leave some at the shop, and the medic fetches it from there
+- **A job may keep something supplied**, as data (`supplies`): it is how the mechanic and the
+  medic do both of the above, and a pack can give the same errand to any post
+- **The bar is left shut, and is meant to be**: there are nine people for eleven places, and
+  the bar is the one that matters least. The first to come in at the gate looking for work
+  takes it
+- **A save from before has the south house put right** when it is loaded: its two beds and its
+  crate go where the map has them now, unless they have been moved since
+- **Materials** are the scrap there already is. Spending them is building (S16)
+- **How many can live here** is the beds there are, and has been since S11: nobody comes to
+  the gate without one to spare
+- **How dangerous it is outside** stays as it is, the same every trip, until there are places
+  out there to be more dangerous or less (S10)
+- On screen, medicine is counted in the bar beside water and fuel
 
-Still to settle:
-- Medicine: used up by the clinic's care, and brought in from outside
-- Materials: the scrap there already is, later spent on building
-- A limit to how many can live here, set by the beds there are
-- How dangerous it is outside, as something the settlement knows or does not
+Done when: ten weeks pass, with two seeds, in which the lamps never go out with fuel lying in
+store, nobody lies in the clinic with no medicine to be had and nobody dies; a patient with
+medicine mends faster than one without, who mends as fast as one with no medic; and a save
+from before loads with its cabinet stocked, nothing else restocked and nobody walled in.
+
+Still open here:
+- A generator wants a workshop with someone in it. A settlement that has a workbench and
+  nobody to work it has its fuel in a crate and its lamps out
+- As much medicine comes in as is used, or more: in ten quiet weeks, five to eleven doses. It
+  runs short only where people are hurt often
+- Nobody is sent for medicine or fuel when it runs out: it is whatever a trip happens to bring
 
 ### S16 — Building — planned
 - Things to build, as data: what they cost, how long they take, who builds them
@@ -528,7 +560,7 @@ Still open here:
   starve about three weeks in with the tank full. Whoever has the last hands on what feeds
   everyone should not be talked out of it by an empty post
 - Someone who cannot get to a bed still goes round in circles by the fire instead of doing
-  anything else. Urbanismo no longer lets it happen, but an old save may have it
+  anything else. Urbanismo no longer lets it happen, but an old save may have it (S25)
 - With everyone dead the settlement simply stands empty: there is no ending, and nothing to do
   but go back to the menu
 - Everything put down in Urbanismo is free and stands at once (S16)
@@ -654,16 +686,17 @@ event and its memory together, not twice.
 
 Still open here:
 - Nothing in the game is funny: being drawn to the funny is being drawn to the lively
-- Whoever is in charge is whoever keeps the watch. There is nobody else to distrust
+- Whoever is in charge is whoever keeps the watch. There is nobody else to distrust (S26)
 - A taste in people moves what is felt for someone and nothing else: not who is sought out to
   talk to, nor who is believed
 - Tastes in people are not learned: nothing lived through moves them yet
 - Nobody tires of what they have every day: having a thing again only ever takes a taste the
   way it was already going
 - Coming to depend on something is having a taste for it grow faster and farther. Nobody goes
-  looking for it, and nobody misses it
+  looking for it, and nobody misses it (S24)
 - A grief, a fight or a death moves no taste: only a meal that turns on someone does
-- Being told what to do is being given advice by the player. No resident orders another about
+- Being told what to do is being given advice by the player. No resident orders another
+  about (S26)
 - Of the game's own foods none can make anyone ill
 
 ### S21 — Walking at any angle — done
@@ -967,6 +1000,410 @@ Done when: a resident sent across open ground at a slant is seen to go straight 
 Still open here:
 - There is no drawing of a body seen from a corner: at a slant it is the side or the front
 - The stride is as long as the step, so going diagonally the feet cover more than they seem to
+
+### S23 — A common fund, and what things are paid with (needs S8) — planned
+Asked for by hand, to come before politics along with S24 and S25: a fine has to go somewhere,
+a law on drink needs drink, and "my brother" needs brothers.
+- **A common fund**: what the settlement holds as a whole, apart from what anybody owns. What
+  is paid at the counter goes into it instead of being gone, and what the settlement pays comes
+  out of it
+- **The settlement settles how it trades**: by barter, a thing for a thing, or with a currency.
+  It is the residents who settle it, with the player given a say. Once there is a government it
+  is decided as any proposal is (S27), and it can be changed in the middle of a game
+- **A new settlement starts on barter.** A currency comes when its residents settle on one
+- **Under barter nothing is priced in coin**: a thing is had for another, each worth to each of
+  the two what it is worth to them (S19), and work is paid in kind
+- **Three things fill the fund**: what is paid at the counter, what trips outside bring in, and
+  what merchants pay for what the settlement sells them. Taxes come later, with the laws (S28)
+- **Buying from merchants and selling to them is the player's to do**, out of the fund and
+  into it. It is the one thing the player does with their own hands instead of advising
+- **Nobody else spends from the fund while there is no government**, but for wages
+- **A currency is made by the player**: it is given a name and it is drawn, in the game, as
+  everything made there is (P25). From then on prices, wages and the fund are counted in it
+- **A currency is credit, and credit can be stolen.** What someone has of it is a figure, as
+  credits are now, and not coins in a pocket. It is taken from them as a thing is (S5): by
+  whoever dares, seen or not by whoever is near, and held against the thief by whoever finds out
+- **The fund can be stolen from as well**, by whoever is given to stealing, a leader included.
+  It is the same leaning that has someone steal from a neighbour (S5), and it is found out the
+  same way
+- A save from before loads as a settlement whose currency is the credits it had
+
+Done when: a week passes under barter in which everyone is fed and the shop changes hands with
+no coin anywhere; a settlement that takes up a currency pays its wages from the fund and takes
+back at the counter what it paid; the fund never goes below nothing; and a save from before
+loads with its credits.
+
+Tests it is not done without: a purchase adding to the fund what it cost; a swap under barter
+that both sides come out of better by their own lights, and one turned down; the change from
+barter to a currency and back; credit stolen from someone, witnessed and not; credit stolen
+from the fund by someone given to stealing, and left alone by someone who is not; and a save
+from before.
+
+Still to settle:
+- What a trip outside puts in the fund: credit found out there, or its finds sold
+- What the player may sell to a merchant: only what is nobody's, or what residents own as well
+- What the fund holds under barter, when there is no credit to count
+- What becomes of a caravan as it is now, which leaves its goods at the shop for nothing (S11)
+- Residents still buy and never sell (S8)
+
+### S24 — Substances (needs S20) — planned
+- **A substance is a consumable like any other, as data**: an item with a `substance` property
+  that says how it is taken, what it does and how likely it is to bring dependence. A pack
+  brings one with no code of its own
+- **Four ways of taking one**: swallowed, sniffed, injected or smoked
+- **Three kinds of effect, each as data**: the good it does while it lasts; the harm of its own,
+  then or afterwards; and what others make of it
+- **Being seen is part of it.** Someone drunk or high is seen by whoever is near, as anything is
+  (S3), and smoke reaches everyone in the room. Each takes it their own way, by their tastes in
+  people (S20): some cannot stand a drunk, some mind the smoke, some mind neither. It moves what
+  they feel for whoever it was, and what they know of them is passed on like any other fact
+- **Dependence comes by chance**, each time one is taken, and the likelier the more of a habit
+  it is. Whoever depends on something goes looking for it, and is the worse for going without:
+  in mood, in nerves and at work. With long enough without, it passes
+- Being under something, and depending on it, are states of a resident's own, and are saved
+- What the bar serves is the first of them
+- Taking one, being seen at it and coming to depend on it are each a domain event
+
+Done when: the same drink leaves one resident dependent and another not, and the same way when
+the same seed is run again; someone dependent is seen to go after it and to work worse without
+it; two residents who watch the same drunk feel differently about them afterwards; smoke
+indoors is minded by those in the room and by nobody outside it; and ten weeks pass with three
+seeds without the whole settlement ending up dependent.
+
+Tests it is not done without: each of the three kinds of effect; dependence by chance and from
+the project RNG; going without; a pack's substance working with no code; a witness who minds
+and one who does not; and a save from before, in which nobody is under anything.
+
+Still to settle:
+- Which substances the game comes with besides drink, and where they come from: made in the
+  settlement, brought back from outside, left by caravans
+- Whether too much of one can kill, and whether the medic treats dependence
+- Whether the player is given a say when someone is about to take to something
+
+### S25 — Families (needs S9) — planned
+- **A couple may marry.** Like a confession and a breakup, it is something the player is given a
+  say in beforehand
+- **Libido, one more side to a way of being**, from 0 to 100 like the others, with a slider
+  where the first resident is made (P16) and in the middle for everyone in a save from before.
+  It counts for nothing in anyone who is not an adult
+- **Two adults need not be a couple to go off alone together**: two who get on very well and
+  both have a high libido may. It is the same narrative event it is for a couple (S9), known to
+  nobody who does not come across them, and whoever has a partner and is found out is turned on
+  as before
+- **Residents have a sex and a gender, and the two are kept apart**: the sex of their body, `m`
+  or `f`, and what they take themselves to be, `m`, `f`, `nb` or `bi`. Both are IDs, given
+  where a resident is made and in the data of whoever comes to the gate. Gender says how they
+  are spoken of, and nothing of what their body can do
+- **Everyone is drawn to `m`, to `f` or to both**, and that too is theirs and is saved. It goes
+  by the other's sex, not by their gender. Nobody courts, becomes a couple with or goes off
+  alone with someone they are not drawn to, however well the two get on. It is what S9 lacked: who is drawn to whom was fixed for each pair, with
+  no notion of what kind of person anyone is drawn to. In a save from before everyone is drawn
+  to both, so that nothing that was going on stops
+- **A child may come of it.** When two adults marry or go off alone together, couple or not,
+  and one is `m` by sex and the other `f`, there is a chance of a child, drawn from the project
+  RNG. It is whoever is `f` that carries it
+- **A child is carried for nine weeks.** Whether whoever carries one goes on working is for the
+  law to say (S28). Where there is no law on it, they work as before
+- **A child is a resident**, born in the settlement, with parents and a date of birth
+- **A calendar: days, weeks, months and years**, counted by the simulation's clock from the day
+  a settlement begins. It is the ordinary one: twelve months, each with the days it has always
+  had, 365 to the year and no leap years. Nothing new is saved for it: the date follows from
+  the day
+- **Everyone has a date of birth, and their age is worked out from it.** A birthday comes round
+  by itself, and is a domain event. A save from before gives each resident the date that makes
+  them the age they were
+- **People grow old and die of it**, and go to a grave as any of the dead do (S7), with all
+  that a death sets going. Nobody dies of it before eighty. From eighty on it is a matter of
+  chance, drawn from the project RNG, and the likelier the older they are
+- **Whoever has no bed curls up on the ground.** A child of ten is like anybody: they sleep in
+  a bed if there is one for them and on the ground if there is not, and rest the worse for it.
+  The same goes for a grown resident left without one
+- **A child's time is counted in weeks, and runs fast**: twelve weeks after being born they are
+  ten years old. How fast is data. From ten on they grow older as everybody does
+- **Until they are ten a child is a bundle**: a head and a blanket, carried on someone's back.
+  They go nowhere by themselves and do nothing
+- **A bundle has needs of its own, and someone has to see to them.** Whoever looks after it
+  carries it, feeds it and puts it down when they must: in a bed, or on a table, some other
+  surface or the ground. Anywhere but a bed it is the worse for it, the more so the longer it
+  is left
+- **A bundle nobody looks after dies.** Its parents look after it first. With them dead, gone
+  or not seeing to it, someone else may take it in, by who they are and what they felt for the
+  parents, and the player is given a say before it is too late
+- **Whoever takes a child in is its parent from then on**: adoption is kin like any other, kept
+  beside the parents it was born to, and both are in the tree
+- **From ten, a child is kept out of nothing but romance and sex.** They can be given a post,
+  get into a fight, take a substance (S24), be tried and be punished (S28). None of it is taken
+  as it would be with a grown man or woman: whoever sees a child at work, hurt, drunk or
+  punished is the worse for it in mood, far more than for the same thing done by or to an
+  adult, and with mood low a settlement argues and comes to blows that much sooner (S15). Once
+  there is a government it is held against it as well (S28, S29)
+- **Kin are kept by stable IDs**: who someone's parents, children, brothers and sisters and
+  spouse are. The rest of a family is worked out from those, and so is the family tree, the
+  dead included (S7)
+- **Kin matter.** What is felt for a child, a parent, a brother or a sister starts from being
+  kin, in each direction by itself as always, and what is done to one of them is taken as done
+  to one's own
+- Romance and sex stay between adults, as they are (S9), and are never between close kin
+- A save from before loads with nobody kin to anybody
+
+Done when: over a long headless run a couple marries and has a child; two who are no couple,
+get on very well and both have a high libido go off alone together, and two with a low one do
+not, nor two of whom one is not drawn to the other; a child is born nine weeks after it was
+conceived, to the two whose child it is; a second child is brother or sister to the first; for
+twelve weeks a child is carried about, put down and seen to, and does nothing else, and at the
+end of them is ten years old, walks, and can be given a post; a year after that they are
+eleven, on their birthday; a bundle left on the ground is worse off than one in a bed; a bundle
+whose parents die is taken in by someone and lives, or by nobody and dies, and never without
+the player having had a say; nobody under eighty dies of old age, and someone old enough does
+and is buried; someone with no bed sleeps on the ground and wakes less rested; a settlement that
+puts a child to work is lower in mood and quicker to quarrel than the same settlement, with the
+same seed, that does not; the tree of a family is the same after saving and loading, with a
+dead grandparent still in it; and someone whose brother is hurt takes it worse than someone to
+whom he is nobody.
+
+Tests it is not done without: a child's parents, and brothers and sisters worked out from them;
+no romance or sex with anyone under age, whatever their libido, or between close kin; libido
+deciding who goes off with whom; being drawn to someone, or not, deciding it first; sex
+deciding who can have a child, and gender deciding nothing of it; nine weeks from conception to
+birth; the date worked out from the day, through months and years; a child's age week by week
+up to ten, and year by year after; a bundle that is carried and never walks; a bundle faring
+worse out of a bed; a bundle with nobody dying, and one taken in living; adoption in the tree
+beside birth; a birthday as an event; no death of old age before eighty, and one after;
+sleeping on the ground for want of a bed; a child at work seen and taken worse
+than an adult at the same post; the same seed giving the same births; kin, sex, gender, who
+they are drawn to and dates of birth kept by saving and loading; and a save from before, with
+everyone the age they were and drawn to both.
+
+Still to settle:
+- What date a settlement begins on
+- How fast the chance of dying of old age grows after eighty
+- What somebody in a save from before has for sex and gender
+- Whether libido is fixed like the rest of a way of being, or rises and falls
+- What a child takes from their parents: way of being, traits, tastes, looks
+- Whether those who come to the gate come with kin, and whether anyone there already is kin to
+  anyone
+
+### P25 — Coin, smoke and kin on screen (needs S23 to S25) — planned
+- The currency named and drawn in the game, and seen wherever something is paid
+- The fund in the bar, beside what the settlement has in food and scrap
+- A substance seen to be taken, each of the four ways, and seen on whoever is under it: how
+  they walk, the smoke round them
+- A resident's family in their panel, and the tree of it on a screen of its own
+- **A child is drawn when they are born, as the adult they will be**: the same screen, the same
+  paper and the same measures as anyone (P17, P19)
+- **Until they are ten, what is seen of a child is their head and a blanket**: on the back of
+  whoever carries them, and in the bed, on the table or on the ground where they are put down
+- **From ten until they are grown the body is shown smaller and the head is not**: the one
+  drawing does for every age, and the body comes up to its drawn size as they grow
+- **A child nobody has drawn has a look the game comes with for children**, one for all of them
+- Sex, gender, who they are drawn to and the slider for libido where the first resident is made
+- The date by the clock, and a birthday seen when it comes round
+
+Still to settle:
+- How small the body of a ten-year-old is, and whether it grows year by year or in a few steps
+
+### S26 — Who is in charge (needs S20) — planned
+Politics comes in four milestones, S26 to S29, and a screen, P26. It has a module of its own,
+`simulation/politics/`: `government.py`, `leadership.py`, `voting.py`, `law.py`, `punishment.py`,
+`legitimacy.py`, `unrest.py`, `faction.py` and `political_event.py`.
+
+What holds for all four:
+- The player is not the mayor and is nobody in the settlement. They propose, advise and
+  influence, and never govern
+- Whoever leads is a resident like any other, with a role. There is never a mayor apart from
+  `Resident`
+- Fear, support, legitimacy and loyalty are four things, and none stands in for another
+- Nobody knows a thing because the world does: residents vote and react on what they saw, were
+  told or believe
+- What politics does to people it does to each of them in their own way, by who they are, what
+  they remember, who was involved and how things stand
+- A government can fall, change or split the settlement, and the game goes on
+- A harsh punishment always leaves memories, reactions and political risk behind it
+- No vote and no outcome is a roll alone, and nothing political is decided in a scene or the UI
+- Politics is built on relationships, rumours, memory and events, and replaces none of them
+- All of it runs headless, without pygame
+
+This one:
+- **Governments as data** (`data/governments.json`), one definition for all of them and no class
+  for each: `strong_mayor`, `council`, `direct_democracy`, `military_leadership`, `commune` and
+  `personalist_rule` to begin with. Each says who may propose, who approves, who votes, how much
+  the leader's word weighs, whether there is a veto, how long a term lasts where there are
+  terms, how the next leader comes to be, and how much abuse of power is put up with
+- **The settlement's government is state**: its kind, who leads, who sits on the council, its
+  rules for elections and for votes, and the laws in force. The kind can change in the middle
+  of a game
+- **There is no government until there are three.** One or two people simply get along. When a
+  third is living there the settlement chooses its kind of government: the residents choose,
+  each by what they hold, with the player given a say. Dropping back under three undoes nothing
+- **Two more sides to a way of being: charisma and leadership.** Charisma is how readily others
+  are won over by someone; leadership is how well others do under them. Both are data like the
+  other six, have a slider where the first resident is made (P16), and are in the middle for
+  everyone in a save from before
+- **A leader is a resident with a role**: `Resident.roles`, IDs that are saved, such as `mayor`.
+  They fall ill, fall in love, steal, take to drink or worse (S24), lose an election, are
+  locked up, resign, die, are killed or are thrown out, as anybody might
+- **Losing a leader ends nothing.** Dead, gone or removed, the government's own way of
+  succession names the next one, or the place stands empty until it does
+- **Seven measures of the settlement, from 0 to 100**: legitimacy, public support, fear, unrest,
+  political stability, authoritarianism and corruption. Each moves by itself: a settlement may
+  be afraid and obedient, with little legitimacy and a great deal of resentment
+- **A political profile for each resident**, kept apart from `Resident` as their tastes are:
+  authoritarian tolerance, justice sensitivity, collectivism, individualism, revengefulness,
+  fearfulness, political interest, loyalty to the leader and trust in the government. The
+  player is not necessarily shown any of it
+- **Obeying and resenting are kept apart**: someone may do as the government says and hate it
+- **A political event is a domain event of a kind of its own** (`PoliticalEvent`), with who took
+  part, who saw it and how much it matters, so that history, sound and the screen can follow
+- Kind of government, leader, council and measures are saved, by stable IDs
+
+Done when: a settlement of two has no government, and chooses one when a third comes to live
+there; a settlement runs four weeks headless under each kind of government; a leader who
+resigns is followed by another by the rules of the government in force; a mayor who dies leaves
+a settlement that goes on, with or without a successor; and a settlement can be brought to high
+fear with low loyalty to its leader.
+
+Tests it is not done without: no government with two and one chosen with three; a change of
+leader; the mayor's death without the game ending; fear apart from loyalty; a save from before
+loading with charisma and leadership in the middle; and the module imported without pygame.
+
+Still to settle:
+- Which kind the ready-made settlement starts under, or whether it chooses on its first day
+- Whether loyalty is to the person or to the place they hold, and so what is left of it for
+  the next leader
+- Where a resident's political profile starts from: their personality and traits, and whether a
+  leaning of their own on top, made from the seed as tastes are (S19)
+
+### S27 — Proposals and votes (needs S26) — planned
+- **The player proposes and the settlement decides.** A proposal goes into the process of the
+  government in force, to the leader, the council or a vote as its kind says, and comes out
+  accepted, changed or rejected. Only then does anything follow. Nothing the player proposes is
+  simply done, unless the government in force allows it
+- **What can be proposed**, as data: rationing food, changing a law, punishing a resident (S28),
+  calling an election, throwing somebody out, declaring property common, changing how the
+  settlement trades (S23). Building something, such as an infirmary, is proposed this way once
+  there is building (S16), and not before
+- **A vote is yes, no or an abstention, and is worked out for each voter**: what they think of
+  the proposal and of the people in it, what they hold, their fear, their trust in the
+  government, what they stand to gain or lose, and what they remember. Somebody may vote down
+  what would do them good because they hate the leader, because it helps an enemy, because it
+  goes against what they hold, or for fear of what follows
+- **The player may work on residents before a vote**, and cannot cast it for them
+- **The player's influence is a layer of its own**: for each resident, trust in the player,
+  resistance to the player, and how much they lean on the player's advice. A proposal weighs
+  differently with each of them, and a resident may take the advice, change it, ignore it or do
+  the opposite. It builds on advice (S4) and on the taste for being told what to do (S20)
+- **Elections**, under the governments that have them. Who stands goes by reputation,
+  relationships, leadership, charisma, how many are behind them, and factions (S29). A result
+  leaves memories and consequences: a loser who resents it, a winner with legitimacy, talk of
+  fraud, followers let down
+- **What politics does is remembered**: "El alcalde encarceló a mi hermano", "Marta votó contra
+  mi expulsión", "El jugador impulsó una elección", "El consejo ignoró la escasez". Such
+  memories weigh on later votes, on relationships and on support
+- Proposals still pending, the history of elections and political memories are saved
+
+Done when: the same proposal is voted for by one resident and against by another, each for
+reasons that can be read back from who they are; a proposal the player makes is turned down, and
+nothing of it happens; an election is held, its winner leads, and the result is still there after
+saving and loading; and those who took part remember it.
+
+Tests it is not done without: a vote that follows the voter's own opinion; a proposal of the
+player's rejected; an election whose result is kept; and political memories.
+
+### S28 — Laws and punishment (needs S27, and S23 to S25) — planned
+- **Laws as data** (`data/laws.json`): `rationing`, `private_property`, `communal_property`,
+  `weapon_restrictions`, `drug_rules`, `curfew`, `theft_penalties`, `election_rules`. A law
+  changes what residents do and what follows from what they do. It is never only words.
+  `drug_rules` says which substances (S24) may be had and taken, and where. `pregnancy_work`
+  says whether whoever is carrying a child keeps their post (S25)
+- **A scale of punishments, as data** (`data/punishments.json`): `warning`, `fine`,
+  `confiscation`, `community_service`, `prison`, `public_stocks`, `exile`, `corporal_punishment`
+  and `execution`
+- **A punishment needs its place.** A jail is a building, and the stocks, a gallows and a
+  guillotine are things put down in Urbanismo, each drawn as everything put down is (P15, P17).
+  Without a jail nobody is locked up, without stocks nobody is put in them, and without a
+  gallows or a guillotine nobody is put to death
+- **A fine goes into the common fund** (S23), in coin or, under barter, in things
+- **Exile is walking out for good**: whoever is exiled goes to the gate and through it, and does
+  not come back. What depended on them is let go of as on a death (S7), with no grave
+- **A punishment moves fear, legitimacy, unrest, support, resentment and relationships, by how
+  things stand.** Putting to death a killer whom most hate may raise support. Putting to death
+  someone held to be innocent sinks legitimacy and sends unrest up
+- **The harsh ones are political events of the first order**, and as with anything that cannot be
+  undone, the player is given a say before they are carried out
+- **Nothing gory is shown.** What happened is recorded with its consequences, with no detailed
+  animation of it
+- **A trial in six steps**: accusation, evidence, witnesses, defence, verdict, punishment. It
+  goes by memory, knowledge, witnesses, rumours and relationships, and never by what the world
+  knows: each resident judges, votes and reacts on what they believe they know
+- **A punishment in public is a political event that records** who was condemned, for what, to
+  what, who was there, which of them were kin (S25) or friends, how each took it and what
+  memories it left
+- **Each takes it their own way**: approval, fear, anger, grief or indifference. There is never
+  one consequence dealt out the same to everybody
+- **A child can be tried and punished like anyone** (S25), and it costs a government far more:
+  in legitimacy, in support and in unrest, by each of those who see it or come to hear of it.
+  So does a law or a post that puts children to work
+- Laws in force and the history of punishments are saved
+
+Done when: a law in force changes what residents are seen to do over a week; a theft that was
+witnessed goes to trial and one that nobody saw cannot; nobody is sentenced to what the
+settlement has no place for; someone exiled is gone from the map, the posts and the beds, and
+is still in the memories of those they left; the same punishment raises legitimacy when those
+watching hold the condemned guilty and sinks it when they hold them innocent; and after a harsh
+one the kin of the condemned and those who wanted it remember it differently.
+
+Tests it is not done without: legitimacy after a just punishment, and its fall after an unjust
+one; a fine reaching the fund; exile removing a resident without breaking what depended on
+them; and no prison without a jail.
+
+Still to settle:
+- What a day locked up is, and how a sentence is counted
+- Whether someone exiled is ever heard of or met again, outside or at the gate (S10, S11)
+
+### S29 — Unrest and factions (needs S28) — planned
+- **Trouble of eight kinds, as data**: `protest`, `refusal_to_work`, `sabotage`, `riot`, `coup`,
+  `forced_election`, `settlement_split` and `revolt`
+- **A crisis comes of three things together**: unrest over its mark, legitimacy under its own,
+  and more means to resist than fear can hold down
+- **What is done to children brings it on sooner** (S25, S28): unrest rises faster for a child
+  worked, hurt or punished than for anything of the kind done to an adult
+- **A crisis is not the end of the game.** A rebellion may change the leader, change the
+  government, split the people, throw the leader out, bring on an election or leave a rival
+  faction behind
+- **Factions come about by themselves**, and there need not be any: from strong ties, from what
+  people hold, from being against the leader, from a common interest, from an old quarrel.
+  Such as `supporters_of_marta`, `anti_mayor_bloc`, `military_group`, `communalists`
+- **A faction is laid over relationships and takes the place of none**
+- Factions weigh on who stands in an election and on how its members vote (S27)
+- Factions are saved
+
+Done when: unrest kept high brings a protest; with legitimacy low and little fear to hold it
+down, a rebellion changes the leader or the kind of government, and the settlement goes on for
+weeks afterwards; a faction forms in one run among people who were already close or of a mind,
+and in another run none forms at all.
+
+Tests it is not done without: a protest from high unrest; and a rebellion that changes the
+government.
+
+Still to settle:
+- What a split settlement is: whether those who leave are gone for good, or are a place outside
+  that can be heard of and met again (S10, S11)
+- What somebody's means to resist are counted from: how many they are, weapons, who keeps
+  the watch
+
+### P26 — Politics on screen (needs S26 to S29) — planned
+- A government entry in the menu: its kind, who leads, who sits on the council, the laws in force
+- The choosing of a government, when the third resident comes, as something seen and advised on
+- The jail, the stocks, the gallows and the guillotine, in Urbanismo and in their editors
+- Where a proposal is made, and where it is seen to go: who has it, how each vote went, what
+  came of it
+- An election, a trial and a public punishment seen as they happen, with nothing gory
+- Trouble on the map: who has stopped work, who is out protesting
+
+Still to settle:
+- How much of the settlement's measures the player is shown, and whether as figures or as the
+  mood of the place. What each resident holds is found out, as their tastes are, and not read
+  off a panel
 
 ## Later
 - SQLite persistence

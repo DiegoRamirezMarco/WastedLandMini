@@ -168,7 +168,16 @@ room. An argument's importance rises with the resentment between the two.
   mends once it is answered, and kills in the end. Thirst does it in a few days, hunger in a week.
 - **Energy.** Generator fuel is kept in a generator container. When night begins, the generator
   burns one unit. Lamps of kind `lamp` only light the map while fuel remains, and radios give no
-  warning without power.
+  warning without power. Fuel brought in from outside is left in a crate, and it is the mechanic
+  who carries it on to the generator: a load at a time, or at once when the generator is
+  running low. With nobody at the workshop the fuel waits and the lamps go out. A settlement
+  with no workbench has nobody to wait for, and there the fuel goes straight in.
+- **Medicine.** The clinic's care uses it up. Whoever lies in a clinic bed with the medic on
+  duty is given a unit from the cabinet, which goes on working in them for half a day; with
+  none left they mend as anyone lying down does, and the settlement is told once a day
+  (`no_medicine`). None is spent on what comes of going without water or food. It comes from
+  outside: what a trip brings back goes to the cabinet, and what a caravan leaves at the shop
+  is fetched from there by the medic.
 - **Mood.** Mood is saved on each resident. Memories and decisions can nudge it, and the minute
   to minute state of the body pulls it slowly up or down. Low mood makes arguments more likely and
   productive work slower.

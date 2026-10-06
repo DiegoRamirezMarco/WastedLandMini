@@ -51,6 +51,8 @@ class Resident:
     # Whether they are looking for a job to take, as someone newly arrived is.
     seeks_work: bool = False
     injuries: list[Injury] = field(default_factory=list)
+    # Game minute until which the last dose they were given in care goes on working.
+    dosed_until: int = 0
     # IDs of the limbs they have lost for good, from the limb registry.
     lost_limbs: list[str] = field(default_factory=list)
     # Where they walked during the last tick, starting where the tick began: a point for each

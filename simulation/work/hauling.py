@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from simulation.items.inventory import Inventory
 from simulation.items.item import ItemInstance
 from simulation.residents.resident import Resident
-from simulation.work.job import INTO_STATION, ProduceRule
+from simulation.work.job import INTO_STATION, ProduceRule, SupplyRule
 from world.interactable import Interactable
 
 if TYPE_CHECKING:
@@ -88,6 +88,65 @@ def errand(world: "SimulationWorld", resident: Resident, rule: ProduceRule, shif
         if post is None or post.count(rule.item) >= rule.max_stock:
             return None
     return fetch_source(world, rule)
+
+
+def _supply_source(world: "SimulationWorld", rule: SupplyRule) -> tuple[int, str] | None:
+    """The fullest shared stack of what is supplied that lies anywhere but where it goes, and its container."""
+    best: tuple[int, str] | None = None
+    for object_id, inventory in world.containers.items():
+        placed = world.interactables.get(object_id)
+        stack = inventory.stack_of(rule.item, None)
+        if placed is None or placed.kind == rule.into or stack is None:
+            continue
+        if best is None or stack.quantity > best[0]:
+            best = (stack.quantity, object_id)
+    return best
+
+
+def supply_errand(world: "SimulationWorld", resident: Resident, rule: SupplyRule, shift_minutes_left: int) -> str | None:
+    """The container a worker should walk to now, to keep what they look after supplied.
+
+    What they carry is taken where it goes, shift or no shift. They go for more when a full load
+    of it is lying somewhere, or at once, for whatever there is, when what they look after runs low.
+    """
+    receiving = [
+        (inventory.count(rule.item), object_id)
+        for object_id, inventory in containers_of_kind(world, rule.into)
+        if inventory.count(rule.item) < rule.max_stock
+    ]
+    if not receiving:
+        return None
+    held, target = min(receiving)
+    if carried(resident, rule.item) > 0:
+        return target
+    source = _supply_source(world, rule) if shift_minutes_left >= MIN_FETCH_MINUTES else None
+    if source is None:
+        return None
+    return source[1] if held < rule.low or source[0] >= rule.carry else None
+
+
+def supply_exchange(world: "SimulationWorld", resident: Resident, rule: SupplyRule, placed: Interactable) -> str | None:
+    """Leave or pick up what is supplied at the container a worker has walked to. Returns what they did."""
+    container = world.containers.get(placed.object_id)
+    if container is None:
+        return None
+    definition = world.definition_of(placed)
+    where = f"{definition.article} {definition.name}"
+    name = world.registries.items.resolve(rule.item).name
+    on_them = resident.inventory.stack_of(rule.item, None)
+    if placed.kind == rule.into:
+        units = min(on_them.quantity, rule.max_stock - container.count(rule.item)) if on_them is not None else 0
+        if units <= 0:
+            return None
+        resident.inventory.take_units(on_them.instance_id, units)
+        world.stock(container, rule.item, units, None)
+        return f"lleva {units} de {name} a {where}"
+    stack = container.stack_of(rule.item, None)
+    if stack is None or on_them is not None:
+        return None
+    units = container.take_units(stack.instance_id, rule.carry)
+    world.stock(resident.inventory, rule.item, units, None)
+    return f"coge {units} de {name} de {where}"
 
 
 def exchange(world: "SimulationWorld", resident: Resident, rule: ProduceRule, placed: Interactable) -> str | None:

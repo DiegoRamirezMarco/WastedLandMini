@@ -32,6 +32,11 @@ class UseDefinition:
     # Whether lying here mends injuries, and the job whose worker makes it mend them faster.
     heals: bool = False
     care_job: str | None = None
+    # Tag of the item that care uses up, the kind of container it is taken from, and how many minutes
+    # one unit goes on working in whoever was given it. With none left, lying here is only rest.
+    care_item: str | None = None
+    care_from: str | None = None
+    dose_minutes: int = 0
     # Credits it costs to use.
     price: int = 0
     # Whether the use is buying one of the things kept inside, at that thing's price.
@@ -120,6 +125,8 @@ def _use_from_data(kind: str, data: dict[str, Any]) -> UseDefinition:
     price, repairs = int(data.get("price", 0)), float(data.get("repairs", 0.0))
     if price < 0 or repairs < 0:
         raise ValueError(f"Use of interactable {kind} has a negative price or repair rate")
+    if data.get("care_item") is not None and int(data.get("dose_minutes", 0)) < 1:
+        raise ValueError(f"Use of interactable {kind} gives care with an item, so a dose must last a minute or more")
     return UseDefinition(
         action=str(data["action"]),
         text=str(data["text"]),
@@ -136,6 +143,9 @@ def _use_from_data(kind: str, data: dict[str, Any]) -> UseDefinition:
         staffed_by=str(data["staffed_by"]) if data.get("staffed_by") is not None else None,
         heals=bool(data.get("heals", False)),
         care_job=str(data["care_job"]) if data.get("care_job") is not None else None,
+        care_item=str(data["care_item"]) if data.get("care_item") is not None else None,
+        care_from=str(data["care_from"]) if data.get("care_from") is not None else None,
+        dose_minutes=int(data.get("dose_minutes", 0)),
         price=price,
         sells=bool(data.get("sells", False)),
         repairs=repairs,

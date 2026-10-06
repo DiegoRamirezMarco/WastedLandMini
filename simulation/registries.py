@@ -272,6 +272,13 @@ class BuiltInRegistries:
                 job.tool.tag in self.items.get(item_id).tags for item_id in self.items.ids()
             ):
                 raise ValueError(f"Job {job_id} uses a tool that no item is tagged as: {job.tool.tag}")
+            supply = job.supplies
+            if supply is not None:
+                if self.items.find(supply.item) is None:
+                    raise ValueError(f"Job {job_id} supplies unknown item: {supply.item}")
+                holder = self.interactables.find(supply.into)
+                if holder is None or not holder.container:
+                    raise ValueError(f"Job {job_id} supplies must go 'into' a container kind, not: {supply.into}")
             rule = job.produces
             if rule is None:
                 continue
@@ -287,6 +294,9 @@ class BuiltInRegistries:
                 raise ValueError(f"Interactable {kind} is staffed by unknown job: {use.staffed_by}")
             if use is not None and use.care_job is not None and use.care_job not in self.jobs:
                 raise ValueError(f"Interactable {kind} is cared for by unknown job: {use.care_job}")
+            source = self.interactables.find(use.care_from) if use is not None and use.care_from else None
+            if use is not None and use.care_item is not None and (source is None or not source.container):
+                raise ValueError(f"Interactable {kind} takes what its care uses up from no kind of container")
         for kind, decision in self.decisions.items():
             for outcome in decision.outcomes.values():
                 if outcome.interaction is not None and outcome.interaction not in self.interactions:
@@ -322,6 +332,8 @@ class BuiltInRegistries:
             holder = self.interactables.find(rule.to)
             if holder is None or not holder.container:
                 raise ValueError(f"Expedition finds are delivered to {rule.to}, which is not a container kind")
+            if rule.needs is not None and self.interactables.find(rule.needs) is None:
+                raise ValueError(f"Expedition finds are delivered by a rule that needs an unknown object kind: {rule.needs}")
         traits = set(vars(Personality()))
         for newcomer in self.world_events.newcomers:
             unknown = newcomer.personality.keys() - traits

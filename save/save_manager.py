@@ -62,13 +62,28 @@ FIRST_ECONOMY_VERSION = 8
 # chosen, as in any older save, goes by the ones that are theirs by default.
 # Version 22 added how long somebody on a walk has been held up by whoever is in their way. A
 # save from before has nobody held up, and may have two people on one tile: they walk apart.
+# Version 23 added medicine, kept in the clinic's cabinet, and the dose each resident is under. A
+# save from before has nobody under one, finds its cabinet stocked as the map stocks it, and has
+# the furniture of the south house moved to where nobody is walled in by it.
 LAST_MAP_CHANGE_VERSION = 16
+# A save older than this gives the containers it never had what the map starts them with.
+LAST_STOCK_CHANGE_VERSION = 23
+FIRST_MEDICINE_VERSION = 23
+# Objects of a built-in map that were moved after saves had been made with them: where each
+# stood, and where it stands now. A save from before has them moved if they are still there.
+MOVED_ON_THE_MAP: dict[str, dict[str, tuple[tuple[int, int], tuple[int, int]]]] = {
+    DEFAULT_MAP_ID: {
+        "crate_south": ((8, 24), (7, 27)),
+        "bed_6": ((7, 24), (8, 24)),
+        "bed_10": ((7, 26), (8, 26)),
+    }
+}
 FIRST_URBANISM_VERSION = 17
 FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 22
+    CURRENT_VERSION = 23
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -147,6 +162,7 @@ class SaveManager:
                     "last_expedition_day": resident.last_expedition_day,
                     "seeks_work": resident.seeks_work,
                     "injuries": [vars(injury) for injury in resident.injuries],
+                    "dosed_until": resident.dosed_until,
                     "lost_limbs": list(resident.lost_limbs),
                     "inventory": _inventory_to_data(resident.inventory),
                 }
@@ -315,6 +331,7 @@ class SaveManager:
                     for injury in resident_data.get("injuries", [])
                     if isinstance(injury, dict)
                 ],
+                dosed_until=int(resident_data.get("dosed_until", 0)),
                 # A limb that is no longer defined is simply not missed.
                 lost_limbs=[
                     str(limb)
@@ -449,7 +466,7 @@ class SaveManager:
             (_item_number(item.instance_id) for inventory in everything for item in inventory.items), default=0
         )
         world.item_count = max(int(data.get("item_count", 0)), highest)
-        if version < LAST_MAP_CHANGE_VERSION:
+        if version < LAST_STOCK_CHANGE_VERSION:
             # Containers the map has gained since start with what the map puts in them.
             for entry in world.registries.maps[world.map_id].stock:
                 container = world.containers.get(entry.container)
@@ -628,11 +645,43 @@ class SaveManager:
             for object_id, placed in from_map.items():
                 if object_id not in world.interactables and (placed.x, placed.y) not in taken:
                     world.interactables[object_id] = placed
+        if version < FIRST_MEDICINE_VERSION:
+            self._move_what_the_map_moved(world)
         world.containers = {
             object_id: containers_before.get(object_id, Inventory())
             for object_id, placed in world.interactables.items()
             if world.definition_of(placed).container
         }
+
+    def _move_what_the_map_moved(self, world: SimulationWorld) -> None:
+        """Put objects an older save has where the map used to have them where the map has them now.
+
+        Only what still stands exactly where it did is moved, and only onto ground nothing else is on:
+        whatever the player has rearranged since is left as they left it.
+        """
+        pending = dict(MOVED_ON_THE_MAP.get(world.map_id, {}))
+        progress = True
+        # One may be standing where another is going, so they are gone over until none can move.
+        while pending and progress:
+            progress = False
+            for object_id, (old, new) in list(pending.items()):
+                placed = world.interactables.get(object_id)
+                if placed is None or (placed.x, placed.y) != old:
+                    del pending[object_id]
+                    continue
+                definition = world.definition_of(placed)
+                moved = Interactable(object_id, placed.kind, new[0], new[1])
+                others = {
+                    tile
+                    for other in world.interactables.values()
+                    if other.object_id != object_id
+                    for tile in other.footprint(world.definition_of(other))
+                }
+                if any(tile in others or not self._can_stand(world, tile) for tile in moved.footprint(definition)):
+                    continue
+                world.interactables[object_id] = moved
+                del pending[object_id]
+                progress = True
 
     def _restore_urbanism(self, world: SimulationWorld, data: dict[str, Any]) -> None:
         """Restore an edited map, ignoring malformed optional layout entries safely."""

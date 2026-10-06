@@ -250,6 +250,7 @@ LOW_HEALTH = 70.0
 PRESSING_NEED = 85.0
 SCRAP_TAG = "scrap"
 FUEL_TAG = "fuel"
+MEDICINE_TAG = "medicine"
 
 
 def taste_rows(world: SimulationWorld, resident: Resident) -> list[tuple[str, str, str | None]]:
@@ -376,18 +377,20 @@ def settlement_counts(world: SimulationWorld) -> list[tuple[str, str]]:
         for placed in world.interactables.values()
         if (use := world.definition_of(placed).use) is not None and use.action == BED_USE_ACTION
     )
-    food = water = scrap = fuel = 0
+    food = water = scrap = fuel = medicine = 0
     for definition_id, quantity in settlement_stock(world):
         definition = world.registries.items.resolve(definition_id)
         food += quantity if definition.category == FOOD_CATEGORY else 0
         water += quantity if definition.category == WATER_CATEGORY else 0
         scrap += quantity if SCRAP_TAG in definition.tags else 0
         fuel += quantity if FUEL_TAG in definition.tags else 0
+        medicine += quantity if MEDICINE_TAG in definition.tags else 0
     return [
         ("people", f"{len(world.residents)}/{beds}"),
         ("food", str(food)),
         ("water", str(water)),
         ("energy", str(fuel)),
+        ("medicine", str(medicine)),
         ("scrap", str(scrap)),
     ]
 

@@ -205,7 +205,7 @@ on displays of different resolutions.
 
 | Part | Where | What it holds |
 |---|---|---|
-| Bar | Across the top, 26 high | The day on a plaque, sun or moon and the hour, pause and speed, what the settlement has (people and beds, food, water, fuel, scrap) as an icon and a figure each, the weather, and zoom. Under them one line: a word from the game, whoever waits for advice, or the latest news |
+| Bar | Across the top, 26 high | The day on a plaque, sun or moon and the hour, pause and speed, what the settlement has (people and beds, food, water, fuel, medicine, scrap) as an icon and a figure each, the weather, and zoom. Under them one line: a word from the game, whoever waits for advice, or the latest news |
 | Menu | Down the left, 58 wide | An icon at ×2 over a word for each entry: residents, posts, stores, events, map. The open one is framed in `lamp` |
 | Map | The middle | The settlement. What the menu opens floats over its top right corner, one thing at a time; the minimap keeps to its bottom left |
 | Panel | Down the right, 196 wide | Whoever is selected, in full; a container's contents; or, with nothing selected, everybody at a glance |

@@ -150,6 +150,16 @@ ICONS = {
         "..yy....",
         ".oo.....",
     ],
+    "medicine": [
+        "..oooo..",
+        ".oppppo.",
+        "oppbbppo",
+        "opbbbbpo",
+        "opbbbbpo",
+        "oppbbppo",
+        ".oppppo.",
+        "..oooo..",
+    ],
     "scrap": [
         "oooooooo",
         "ohhhhhho",

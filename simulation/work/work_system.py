@@ -121,6 +121,10 @@ class WorkSystem:
             errand = hauling.errand(world, resident, job.produces, remaining)
             if errand is not None:
                 return ScoredAction(HAUL_ACTION, WORK_SCORE, errand)
+        if job.supplies is not None:
+            errand = hauling.supply_errand(world, resident, job.supplies, remaining)
+            if errand is not None:
+                return ScoredAction(HAUL_ACTION, WORK_SCORE, errand)
         if job.expedition is not None:
             # What was brought back from outside is put away before anything else.
             errand = world.expeditions.errand(world, resident)
@@ -192,6 +196,9 @@ class WorkSystem:
             # Hands full, or nothing left to work with: off on an errand.
             self._leave(resident)
             return
+        if job.supplies is not None and self._called_away(world, resident, job, placed, activity.minutes_left):
+            self._leave(resident)
+            return
         if activity.minutes_left <= 0 or world.activities.urgent_needs(world, resident):
             self._leave(resident)
 
@@ -204,6 +211,8 @@ class WorkSystem:
             return
         if not activity.using:
             done = hauling.exchange(world, resident, job.produces, placed) if job.produces is not None else None
+            if done is None and job.supplies is not None:
+                done = hauling.supply_exchange(world, resident, job.supplies, placed)
             if done is None and job.expedition is not None:
                 done = world.expeditions.unload(world, resident, placed)
             if done is None:
@@ -244,6 +253,14 @@ class WorkSystem:
             ),
             at=resident.tile,
         )
+
+    def _called_away(
+        self, world: "SimulationWorld", resident: Resident, job: JobDefinition, placed: Interactable, shift_left: int
+    ) -> bool:
+        """Whether a worker should leave the post to fetch what they keep supplied. Nobody being served is left."""
+        if world.users_of(placed.object_id) > 0:
+            return False
+        return hauling.supply_errand(world, resident, job.supplies, shift_left) is not None
 
     def _leave(self, resident: Resident) -> None:
         resident.activity = None

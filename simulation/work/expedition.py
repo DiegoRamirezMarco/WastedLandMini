@@ -33,6 +33,9 @@ class Delivery:
 
     to: str
     tag: str | None = None
+    # Kind of object the settlement has to have for a find to be taken there: fuel is left in
+    # store only where there is a post whose worker carries it on to the generator.
+    needs: str | None = None
 
 
 @dataclass(frozen=True)
@@ -88,7 +91,11 @@ def expedition_settings_from_data(data: dict[str, Any]) -> ExpeditionSettings:
     return ExpeditionSettings(
         loot=loot,
         deliveries=tuple(
-            Delivery(str(entry["to"]), str(entry["tag"]) if "tag" in entry else None)
+            Delivery(
+                str(entry["to"]),
+                str(entry["tag"]) if "tag" in entry else None,
+                str(entry["needs"]) if "needs" in entry else None,
+            )
             for entry in data.get("deliveries", [])
         ),
         injury=(low, high),

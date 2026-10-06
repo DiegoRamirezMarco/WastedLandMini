@@ -8,6 +8,7 @@ from simulation.items.item import ItemInstance
 from simulation.residents.activity import MOVE_TILES_PER_MINUTE
 from simulation.residents.resident import Resident
 from simulation.social.interaction import InteractionDefinition
+from simulation.work.hauling import containers_of_kind
 from world.interactable import Interactable, UseDefinition
 
 if TYPE_CHECKING:
@@ -31,6 +32,9 @@ LIMB_LOSS_IMPORTANCE = 85
 WORST_NEED = 99.5
 PRIVATION_IMPORTANCE = 60
 DEATH_IMPORTANCE = 95
+DOSE_IMPORTANCE = 10
+NO_CARE_ITEM_IMPORTANCE = 40
+NO_CARE_ITEM_NOTICE = "no_medicine"
 GRAVE_KIND = "grave"
 DEFAULT_INJURY = "bruise"
 
@@ -79,7 +83,12 @@ class HealthSystem:
         if resident.resident_id not in world.residents or not resident.injuries:
             return
         care = self.care_use(world, resident)
-        treated = care is not None and (care.care_job is None or world.work.is_staffed(world, care.care_job))
+        treated = (
+            care is not None
+            and (care.care_job is None or world.work.is_staffed(world, care.care_job))
+            and any(injury.kind not in wasting for injury in resident.injuries)
+            and self._dosed(world, resident, care)
+        )
         resting = care is not None or not world.is_aware(resident)
         for injury in resident.injuries:
             if injury.kind in wasting:
@@ -95,6 +104,47 @@ class HealthSystem:
                 rate = definition.heal_per_day * (BED_REST_BONUS if resting else 1.0)
             injury.severity -= rate / MINUTES_PER_DAY
         resident.injuries = [injury for injury in resident.injuries if injury.severity > 0]
+
+    def _dosed(self, world: "SimulationWorld", resident: Resident, care: UseDefinition) -> bool:
+        """Whether the care a resident lies in has what it takes: a dose still at work in them, or one given now.
+
+        With none to give, notice is given once a day and they mend as anyone lying down does.
+        """
+        if care.care_item is None:
+            return True
+        now = world.clock.total_minutes
+        if now < resident.dosed_until:
+            return True
+        for _, inventory in containers_of_kind(world, care.care_from or ""):
+            for item in inventory.items:
+                definition = world.registries.items.resolve(item.definition_id)
+                if item.owner_id is not None or care.care_item not in definition.tags:
+                    continue
+                inventory.take_unit(item.instance_id)
+                resident.dosed_until = now + care.dose_minutes
+                room = world.room_at(resident.tile)
+                world.emit_event(
+                    DomainEvent(
+                        "dose_given",
+                        DOSE_IMPORTANCE,
+                        f"A {resident.name} le dan {definition.name}",
+                        [resident.resident_id],
+                        location_id=room.room_id if room is not None else None,
+                        data={"item": definition.item_id},
+                    )
+                )
+                return True
+        if world.notices.get(NO_CARE_ITEM_NOTICE) != world.clock.day:
+            world.notices[NO_CARE_ITEM_NOTICE] = world.clock.day
+            world.emit_event(
+                DomainEvent(
+                    "no_medicine",
+                    NO_CARE_ITEM_IMPORTANCE,
+                    f"No queda con qué curar a {resident.name}: solo puede guardar cama",
+                    [resident.resident_id],
+                )
+            )
+        return False
 
     def _go_without(self, world: "SimulationWorld", resident: Resident) -> set[str]:
         """Worsen what a resident suffers from a need left at its worst. Returns the kinds that grew."""

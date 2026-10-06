@@ -119,6 +119,12 @@
     "per_minute": {
       "social": -0.03
     },
+    "supplies": {
+      "item": "medicine",
+      "into": "medicine_cabinet",
+      "low": 2,
+      "carry": 6
+    },
     "priority": 4
   },
   "mechanic": {
@@ -138,6 +144,12 @@
     "interruptible": true,
     "per_minute": {
       "social": -0.03
+    },
+    "supplies": {
+      "item": "fuel",
+      "into": "generator",
+      "low": 4,
+      "carry": 6
     },
     "priority": 2
   },

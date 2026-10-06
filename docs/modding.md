@@ -194,7 +194,9 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
   The tag `blade` makes the wounds it leaves cuts. `blade` and `firearm` also say in which of
   their manners whoever carries it fights (see Manners).
 - An object's use heals with `"heals": true`; `"care_job"` names the job whose worker on duty
-  makes it heal at the treated rate.
+  makes it heal at the treated rate. With `"care_item"` (an item tag), `"care_from"` (a
+  container kind) and `"dose_minutes"`, that care uses up one unit of such an item from such a
+  container for every `dose_minutes` someone is under it, and without one it is only rest.
 - An exchange in `data/social.json` is a fight if it has a `damage` range, e.g. `[8, 18]`.
 - A map's `graves` lists the tiles where the dead are buried, in the order they are used.
 
@@ -371,6 +373,11 @@ looks and nothing of what happens.
   container kind the worker carries the produce to. `from` and `from_category` name the raw
   material and the container kind the worker fetches it from, if the work needs any. `carry` is
   how many units go in one trip, either way (6 unless set).
+- `"supplies": {"item": "fuel", "into": "generator", "low": 4, "carry": 6}` has the worker keep
+  a kind of container stocked with an item from wherever else in the settlement it is lying.
+  They go for it when `carry` units are waiting in one place, or at once for whatever there is
+  when the receiving container holds fewer than `low`, and never while someone is being served
+  at their post. `max_stock` stops it (99 unless set). `into` must be a container kind.
 - `per_minute` changes the worker's needs while on duty, and `sight_bonus` extends how far they see.
 - `"tool": {"tag": "hoe", "speed": 1.5}` makes the work that much faster for a worker carrying a
   working item with that tag. At least one item must have the tag.
@@ -389,10 +396,13 @@ settlement is created, in `SimulationWorld.demo_world`.
 - `data/expeditions.json` says what is out there. `loot` lists items with a `weight`; the heavier,
   the oftener found. `deliveries` says where finds go, the first match winning:
   `{"tag": "water", "to": "water_tank"}`, `{"tag": "fuel", "to": "generator"}`,
+  `{"tag": "medicine", "to": "medicine_cabinet"}`,
   `{"tag": "scrap", "to": "scrap_pile"}` for items with a tag, `{"to": "shop_counter"}` for the
   rest. A rule whose kind of container does not stand anywhere in the settlement is passed over
   for the next that fits, which is what the rules after the catch-all are for: food to a
-  `pantry`, anything to a `crate`. `to` must be a container kind. `injury` and `injury_kind` are what a bad trip does.
+  `pantry`, anything to a `crate`. A rule with `"needs"` only counts where the settlement has an
+  object of that kind: `{"tag": "fuel", "to": "crate", "needs": "workbench"}` leaves fuel in store
+  where there is a workshop whose mechanic carries it on, and nowhere else. `to` must be a container kind. `injury` and `injury_kind` are what a bad trip does.
   `find_chance`, `push_on_finds`, `push_on_danger`, `push_on_minutes` and `turn_back_minutes`
   shape the risky find.
 - In `data/decisions.json` the game opens `risky_find` by ID, and an outcome's `"expedition"`

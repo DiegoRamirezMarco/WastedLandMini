@@ -17,6 +17,10 @@
       "weight": 3
     },
     {
+      "item": "medicine",
+      "weight": 0.4
+    },
+    {
       "item": "pizza_radioactiva",
       "weight": 0.5
     },
@@ -40,7 +44,16 @@
     },
     {
       "tag": "fuel",
+      "to": "crate",
+      "needs": "workbench"
+    },
+    {
+      "tag": "fuel",
       "to": "generator"
+    },
+    {
+      "tag": "medicine",
+      "to": "medicine_cabinet"
     },
     {
       "tag": "scrap",

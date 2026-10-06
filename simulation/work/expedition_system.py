@@ -163,7 +163,12 @@ class ExpeditionSystem:
         back, so that nobody is left holding it and unable to set out again.
         """
         tags = world.registries.items.resolve(item.definition_id).tags
-        fitting = [rule.to for rule in world.registries.expeditions.deliveries if rule.tag is None or rule.tag in tags]
+        kinds = {placed.kind for placed in world.interactables.values()}
+        fitting = [
+            rule.to
+            for rule in world.registries.expeditions.deliveries
+            if (rule.tag is None or rule.tag in tags) and (rule.needs is None or rule.needs in kinds)
+        ]
         return next((kind for kind in fitting if containers_of_kind(world, kind)), fitting[0] if fitting else None)
 
     def errand(self, world: "SimulationWorld", resident: Resident) -> str | None:

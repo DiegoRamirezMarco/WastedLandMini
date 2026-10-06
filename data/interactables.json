@@ -188,12 +188,16 @@
       "minutes": 360,
       "position": "on",
       "heals": true,
-      "care_job": "medic"
+      "care_job": "medic",
+      "care_item": "medicine",
+      "care_from": "medicine_cabinet",
+      "dose_minutes": 720
     }
   },
   "medicine_cabinet": {
     "name": "botiquín",
     "article": "un",
+    "container": true,
     "light": 3
   },
   "grave": {

@@ -100,6 +100,16 @@
     ]
   },
   {
+    "id": "medicine",
+    "name": "medicinas",
+    "article": "unas",
+    "category": "medicine",
+    "base_value": 18,
+    "tags": [
+      "medicine"
+    ]
+  },
+  {
     "id": "baton",
     "name": "porra",
     "article": "una",

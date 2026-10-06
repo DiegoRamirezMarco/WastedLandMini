@@ -27,6 +27,21 @@ class ProduceRule:
 
 
 @dataclass(frozen=True)
+class SupplyRule:
+    """Something a worker keeps a kind of container stocked with, from wherever else it is lying."""
+
+    item: str
+    # Kind of container it is carried to.
+    into: str
+    # With fewer than this where it goes, whatever there is of it is fetched at once.
+    low: int = 1
+    # How many units are carried in one trip. Short of running low, nobody sets out for less.
+    carry: int = 6
+    # Nothing more is carried while the receiving container already holds this many.
+    max_stock: int = 99
+
+
+@dataclass(frozen=True)
 class ToolRule:
     """A kind of tool that makes the work go faster, and wears out doing it."""
 
@@ -47,6 +62,8 @@ class JobDefinition:
     interruptible: bool = True
     per_minute: dict[str, float] = field(default_factory=dict)
     produces: ProduceRule | None = None
+    # What the worker sees to it that something else in the settlement never runs out of.
+    supplies: SupplyRule | None = None
     # Extra tiles a worker on duty can see, for those whose job is to keep watch.
     sight_bonus: int = 0
     tool: ToolRule | None = None
@@ -89,6 +106,20 @@ def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition
         )
         if produces.carry < 1:
             raise ValueError(f"Job {job_id} must carry at least 1 unit per trip")
+    supplies = None
+    if "supplies" in data:
+        rule = data["supplies"]
+        if "item" not in rule or "into" not in rule:
+            raise ValueError(f"Job {job_id} supplies needs an item and the kind of container it goes into")
+        supplies = SupplyRule(
+            item=str(rule["item"]),
+            into=str(rule["into"]),
+            low=int(rule.get("low", 1)),
+            carry=int(rule.get("carry", 6)),
+            max_stock=int(rule.get("max_stock", 99)),
+        )
+        if supplies.carry < 1 or supplies.low < 0:
+            raise ValueError(f"Job {job_id} must supply at least 1 unit per trip, and from a level that is not negative")
     tool = None
     if "tool" in data:
         tool = ToolRule(str(data["tool"]["tag"]), float(data["tool"].get("speed", 1.5)))
@@ -106,6 +137,7 @@ def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition
         interruptible=bool(data.get("interruptible", True)),
         per_minute={str(need): float(delta) for need, delta in data.get("per_minute", {}).items()},
         produces=produces,
+        supplies=supplies,
         sight_bonus=int(data.get("sight_bonus", 0)),
         tool=tool,
         wage=wage,

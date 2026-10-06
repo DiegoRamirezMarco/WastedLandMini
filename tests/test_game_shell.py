@@ -1409,6 +1409,7 @@ class GameShellTests(unittest.TestCase):
         world = self.game.world
         counts = dict(settlement_counts(world))
         self.assertEqual(counts["people"], f"{len(world.residents)}/11")
+        self.assertEqual(counts["medicine"], str(world.containers["medicine_cabinet"].count("medicine")))
         food = int(counts["food"])
         self.assertGreater(food, 0)
         pantry = world.containers["pantry_1"]

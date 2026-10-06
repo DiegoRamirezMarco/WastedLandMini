@@ -159,7 +159,8 @@
     {"container": "shop_counter", "item": "rusty_knife", "count": 1},
     {"container": "shop_counter", "item": "old_radio", "count": 1},
     {"container": "water_tank", "item": "water", "count": 220},
-    {"container": "generator", "item": "fuel", "count": 20}
+    {"container": "generator", "item": "fuel", "count": 20},
+    {"container": "medicine_cabinet", "item": "medicine", "count": 6}
   ],
   "graves": [
     [54, 28],
