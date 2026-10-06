@@ -457,6 +457,11 @@ settlement is created, in `SimulationWorld.demo_world`.
   - `stranger`: `asks` names the job whose worker on duty answers the gate.
   - `stock`: puts `count` things from `items` (each with a `weight`) into the first container of
     kind `container`, and says `text`.
+  - `merchant`: someone called `name` stops for `minutes` with `count` things from `items` and a
+    `purse` of coin, both ranges. They ask `sells_at` times a thing's base value for it and give
+    `buys_at` times for one, which must not be more. What is bought from them is left in the first
+    container of kind `container`, or else in the one nearest the way in. It says `text` when they
+    come and `end_text` when they go.
   - `weather`: lasts `minutes`, is called `name`, adds `stress_per_minute` to anyone not under a
     roof, and says `text` when it comes and `end_text` when it goes. A job marked
     `"outdoors": true` makes nothing while it lasts.
@@ -499,6 +504,17 @@ settlement is created, in `SimulationWorld.demo_world`.
   `price_factor` (a price is the item's `base_value` times this), `scarcity_markup` (how much
   dearer a thing gets as it runs out), `vacancy_notice_hours` and `week_days`. Every field has a
   default, and so does the file.
+- The same file holds how it trades. `starting_credits` is what each resident is handed when a
+  currency is first taken up, and `fund_per_resident` what goes into the fund for each.
+  `credits_name` and `credits_singular` name the currency of a settlement that comes ready made.
+  `kept_categories` lists the categories of thing that, under barter, whoever holds no job hands
+  something over for. `pilfer_max` is the most credit taken at once. `trade_ask_days` is how long
+  the residents cannot be asked again how they would trade, and `savings_scale` and `goods_scale`
+  are the credits and the worth of belongings at which either weighs all it can on their answer.
+- In `data/decisions.json` the game puts `currency_proposal`, `barter_proposal` and
+  `sale_proposal` to residents by ID. An outcome with `"agrees": true` is going along with what
+  was put. Their scores may weigh `savings`, `goods` and `bargain` (how good a sale is by the
+  resident's own lights: a half for an even one).
 
 ## Traits and sounds
 

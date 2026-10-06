@@ -7,6 +7,10 @@ from simulation.commands import SimulationCommand
 from simulation.events.decision import Decision
 from simulation.events.event import DomainEvent, euphonic
 from simulation.events.event_manager import EventManager
+from simulation.economy.fund_system import FundSystem
+from simulation.economy.merchant import Merchant, MerchantSystem
+from simulation.economy.terms import TradeResult, TradingState
+from simulation.economy.terms_system import TermsSystem
 from simulation.economy.trade_system import TradeSystem
 from simulation.events.intervention_system import InterventionSystem
 from simulation.events.world_event import Upcoming, Weather
@@ -81,6 +85,13 @@ class SimulationWorld:
     work: WorkSystem = field(default_factory=WorkSystem)
     staffing: StaffingSystem = field(default_factory=StaffingSystem)
     trade: TradeSystem = field(default_factory=TradeSystem)
+    fund: FundSystem = field(default_factory=FundSystem)
+    terms: TermsSystem = field(default_factory=TermsSystem)
+    merchants: MerchantSystem = field(default_factory=MerchantSystem)
+    # How the settlement trades, and what it holds in coin as a whole. A new one trades by barter.
+    trading: TradingState = field(default_factory=TradingState)
+    # Whoever has stopped by the gate to trade, while they are there.
+    merchant: Merchant | None = None
     bonds: BondSystem = field(default_factory=BondSystem)
     expeditions: ExpeditionSystem = field(default_factory=ExpeditionSystem)
     happenings: WorldEventSystem = field(default_factory=WorldEventSystem)
@@ -196,6 +207,22 @@ class SimulationWorld:
     def set_research(self, subject_id: str | None) -> ResearchResult:
         """Say what is to be worked out next. Whoever holds the post for it works on that."""
         return self.research.choose(self, subject_id)
+
+    def propose_currency(self, name: str, singular: str | None, option_id: str) -> TradeResult:
+        """Put it to the residents that they trade with a currency the player has made. They settle it."""
+        return self.terms.propose_currency(self, name, singular, option_id)
+
+    def propose_barter(self, option_id: str) -> TradeResult:
+        """Put it to the residents that they go back to trading a thing for a thing. They settle it."""
+        return self.terms.propose_barter(self, option_id)
+
+    def deal_with_merchant(self, sell: Mapping[str, int], buy: Mapping[str, int]) -> TradeResult:
+        """Sell whoever has stopped to trade what belongs to nobody, and buy from them, out of the fund and into it."""
+        return self.merchants.deal(self, sell, buy)
+
+    def propose_sale(self, resident_id: str, item_id: str, for_item: str | None, option_id: str) -> TradeResult:
+        """Put it to a resident that they sell a thing of their own to whoever has stopped to trade."""
+        return self.merchants.propose_sale(self, resident_id, item_id, for_item, option_id)
 
     def move_building(self, room_id: str, tile: Tile) -> UrbanismResult:
         return self.urbanism.move_building(self, room_id, tile)
@@ -518,6 +545,8 @@ class SimulationWorld:
         for index, resident in enumerate(residents):
             resident.x, resident.y = spawns[index % len(spawns)]
             world.residents[resident.resident_id] = resident
+        # A settlement that is already running trades with the credits it has always had.
+        world.terms.settle_on_credits(world)
         # The opening situation: Marta and Raúl are at odds over the provisions, and it is getting to him.
         world.relationship("marta", "raul").resentment = 35
         world.relationship("raul", "marta").affection = 15

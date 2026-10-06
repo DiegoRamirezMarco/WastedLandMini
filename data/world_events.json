@@ -54,7 +54,7 @@
       "asks": "guard"
     },
     "caravan": {
-      "kind": "stock",
+      "kind": "merchant",
       "chance_per_day": 0.2,
       "hours": [
         9,
@@ -63,8 +63,8 @@
       "cooldown_days": 4,
       "container": "shop_counter",
       "count": [
-        3,
-        6
+        8,
+        14
       ],
       "items": [
         {
@@ -88,9 +88,21 @@
           "weight": 0.3
         }
       ],
-      "text": "Pasa una caravana y deja género en la tienda",
+      "text": "Una caravana para junto a la puerta a comerciar",
       "lead_hours": 5,
-      "forecast": "el paso de una caravana"
+      "forecast": "el paso de una caravana",
+      "name": "la caravana",
+      "minutes": [
+        240,
+        360
+      ],
+      "sells_at": 1.5,
+      "buys_at": 0.6,
+      "purse": [
+        20,
+        60
+      ],
+      "end_text": "La caravana recoge y sigue su camino"
     },
     "dust_storm": {
       "kind": "weather",

@@ -78,7 +78,8 @@ def found_resident(
         # A manner the game does not define is dropped the same way: they go by their own.
         manners=world.registries.manners.tidy(manners or {}),
         age=min(max(int(age), youngest), oldest),
-        credits=world.registries.economy.starting_credits,
+        # A settlement that trades by barter, as a new one does, has no coin to put in a pocket.
+        credits=world.registries.economy.starting_credits if world.fund.currency(world) is not None else 0.0,
     )
     world.residents[resident.resident_id] = resident
     room = world.room_at(resident.tile)

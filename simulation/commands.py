@@ -1,6 +1,7 @@
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
+from simulation.economy.terms import TradeResult
 from simulation.work.research import ResearchResult
 from world.map import Tile
 from world.urbanism import UrbanismResult
@@ -51,6 +52,18 @@ class CommandTarget(Protocol):
         ...
 
     def set_research(self, subject_id: str | None) -> ResearchResult:
+        ...
+
+    def propose_currency(self, name: str, singular: str | None, option_id: str) -> TradeResult:
+        ...
+
+    def propose_barter(self, option_id: str) -> TradeResult:
+        ...
+
+    def deal_with_merchant(self, sell: Mapping[str, int], buy: Mapping[str, int]) -> TradeResult:
+        ...
+
+    def propose_sale(self, resident_id: str, item_id: str, for_item: str | None, option_id: str) -> TradeResult:
         ...
 
     def found_resident(
@@ -236,6 +249,68 @@ class SetResearchCommand:
 
     def apply(self, world: CommandTarget) -> ResearchResult:
         return world.set_research(self.subject_id)
+
+
+@dataclass(frozen=True)
+class ProposeCurrencyCommand:
+    """The player's proposal that the settlement trade with a currency they have made and named.
+
+    It is the residents who settle it, each for themselves, with the advice it is put with. If
+    more are for it than against, prices, wages and the fund are counted in it from then on.
+    """
+
+    name: str
+    # What one of it is called. Left out, it is the name less a final `s`.
+    singular: str | None = None
+    # The advice it is put with, one of the options of the currency proposal decision.
+    option_id: str = "encourage"
+
+    def apply(self, world: CommandTarget) -> TradeResult:
+        return world.propose_currency(self.name, self.singular, self.option_id)
+
+
+@dataclass(frozen=True)
+class ProposeBarterCommand:
+    """The player's proposal that the settlement go back to trading a thing for a thing."""
+
+    option_id: str = "encourage"
+
+    def apply(self, world: CommandTarget) -> TradeResult:
+        return world.propose_barter(self.option_id)
+
+
+@dataclass(frozen=True)
+class DealWithMerchantCommand:
+    """What the player sells to whoever has stopped to trade, and buys from them, in one go.
+
+    It is the one thing the player does with their own hands. Only what is nobody's can be sold
+    this way. Each is units by item ID: with a currency the difference comes out of the fund or
+    goes into it, and under barter what is given has to be worth what is taken.
+    """
+
+    sell: Mapping[str, int] = field(default_factory=dict)
+    buy: Mapping[str, int] = field(default_factory=dict)
+
+    def apply(self, world: CommandTarget) -> TradeResult:
+        return world.deal_with_merchant(self.sell, self.buy)
+
+
+@dataclass(frozen=True)
+class ProposeSaleCommand:
+    """The player's proposal to a resident that they sell a thing of their own to a merchant.
+
+    They agree or they do not, by what it is worth to them. What it fetches is theirs: coin, or
+    under barter the thing of the merchant's that `for_item` names.
+    """
+
+    resident_id: str
+    # The item of theirs, by its instance ID.
+    item_id: str
+    for_item: str | None = None
+    option_id: str = "encourage"
+
+    def apply(self, world: CommandTarget) -> TradeResult:
+        return world.propose_sale(self.resident_id, self.item_id, self.for_item, self.option_id)
 
 
 @dataclass(frozen=True)

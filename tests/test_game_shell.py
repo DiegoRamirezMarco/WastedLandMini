@@ -52,6 +52,7 @@ from ui.labels import (
     has_shop,
     known_forecasts,
     price_at,
+    price_label,
     selling_use,
     shop_goods,
 )
@@ -812,9 +813,9 @@ class GameShellTests(unittest.TestCase):
     def test_errands_repairs_credits_and_days_off_are_put_into_words(self) -> None:
         view, world = self.game.global_view, self.game.world
         raul, lucia = world.residents["raul"], world.residents["lucia"]
-        self.assertEqual(describe_credits(lucia), "6 vales")
+        self.assertEqual(describe_credits(world, lucia), "6 vales")
         lucia.credits = 1.9
-        self.assertEqual(describe_credits(lucia), "1 vale")
+        self.assertEqual(describe_credits(world, lucia), "1 vale")
         lucia.activity = Activity("haul", "pantry_1", path=[(7, 9)], minutes_left=2)
         self.assertEqual(describe_action(world, lucia), "acarrea para su puesto")
         lucia.activity = Activity("haul", "pantry_1", minutes_left=2, using=True)
@@ -942,6 +943,19 @@ class GameShellTests(unittest.TestCase):
         beans.quantity = 1
         self.assertEqual(price_at(world, "shop_counter", beans), 20, "the last tin is dear")
         self.assertEqual(affordable_goods(world, lucia), ["hoe", "canned_beans"])
+        self.assertEqual(price_label(world, "shop_counter", beans), "20 vales")
+        self.assertEqual(describe_credits(world, lucia), "20 vales")
+        world.trading.in_use = False
+        self.assertIsNone(price_label(world, "shop_counter", beans), "under barter nothing has a price")
+        self.assertEqual(describe_credits(world, lucia), "Trueque: sin moneda")
+        lucia.inventory.items.clear()
+        self.assertEqual(affordable_goods(world, lucia), [], "with nothing of her own there is nothing to be had")
+        world.stock(lucia.inventory, "hoe", 1, "lucia")
+        lucia.needs.hunger = 95
+        self.assertIn("canned_beans", affordable_goods(world, lucia))
+        for shown in (("shop_counter", None), (None, "lucia")):
+            view.hud.selected_container, view.hud.selected_id = shown
+            self.game.active_scene.render()
         del world.containers["shop_counter"]
         self.assertFalse(has_shop(world))
         world.containers["shop_counter"] = counter

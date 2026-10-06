@@ -103,7 +103,7 @@ class RoutineSystem:
         """Whether a use would lower a need, as things stand: open, within their means and not empty."""
         if use.staffed_by is not None and not world.work.is_staffed(world, use.staffed_by):
             return False
-        if use.price > resident.credits:
+        if not world.trade.can_afford(world, resident, use):
             return False
         if use.per_minute.get(need, 0.0) < 0:
             return True
@@ -149,7 +149,7 @@ class RoutineSystem:
     ) -> float | None:
         """How much the resident wants this use right now. None if it has nothing to offer them."""
         distance_cost = DISTANCE_COST * manhattan(resident.tile, (placed.x, placed.y))
-        if use.price > resident.credits:
+        if not world.trade.can_afford(world, resident, use):
             return None
         if use.sells or use.repairs > 0:
             want = (

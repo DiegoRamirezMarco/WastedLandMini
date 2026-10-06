@@ -281,7 +281,7 @@ class ActivitySystem:
             return True
         if use.staffed_by is not None and not world.work.is_staffed(world, use.staffed_by):
             return False
-        if use.price > resident.credits:
+        if not world.trade.can_afford(world, resident, use):
             return False
         if use.sells:
             # Paid for and handed over at once; the event of it is the purchase itself.
@@ -300,7 +300,7 @@ class ActivitySystem:
                 return False
         elif use.item_id is not None:
             activity.item_id = use.item_id
-        world.trade.pay(resident, use.price)
+        world.trade.charge(world, resident, use)
         if use.radio:
             world.happenings.hear_radio(world, resident)
         placed = world.interactables[activity.target_id]

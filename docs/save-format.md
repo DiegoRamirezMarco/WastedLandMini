@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 25 (current)
+## Version 26 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `25` |
+| `version` | `26` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -16,6 +16,8 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `upcoming` | World events on their way: `event_id`, `at`, and the `fact_id` of the word a radio gave of it |
 | `at_the_gate`, `newcomers_seen` | ID of the newcomer waiting for an answer; IDs of all who have come before |
 | `under_raid` | ID of the raid at the gate while whoever is on watch decides what to do |
+| `trading` | How the settlement trades: `currency` (its `currency_id`, `name` and `singular`, or `null` if it never made one), `in_use` (false under barter), `fund` (the coin the settlement holds as a whole), `currency_count` and `asked_on` (the day the residents were last asked) |
+| `merchant` | Whoever has stopped by to trade, or `null`: `event_id`, `leaves_at`, `goods` (units per item ID) and `purse` |
 | `map_id` | ID of the map in `data/maps/` |
 | `terrain`, `rooms` | The live terrain grid and stable room records after changes made in Urbanismo |
 | `urbanism` | Stable placement counters and the terrain kept below constructed buildings, so they can be moved or removed later |
@@ -24,7 +26,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them) |
 | `containers` | Per container object ID, the items inside |
 | `item_count` | Counter behind item IDs |
-| `thefts`, `theft_cooldowns`, `notices` | Record of every theft; last theft per resident; once-a-day notices already given |
+| `thefts`, `theft_cooldowns`, `notices` | Record of every theft, with the `amount` of credit taken when it was not an item and `@fund` for a `victim_id` when it was the settlement's; last theft per resident; once-a-day notices already given |
 | `relationships` | One entry per direction: `source_id`, `target_id`, the five feelings, `last_argued`, `bond` (the degree of friendship last held) and `last_together` |
 | `memories` | Per resident ID, a list of `text`, `importance`, `emotional_value`, `people`, `tags`, `timestamp`, `location_id` |
 | `facts` | Recorded facts: `fact_id`, `event_type`, `text`, `subject_ids`, `importance`, `timestamp`, `location_id`, `expires_at` |
@@ -64,6 +66,10 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 26** added `trading`, `merchant` and a theft's `amount`. An older save trades with
+  the credits it had, called as `data/economy.json` calls them, and its fund starts with what a
+  currency just taken up would have put in it. A merchant whose event is gone, or is no longer
+  one that trades, has moved on; what they carried that no content defines any longer is left out.
 - **Version 25** added `research`. An older save knows every subject that opens up something
   it has standing, and whatever those take knowing, and is working nothing out. A subject that
   is no longer defined is forgotten.

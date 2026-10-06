@@ -225,7 +225,7 @@ class NewSettlementTests(unittest.TestCase):
         settle(self.world, until="free")
         self.world.step(MINUTES_PER_DAY * 20)
         kinds = {line.split(" | ")[1] for line in self.world.event_log}
-        self.assertFalse(kinds & {"raid", "weather_changed", "food_spoiled", "stranger_unanswered", "caravan_passed"})
+        self.assertFalse(kinds & {"raid", "weather_changed", "food_spoiled", "stranger_unanswered", "merchant_arrived"})
         self.assertFalse(self.world.upcoming)
         self.assertTrue(self.world.apply_command(AcknowledgeTutorialCommand()))
         self.assertFalse(self.world.tutorial.active)

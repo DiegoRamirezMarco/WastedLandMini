@@ -4,12 +4,21 @@ from typing import TYPE_CHECKING
 
 from simulation.ai.navigation import path_beside
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency
+from simulation.economy import pilfering
+from simulation.economy.pilfering import PILFERING_ACTIONS
 from simulation.events.event import DomainEvent
 from simulation.events.world_event_system import RADIO_TAG
 from simulation.items.inventory import Inventory
 from simulation.items.item import WORN_CONDITION, ItemDefinition, ItemInstance
 from simulation.items.registry import UNKNOWN_CATEGORY
-from simulation.items.theft import TheftAttempt
+from simulation.items.theft import (
+    FUND_VICTIM,
+    STEAL_MINUTES,
+    THEFT_COOLDOWN_MINUTES,
+    THEFT_IMPORTANCE,
+    THEFT_THRESHOLD,
+    TheftAttempt,
+)
 from simulation.items.trading import TradeOffer
 from simulation.knowledge.fact import SOURCE_PARTICIPANT
 from simulation.knowledge.knowledge_system import learn, witnesses_of
@@ -26,16 +35,12 @@ if TYPE_CHECKING:
 
 USE_ITEM_ACTION = "use_item"
 STEAL_ACTION = "steal"
-ITEM_ACTIONS = (USE_ITEM_ACTION, STEAL_ACTION)
+ITEM_ACTIONS = (USE_ITEM_ACTION, STEAL_ACTION, *PILFERING_ACTIONS)
 FOOD_CATEGORY = "food"
 WATER_CATEGORY = "water"
 
 USE_ITEM_MINUTES = 10
 USE_ITEM_APPEAL = 0.8
-STEAL_MINUTES = 2
-THEFT_THRESHOLD = 0.15
-THEFT_COOLDOWN_MINUTES = 1440
-THEFT_IMPORTANCE = 45
 NOTICE_IMPORTANCE = 40
 NOTICE_STRESS = 8.0
 RETURN_IMPORTANCE = 25
@@ -232,21 +237,26 @@ class ItemSystem:
         definition: ItemDefinition,
         item: ItemInstance | None = None,
     ) -> float:
-        """How much a resident wants to take something of someone else's.
+        """How much a resident wants to take something of someone else's."""
+        return self.personal_value(world, thief, definition, item) / 50.0 * self.leaning_to_steal(world, thief, owner)
 
-        Greed and a grudge against the owner push towards it; empathy holds back.
+    def leaning_to_steal(self, world: "SimulationWorld", thief: Resident, owner: Resident | None) -> float:
+        """How given a resident is to taking what is not theirs, from 0 for not at all.
+
+        Greed and a grudge against the owner push towards it; empathy holds back. With no owner
+        it is what the settlement holds in common, and there is nobody to bear the grudge.
         """
-        feelings = world.relationships.get((thief.resident_id, owner.resident_id))
+        feelings = world.relationships.get((thief.resident_id, owner.resident_id)) if owner is not None else None
         resentment = feelings.resentment if feelings is not None else 0.0
         drive = (thief.personality.greed - 50.0) / 50.0 + resentment / 100.0 - thief.personality.empathy / 200.0
-        return self.personal_value(world, thief, definition, item) / 50.0 * max(0.0, drive)
+        return max(0.0, drive)
 
     def _theft_candidates(self, world: "SimulationWorld", resident: Resident) -> list[ScoredAction]:
-        """Other people's things in containers nobody is watching."""
+        """Other people's things in containers nobody is watching, their credit, and what is everybody's."""
         last = world.theft_cooldowns.get(resident.resident_id)
         if last is not None and world.clock.total_minutes - last < THEFT_COOLDOWN_MINUTES:
             return []
-        scored: list[ScoredAction] = []
+        scored: list[ScoredAction] = pilfering.candidates(world, resident)
         for container_id, inventory in world.containers.items():
             placed = world.interactables.get(container_id)
             if placed is None:
@@ -269,6 +279,8 @@ class ItemSystem:
         return scored
 
     def plan(self, world: "SimulationWorld", resident: Resident, candidate: ScoredAction) -> Activity | None:
+        if candidate.name in PILFERING_ACTIONS:
+            return pilfering.plan(world, resident, candidate)
         minutes = STEAL_MINUTES if candidate.name == STEAL_ACTION else USE_ITEM_MINUTES
         if candidate.target_id is None:
             return Activity(candidate.name, minutes_left=minutes, item_id=candidate.item_id)
@@ -283,11 +295,13 @@ class ItemSystem:
     def tick(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> None:
         """Spend one minute using or stealing an item, once the resident has reached it."""
         if not activity.using:
-            started = (
-                self._begin_theft(world, resident, activity)
-                if activity.action == STEAL_ACTION
-                else self._begin_use(world, resident, activity)
-            )
+            if activity.action in PILFERING_ACTIONS:
+                self._face(world, resident, activity)
+                started = pilfering.begin(world, resident, activity)
+            elif activity.action == STEAL_ACTION:
+                started = self._begin_theft(world, resident, activity)
+            else:
+                started = self._begin_use(world, resident, activity)
             if not started:
                 self._end(resident)
                 return
@@ -390,9 +404,17 @@ class ItemSystem:
         return True
 
     def notice_missing(self, world: "SimulationWorld", resident: Resident) -> None:
-        """A resident who can see where they kept something realises it is gone."""
+        """A resident who can see where they kept something realises it is gone.
+
+        So does whoever keeps the counter, of what the settlement had there.
+        """
         for attempt in world.thefts:
-            if attempt.victim_id != resident.resident_id or attempt.noticed or attempt.returned:
+            if attempt.noticed or attempt.returned:
+                continue
+            common = attempt.victim_id == FUND_VICTIM
+            if attempt.victim_id != resident.resident_id and not (
+                common and pilfering.keeps_counter(world, resident, attempt.container_id)
+            ):
                 continue
             placed = world.interactables.get(attempt.container_id)
             if placed is None or resident.resident_id not in witnesses_of(world, (placed.x, placed.y)):
@@ -401,6 +423,10 @@ class ItemSystem:
             item = self.find_item(world, attempt.item_instance_id)
             definition = world.registries.items.resolve(item.definition_id) if item is not None else None
             thing = _named(definition) if definition is not None else "algo"
+            if attempt.amount > 0 and world.trading.currency is not None:
+                thing = world.trading.currency.amount(attempt.amount)
+            if common:
+                thing = f"{thing} de lo que es de todos"
             if world.knowledge.knows(resident.resident_id, attempt.fact_id):
                 continue
             resident.needs.apply({"stress": NOTICE_STRESS})
@@ -428,7 +454,7 @@ class ItemSystem:
         if not self._maybe_gift(world, resident, partner):
             self._maybe_trade(world, resident, partner)
 
-    def _owned(self, world: "SimulationWorld", resident: Resident) -> list[ItemInstance]:
+    def owned(self, world: "SimulationWorld", resident: Resident) -> list[ItemInstance]:
         """Things a resident carries that are theirs to give away."""
         return [
             item
@@ -437,21 +463,47 @@ class ItemSystem:
             and world.registries.items.resolve(item.definition_id).category != UNKNOWN_CATEGORY
         ]
 
+    def spare(self, world: "SimulationWorld", resident: Resident) -> list[ItemInstance]:
+        """Things of their own that a resident carries and could part with.
+
+        Nobody gives away what they work with: the tool of their job stays with them. One they
+        have besides it is theirs to give like anything else.
+        """
+        owned = self.owned(world, resident)
+        job = world.work.job_of(world, resident)
+        if job is None or job.tool is None:
+            return owned
+        resolve = world.registries.items.resolve
+        kept = world.work.tool_of(world, resident, job) or next(
+            (item for item in owned if job.tool.tag in resolve(item.definition_id).tags), None
+        )
+        return [item for item in owned if item is not kept or item.quantity > 1]
+
     def _return_stolen(self, world: "SimulationWorld", resident: Resident, partner: Resident) -> None:
         for attempt in world.thefts:
             if attempt.returned or attempt.thief_id != resident.resident_id or attempt.victim_id != partner.resident_id:
                 continue
-            item = resident.inventory.remove(attempt.item_instance_id)
-            if item is None:
-                continue
-            partner.inventory.add(item)
+            if attempt.amount > 0:
+                # Credit comes back as far as they still have it.
+                back = min(attempt.amount, float(int(resident.credits)))
+                coin = world.trading.currency
+                if back < 1 or coin is None:
+                    continue
+                resident.credits -= back
+                partner.credits += back
+                thing = coin.amount(back)
+            else:
+                item = resident.inventory.remove(attempt.item_instance_id)
+                if item is None:
+                    continue
+                partner.inventory.add(item)
+                thing = _named(world.registries.items.resolve(item.definition_id))
             attempt.returned = True
             attempt.discovered = True
             fact = world.knowledge.facts.get(attempt.fact_id)
             if fact is not None:
                 # Handing it back is the confession; they have just made their peace over it.
                 learn(world, partner, fact, 1.0, SOURCE_PARTICIPANT)
-            thing = _named(world.registries.items.resolve(item.definition_id))
             world.emit_event(
                 DomainEvent(
                     "item_returned",
@@ -463,7 +515,7 @@ class ItemSystem:
             )
 
     def _maybe_gift(self, world: "SimulationWorld", giver: Resident, receiver: Resident) -> bool:
-        gifts = self._owned(world, giver)
+        gifts = self.spare(world, giver)
         feelings = world.relationship(giver.resident_id, receiver.resident_id)
         if not gifts or feelings.affection < GIFT_AFFECTION or giver.personality.greed > GIFT_MAX_GREED:
             return False
@@ -519,8 +571,8 @@ class ItemSystem:
         """The swap of one item each that the proposer gains most from and the receiver does not lose by."""
         resolve = world.registries.items.resolve
         best: tuple[float, str, str] | None = None
-        for mine in self._owned(world, proposer):
-            for theirs in self._owned(world, receiver):
+        for mine in self.spare(world, proposer):
+            for theirs in self.spare(world, receiver):
                 if mine.definition_id == theirs.definition_id:
                     continue
                 mine_def, theirs_def = resolve(mine.definition_id), resolve(theirs.definition_id)
@@ -572,11 +624,11 @@ class ItemSystem:
             return
         resolve = world.registries.items.resolve
         dislike = world.registries.tastes.thresholds[DISLIKED]
-        for mine in self._owned(world, proposer):
+        for mine in self.spare(world, proposer):
             mine_def = resolve(mine.definition_id)
             if world.tastes.liking(world, receiver, mine_def) > dislike:
                 continue
-            for theirs in self._owned(world, receiver):
+            for theirs in self.spare(world, receiver):
                 theirs_def = resolve(theirs.definition_id)
                 if mine.definition_id == theirs.definition_id or mine_def.base_value < theirs_def.base_value:
                     continue

@@ -540,5 +540,133 @@
         "influence": {}
       }
     ]
+  },
+  "currency_proposal": {
+    "event_type": "trade_proposed",
+    "window_minutes": 0,
+    "cooldown_minutes": 0,
+    "anger_threshold": 0,
+    "importance": 30,
+    "text": "Se le pregunta a {name} por {thing}",
+    "prompt": "¿Y si probamos a {thing}?",
+    "outcomes": {
+      "agree": {
+        "score": {
+          "bias": 0.35,
+          "greed": 0.3,
+          "idle": 0.15,
+          "goods": -0.2
+        },
+        "agrees": true,
+        "text": "{name} está por {thing}"
+      },
+      "refuse": {
+        "score": {
+          "bias": 0.45,
+          "empathy": 0.1,
+          "goods": 0.2
+        },
+        "text": "{name} prefiere seguir con el trueque"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Nos irá mejor",
+        "influence": {
+          "agree": 0.1,
+          "refuse": -0.05
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Lo que digáis",
+        "influence": {}
+      }
+    ]
+  },
+  "barter_proposal": {
+    "event_type": "trade_proposed",
+    "window_minutes": 0,
+    "cooldown_minutes": 0,
+    "anger_threshold": 0,
+    "importance": 30,
+    "text": "Se le pregunta a {name} por {thing}",
+    "prompt": "¿Y si probamos a {thing}?",
+    "outcomes": {
+      "agree": {
+        "score": {
+          "bias": 0.3,
+          "empathy": 0.2,
+          "goods": 0.3,
+          "savings": -0.5
+        },
+        "agrees": true,
+        "text": "{name} está por {thing}"
+      },
+      "refuse": {
+        "score": {
+          "bias": 0.4,
+          "greed": 0.3,
+          "savings": 0.3
+        },
+        "text": "{name} prefiere seguir con la moneda"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Nos irá mejor",
+        "influence": {
+          "agree": 0.1,
+          "refuse": -0.05
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Lo que digáis",
+        "influence": {}
+      }
+    ]
+  },
+  "sale_proposal": {
+    "event_type": "sale_proposed",
+    "window_minutes": 0,
+    "cooldown_minutes": 120,
+    "anger_threshold": 0,
+    "importance": 30,
+    "text": "Se le propone a {name} vender {thing}",
+    "prompt": "¿Que venda {thing}?",
+    "outcomes": {
+      "agree": {
+        "score": {
+          "bias": -1.0,
+          "bargain": 2.5
+        },
+        "agrees": true,
+        "text": "{name} acepta vender {thing}"
+      },
+      "refuse": {
+        "score": {
+          "bias": 0.25
+        },
+        "text": "{name} no vende {thing}"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Es buen trato",
+        "influence": {
+          "agree": 0.2,
+          "refuse": -0.1
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú verás",
+        "influence": {}
+      }
+    ]
   }
 }

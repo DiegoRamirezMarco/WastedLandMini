@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from simulation.ai.decision_system import advice_influence
 from simulation.events.crisis import Crisis
-from simulation.events.decision import Decision, DecisionDefinition, DecisionOption
+from simulation.events.decision import Decision, DecisionDefinition, DecisionOption, OutcomeDefinition
 from simulation.events.event import DomainEvent
 from simulation.memory.memory import Memory
 from simulation.residents.activity import Activity
@@ -91,6 +91,9 @@ def score_inputs(world: "SimulationWorld", resident: Resident, target: Resident 
         "burden": 0.0,
         "effort": 0.0,
         "short": 0.0,
+        "savings": 0.0,
+        "goods": 0.0,
+        "bargain": 0.0,
     }
     if target is not None:
         feelings = world.relationship(resident.resident_id, target.resident_id)
@@ -280,12 +283,30 @@ class InterventionSystem:
         They decide on the spot, weighing `inputs` with the rest. Returns whether they took it on.
         Whoever says yes can be asked again at once; whoever says no has said so for a while.
         """
-        definition = world.registries.decisions.get(BUILD_PROPOSAL)
-        if definition is None or self.asking_obstacle(world, resident, BUILD_PROPOSAL) is not None:
+        if self.asking_obstacle(world, resident, BUILD_PROPOSAL) is not None:
             return False
-        decision = self._decision(world, resident, None, definition, 0.0, subject=thing, inputs=inputs)
-        outcome = definition.outcomes.get(self._settle(world, decision, option_id, waiting=False) or "")
+        outcome = self.put_to(world, resident, BUILD_PROPOSAL, thing, inputs, option_id)
         return outcome is not None and outcome.builds
+
+    def put_to(
+        self,
+        world: "SimulationWorld",
+        resident: Resident,
+        kind: str,
+        thing: str,
+        inputs: dict[str, float],
+        option_id: str | None,
+    ) -> OutcomeDefinition | None:
+        """Put something to a resident with one of the usual advices, for them to answer on the spot.
+
+        They weigh `inputs` with the rest and pick, without stopping what they are doing. Returns
+        what they chose, or None if there is no such kind of decision.
+        """
+        definition = world.registries.decisions.get(kind)
+        if definition is None:
+            return None
+        decision = self._decision(world, resident, None, definition, 0.0, subject=thing, inputs=inputs)
+        return definition.outcomes.get(self._settle(world, decision, option_id, waiting=False) or "")
 
     def _cooldown_key(self, kind: str, resident_id: str) -> str:
         return resident_id if kind == GRIEVANCE else f"{kind}:{resident_id}"
@@ -478,8 +499,8 @@ class InterventionSystem:
             resident.activity = None
             resident.current_action = "idle"
 
-        if not chosen.builds:
-            # Whoever has just taken a piece of building on can be asked about another at once.
+        if not (chosen.builds or chosen.agrees):
+            # Whoever has just taken a thing on, or gone along with one, can be asked about another at once.
             world.crisis_cooldowns[self._cooldown_key(decision.kind, resident.resident_id)] = world.clock.total_minutes
         advice = f"consejo: {option.text}" if option is not None else "sin consejo"
         world.emit_event(

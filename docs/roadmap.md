@@ -99,8 +99,8 @@ This also closed what S7 left open: a frightened resident buys a weapon on purpo
 post is offered round until someone takes it.
 
 Still open here:
-- Residents buy but never sell, and credits spent are simply gone: there is no settlement fund
-  (S23).
+- Residents buy but never sell for coin. S23 gave the settlement a fund that what is spent goes
+  into, and under barter has them hand a thing over at the counter.
 
 S10 closed the rest: trips outside restock the shop, and a repair now uses up a piece of scrap.
 
@@ -1087,50 +1087,97 @@ Still open here:
 - There is no drawing of a body seen from a corner: at a slant it is the side or the front
 - The stride is as long as the step, so going diagonally the feet cover more than they seem to
 
-### S23 — A common fund, and what things are paid with (needs S8) — planned
+### S23 — A common fund, and what things are paid with (needs S8) — done
 Asked for by hand, to come before politics along with S24 and S25: a fine has to go somewhere,
 a law on drink needs drink, and "my brother" needs brothers.
-- **A common fund**: what the settlement holds as a whole, apart from what anybody owns. What
-  is paid at the counter goes into it instead of being gone, and what the settlement pays comes
-  out of it
+
+Asked first, and answered: a caravan stops for some hours and gives nothing away; what is a
+resident's own can be sold to it if they agree, and what it fetches is theirs; under barter the
+fund is the things that are nobody's, in the shop and the stores, and what a trip brings back
+goes into it as things; and under barter whoever works is kept, and takes nothing home.
+
+- **A common fund**: what the settlement holds as a whole, apart from what anybody owns. In coin
+  it is a figure, and it never goes below nothing. In things it is whatever lies in a container
+  and is nobody's
 - **The settlement settles how it trades**: by barter, a thing for a thing, or with a currency.
-  It is the residents who settle it, with the player given a say. Once there is a government it
-  is decided as any proposal is (S27), and it can be changed in the middle of a game
-- **A new settlement starts on barter.** A currency comes when its residents settle on one
-- **Under barter nothing is priced in coin**: a thing is had for another, each worth to each of
-  the two what it is worth to them (S19), and work is paid in kind
-- **Three things fill the fund**: what is paid at the counter, what trips outside bring in, and
-  what merchants pay for what the settlement sells them. Taxes come later, with the laws (S28)
+  It is the residents who settle it. The player puts it to them with advice, everyone who is in
+  answers for themselves, and more for it than against carries it: greed and savings lean
+  towards coin, things of their own and empathy towards barter. They cannot be asked again for
+  three days. Once there is a government it is decided as any proposal is (S27)
+- **A new settlement starts on barter.** The one that comes ready made trades with its credits
+- **A currency is made by the player**: it is given a name, and what one of it is called. The
+  first one a settlement takes up puts six in every pocket and thirty in the fund for each
+  resident. Going back to barter leaves what is held as it is, counting for nothing, and there
+  if a currency is taken up again. Drawing it is P25
+- **With a currency, wages come out of the fund and what is paid at a counter goes back into
+  it**: a purchase, a drink, a repair. No coin is made or lost. With the fund empty wages go
+  unpaid, and it is said once a day
+- **Under barter nothing is priced in coin, and whoever holds a job is kept**: they eat, drink
+  at the bar and have things mended for nothing. Whoever holds none hands over the thing of
+  theirs worth least to them for a meal, a drink or a repair. With nothing to give they are fed
+  all the same, which is said once a day, and go without the rest. A settlement still in its
+  opening asks nothing of anybody
+- **A swap at the counter**: a resident offers a thing of theirs for one on the shelf that is
+  worth more to them, not knowing what they will be told. Whoever keeps the counter takes it
+  only if they do not lose by it as they see it (S19). What was given goes on the shelf as the
+  settlement's. Turned down, they do not ask again that day
+- **A caravan is a merchant** (`merchant`, a kind of world event): it stops for four to six
+  hours with eight to fourteen things and some coin, asks half as much again as a thing is
+  worth and gives six tenths for one. A pack can still have things left for nothing (`stock`)
 - **Buying from merchants and selling to them is the player's to do**, out of the fund and
-  into it. It is the one thing the player does with their own hands instead of advising
+  into it, in one deal: only what is nobody's is sold this way. Under barter what is handed
+  over has to be worth what is taken. What is bought is left at the shop
+- **What is a resident's own is put to them**, and they answer by what it is worth to them
+  against what it fetches. Advice counts for little. What it fetches is theirs: coin, or under
+  barter a thing of the merchant's
 - **Nobody else spends from the fund while there is no government**, but for wages
-- **A currency is made by the player**: it is given a name and it is drawn, in the game, as
-  everything made there is (P25). From then on prices, wages and the fund are counted in it
-- **A currency is credit, and credit can be stolen.** What someone has of it is a figure, as
-  credits are now, and not coins in a pocket. It is taken from them as a thing is (S5): by
-  whoever dares, seen or not by whoever is near, and held against the thief by whoever finds out
-- **The fund can be stolen from as well**, by whoever is given to stealing, a leader included.
-  It is the same leaning that has someone steal from a neighbour (S5), and it is found out the
-  same way
-- A save from before loads as a settlement whose currency is the credits it had
+- **A currency is credit, and credit can be stolen.** It is taken from someone asleep, with
+  nobody looking on, by whoever the same leaning would have steal a thing (S5), and only by
+  someone short of coin themselves. Whoever sees it knows and holds it against the thief; the
+  victim misses it on waking; making peace brings back what is left of it
+- **The fund can be stolen from as well**, at the counter: coin, or under barter a thing off
+  the shelf. Whoever keeps the counter sees that it is short
+- A save from before loads as a settlement whose currency is the credits it had (save version 26)
+- Each of these is a domain event, and each thing the player does is a command:
+  `ProposeCurrencyCommand`, `ProposeBarterCommand`, `DealWithMerchantCommand` and
+  `ProposeSaleCommand`. None has a screen until P25
 
 Done when: a week passes under barter in which everyone is fed and the shop changes hands with
 no coin anywhere; a settlement that takes up a currency pays its wages from the fund and takes
 back at the counter what it paid; the fund never goes below nothing; and a save from before
 loads with its credits.
 
-Tests it is not done without: a purchase adding to the fund what it cost; a swap under barter
-that both sides come out of better by their own lights, and one turned down; the change from
-barter to a currency and back; credit stolen from someone, witnessed and not; credit stolen
-from the fund by someone given to stealing, and left alone by someone who is not; and a save
-from before.
+Found by running ten weeks with a fund that can run dry, and put right:
+- **Nobody gives away what they work with.** Farmers made presents of their hoes and bought
+  others with wages that never ran out. With a fund that does, they were left without, the
+  garden gave a third less and in some settlements everybody starved. The tool of a
+  resident's job is no longer given, swapped or handed over; one they have besides it is
+- **The tool somebody works with is mended even when they cannot pay for it**: whoever can
+  pay does
+- **Coin tempts whoever is short of it.** Taken by anyone given to it, credit went missing as
+  often as every other day, and whoever had most took as readily as anyone
+- With these, sixteen seeds run for ten weeks keep as much food by them as before the fund, but
+  for one, where raiders got in three times and it was down to its last few meals at the end.
+  The rest never had fewer than twenty-seven by them, against seventeen before
 
-Still to settle:
-- What a trip outside puts in the fund: credit found out there, or its finds sold
-- What the player may sell to a merchant: only what is nobody's, or what residents own as well
-- What the fund holds under barter, when there is no credit to count
-- What becomes of a caravan as it is now, which leaves its goods at the shop for nothing (S11)
-- Residents still buy and never sell (S8)
+Still open here:
+- With nobody to sell to a caravan the fund runs dry in about a month: more is paid out in
+  wages than comes back at the counter, and what is saved never comes back. From then on wages
+  are paid as far as the day's takings go, to whoever is at work when they come in. Taxes are
+  S28
+- Whoever keeps the shop can never buy at it, so what they earn piles up: after ten weeks the
+  shopkeeper holds two thirds of the coin there is
+- Under barter nobody comes by anything of their own but by a present, a swap or a theft, so
+  the shop moves little: whoever is kept takes nothing home
+- Nobody minds going unpaid, and nobody minds someone who holds no job being fed for nothing
+- What is handed over at the bar or the workbench under barter is on the shop's shelf at once,
+  with nobody carrying it there, and so is what is bought from a caravan (S8)
+- A caravan is not seen at the gate, and nobody goes to meet it. Residents do not deal with it
+  unless the player puts it to them
+- Nobody proposes a currency, or going back to barter, unasked
+- A settlement with no shop has nowhere for its fund to be stolen from
+- A thing sold to a caravan is sold as new, however worn
+- Residents still never sell for coin: under a currency the counter only sells (S8)
 
 ### S24 — Substances (needs S20) — planned
 - **A substance is a consumable like any other, as data**: an item with a `substance` property
@@ -1272,6 +1319,10 @@ Still to settle:
 ### P25 — Coin, smoke and kin on screen (needs S23 to S25) — planned
 - The currency named and drawn in the game, and seen wherever something is paid
 - The fund in the bar, beside what the settlement has in food and scrap
+- Putting a currency, or going back to barter, to the residents, and how each of them answered
+- A caravan seen at the gate, and dealing with it: what it brings and asks, what the settlement
+  has that is nobody's, and putting a sale to a resident. Until then S23 can only be played by
+  commands
 - A substance seen to be taken, each of the four ways, and seen on whoever is under it: how
   they walk, the smoke round them
 - A resident's family in their panel, and the tree of it on a screen of its own

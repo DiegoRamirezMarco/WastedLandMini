@@ -3,10 +3,12 @@ from pathlib import Path
 from typing import Any
 
 from simulation.clock import SimulationClock
+from simulation.economy.merchant import Merchant
+from simulation.economy.terms import Currency, TradingState
 from simulation.events.crisis import Crisis
 from simulation.events.decision import Decision, DecisionOption
 from simulation.events.event import DomainEvent
-from simulation.events.world_event import Upcoming, Weather
+from simulation.events.world_event import MERCHANT, Upcoming, Weather
 from simulation.events.world_event_system import RAID_DECISION, STRANGER_DECISION
 from simulation.health.injury import Death, Injury
 from simulation.items.inventory import Inventory
@@ -72,6 +74,10 @@ FIRST_ECONOMY_VERSION = 8
 # Version 25 added what the settlement knows and what it is working out. A save from before
 # knows how to make whatever it has standing, and is working nothing out.
 FIRST_RESEARCH_VERSION = 25
+# Version 26 added the common fund, how the settlement trades, whoever has stopped by to trade,
+# and credit as something that can be stolen. A save from before trades with the credits it
+# had, and its fund starts with what a currency just taken up would have put in it.
+FIRST_FUND_VERSION = 26
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 23
@@ -90,7 +96,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 25
+    CURRENT_VERSION = 26
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -112,6 +118,23 @@ class SaveManager:
             "upcoming": [vars(upcoming) for upcoming in world.upcoming],
             "at_the_gate": world.at_the_gate,
             "under_raid": world.under_raid,
+            "trading": {
+                "currency": vars(world.trading.currency) if world.trading.currency is not None else None,
+                "in_use": world.trading.in_use,
+                "fund": world.trading.fund,
+                "currency_count": world.trading.currency_count,
+                "asked_on": world.trading.asked_on,
+            },
+            "merchant": (
+                {
+                    "event_id": world.merchant.event_id,
+                    "leaves_at": world.merchant.leaves_at,
+                    "goods": dict(world.merchant.goods),
+                    "purse": world.merchant.purse,
+                }
+                if world.merchant is not None
+                else None
+            ),
             "newcomers_seen": list(world.newcomers_seen),
             "map_id": world.map_id,
             "terrain": [list(row) for row in world.tile_map.tiles],
@@ -427,6 +450,7 @@ class SaveManager:
         self._restore_knowledge(world, data)
         self._restore_decisions(world, data)
         self._restore_happenings(world, data, rng_data)
+        self._restore_trading(world, data, version)
 
         event_log = data.get("event_log", [])
         world.event_log = [str(line) for line in event_log] if isinstance(event_log, list) else []
@@ -537,6 +561,7 @@ class SaveManager:
                 fact_id=str(attempt.get("fact_id", "")),
                 noticed=bool(attempt.get("noticed", False)),
                 returned=bool(attempt.get("returned", False)),
+                amount=max(0.0, float(attempt.get("amount", 0.0))),
             )
             for attempt in (thefts if isinstance(thefts, list) else [])
             if isinstance(attempt, dict)
@@ -551,6 +576,49 @@ class SaveManager:
             for job_id, minute in _object_or_empty(data.get("vacancies")).items()
             if job_id in world.registries.jobs
         }
+
+    def _restore_trading(self, world: SimulationWorld, data: dict[str, Any], version: int) -> None:
+        """Put back how the settlement trades, its fund, and whoever had stopped by to trade."""
+        if version < FIRST_FUND_VERSION:
+            world.terms.settle_on_credits(world)
+            return
+        saved = _object_or_empty(data.get("trading"))
+        currency = saved.get("currency")
+        asked_on = saved.get("asked_on")
+        made = (
+            Currency(
+                currency_id=str(currency.get("currency_id", "")),
+                name=str(currency.get("name", "")),
+                singular=str(currency.get("singular", currency.get("name", ""))),
+            )
+            if isinstance(currency, dict) and currency.get("currency_id") and currency.get("name")
+            else None
+        )
+        world.trading = TradingState(
+            currency=made,
+            # A settlement trades with a currency only while it has one.
+            in_use=bool(saved.get("in_use", False)) and made is not None,
+            fund=max(0.0, float(saved.get("fund", 0.0))),
+            currency_count=max(0, int(saved.get("currency_count", 0))),
+            asked_on=int(asked_on) if asked_on is not None else None,
+        )
+        visitor = data.get("merchant")
+        events = world.registries.world_events.events
+        # Whoever came with an event the game no longer has, or that is no longer a merchant, has gone.
+        if isinstance(visitor, dict) and getattr(events.get(visitor.get("event_id")), "kind", None) == MERCHANT:
+            world.merchant = Merchant(
+                event_id=str(visitor["event_id"]),
+                leaves_at=int(visitor.get("leaves_at", 0)),
+                goods={
+                    str(item_id): int(units)
+                    for item_id, units in _object_or_empty(visitor.get("goods")).items()
+                    if isinstance(units, int)
+                    and not isinstance(units, bool)
+                    and units > 0
+                    and world.registries.items.find(str(item_id)) is not None
+                },
+                purse=max(0.0, float(visitor.get("purse", 0.0))),
+            )
 
     def _restore_happenings(self, world: SimulationWorld, data: dict[str, Any], rng_data: dict[str, Any]) -> None:
         """Put back the weather, the gate and what has already happened from outside."""

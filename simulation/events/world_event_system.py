@@ -1,4 +1,4 @@
-"""Things that happen to the settlement from outside: strangers, caravans, weather and vermin.
+"""Things that happen to the settlement from outside: strangers, merchants, weather and vermin.
 
 They are rolled once an hour with a random generator of their own, so that whether one happens
 never changes what the residents would otherwise have done.
@@ -12,6 +12,7 @@ from simulation.knowledge.fact import SOURCE_PARTICIPANT
 from simulation.knowledge.knowledge_system import learn
 from simulation.events.world_event import (
     LET_IN,
+    MERCHANT,
     RAID,
     SPOIL,
     STAND_GROUND,
@@ -62,6 +63,7 @@ class WorldEventSystem:
     def tick(self, world: "SimulationWorld") -> None:
         """Let the weather pass and act, then once an hour see whether anything new happens."""
         self._weather(world)
+        world.merchants.tick(world)
         if world.at_the_gate is not None and not self._being_decided(world):
             # Nobody is left to answer: whoever was waiting gives up and goes.
             world.at_the_gate = None
@@ -301,7 +303,7 @@ class WorldEventSystem:
             personality=Personality(**newcomer.personality),
             traits=list(newcomer.traits),
             age=newcomer.age,
-            credits=world.registries.economy.starting_credits,
+            credits=world.registries.economy.starting_credits if world.fund.currency(world) is not None else 0.0,
             # They came to stay, and mean to pull their weight.
             seeks_work=True,
         )
@@ -339,6 +341,9 @@ class WorldEventSystem:
             return world.weather is None
         if definition.kind == RAID:
             return world.under_raid is None and RAID_DECISION in world.registries.decisions
+        if definition.kind == MERCHANT:
+            # One at a time, and only where there is somewhere to leave what is bought from them.
+            return world.merchant is None and bool(world.containers)
         return bool(containers_of_kind(world, definition.container or ""))
 
     def _unseen(self, world: "SimulationWorld") -> list[Newcomer]:
@@ -373,6 +378,8 @@ class WorldEventSystem:
             self._stranger(world, definition)
         elif definition.kind == STOCK:
             self._stock(world, definition)
+        elif definition.kind == MERCHANT:
+            world.merchants.arrive(world, definition)
         elif definition.kind == WEATHER:
             minutes = world.event_rng.randint(*definition.minutes)
             world.weather = Weather(definition.event_id, world.clock.total_minutes + minutes)
@@ -413,20 +420,25 @@ class WorldEventSystem:
 
     def _stock(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
         container = containers_of_kind(world, definition.container or "")[0][1]
+        left = self.draw_goods(world, definition)
+        for item_id, units in left.items():
+            world.stock(container, item_id, units, None)
+        goods = ", ".join(f"{world.registries.items.resolve(item_id).name} ({units})" for item_id, units in left.items())
+        if goods:
+            world.emit_event(DomainEvent("goods_left", STOCK_IMPORTANCE, f"{definition.text}: {goods}"))
+
+    def draw_goods(self, world: "SimulationWorld", definition: WorldEventDefinition) -> dict[str, int]:
+        """The things an event brings, drawn from its own list by weight: how many units of each."""
         items = [(item, weight) for item, weight in definition.items if world.registries.items.find(item) is not None]
-        left: dict[str, int] = {}
+        drawn: dict[str, int] = {}
         for _ in range(world.event_rng.randint(*definition.count) if items else 0):
             mark = world.event_rng.random() * sum(weight for _, weight in items)
             for item_id, weight in items:
                 mark -= weight
                 if mark < 0:
                     break
-            left[item_id] = left.get(item_id, 0) + 1
-        for item_id, units in left.items():
-            world.stock(container, item_id, units, None)
-        goods = ", ".join(f"{world.registries.items.resolve(item_id).name} ({units})" for item_id, units in left.items())
-        if goods:
-            world.emit_event(DomainEvent("caravan_passed", STOCK_IMPORTANCE, f"{definition.text}: {goods}"))
+            drawn[item_id] = drawn.get(item_id, 0) + 1
+        return drawn
 
     def _spoil(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
         lost = 0

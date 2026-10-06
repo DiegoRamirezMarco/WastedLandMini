@@ -281,7 +281,7 @@ def draw_resident_panel(
     room = panel.right - PADDING - beside
     font.draw(target, resident.name, (beside, y), PALETTE["paper"], scale=2)
     lines = [
-        (describe_credits(resident), "lamp"),
+        (describe_credits(world, resident), "lamp"),
         (describe_action(world, resident), "dust"),
         (describe_job(world, resident), "stone"),
     ]

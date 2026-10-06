@@ -7,7 +7,7 @@ from graphics.item_icons import ICON_SIZE, ItemIcons
 from graphics.palette import PALETTE
 from simulation.items.inventory import Inventory
 from simulation.world import SimulationWorld
-from ui.labels import condition_of, price_at, selling_use
+from ui.labels import condition_of, price_label, selling_use
 from ui.panel import draw_panel
 
 ROW_HEIGHT = ICON_SIZE[1] + 2
@@ -116,8 +116,8 @@ def draw_container_panel(
             draw_condition(target, (x, y), condition)
         text = f"{definition.name} x{item.quantity}"
         room = rect.width - PADDING * 2 - ICON_SIZE[0] - 4
-        if selling is not None and item.owner_id is None:
-            price = f"{price_at(world, container_id, item)} vales"
+        price = price_label(world, container_id, item) if selling is not None and item.owner_id is None else None
+        if price is not None:
             font.draw(target, price, (rect.right - PADDING - font.width(price), y + 3), PALETTE["lamp"])
             room -= font.width(price) + 4
         else:

@@ -19,7 +19,15 @@ Event types emitted so far:
 | `meal_started` | A resident starts eating, with the food ID in `data.item_id` | 5 |
 | `work_started` | A resident takes up their post | 5 |
 | `goods_hauled` | A worker leaves a load in a container, or fetches one from it | 5 |
-| `item_bought` | A resident buys something over the counter | 15 |
+| `item_bought` | A resident buys something over the counter, with `item_id` and `price` in `data` | 15 |
+| `item_swapped` | Under barter, a resident has something off the counter for a thing of their own, with `item_id` and `given_id` in `data` | 15 |
+| `swap_refused` | Whoever keeps the counter will not have any of what a resident offers for a thing (once a day for each resident) | 20 |
+| `keep_paid` | Under barter, someone who holds no job hands a thing over for a meal, a drink or a repair, with `item_id` in `data` | 10 |
+| `keep_unpaid` | Under barter, someone who holds no job is fed with nothing to give for it (once a day for each) | 20 |
+| `wages_unpaid` | The fund has nothing left to pay a wage with (once a day) | 35 |
+| `trade_proposed` | A resident is asked whether the settlement should trade with a currency, or go back to barter | 30 |
+| `trade_terms_changed` | The residents take up a currency, or go back to barter, with `currency_id` in `data` (null for barter) | 60 |
+| `trade_terms_kept` | They were asked and would rather go on as they are | 40 |
 | `item_broke` | Something wears right out | 30 |
 | `post_vacant` | A job has been short of people too long (once per vacancy) | 35 |
 | `job_offered` | A resident is asked to take a vacant job and waits for advice | 50 |
@@ -48,9 +56,9 @@ Event types emitted so far:
 | `taste_found_out` | The player comes to suspect or to know a taste of a resident, with `resident_id`, `taste`, `state` and `leaning` in `data`. Never a number | 12 suspected, 22 known |
 | `taste_mentioned` | A resident speaks of something they like or cannot stand, at the end of a friendly exchange | 10 |
 | `trade_refused` | A resident will not take a thing in a swap because it is not to their liking (once a day between the two) | 12 |
-| `theft_committed` | A resident takes someone else's thing | 45 |
-| `theft_noticed` | An owner sees that something of theirs is gone | 40 |
-| `item_returned` | A stolen thing is handed back | 25 |
+| `theft_committed` | A resident takes someone else's thing or credit, or takes from what the settlement holds in common. For credit and the fund, `victim_id` (`@fund` for the settlement) and `amount` in `data` | 45 |
+| `theft_noticed` | An owner sees that something of theirs is gone, or whoever keeps the counter that the fund is short | 40 |
+| `item_returned` | A stolen thing, or stolen credit, is handed back | 25 |
 | `crisis_opened` | A resident boils over and waits for advice | 50 to 69, by anger |
 | `fight_brewing` | A resident squares up to another and waits for advice | 60 to 69 |
 | `fight_started` | Two residents come to blows | 60, plus up to 20 with resentment, plus 15 |
@@ -74,7 +82,12 @@ Event types emitted so far:
 | `newcomer_joined` | A stranger is let in and stays | 60 |
 | `stranger_turned_away` | A stranger is sent on their way | 40 |
 | `stranger_unanswered` | Someone knocks and there is no gatekeeper to answer | 35 |
-| `caravan_passed` | A caravan leaves goods at the shop | 30 |
+| `merchant_arrived` | A merchant stops by the gate to trade, with `event_id` and `goods` in `data` | 45 |
+| `merchant_left` | They move on | 20 |
+| `merchant_deal` | The player sells them what is nobody's and buys from them, with `sold`, `bought` and `paid` (out of the fund, or into it if negative) in `data` | 30 |
+| `sale_proposed` | A resident is asked to sell a merchant a thing of their own | 30 |
+| `item_sold` | They do, with `item_id`, `for_item` and `price` in `data` | 25 |
+| `goods_left` | A world event of kind `stock` leaves things in a container for nothing | 30 |
 | `weather_changed` | A storm rises, or passes | 45, 30 |
 | `food_spoiled` | Vermin eat part of what is in the pantries | 45 |
 | `radio_bulletin` | A resident is the first to hear on a radio what is on its way | 35 |

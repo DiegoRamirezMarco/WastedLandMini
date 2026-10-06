@@ -11,6 +11,9 @@ watches, advises and intervenes, but does not control them.
 - Residents with jobs, posts, shifts and days off; places that only work while someone staffs them.
 - A working economy: what is made is carried to where it is used, tools wear out and are mended,
   work earns credits and credits buy things, and a post left empty is taken up by someone else.
+- A common fund, and a say in what things are paid with: a settlement starts on barter, takes
+  up a currency the player names if its residents will have it, pays its wages out of the fund
+  and takes back at the counter what it paid. Caravans stop to trade, and credit can be stolen.
 - Consequences that last: injuries, a clinic, fights you can try to stop, a limb lost for good
   to a blade, and death.
 - Things to work out: somebody at a study desk spends their shift on what the player has

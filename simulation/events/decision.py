@@ -11,7 +11,7 @@ from simulation.work.expedition import EXPEDITION_CHOICES
 SCORE_INPUTS = (
     "bias", "anger", "aggression", "impulsiveness", "empathy", "courage", "sociability", "greed",
     "stress", "affection", "resentment", "fear", "attraction", "health", "vacancy", "idle",
-    "mood", "burden", "effort", "short",
+    "mood", "burden", "effort", "short", "savings", "goods", "bargain",
 )
 
 
@@ -66,6 +66,8 @@ class OutcomeDefinition:
     raid: str | None = None
     # Whether choosing this means taking on the piece of building the decision is about.
     builds: bool = False
+    # Whether choosing this means going along with what was put to them: a sale, a way of trading.
+    agrees: bool = False
 
 
 @dataclass(frozen=True)
@@ -148,4 +150,5 @@ def _outcome_from_data(kind: str, outcome_id: str, data: dict[str, Any]) -> Outc
         gate=gate,
         raid=raid,
         builds=bool(data.get("builds", False)),
+        agrees=bool(data.get("agrees", False)),
     )

@@ -229,7 +229,7 @@ class StrangerTests(unittest.TestCase):
 
 
 class CaravanAndVerminTests(unittest.TestCase):
-    def test_a_caravan_leaves_goods_on_the_shop_counter(self) -> None:
+    def test_a_caravan_stops_to_trade_and_leaves_nothing_on_the_shop_counter(self) -> None:
         world = _settled()
         _only(world, "caravan", hour=4)
         counter = world.containers["shop_counter"]
@@ -237,10 +237,10 @@ class CaravanAndVerminTests(unittest.TestCase):
         world.step(60)
         self.assertEqual([upcoming.event_id for upcoming in world.upcoming], ["caravan"], "it is on its way first")
         world.step(5 * 60)
-        added = sum(item.quantity for item in counter.items) - before
-        self.assertTrue(3 <= added <= 6, added)
-        self.assertEqual(_types(world).count("caravan_passed"), 1)
-        self.assertIn("Pasa una caravana y deja género en la tienda:", world.event_log[-1])
+        self.assertEqual(sum(item.quantity for item in counter.items), before, "what it brings has to be bought")
+        self.assertTrue(8 <= sum(world.merchant.goods.values()) <= 14, world.merchant.goods)
+        self.assertEqual(_types(world).count("merchant_arrived"), 1)
+        self.assertIn("Una caravana para junto a la puerta a comerciar:", world.event_log[-1])
 
     def test_vermin_eat_a_share_of_what_is_in_the_pantries_and_leave_private_stores_alone(self) -> None:
         world = _settled()
@@ -414,7 +414,7 @@ class EventfulWeeksTests(unittest.TestCase):
                 for need in ("hunger", "tiredness", "social", "stress"):
                     self.assertLess(getattr(resident.needs, need), 100.0, (resident.name, need, world.clock.label))
         types = _types(world)
-        self.assertIn("caravan_passed", types)
+        self.assertIn("merchant_arrived", types)
         self.assertIn("weather_changed", types)
         self.assertIn("newcomer_joined", types)
         self.assertGreater(len(world.residents), started)

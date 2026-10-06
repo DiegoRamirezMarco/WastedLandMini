@@ -143,8 +143,9 @@ room. An argument's importance rises with the resentment between the two.
 - **Putting it away.** What was found is carried to where it goes before anything else: the first
   rule in `deliveries` that fits, and whose kind of container the settlement has, says where.
   Scrap goes to a scrap pile; the rest goes on the shop's counter, where it is sold. Apart from
-  a passing caravan, nothing reaches the shop any other way. A settlement with no shop or scrap
-  pile yet puts food in a pantry and everything else in a crate.
+  what is bought from a caravan, and what is handed over at the counter under barter, nothing
+  reaches the shop any other way. A settlement with no shop or scrap pile yet puts food in a
+  pantry and everything else in a crate.
 - **A risky find.** Some trips come on something that promises more and looks dangerous. That is
   a decision, and the player may advise, but the resident is not stopped by it: they are still out
   there, and they do not come home until it is settled. Going for it means more finds, more danger
@@ -176,8 +177,8 @@ room. An argument's importance rises with the resentment between the two.
   duty is given a unit from the cabinet, which goes on working in them for half a day; with
   none left they mend as anyone lying down does, and the settlement is told once a day
   (`no_medicine`). None is spent on what comes of going without water or food. It comes from
-  outside: what a trip brings back goes to the cabinet, and what a caravan leaves at the shop
-  is fetched from there by the medic.
+  outside: what a trip brings back goes to the cabinet, and what is bought from a caravan and
+  left at the shop is fetched from there by the medic.
 - **Mood.** Mood is saved on each resident. Memories and decisions can nudge it, and the minute
   to minute state of the body pulls it slowly up or down. Low mood makes arguments more likely and
   productive work slower.
@@ -209,7 +210,9 @@ room. An argument's importance rises with the resentment between the two.
 - **Looking for work.** Someone newly arrived looks for a job without waiting to be asked: the
   one most missed that has a free post. It is put to them as any job offer is, and they take it
   unless they are talked out of it.
-- **A caravan** leaves a few things on the shop's counter, drawn from its own list.
+- **A caravan** stops by the gate for some hours with things drawn from its own list and some
+  coin, and leaves nothing for nothing. Dealing with it is the player's to do: see *The fund,
+  barter and currency*.
 - **A storm** lasts some hours. While it does, work in the open stops and whoever does it leaves
   their post, nobody sets out on a trip, and anyone not under a roof grows more stressed by the
   minute. So people get out of it: taking shelter is one more thing a resident can choose, ahead
@@ -235,10 +238,14 @@ room. An argument's importance rises with the resentment between the two.
   put back is kept on its owner, to have it seen to.
 - **Repairs.** A use with `repairs` mends a worn thing its owner brings, so much condition a
   minute, while the job it is `staffed_by` has someone on duty. It stops if they leave.
-- **Credits.** Every minute on duty, or loading and unloading for the job, earns a resident a
-  share of the hourly wage (`data/economy.json`, or the job's own `wage`). A use with a `price`
-  takes that many credits when it starts, and is not even considered by someone who cannot pay.
-  A drink at the bar and a repair at the workbench both cost.
+- **Credits.** With a currency, every minute on duty, or loading and unloading for the job,
+  earns a resident a share of the hourly wage (`data/economy.json`, or the job's own `wage`),
+  out of the common fund and as far as the fund goes. A use with a `price` takes that many
+  credits when it starts, into the fund, and is not even considered by someone who cannot pay.
+  A drink at the bar and a repair at the workbench both cost. The one thing nobody goes without
+  for want of coin is the mending of the tool they work with.
+- **Nobody gives away what they work with.** The tool of a resident's job is never made a
+  present of, swapped or handed over. One they have besides it is theirs to give.
 - **The shop.** A use with `sells` is buying one unit of something kept in that object, while its
   keeper is on duty. A thing costs its base value times the settlement's price factor, and more
   the fewer are left. What a resident wants to buy:
@@ -246,7 +253,49 @@ room. An argument's importance rises with the resentment between the two.
   - a weapon, if they are afraid enough of someone and carry none;
   - otherwise whatever would do them most good right now for its price, unless they already own
     one, or two units if it is food.
-  What is bought becomes the buyer's and goes with them.
+  What is bought becomes the buyer's and goes with them. What was paid goes into the fund.
+
+## The fund, barter and currency
+
+- **The common fund** is what the settlement holds as a whole, apart from what anybody owns. In
+  coin it is a figure. In things it is whatever lies in a container and is nobody's: the shop's
+  shelves, the pantries, the scrap. It never goes below nothing.
+- **A settlement trades by barter or with a currency.** A new one starts on barter. One that
+  comes ready made, and a save from before, trade with the credits they always had.
+- **It is the residents who settle it.** The player makes a currency by naming it and puts it to
+  them, or puts it to them to go back to barter, with advice. Everyone who is in answers for
+  themselves: greed and savings lean towards coin, things of their own and empathy towards
+  barter. More for it than against, and it is done. They cannot be asked again for some days.
+  The first currency a settlement takes up puts something in every pocket and in the fund. Going
+  back to barter leaves what is held as it is, counting for nothing, and there if a currency is
+  taken up again.
+- **With a currency** wages come out of the fund and what is paid at a counter goes back into
+  it. No coin is made or lost: it goes round. With the fund empty wages go unpaid, and it is
+  said once a day.
+- **Under barter nothing is priced.** Whoever holds a job is kept: they eat, drink at the bar
+  and have things mended for nothing, and take nothing home. Whoever holds none hands over the
+  thing of theirs worth least to them for a meal, a drink or a repair; with nothing to give
+  they are fed all the same, which is said, and go without the rest. A settlement still in its
+  opening asks nothing of anybody.
+- **A swap at the counter.** Under barter a resident goes to the counter for a thing they would
+  give something of theirs for and come out better by their own lights. They cannot know
+  beforehand what whoever keeps the counter will say: the keeper takes the swap only if they do
+  not lose by it as they see it. What was given goes on the shelf as the settlement's. Turned
+  down, they do not ask again that day.
+- **Merchants.** While a caravan is at the gate the player sells it what is nobody's and buys
+  from it, in one deal: it gives less for a thing than it asks for one. With a currency the
+  difference comes out of the fund or goes into it, as far as the fund and the caravan's purse
+  go. Under barter what is handed over has to be worth what is taken. What is bought is left at
+  the shop.
+- **What is somebody's is theirs to sell.** The player can put it to a resident that they sell
+  a merchant a thing of their own. They weigh what it is worth to them against what it fetches,
+  and what it fetches is theirs: coin, or under barter a thing of the merchant's.
+- **Credit can be stolen.** It is a figure and not coins in a pocket, but it is taken as a thing
+  is: from someone asleep, with nobody looking on, by someone the same leaning would have steal a
+  thing, and only by someone short of coin themselves. Whoever sees it knows, and holds it
+  against the thief; the victim misses it on waking without knowing who.
+- **So can the fund**, at the counter, when nobody is looking: coin, or under barter a thing off
+  the shelf. Whoever keeps the counter sees that it is short.
 
 ## Who does what
 

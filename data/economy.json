@@ -4,5 +4,15 @@
   "price_factor": 1.0,
   "scarcity_markup": 1.0,
   "vacancy_notice_hours": 24,
-  "week_days": 7
+  "week_days": 7,
+  "fund_per_resident": 30,
+  "credits_name": "vales",
+  "credits_singular": "vale",
+  "kept_categories": [
+    "food"
+  ],
+  "pilfer_max": 20,
+  "trade_ask_days": 3,
+  "savings_scale": 30,
+  "goods_scale": 60
 }

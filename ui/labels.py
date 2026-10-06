@@ -96,6 +96,15 @@ def price_at(world: SimulationWorld, container_id: str, item: ItemInstance) -> i
     return world.trade.price_of(world, definition, world.containers[container_id].count(item.definition_id))
 
 
+def price_label(world: SimulationWorld, container_id: str, item: ItemInstance) -> str | None:
+    """What one unit of something on a counter costs, in the settlement's currency, such as `11 vales`.
+
+    None under barter, where nothing has a price: a thing is had for another.
+    """
+    coin = world.fund.currency(world)
+    return coin.amount(price_at(world, container_id, item)) if coin is not None else None
+
+
 def shop_goods(world: SimulationWorld) -> list[tuple[str, int]]:
     """Everything on sale in the settlement as item definition ID and price, cheapest first."""
     goods: dict[str, int] = {}
@@ -114,7 +123,18 @@ def has_shop(world: SimulationWorld) -> bool:
 
 
 def affordable_goods(world: SimulationWorld, resident: Resident) -> list[str]:
-    """Item definition IDs of what a resident has credits enough to buy, cheapest first."""
+    """Item definition IDs of what a resident has credits enough to buy, cheapest first.
+
+    Under barter it is what they have something of their own to offer for, keenest first.
+    """
+    if world.fund.currency(world) is None:
+        wanted = [
+            item.definition_id
+            for container_id in world.containers
+            if selling_use(world, container_id) is not None
+            for _, item, _ in world.trade.offers(world, resident, container_id)
+        ]
+        return list(dict.fromkeys(wanted))
     return [definition_id for definition_id, price in shop_goods(world) if price <= resident.credits]
 
 
@@ -132,6 +152,8 @@ def describe_weather(world: SimulationWorld) -> str | None:
     weather = world.happenings.weather_now(world)
     return weather.name.capitalize() if weather is not None else None
 
+
+BARTER_LABEL = "Trueque: sin moneda"
 
 OBSTACLE_LABELS = {
     "own_job": "ya es su puesto",
@@ -168,10 +190,13 @@ def away_residents(world: SimulationWorld) -> list[Resident]:
     return [resident for resident in world.residents.values() if resident.away]
 
 
-def describe_credits(resident: Resident) -> str:
-    """What a resident has earned and not spent, in whole credits, such as `12 vales`."""
-    whole = int(resident.credits)
-    return "1 vale" if whole == 1 else f"{whole} vales"
+def describe_credits(world: SimulationWorld, resident: Resident) -> str:
+    """What a resident has earned and not spent, in the settlement's currency, such as `12 vales`.
+
+    Under barter nobody has any to count, and it says so.
+    """
+    coin = world.fund.currency(world)
+    return coin.amount(resident.credits) if coin is not None else BARTER_LABEL
 
 
 def describe_injuries(world: SimulationWorld, resident: Resident) -> str:
