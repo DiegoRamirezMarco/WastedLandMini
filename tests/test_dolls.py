@@ -27,7 +27,7 @@ class DollTemplateTests(unittest.TestCase):
         self.plan = builtin_plan()
         self.template = load_template()
 
-    def test_every_part_is_a_bone_of_the_doll_and_only_limbs_are_longer_than_they_are_drawn(self) -> None:
+    def test_the_doll_lengthens_its_torso_and_arms_but_not_its_legs(self) -> None:
         unit = self.template.unit
         self.assertEqual(set(self.template.canvases), {BODY_CANVAS, HEAD_CANVAS})
         self.assertEqual(self.plan.like("doll"), "side", "a doll is posed by the clips of a body seen from the side")
@@ -37,14 +37,22 @@ class DollTemplateTests(unittest.TestCase):
             longer = self.plan.length("doll", bone) / (math.dist(spec.start, spec.end) / unit)
             if abs(longer - 1.0) > 1e-6:
                 stretched[bone] = round(longer, 3)
-        # Arms and legs are a little longer on the doll than on the canvas, each pair by the same; nothing else is.
+        # The longer torso gives the figure adult proportions. Arms still gain a little reach, but
+        # legs keep their drawn length so trousers and shoes are not pulled apart.
         self.assertEqual(
             set(stretched),
-            {f"{part}_{side}" for part in ("upper_arm", "forearm", "thigh", "shin") for side in ("left", "right")},
+            {"spine", *{f"{part}_{side}" for part in ("upper_arm", "forearm") for side in ("left", "right")}},
         )
         for bone, longer in stretched.items():
-            self.assertTrue(1.1 <= longer <= 1.3, (bone, longer))
-            self.assertEqual(longer, stretched[bone.replace("_left", "_right")], bone)
+            limits = (1.3, 1.4) if bone == "spine" else (1.1, 1.3)
+            self.assertTrue(limits[0] <= longer <= limits[1], (bone, longer))
+            if bone.endswith("_left"):
+                self.assertEqual(longer, stretched[bone.replace("_left", "_right")], bone)
+        for part in ("thigh", "shin"):
+            for side in ("left", "right"):
+                bone = f"{part}_{side}"
+                drawn = math.dist(self.template.parts[bone].start, self.template.parts[bone].end) / unit
+                self.assertAlmostEqual(self.plan.length("doll", bone), drawn)
         self.assertEqual(set(self.template.parts), set(self.plan.orders["doll"]), "every part has its turn to be drawn")
 
     def test_hands_feet_and_hips_are_parts_of_their_own(self) -> None:
@@ -56,15 +64,18 @@ class DollTemplateTests(unittest.TestCase):
             self.assertGreater(foot.end[0] - foot.start[0], abs(foot.end[1] - foot.start[1]), "and points forwards")
         self.assertEqual(parts["hips"].start, parts["spine"].start, "the hips hang from where the trunk stands")
         self.assertGreater(parts["hips"].end[1], parts["hips"].start[1])
-        # A hand turns with its forearm; a foot stays level whatever the shin does.
+        # A hand turns with its forearm. A planted foot stays level, while the other one flexes
+        # with the stride instead of looking snapped away from its ankle.
         swung = self.plan.pose("doll_right", "fight", 0.3)
         still = self.plan.pose("doll_right")
         hand = lambda pose: (pose["fingertip_right"][0] - pose["hand_right"][0], pose["fingertip_right"][1] - pose["hand_right"][1])
         foot_of = lambda pose: (pose["toe_right"][0] - pose["foot_right"][0], pose["toe_right"][1] - pose["foot_right"][1])
         self.assertNotAlmostEqual(hand(swung)[0], hand(still)[0], 1)
-        walking = self.plan.pose("doll_right", "walk", 0.1)
+        walking = self.plan.pose("doll_right", "walk", 0.0)
         self.assertNotEqual(walking["foot_right"], still["foot_right"])
-        self.assertAlmostEqual(foot_of(walking)[1], foot_of(still)[1], 5)
+        left_foot = lambda pose: (pose["toe_left"][0] - pose["foot_left"][0], pose["toe_left"][1] - pose["foot_left"][1])
+        self.assertAlmostEqual(foot_of(walking)[1], foot_of(still)[1], 5, "the planted foot is level")
+        self.assertGreater(abs(left_foot(walking)[1]), 0.5, "the lifted foot flexes with the leg")
 
     def test_the_near_arm_hangs_from_further_back_and_the_near_leg_goes_over_the_body(self) -> None:
         rest = self.plan.rests["doll"]
@@ -499,8 +510,14 @@ class DollEditorTests(unittest.TestCase):
         skin = column[-1]
         self.assertNotEqual(skin, tuple(window.get_at((chest[0] + 80, chest[1])))[:3], "just below its top is his head")
         self.assertNotIn(skin, column[: 7 * SCALE], "and above it only his name")
-        left, high, right, low = doll.standing(view.bodies.plan)
-        crown = view.bodies.plan.rests["doll"]["head"][1] + 0.5 - editor.template.parts["skull"].radius / editor.template.unit
+        # It stands by its own measures, which are those of the paper: nothing is drawn out to fit the game's body.
+        self.assertIsNot(doll.plan, view.bodies.plan)
+        self.assertIs(view.bodies.characters["raul"].plan, doll.plan)
+        left, high, right, low = doll.standing(doll.plan)
+        crown = doll.plan.rests["doll"]["head"][1] + 0.5 - editor.template.parts["skull"].radius / editor.template.unit
+        self.assertGreater(
+            doll.plan.rests["doll"]["head"][1], view.bodies.plan.rests["doll"]["head"][1], "a trunk as short as it was drawn"
+        )
         self.assertAlmostEqual(high, crown, delta=0.5, msg="the plain head of the mannequin, and no hair")
         self.assertEqual(-left, right)
         self.assertAlmostEqual(low, 0.0, delta=1.0)

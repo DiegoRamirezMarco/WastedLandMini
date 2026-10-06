@@ -7,8 +7,9 @@ facing the other way it is the same drawing in a mirror.
 """
 
 import json
+import logging
 import math
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -16,14 +17,22 @@ import pygame
 
 from graphics.illustrations import Illustrations
 from graphics.palette import PALETTE
-from skeleton.plan import PLAN_PATH, SkeletonPlan, wrapped
+from skeleton.plan import PLAN_PATH, SIDES, SkeletonPlan, wrapped
 from skeleton.rig import Skeleton
 
 Point = tuple[float, float]
 Color = tuple[int, int, int]
 
+logger = logging.getLogger(__name__)
+
 BODY_CANVAS = "body"
 HEAD_CANVAS = "head"
+# The measures of a doll are kept beside its drawings.
+BUILD_FILE = "build.json"
+# No part may be made shorter than this, in the skeleton's own measure, nor a limb be moved
+# further than this from where the body plan joins it on.
+SHORTEST_PART = 0.4
+FURTHEST_ATTACHED = 5.0
 # Parts are kept turned in this many steps of a full turn.
 TURN_STEPS = 96
 # The view of the skeleton that a doll is posed in, with its own build and order of drawing, and
@@ -46,6 +55,76 @@ BOX_DETAIL = 4.0
 def doll_path(body_id: str, canvas: str) -> str:
     """Where a resident's drawing of one canvas is kept, below the illustrations folder."""
     return f"dolls/{body_id}/{canvas}.png"
+
+
+def build_path(body_id: str) -> str:
+    """Where a resident's measures are kept, below the illustrations folder."""
+    return f"dolls/{body_id}/{BUILD_FILE}"
+
+
+def unsided(name: str) -> str:
+    """The name of a bone or part without the side of the body it is on: both arms are one to the measures."""
+    for side in SIDES:
+        if name.endswith(side):
+            return name[: -len(side)]
+    return name
+
+
+@dataclass
+class DollBuild:
+    """The measures of one doll: how its own are different from the template's.
+
+    Someone drawn with short legs has short legs. The parts are as long as the guide was set for
+    them, and a limb joins the trunk where it was put. Both sides of a body share their measures.
+    """
+
+    # How far each joint of the guide was moved along its part, in the skeleton's own measure, by
+    # part and end: `shin.end` is the ankle.
+    joints: dict[str, float] = field(default_factory=dict)
+    # How far a joint that goes anywhere was moved, such as where a head sits on its neck.
+    points: dict[str, Point] = field(default_factory=dict)
+    # How far from where the body plan has them the bones that join a limb to the trunk end.
+    attach: dict[str, Point] = field(default_factory=dict)
+
+    def copy(self) -> "DollBuild":
+        return DollBuild(dict(self.joints), dict(self.points), dict(self.attach))
+
+    def to_data(self) -> dict[str, Any]:
+        return {
+            "joints": {key: round(value, 3) for key, value in self.joints.items()},
+            "points": {key: [round(value[0], 3), round(value[1], 3)] for key, value in self.points.items()},
+            "attach": {key: [round(value[0], 3), round(value[1], 3)] for key, value in self.attach.items()},
+        }
+
+
+def build_from_data(data: Any) -> DollBuild:
+    """Measures as they were kept. Whatever of them cannot be read is left as the template has it."""
+    build = DollBuild()
+    if not isinstance(data, dict):
+        return build
+    for key, value in (data.get("joints") or {}).items() if isinstance(data.get("joints"), dict) else ():
+        if isinstance(value, (int, float)):
+            build.joints[str(key)] = float(value)
+    for name, target in (("points", build.points), ("attach", build.attach)):
+        kept = data.get(name)
+        for key, value in kept.items() if isinstance(kept, dict) else ():
+            if isinstance(value, (list, tuple)) and len(value) == 2 and all(isinstance(each, (int, float)) for each in value):
+                target[str(key)] = (float(value[0]), float(value[1]))
+    return build
+
+
+@dataclass(frozen=True)
+class JointHandle:
+    """A joint of the guide that can be taken hold of to make a part longer or shorter."""
+
+    # What the measures call it: a part and one of its ends.
+    key: str
+    canvas: str
+    # Where it is on the canvas, and where the template has it.
+    point: Point
+    origin: Point
+    # The way it may be moved. None for a joint that goes anywhere.
+    axis: Point | None
 
 
 @dataclass(frozen=True)
@@ -99,6 +178,103 @@ class DollTemplate:
     # Size in pixels of each canvas.
     canvases: dict[str, tuple[int, int]]
     parts: dict[str, PartSpec]
+
+    def joint_keys(self) -> dict[tuple[str, Point], tuple[str, Point | None]]:
+        """Every joint of the guide that can be moved, by canvas and place: what the measures call
+        it, and the way it may go.
+
+        A joint two parts share is the end of the first of them, and moves along it. A part that is
+        everything on its canvas has one such joint, where it is joined on, which goes anywhere.
+        """
+        keys: dict[tuple[str, Point], tuple[str, Point | None]] = {}
+        for bone, spec in self.parts.items():
+            if not spec.whole:
+                keys.setdefault((spec.canvas, spec.end), (f"{unsided(bone)}.end", _direction(spec)))
+        for bone, spec in self.parts.items():
+            axis = None if spec.whole else _direction(spec)
+            keys.setdefault((spec.canvas, spec.start), (f"{unsided(bone)}.start", axis))
+        return keys
+
+    def built(self, build: DollBuild) -> "DollTemplate":
+        """This template with its joints where a doll's measures have them."""
+        if not build.joints and not build.points:
+            return self
+        # Where a limb starts is moved by itself, and takes the whole limb with it.
+        moved: dict[tuple[str, Point], Point] = {}
+        for place, (key, axis) in self.joint_keys().items():
+            if not key.endswith(".start"):
+                continue
+            if axis is None:
+                shift = build.points.get(key, (0.0, 0.0))
+                moved[place] = (shift[0] * self.unit, shift[1] * self.unit)
+            else:
+                far = build.joints.get(key, 0.0) * self.unit
+                moved[place] = (axis[0] * far, axis[1] * far)
+        # Every other joint is the end of a part: moved, the part is that much longer or shorter,
+        # and whatever hangs from it goes along as long as it was.
+        waiting = [(bone, spec) for bone, spec in self.parts.items() if not spec.whole]
+        while waiting:
+            ready = [(bone, spec) for bone, spec in waiting if (spec.canvas, spec.start) in moved]
+            if not ready:
+                break
+            for bone, spec in ready:
+                way, begun = _direction(spec), moved[(spec.canvas, spec.start)]
+                far = build.joints.get(f"{unsided(bone)}.end", 0.0) * self.unit
+                moved.setdefault((spec.canvas, spec.end), (begun[0] + way[0] * far, begun[1] + way[1] * far))
+            waiting = [entry for entry in waiting if entry not in ready]
+
+        def at(canvas: str, point: Point) -> Point:
+            shift = moved.get((canvas, point), (0.0, 0.0))
+            return (point[0] + shift[0], point[1] + shift[1])
+
+        parts = {
+            bone: replace(spec, start=at(spec.canvas, spec.start), end=at(spec.canvas, spec.end))
+            for bone, spec in self.parts.items()
+        }
+        return DollTemplate(self.unit, self.canvases, parts)
+
+    def handles(self, built: "DollTemplate") -> list[JointHandle]:
+        """The joints of a doll's guide that can be taken hold of, where its own measures have them."""
+        found = []
+        seen: set[tuple[str, Point]] = set()
+        keys = self.joint_keys()
+        for bone, spec in self.parts.items():
+            for origin, point in ((spec.start, built.parts[bone].start), (spec.end, built.parts[bone].end)):
+                place = (spec.canvas, origin)
+                if place in keys and place not in seen:
+                    seen.add(place)
+                    key, axis = keys[place]
+                    found.append(JointHandle(key, spec.canvas, point, origin, axis))
+        return found
+
+    def takes(self, build: DollBuild) -> bool:
+        """Whether a doll can have these measures: every part still a part, every joint on its
+        canvas, and nothing of a part over a part it does not meet."""
+        built = self.built(build)
+        for bone, spec in built.parts.items():
+            width, height = self.canvases[spec.canvas]
+            if not all(0 <= x <= width and 0 <= y <= height for x, y in (spec.start, spec.end)):
+                return False
+            if spec.whole:
+                continue
+            way = _direction(self.parts[bone])
+            along = (spec.end[0] - spec.start[0]) * way[0] + (spec.end[1] - spec.start[1]) * way[1]
+            if along < SHORTEST_PART * self.unit:
+                return False
+        own = {bone: pygame.mask.from_surface(built.region(bone)) for bone, spec in built.parts.items() if not spec.whole}
+        for bone, region in own.items():
+            spec = built.parts[bone]
+            for other, other_region in own.items():
+                if other <= bone or built.parts[other].canvas != spec.canvas:
+                    continue
+                if {spec.start, spec.end} & {built.parts[other].start, built.parts[other].end}:
+                    continue
+                # Two parts side by side may share the line between them, and no more.
+                if region.overlap_area(other_region, (0, 0)) > 4 * self.unit:
+                    return False
+        return all(
+            abs(shift[0]) <= FURTHEST_ATTACHED and abs(shift[1]) <= FURTHEST_ATTACHED for shift in build.attach.values()
+        )
 
     def mask(self, bone: str) -> pygame.Surface:
         """The zone of a part on its canvas: white and solid where the part is, clear elsewhere."""
@@ -253,6 +429,39 @@ def _direction(spec: PartSpec) -> Point:
     return (dx / length, dy / length)
 
 
+def doll_rest(plan: SkeletonPlan, template: DollTemplate, build: DollBuild) -> dict[str, Point]:
+    """Where the joints of a doll with its own measures stand at rest.
+
+    Every bone that a part is drawn for is as long as the part is on its canvas and points the way
+    it is drawn, so nothing has to be drawn out to fit. The bones between, which join a limb to
+    the trunk, are as the body plan has them and moved by as much as the measures say. The whole
+    is then stood back on the ground where the body plan's own stands.
+    """
+    base = plan.rests[DOLL_VIEW]
+    placed = {plan.root: base[plan.root]}
+    # Bones are listed from the root outwards, so a bone's start is always placed before it.
+    for bone in plan.bones.values():
+        (start_x, start_y), (end_x, end_y) = base[bone.start], base[bone.end]
+        reach = (end_x - start_x, end_y - start_y)
+        spec = template.parts.get(bone.name)
+        if spec is not None:
+            reach = ((spec.end[0] - spec.start[0]) / template.unit, (spec.end[1] - spec.start[1]) / template.unit)
+        else:
+            shift = build.attach.get(unsided(bone.name), (0.0, 0.0))
+            reach = (reach[0] + shift[0], reach[1] + shift[1])
+        placed[bone.end] = (placed[bone.start][0] + reach[0], placed[bone.start][1] + reach[1])
+    lowest = max(y for _, y in base.values())
+    feet = [joint for joint, (_, y) in base.items() if y >= lowest - 0.01]
+    aside = sum(base[joint][0] - placed[joint][0] for joint in feet) / len(feet)
+    down = lowest - max(placed[joint][1] for joint in feet)
+    return {joint: (x + aside, y + down) for joint, (x, y) in placed.items()}
+
+
+def doll_plan(plan: SkeletonPlan, template: DollTemplate, build: DollBuild) -> SkeletonPlan:
+    """The body plan of one doll: the game's own, standing as that doll's measures have it."""
+    return replace(plan, rests={**plan.rests, DOLL_VIEW: doll_rest(plan, template, build)})
+
+
 def template_from_data(data: dict[str, Any]) -> DollTemplate:
     unit = int(data["unit"])
     canvases = {str(name): (int(size[0] * unit), int(size[1] * unit)) for name, size in data["canvases"].items()}
@@ -296,8 +505,14 @@ class DollPart:
 class Doll:
     """A drawing cut into its parts, ready to be laid over a skeleton."""
 
-    def __init__(self, template: DollTemplate, drawings: dict[str, pygame.Surface]) -> None:
+    def __init__(
+        self, template: DollTemplate, drawings: dict[str, pygame.Surface], plan: SkeletonPlan | None = None
+    ) -> None:
         self.unit = template.unit
+        self.template = template
+        # The body plan with this doll's own measures: whoever poses it goes by this one, and then
+        # every part is as long on the doll as it was drawn. None for a doll laid over the game's own.
+        self.plan = plan
         self.parts: dict[str, DollPart] = {}
         for bone, spec in template.parts.items():
             drawing = drawings.get(spec.canvas)
@@ -431,10 +646,35 @@ class Doll:
 class DollStore:
     """The dolls there are drawings for, cut the first time each is asked for."""
 
-    def __init__(self, illustrations: Illustrations | None, template: DollTemplate) -> None:
+    def __init__(
+        self, illustrations: Illustrations | None, template: DollTemplate, plan: SkeletonPlan | None = None
+    ) -> None:
         self._illustrations = illustrations
         self.template = template
+        # The game's body plan, which each doll gets with its own measures.
+        self.plan = plan
         self._dolls: dict[str, Doll | None] = {}
+
+    def build(self, body_id: str) -> DollBuild:
+        """The measures kept for a body. Those of the template if it has none of its own that can be used."""
+        root = self._illustrations.root if self._illustrations is not None else None
+        if root is None:
+            return DollBuild()
+        path = (root / build_path(body_id)).resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            return DollBuild()
+        try:
+            build = build_from_data(json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, ValueError) as error:
+            logger.warning("Measures could not be read: %s (%s)", path, error)
+            return DollBuild()
+        return build if self.template.takes(build) else DollBuild()
+
+    def made(self, drawings: dict[str, pygame.Surface], build: DollBuild) -> Doll:
+        """A doll cut from drawings by its own measures, with the body plan that goes with them."""
+        template = self.template.built(build)
+        plan = doll_plan(self.plan, template, build) if self.plan is not None else None
+        return Doll(template, drawings, plan)
 
     def drawings(self, body_id: str) -> dict[str, pygame.Surface]:
         """The drawings kept for a body, by canvas. Empty if nobody has drawn it."""
@@ -447,7 +687,7 @@ class DollStore:
         """The doll of a body. None unless its body has been drawn."""
         if body_id not in self._dolls:
             drawings = self.drawings(body_id)
-            self._dolls[body_id] = Doll(self.template, drawings) if BODY_CANVAS in drawings else None
+            self._dolls[body_id] = self.made(drawings, self.build(body_id)) if BODY_CANVAS in drawings else None
         return self._dolls[body_id]
 
     def forget(self, body_id: str) -> None:

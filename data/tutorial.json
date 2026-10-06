@@ -47,9 +47,18 @@
       "done": "Cuarta lección: todo se puede deshacer"
     },
     {
+      "id": "draw_measures",
+      "title": "A su medida",
+      "text": "Elige Medidas y arrastra un punto del papel: la pieza se alarga o se acorta, y el muñeco medirá lo que mida aquí. En la figura de la derecha se mueven hombros, piernas y cabeza hasta que encajen. Medidas de partida lo deja como estaba.",
+      "goal": {"type": "deed", "target": "measure"},
+      "focus": "doll",
+      "hint": "tools",
+      "done": "Quinta lección: cada cual tiene sus medidas"
+    },
+    {
       "id": "draw_resident",
       "title": "Dibuja a tu habitante",
-      "text": "Dibújalo entero: el cuerpo de lado, mirando a la derecha, y la cabeza aparte. Maniquí de partida deja una figura sencilla para pintar encima. Abajo a la derecha ves cómo se mueve. Cuando te guste, Guardar.",
+      "text": "Vuelve al Pincel y dibújalo entero: el cuerpo de lado, mirando a la derecha, y la cabeza aparte. Maniquí de partida deja una figura sencilla para pintar encima. Abajo a la derecha ves cómo se mueve. Cuando te guste, Guardar.",
       "goal": {"type": "deed", "target": "save_resident"},
       "focus": "doll",
       "hint": "save",

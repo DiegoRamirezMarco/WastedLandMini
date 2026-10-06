@@ -140,7 +140,7 @@
     "doll": {
       "like": "side",
       "rest": {
-        "pelvis": [0, -11.3],
+        "pelvis": [0, -9.8],
         "chest": [0, -15.3],
         "neck": [0, -17.3],
         "head": [0, -20.3],
@@ -150,13 +150,13 @@
         "shoulder_right": [-1, -14.6],
         "elbow_right": [-1, -11.1],
         "hand_right": [-1, -7.6],
-        "hip_left": [0.9, -9],
-        "knee_left": [0.9, -5.25],
+        "hip_left": [0.9, -7.5],
+        "knee_left": [0.9, -4.5],
         "foot_left": [0.9, -1.5],
-        "hip_right": [-1, -9],
-        "knee_right": [-1, -5.25],
+        "hip_right": [-1, -7.5],
+        "knee_right": [-1, -4.5],
         "foot_right": [-1, -1.5],
-        "groin": [0, -9.5],
+        "groin": [0, -8],
         "fingertip_left": [0.9, -6],
         "fingertip_right": [-1, -6],
         "toe_left": [2.9, -1.5],
@@ -216,18 +216,22 @@
       "side": [
         {
           "thigh_right": 28, "shin_right": 8, "thigh_left": -22, "shin_left": -45,
+          "foot_left": -25,
           "upper_arm_left": 30, "forearm_left": 50, "upper_arm_right": -28, "forearm_right": -8
         },
         {
           "root": [0, -1], "thigh_left": 15, "shin_left": -40,
+          "foot_left": -10,
           "upper_arm_left": 5, "forearm_left": 15, "upper_arm_right": -5, "forearm_right": 5
         },
         {
           "thigh_left": 28, "shin_left": 8, "thigh_right": -22, "shin_right": -45,
+          "foot_right": -25,
           "upper_arm_right": 30, "forearm_right": 50, "upper_arm_left": -28, "forearm_left": -8
         },
         {
           "root": [0, -1], "thigh_right": 15, "shin_right": -40,
+          "foot_right": -10,
           "upper_arm_right": 5, "forearm_right": 15, "upper_arm_left": -5, "forearm_left": 5
         }
       ]

@@ -1,12 +1,27 @@
 """Where a resident's body and head are drawn: two canvases over a guide, and the result moving beside them."""
 
+import json
+import math
 from collections.abc import Callable
 from pathlib import Path
 
 import pygame
 
 from graphics.body_renderer import BodyRenderer
-from graphics.doll import BODY_CANVAS, DOLL_FACINGS, HEAD_CANVAS, Doll, DollStore, doll_path, draw_doll
+from graphics.doll import (
+    BODY_CANVAS,
+    DOLL_FACINGS,
+    HEAD_CANVAS,
+    Doll,
+    DollBuild,
+    DollStore,
+    JointHandle,
+    build_path,
+    doll_path,
+    doll_plan,
+    draw_doll,
+    unsided,
+)
 from graphics.doll_guide import label_spots, reference
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
@@ -21,6 +36,7 @@ from ui.tutorial_panel import (
     COLOR_DEED,
     DOLL_FOCUS,
     FILL_DEED,
+    MEASURE_DEED,
     RESIDENT_DRAWN_DEED,
     STROKE_DEED,
     UNDO_DEED,
@@ -32,13 +48,28 @@ from ui.tutorial_panel import (
 BODY_AT = (196, 58)
 HEAD_AT = (530, 58)
 PREVIEW = pygame.Rect(530, 272, 192, 170)
-NOTES = pygame.Rect(8, 272, 180, 174)
+NOTES = pygame.Rect(8, 290, 180, 156)
 TOOLS_LEFT = 8
 SWATCH = (28, 16)
 SWATCHES_PER_ROW = 6
 BRUSHES = (2, 5, 10, 18)
 BRUSH_TOOL, ERASER_TOOL, FILL_TOOL = "brush", "eraser", "fill"
-TOOL_LABELS = {BRUSH_TOOL: "Pincel", ERASER_TOOL: "Goma", FILL_TOOL: "Cubo"}
+# Not a way of painting: with it in hand the joints of the guide are what the mouse takes hold of.
+MEASURE_TOOL = "measure"
+TOOL_LABELS = {BRUSH_TOOL: "Pincel", ERASER_TOOL: "Goma", FILL_TOOL: "Cubo", MEASURE_TOOL: "Medidas"}
+# Canvas pixels within which a joint is taken hold of, and how large it is drawn while it can be.
+GRIP = 8
+HANDLE_RADIUS = 4
+# What the places where a limb is joined on are called beside the figure, by the bone that joins it.
+ATTACH_NAMES = {"clavicle": "hombros", "pelvis": "piernas"}
+HEAD_NAME = "cabeza"
+MEASURE_PREVIEW = "Arrastra hombros, piernas y cabeza"
+MEASURE_NOTES = (
+    "Arrastra los puntos del papel: la pieza se alarga o se acorta, y lo que cuelga de ella la sigue.",
+    "El muñeco mide lo que mide en el papel. Si lo quieres paticorto, acorta aquí las piernas.",
+    "En la figura de la derecha se mueven hombros, piernas y cabeza hasta donde encajen.",
+    "Lo ya pintado no se mueve con los puntos: mejor ajustar las medidas antes de dibujar.",
+)
 # Where the guide is shown: under the drawing, over it, or not at all.
 GUIDE_UNDER, GUIDE_OVER, GUIDE_OFF = "under", "over", "off"
 GUIDE_LABELS = {GUIDE_UNDER: "Calco: debajo", GUIDE_OVER: "Calco: encima", GUIDE_OFF: "Calco: quitado"}
@@ -64,6 +95,10 @@ UNDO_STEPS = 30
 PAPER = PALETTE["bone"]
 # Window pixels to one of the skeleton's in the preview, and how fast it goes through its clips.
 PREVIEW_DETAIL = 9.0
+# How far above the bottom of the preview, in window pixels, the ground it stands on is.
+PREVIEW_FOOT = 40
+# While it is being measured the figure stands still, and is shown larger to be taken hold of.
+MEASURE_DETAIL = 12.0
 PREVIEW_RATE = 1.2
 PREVIEW_CLIPS = ("walk", "idle", "work", "fight")
 PREVIEW_SECONDS = 4.0
@@ -106,7 +141,14 @@ class DollEditor:
         self.plan = plan
         self.bodies = bodies
         self.on_saved = on_saved
-        self.template = dolls.template
+        # The template every doll starts from, and this one's own: its measures, the template with
+        # its joints where they put them, and the body plan that stands as they say.
+        self.base_template = dolls.template
+        self.build = DollBuild()
+        self.template = self.base_template
+        self.doll_plan = doll_plan(plan, self.template, self.build)
+        # What of the measures the mouse has hold of, and how they stood when it took hold.
+        self._grab: tuple | None = None
         self.closed = False
         self.resident_id: str | None = None
         self.drawings: dict[str, pygame.Surface] = {}
@@ -116,7 +158,7 @@ class DollEditor:
         }
         self.guides = {name: self._named_guide(name) for name in self.areas}
         # The figure of the guide, cut as a drawing would be: what moves in the preview until something is drawn.
-        self._example = Doll(self.template, {name: reference(self.template, name) for name in self.areas})
+        self._example = Doll(self.template, {name: reference(self.template, name) for name in self.areas}, self.doll_plan)
         self._showing_example = True
         self.colors = list(PALETTE.values())
         self.color = PALETTE["ink"]
@@ -145,6 +187,8 @@ class DollEditor:
         self.guide_button.rect.width = 110
         y += 18
         self.mannequin_button = Button.at(font, TOOLS_LEFT, y, "Maniquí de partida", ("mannequin",))
+        y += 18
+        self.measures_button = Button.at(font, TOOLS_LEFT, y, "Medidas de partida", ("measures",))
         self.top_buttons = self._row(6, [("<", ("step", -1)), (">", ("step", 1)), ("Guardar", ("save",)), ("Volver", ("close",))], left=530)
 
     def _row(self, y: int, entries: list[tuple[str, tuple]], left: int = TOOLS_LEFT) -> list[Button]:
@@ -157,7 +201,10 @@ class DollEditor:
 
     @property
     def buttons(self) -> list[Button]:
-        return [*self.top_buttons, *self.tool_buttons, *self.edit_buttons, self.guide_button, self.mannequin_button]
+        return [
+            *self.top_buttons, *self.tool_buttons, *self.edit_buttons, self.guide_button, self.mannequin_button,
+            self.measures_button,
+        ]
 
     def open(self, resident_id: str | None) -> None:
         """Start drawing a resident, from what has been drawn of them so far."""
@@ -175,7 +222,98 @@ class DollEditor:
                 picture = kept[name]
                 surface.blit(picture if picture.get_size() == size else pygame.transform.smoothscale(picture, size), (0, 0))
             self.drawings[name] = surface
-        self._cut()
+        self._grab = None
+        self.set_build(self.dolls.build(self.resident_id) if self.resident_id is not None else DollBuild())
+
+    def set_build(self, build: DollBuild, settled: bool = True) -> bool:
+        """Give the doll other measures, if it can have them. Returns whether it could.
+
+        The guide, the figure under it and the body plan all follow. While a joint is still being
+        dragged the drawing is not cut again, which is the slow part: `settled` says it has been let go.
+        """
+        if not self.base_template.takes(build):
+            return False
+        self.build = build
+        self.template = self.base_template.built(build)
+        self.doll_plan = doll_plan(self.plan, self.template, build)
+        self.guides = {name: self._named_guide(name) for name in self.areas}
+        if settled:
+            self._example = Doll(
+                self.template, {name: reference(self.template, name) for name in self.areas}, self.doll_plan
+            )
+            self._cut()
+        return True
+
+    def joint_handles(self, canvas: str) -> list[JointHandle]:
+        """The joints of one canvas that can be taken hold of, where the doll's measures have them."""
+        return [handle for handle in self.base_template.handles(self.template) if handle.canvas == canvas]
+
+    @property
+    def _per_unit(self) -> float:
+        """Canvas pixels to one of the skeleton's in the preview, as it is shown while measuring."""
+        return MEASURE_DETAIL / self.layers.scale
+
+    def figure_handles(self) -> list[tuple[str, str, tuple[float, float]]]:
+        """Where on the figure a limb or the head can be taken hold of to be joined on elsewhere.
+
+        Each is a kind, `attach` for the bone that joins a limb to the trunk or `point` for a head
+        on its neck, what the measures call it, and where it is on the game's canvas.
+        """
+        pose = self.doll_plan.pose(DOLL_FACINGS["right"])
+        per_unit = self._per_unit
+
+        def spot(joints: list[str]) -> tuple[float, float]:
+            x = sum(pose[joint][0] for joint in joints) / len(joints)
+            y = sum(pose[joint][1] for joint in joints) / len(joints)
+            return (PREVIEW.centerx + (x + 0.5) * per_unit, PREVIEW.bottom - PREVIEW_FOOT / self.layers.scale + (y + 0.5) * per_unit)
+
+        found: dict[tuple[str, str], list[str]] = {}
+        for bone in self.plan.bones.values():
+            spec = self.base_template.parts.get(bone.name)
+            if spec is None:
+                # A bone nobody draws: it is what holds a limb to the trunk, one each side.
+                found.setdefault(("attach", unsided(bone.name)), []).append(bone.end)
+            elif spec.whole:
+                found.setdefault(("point", f"{unsided(bone.name)}.start"), []).append(bone.end)
+        return [(kind, name, spot(joints)) for (kind, name), joints in found.items()]
+
+    def _take_hold(self, position: tuple[int, int]) -> bool:
+        """Take hold of the joint or the limb under the mouse, if there is one near enough."""
+        on = self._canvas_under(position)
+        if on is not None:
+            name, at = on
+            near = [handle for handle in self.joint_handles(name) if math.dist(handle.point, at) <= GRIP]
+            if not near:
+                return False
+            handle = min(near, key=lambda each: math.dist(each.point, at))
+            before = self.build.points.get(handle.key, (0.0, 0.0)) if handle.axis is None else self.build.joints.get(handle.key, 0.0)
+            self._grab = ("joint", handle.key, handle.axis, before, position)
+            return True
+        if PREVIEW.collidepoint(position):
+            near = [entry for entry in self.figure_handles() if math.dist(entry[2], position) <= GRIP + 2]
+            if not near:
+                return False
+            kind, name, _ = min(near, key=lambda entry: math.dist(entry[2], position))
+            before = (self.build.attach if kind == "attach" else self.build.points).get(name, (0.0, 0.0))
+            self._grab = (kind, name, None, before, position)
+            return True
+        return False
+
+    def _pull(self, position: tuple[int, int]) -> None:
+        """Move whatever is held to where the mouse now is, as far as the doll can have it there."""
+        kind, name, axis, before, pressed = self._grab
+        dx, dy = position[0] - pressed[0], position[1] - pressed[1]
+        build = self.build.copy()
+        if kind == "joint" and axis is not None:
+            build.joints[name] = round(before + (dx * axis[0] + dy * axis[1]) / self.template.unit, 2)
+        elif kind == "joint":
+            build.points[name] = (round(before[0] + dx / self.template.unit, 2), round(before[1] + dy / self.template.unit, 2))
+        elif kind == "attach":
+            build.attach[name] = (round(before[0] + dx / self._per_unit, 2), round(before[1] + dy / self._per_unit, 2))
+        else:
+            # A head moved on the figure is its neck moved the other way on the head's own paper.
+            build.points[name] = (round(before[0] - dx / self._per_unit, 2), round(before[1] - dy / self._per_unit, 2))
+        self.set_build(build, settled=False)
 
     def _did(self, deed: str) -> None:
         """Say that the player has done something the opening of a new settlement may be waiting for."""
@@ -220,7 +358,8 @@ class DollEditor:
                 write(name, (spot.right + 4, spot.top + 8))
             elif part in NAMES_BELOW:
                 write(name, (spot.left + 4, spot.bottom - LINE_HEIGHT))
-            else:
+            elif spot.height >= self.font.width(name) + 2:
+                # Up its left edge, where the figure leaves room. A part made too short for its name goes without.
                 write(name, (spot.left + 3, spot.centery - self.font.width(name) // 2), upright=True)
             if side and part in LIMB_TOPS:
                 # Over the round end the game gives a limb where nothing else begins.
@@ -245,7 +384,7 @@ class DollEditor:
         if self._showing_example:
             self._preview = self._example
             return
-        self._preview = Doll(self.template, self.drawings)
+        self._preview = Doll(self.template, self.drawings, self.doll_plan)
 
     def _remember(self, name: str) -> None:
         self._undo.append((name, self.drawings[name].copy()))
@@ -297,6 +436,9 @@ class DollEditor:
                 path = self.root / doll_path(self.resident_id, name)
                 path.parent.mkdir(parents=True, exist_ok=True)
                 pygame.image.save(surface, str(path))
+            # Their measures go with their drawings: one is cut by the other.
+            measures = self.root / build_path(self.resident_id)
+            measures.write_text(json.dumps(self.build.to_data(), indent=2) + "\n", encoding="utf-8")
         except (OSError, pygame.error):
             self.notice = "No se pudo guardar"
             return False
@@ -326,6 +468,8 @@ class DollEditor:
             self.guide_button.label = GUIDE_LABELS[self.guide]
         elif intent[0] == "mannequin":
             self.mannequin()
+        elif intent[0] == "measures":
+            self.set_build(DollBuild())
         elif intent[0] == "step":
             self.step(intent[1])
         elif intent[0] == "save":
@@ -356,7 +500,12 @@ class DollEditor:
 
     def press(self, position: tuple[int, int]) -> None:
         """Handle the left button going down at a position on the game's canvas."""
+        if self.tool == MEASURE_TOOL and self._take_hold(position):
+            return
         on = self._canvas_under(position)
+        if on is not None and self.tool == MEASURE_TOOL:
+            # With the measures in hand nothing is painted: a slip of the mouse spoils no drawing.
+            return
         if on is not None:
             name, at = on
             self._remember(name)
@@ -386,6 +535,9 @@ class DollEditor:
 
     def drag(self, position: tuple[int, int]) -> None:
         """Go on with a stroke, on the drawing it began on, even past its edge."""
+        if self._grab is not None:
+            self._pull(position)
+            return
         if self._stroke is None:
             return
         name, last = self._stroke
@@ -395,6 +547,11 @@ class DollEditor:
         self._stroke = (name, at)
 
     def release(self) -> None:
+        if self._grab is not None:
+            self._grab = None
+            # Let go: now the drawing is cut again by the measures it was left with.
+            self.set_build(self.build)
+            self._did(MEASURE_DEED)
         if self._stroke is not None:
             self._stroke = None
             self._cut()
@@ -436,7 +593,7 @@ class DollEditor:
             pygame.draw.circle(canvas, PALETTE["bone"], rect.center, max(1, size // 2))
         for button in self.tool_buttons:
             button.draw(canvas, font, active=button.intent == ("tool", self.tool))
-        for button in (*self.edit_buttons, self.guide_button, self.mannequin_button):
+        for button in (*self.edit_buttons, self.guide_button, self.mannequin_button, self.measures_button):
             button.draw(canvas, font)
 
         for name, area in self.areas.items():
@@ -445,12 +602,15 @@ class DollEditor:
             pygame.draw.rect(canvas, PALETTE["stone"], area.inflate(2, 2), 1)
             canvas.fill(TRANSPARENT, area)
             self.layers.under(self._show_drawing(name, area))
-        caption = EXAMPLE_PREVIEW if self._showing_example else OWN_PREVIEW
-        font.draw(canvas, caption, (PREVIEW.x, PREVIEW.y - LINE_HEIGHT - 1), PALETTE["dust"])
+        measuring = self.tool == MEASURE_TOOL
+        caption = MEASURE_PREVIEW if measuring else (EXAMPLE_PREVIEW if self._showing_example else OWN_PREVIEW)
+        font.draw(canvas, caption, (PREVIEW.x, PREVIEW.y - LINE_HEIGHT - 1), PALETTE["glow" if measuring else "dust"])
         pygame.draw.rect(canvas, PALETTE["stone"], PREVIEW.inflate(2, 2), 1)
         canvas.fill(TRANSPARENT, PREVIEW)
         self.layers.under(self._show_preview)
 
+        if measuring:
+            self._render_handles()
         lesson = lesson_for(self.world, focus=DOLL_FOCUS)
         if lesson is not None:
             # While the opening of a new settlement teaches drawing, the lesson goes where the notes do.
@@ -458,11 +618,30 @@ class DollEditor:
             draw_hint(canvas, self._hint_rect(lesson.hint), self.time)
             return
         y = NOTES.y
-        for note in NOTES_TEXT:
+        for note in MEASURE_NOTES if measuring else NOTES_TEXT:
             for line in font.wrap(note, NOTES.width):
                 font.draw(canvas, line, (NOTES.x, y), PALETTE["bone"])
                 y += LINE_HEIGHT
             y += 3
+
+    def _render_handles(self) -> None:
+        """Mark what the mouse can take hold of: the joints on both papers, and on the figure where
+        the limbs and the head are joined on."""
+        held = self._grab[1] if self._grab is not None else None
+
+        def mark(spot: tuple[float, float], lit: bool, radius: int = HANDLE_RADIUS) -> None:
+            centre = (round(spot[0]), round(spot[1]))
+            pygame.draw.circle(self.canvas, PALETTE["ink"], centre, radius + 2)
+            pygame.draw.circle(self.canvas, PALETTE["glow" if lit else "paper"], centre, radius + 1)
+            pygame.draw.circle(self.canvas, PALETTE["ember"], centre, radius - 1)
+
+        for name, area in self.areas.items():
+            for handle in self.joint_handles(name):
+                mark((area.x + handle.point[0], area.y + handle.point[1]), handle.key == held)
+        for kind, name, spot in self.figure_handles():
+            mark(spot, name == held, HANDLE_RADIUS - 1)
+            label = HEAD_NAME if kind == "point" else ATTACH_NAMES.get(name, name)
+            self.font.draw(self.canvas, label, (round(spot[0]) + HANDLE_RADIUS + 5, round(spot[1]) - 5), PALETTE["paper"])
 
     def _show_drawing(self, name: str, area: pygame.Rect) -> Callable[[pygame.Surface], None]:
         place = self.layers.on_screen(area)
@@ -489,9 +668,14 @@ class DollEditor:
         turn = int(self.time / PREVIEW_SECONDS)
         clip = PREVIEW_CLIPS[turn % len(PREVIEW_CLIPS)]
         facing = DOLL_FACINGS["right" if (turn // len(PREVIEW_CLIPS)) % 2 == 0 else "left"]
-        skeleton = Skeleton(self.plan, facing)
-        skeleton.set_pose(self.plan.pose(facing, clip, self.time * PREVIEW_RATE))
+        phase, detail = self.time * PREVIEW_RATE, PREVIEW_DETAIL
+        if self.tool == MEASURE_TOOL:
+            # While it is being measured it stands still, facing right, so that it can be taken hold of.
+            clip, facing, phase, detail = PREVIEW_CLIPS[1], DOLL_FACINGS["right"], 0.0, MEASURE_DETAIL
+        plan = self.doll_plan
+        skeleton = Skeleton(plan, facing)
+        skeleton.set_pose(plan.pose(facing, clip, phase))
         before = screen.get_clip()
         screen.set_clip(place)
-        draw_doll(screen, self._preview, self.plan, skeleton, (place.centerx, place.bottom - 40), PREVIEW_DETAIL)
+        draw_doll(screen, self._preview, plan, skeleton, (place.centerx, place.bottom - PREVIEW_FOOT), detail)
         screen.set_clip(before)

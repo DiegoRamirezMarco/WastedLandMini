@@ -1044,7 +1044,7 @@ class GlobalView:
         body = pygame.Rect(spot[0] - FRAME_ORIGIN[0], spot[1] - FRAME_ORIGIN[1], *FRAME_SIZE)
         if doll is not None:
             # A doll is as tall and as wide as it was drawn: its name goes over its own head.
-            left, high, right, low = doll.standing(self.bodies.plan)
+            left, high, right, low = doll.standing(doll.plan or self.bodies.plan)
             body = pygame.Rect(
                 spot[0] + math.floor(left), spot[1] + math.floor(high), math.ceil(right - left), math.ceil(low) - math.floor(high)
             )
@@ -1057,6 +1057,11 @@ class GlobalView:
         turn = stride if stride is not None else self.time * CLIP_RATES.get(clip, 0.0)
         index = int(turn * frames) % frames
         character = self.bodies.character(resident)
+        # A doll stands and moves by its own measures, so that it is as it was drawn. Physics is
+        # left with whatever body it has in hand until it is done with it.
+        own = doll.plan if doll is not None and doll.plan is not None else self.bodies.plan
+        if character.plan is not own and not character.physical:
+            character.plan = own
         # A doll turns smoothly; the game's own bodies go from one kept picture to the next.
         character.stand(spot[0], spot[1], facing, clip, turn % 1.0 if doll is not None else index / frames, overlay)
 
@@ -1111,11 +1116,12 @@ class GlobalView:
 
     def _posed_skeleton(self, resident_id: str, character) -> Skeleton:
         """A skeleton standing as a resident's clips have them right now, to lay their doll over."""
-        key = (resident_id, character.facing, tuple(character.lost))
+        plan = character.plan
+        key = (resident_id, character.facing, tuple(character.lost), id(plan))
         if key not in self._posed:
-            self._posed[key] = Skeleton(self.bodies.plan, character.facing, character.lost)
+            self._posed[key] = Skeleton(plan, character.facing, character.lost)
         skeleton = self._posed[key]
-        pose = self.bodies.plan.pose(character.facing, character.clip, character.phase, character.overlay)
+        pose = plan.pose(character.facing, character.clip, character.phase, character.overlay)
         skeleton.set_pose(pose, character.x, character.y)
         return skeleton
 

@@ -260,10 +260,18 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   `leg`, `shin`, `shoe` or `head`; anything else is a plain rounded strip. `whole` is for a part
   that is everything on its canvas. Every other part is cut round at the joints it shares, but for
   `free_start`, a part that does not turn about its first joint, and `free_end`, one left as
-  drawn at its second though another starts there, as the trunk at the shoulders. A part need
-  not be as long as its bone is in the `doll` view: it is drawn out between its two joints to
-  fit, and keeps its width and its ends. Every part must have its turn in the `doll` order, and
+  drawn at its second though another starts there, as the trunk at the shoulders. In the game a
+  bone that a part is drawn for is as long as the part is on its paper, whatever the `doll` view
+  says: of that view the game keeps where the bones between are, the ones that join a limb to
+  the trunk, and how high the feet stand. Every part must have its turn in the `doll` order, and
   zones may only overlap where two parts share a joint.
+- A doll's own measures are kept in `illustrations/dolls/<id>/build.json`, written by the
+  editor: `joints` says how far each joint of the guide was moved along its part, in the
+  skeleton's own measure, by part and end (`shin.end` is the ankle, `upper_arm.start` the
+  shoulder, and a limb's start moves all of it); `points` how far a joint that goes anywhere was
+  moved (`skull.start`, where a head sits on its neck); and `attach` how far from where the
+  `doll` view has them the bones that join a limb on end (`clavicle`, `pelvis`). Names carry no
+  side: both arms are one. Measures a doll cannot have are ignored whole.
 - `physics`: gravity in pixels per second squared, how much speed is kept each step (`damping`),
   lost along the ground (`friction`) and given back on landing (`bounce`), how hard limits push
   back, and when a body that lies still goes to sleep.

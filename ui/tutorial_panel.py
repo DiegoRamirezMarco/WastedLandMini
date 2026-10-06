@@ -24,6 +24,7 @@ BUILDING_ART_FOCUS = "building_art"
 # What the player does with their own hands that the opening waits for, by the names the editors give it.
 COLOR_DEED, STROKE_DEED, FILL_DEED, UNDO_DEED = "color", "stroke", "fill", "undo"
 PART_DEED = "part"
+MEASURE_DEED = "measure"
 RESIDENT_DRAWN_DEED = "save_resident"
 BUILDING_DRAWN_DEED = "save_building"
 OBJECT_DRAWN_PREFIX = "draw:"

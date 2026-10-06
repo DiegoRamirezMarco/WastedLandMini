@@ -161,9 +161,17 @@ cut apart where the body bends, each part laid along its bone and turned as the 
   near side hangs from a little behind the middle of the trunk and the far one from a little in
   front, so that both show, and the legs leave the hips the same way. The legs start low in the hips, so that the top of a thigh comes to
   just below the waist and not up into the belly; the near leg is laid over the hips and the
-  far one goes behind. Arms and legs are somewhat longer than they
-  are drawn: each is drawn out between its joints, so its width and its round ends stay as they
-  were. A hand turns with its forearm, and a foot stays level whatever the leg does.
+  far one goes behind. A hand turns with its forearm; the planted foot stays level and the
+  lifted foot flexes during a stride.
+- **Its own measures.** In the game a doll stands on a body made for it: every part is as long
+  on the doll as it is on its paper, and nothing is drawn out to fit. The joints of the guide
+  can be dragged to make a part longer or shorter, with whatever hangs from it following, and on
+  the figure beside the paper the shoulders, the legs and the head are dragged to where they are
+  to be joined on. Both sides of a body share their measures. They are kept beside the drawings,
+  in `build.json`, and the body plan's own `doll` view is left to say only how far apart the two
+  sides hang and where a limb is joined on to begin with. Laid over the game's own body, as
+  only tools and tests now do, a drawing is still drawn out between its joints: there the torso
+  is lengthened between chest and waist and the arms gain a little reach.
 - **Moving.** The doll is posed from the side by the same clips as any body. Facing left it is
   the same drawing in a mirror, and walking up or down the map it keeps the side it last faced.
   It reels, falls, loses limbs and lies still exactly as the game's own bodies do, since it is the

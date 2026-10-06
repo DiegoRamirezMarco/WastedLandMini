@@ -617,6 +617,35 @@ Still open here:
   small picture beside
 - The example of an object is the game's own pixel art, enlarged
 
+### P19 — A body of one's own (needs P18) — done
+A doll was laid over one body made for all of them, and drawn out to fit it: a trunk came out
+longer than it was drawn. Now the paper is the measure.
+
+- **Every part is as long on the doll as on its paper.** Each doll stands on a body plan of its
+  own, made from its drawing: nothing is drawn out between its joints any more
+- **The joints of the guide can be dragged** (`Medidas`): a part is made longer or shorter and
+  whatever hangs from it follows, as long as it was. Where a limb starts moves all of it, to
+  make room on the paper. Someone short in the leg is made by shortening the legs there
+- **Limbs and head are joined on where they are put**: on the figure beside the paper the
+  shoulders, the legs and the head are dragged to their place, and the head's neck can be moved
+  on its own paper too
+- Both sides of a body share their measures, and they are kept beside the drawings
+- A joint goes no further than the doll can have it: no part shorter than a sliver, none off
+  its paper, none over a part it does not meet
+- The guide, the figure under it and the walking figure all follow as a joint is dragged, and
+  with the measures in hand nothing is painted
+- The opening has a lesson for it, done by dragging a joint
+- On the map a resident with a doll is posed, struck and knocked down on their own body
+
+Still open here:
+- What is already painted does not move with the joints: measures are best set before drawing
+- Dragging a joint is not undone with `Ctrl+Z`; `Medidas de partida` puts them all back
+- Both sides are always alike: nobody has one arm longer than the other
+- There is no making a part wider on the guide, only longer. Wider is simply drawn wider
+- The whole doll cannot be made larger or smaller at a stroke
+- Arms have little room to grow on the paper before they reach the legs
+- The game's own pixel bodies, for whoever has not been drawn, are all of one build
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it

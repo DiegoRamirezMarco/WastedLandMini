@@ -103,7 +103,7 @@ class Game:
         # Until somebody draws them, whoever has no art of their own borrows one of the game's looks.
         self.faces = FaceRenderer(self.assets, self.custom, self.illustrations, Looks(self.assets))
         # Residents whose body has been drawn, cut into parts that move.
-        self.dolls = DollStore(self.illustrations, load_template())
+        self.dolls = DollStore(self.illustrations, load_template(), builtin_plan())
         self.music = load_music_settings(DATA_DIR / "audio.json")
         self.audio = AudioManager(
             ASSETS_DIR / "sounds",

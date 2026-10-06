@@ -46,6 +46,7 @@ def settle(world: SimulationWorld, until: str | None = None) -> None:
         "draw_stroke": lambda: drew("stroke"),
         "draw_fill": lambda: drew("fill"),
         "draw_undo": lambda: drew("undo"),
+        "draw_measures": lambda: drew("measure"),
         "draw_resident": lambda: drew("save_resident"),
         "shack": lambda: world.apply_command(PlaceBuildingCommand("shack", SHACK_AT)),
         "draw_parts": lambda: drew("part"),
@@ -153,7 +154,7 @@ class NewSettlementTests(unittest.TestCase):
 
     def test_drawing_is_taught_a_thing_at_a_time_and_only_what_is_asked_counts(self) -> None:
         settle(self.world, until="draw_color")
-        lessons = ["color", "stroke", "fill", "undo", "save_resident"]
+        lessons = ["color", "stroke", "fill", "undo", "measure", "save_resident"]
         for index, deed in enumerate(lessons):
             self.assertEqual(self.world.guide.owed(self.world), deed)
             # Doing what a later lesson teaches is not doing this one.
@@ -700,8 +701,18 @@ class DrawingLessonsTests(unittest.TestCase):
         self._click(self._button(editor, ("tool", "fill")))
         self._click((body.x + 10, body.y + 10))
         self._key(pygame.K_z, "z", pygame.KMOD_CTRL)
+        self._measure(editor)
+        self._click(self._button(editor, ("tool", "brush")))
         self._click(self._button(editor, ("mannequin",)))
         self._click(self._button(editor, ("save",)))
+
+    def _measure(self, editor) -> None:
+        """Take the measures in hand and make the legs a little shorter, by the ankle."""
+        self._click(self._button(editor, ("tool", "measure")))
+        body = editor.areas["body"]
+        ankle = next(handle for handle in editor.joint_handles("body") if handle.key == "shin.end")
+        start = (round(body.x + ankle.point[0]), round(body.y + ankle.point[1]))
+        self._stroke(start, (start[0], start[1] - 16))
 
     def _put_down(self, category: str, catalog_id: str, tile: tuple[int, int]) -> None:
         """Drag something out of the catalogue of the layout editor and let go of it on a tile."""
@@ -735,20 +746,38 @@ class DrawingLessonsTests(unittest.TestCase):
         self._click((body.x + 10, body.y + 10))
         self.assertEqual(self.step, "draw_undo")
         self._key(pygame.K_z, "z", pygame.KMOD_CTRL)
+        self.assertEqual(self.step, "draw_measures")
+        # Taking the tool is not using it; nor does it paint.
+        self._click(self._button(editor, ("tool", "measure")))
+        self.assertEqual(self.step, "draw_measures")
+        painted = pygame.mask.from_surface(editor.drawings["body"]).count()
+        self._stroke((body.x + 150, body.y + 200), (body.x + 170, body.y + 220))
+        self.assertEqual(pygame.mask.from_surface(editor.drawings["body"]).count(), painted)
+        self.assertEqual(self.step, "draw_measures")
+        self._measure(editor)
         self.assertEqual(self.step, "draw_resident")
+        self.assertEqual(editor.build.joints, {"shin.end": -1.0})
+        self._click(self._button(editor, ("tool", "brush")))
         self._click(self._button(editor, ("mannequin",)))
         self._frame()
         self.assertEqual(self.step, "draw_resident")
         self._click(self._button(editor, ("save",)))
         self.assertEqual(self.step, "shack")
-        for name in ("body", "head"):
-            self.assertTrue((self.drawings / "dolls" / resident_id / f"{name}.png").is_file())
+        for name in ("body.png", "head.png", "build.json"):
+            self.assertTrue((self.drawings / "dolls" / resident_id / name).is_file())
         # Time has stood still all the while.
         self.assertEqual(self.game.world.clock.total_minutes, 8 * 60)
         self._key(pygame.K_ESCAPE)
         self.assertEqual(self.game.scene_name, "global")
-        self.assertIsNotNone(self.game.dolls.get(resident_id))
+        doll = self.game.dolls.get(resident_id)
+        self.assertIsNotNone(doll)
+        # On the map their legs are as short as they were made on the paper, and no shorter or longer.
+        base = self.game.global_view.bodies.plan
+        self.assertAlmostEqual(doll.plan.length("doll", "shin_left"), 2.0)
+        self.assertAlmostEqual(doll.plan.length("doll", "thigh_left"), 3.0)
+        self.assertLess(doll.plan.rests["doll"]["pelvis"][1] * -1, base.rests["doll"]["pelvis"][1] * -1)
         self._frame()
+        self.assertIs(self.game.global_view.bodies.characters[resident_id].plan, doll.plan)
 
     def test_a_drawing_left_half_done_can_be_gone_back_to_from_the_map(self) -> None:
         self._make_someone()
