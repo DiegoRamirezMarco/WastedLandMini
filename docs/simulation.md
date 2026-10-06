@@ -315,7 +315,8 @@ room. An argument's importance rises with the resentment between the two.
   trait gives is known to the player from the start, as the trait is.
 - `TasteSystem.found_out` is what a screen may show: each taste with how sure it is and which
   way it goes. Suspected, it says liked, disliked or neither; known, which of the five. There is
-  never a number in it.
+  never a number in it. The one place the figures are shown is the `Debug` switch on a resident's
+  tastes, which is there for trying things out and not for play.
 - A taste for something no content brings any longer stays in the save and does nothing.
 - **What is lived moves what is learned**, by how good or bad it was and how much it mattered
   (`TasteSystem.learn`): a meal like any other hardly counts, and nearly dying of one counts for

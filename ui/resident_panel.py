@@ -27,6 +27,7 @@ from ui.labels import (
     expression_of,
     has_shop,
     relationship_rows,
+    taste_debug_rows,
     taste_rows,
     trait_names,
 )
@@ -65,6 +66,12 @@ TAB_WIDTH = 40
 TASTE_ROW = LINE_HEIGHT + 2
 TASTE_ICONS = {LOVED: "relish", LIKED: "relish", DISLIKED: "disgust", HATED: "disgust"}
 TASTE_COLORS = {LOVED: "lichen", LIKED: "lichen", DISLIKED: "ember", HATED: "ember"}
+# A switch on the tastes for looking at the figures the game keeps to itself. Not for play.
+DEBUG_LABEL = "Debug"
+DEBUG_WIDTH = 34
+DEBUG_TITLE = "Gustos: valores"
+DEBUG_HEADINGS = ("base", "apr.", "total")
+DEBUG_COLUMN = 26
 
 
 def _title(target: pygame.Surface, font: BitmapFont, text: str, x: int, y: int, width: int) -> int:
@@ -111,6 +118,45 @@ def tab_hitbox(panel: pygame.Rect) -> pygame.Rect:
     return pygame.Rect(panel.right - PADDING - TAB_WIDTH, top - 1, TAB_WIDTH, LINE_HEIGHT)
 
 
+def debug_hitbox(panel: pygame.Rect) -> pygame.Rect:
+    """Where the figures behind the tastes are switched on and off: beside the way back."""
+    tab = tab_hitbox(panel)
+    return pygame.Rect(tab.left - DEBUG_WIDTH - 3, tab.y, DEBUG_WIDTH, tab.height)
+
+
+def _draw_taste_figures(
+    target: pygame.Surface,
+    font: BitmapFont,
+    panel: pygame.Rect,
+    position: tuple[int, int],
+    world: SimulationWorld,
+    resident: Resident,
+) -> None:
+    """Every taste a resident has with its figures: the leaning, what was learned, and the two together."""
+    x, y = position
+    right = panel.right - PADDING
+    # From the right: how sure the player is, then the three figures.
+    columns = [right - 8 - DEBUG_COLUMN * (len(DEBUG_HEADINGS) - index) for index in range(len(DEBUG_HEADINGS))]
+    for column, heading in zip(columns, DEBUG_HEADINGS):
+        font.draw(target, heading, (column + DEBUG_COLUMN - font.width(heading), y), PALETTE["dust"])
+    y += TASTE_ROW
+    rows = taste_debug_rows(world, resident)
+    room = (panel.bottom - PADDING - y) // TASTE_ROW
+    left_out = max(0, len(rows) - (room - 1)) if len(rows) > room else 0
+    for label, leaning, learned, value, reaction, sure in rows[: len(rows) - left_out]:
+        font.draw(target, font.truncate(label, columns[0] - x - 2), (x, y), PALETTE["bone"])
+        figures = ("" if leaning is None else f"{leaning:+d}", "" if learned is None else f"{learned:+d}", f"{value:+d}")
+        colors = ("stone", "stone", TASTE_COLORS.get(reaction, "paper"))
+        for column, figure, color in zip(columns, figures, colors):
+            font.draw(target, figure, (column + DEBUG_COLUMN - font.width(figure), y), PALETTE[color])
+        font.draw(target, sure, (right - font.width(sure), y), PALETTE["teal"])
+        y += TASTE_ROW
+    if left_out:
+        font.draw(target, f"y {left_out} más", (x, y), PALETTE["stone"])
+    elif not rows:
+        font.draw(target, "Todavía no tiene ninguno", (x, y), PALETTE["stone"])
+
+
 def _draw_tab(target: pygame.Surface, font: BitmapFont, panel: pygame.Rect, tab: str) -> None:
     rect = tab_hitbox(panel)
     draw_panel(target, rect, fill="shadow", border="lamp")
@@ -126,11 +172,24 @@ def _draw_tastes(
     position: tuple[int, int],
     world: SimulationWorld,
     resident: Resident,
+    debug: bool = False,
 ) -> None:
-    """What the player has found out of what a resident likes, one taste to a line."""
+    """What the player has found out of what a resident likes, one taste to a line. With `debug`,
+    every taste they have and the figures behind it instead."""
     x, y = position
     inner = panel.width - PADDING * 2
-    y = _title(target, font, TASTES_TITLE, x, y, inner - TAB_WIDTH - 3)
+    y = _title(target, font, DEBUG_TITLE if debug else TASTES_TITLE, x, y, inner - TAB_WIDTH - DEBUG_WIDTH - 6)
+    switch = debug_hitbox(panel)
+    draw_panel(target, switch, fill="lamp" if debug else "shadow", border="iron")
+    font.draw(
+        target,
+        DEBUG_LABEL,
+        (switch.centerx - font.width(DEBUG_LABEL) // 2, switch.y),
+        PALETTE["ink" if debug else "stone"],
+    )
+    if debug:
+        _draw_taste_figures(target, font, panel, (x, y), world, resident)
+        return
     rows = taste_rows(world, resident)
     room = (panel.bottom - PADDING - y) // TASTE_ROW
     if len(rows) > room:
@@ -199,6 +258,7 @@ def draw_resident_panel(
     resident: Resident,
     layers: ScreenLayers | None = None,
     tab: str = LIFE_TAB,
+    debug: bool = False,
 ) -> None:
     draw_panel(target, panel)
     x, y = panel.x + PADDING, panel.y + PADDING
@@ -243,7 +303,7 @@ def draw_resident_panel(
     y += 4
 
     if tab == TASTES_TAB:
-        _draw_tastes(target, font, assets, panel, (x, y), world, resident)
+        _draw_tastes(target, font, assets, panel, (x, y), world, resident, debug)
         _draw_tab(target, font, panel, tab)
         return
     traits = trait_names(world, resident)

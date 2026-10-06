@@ -44,6 +44,7 @@ from scenes.hud import (
     ROSTER_INTENT,
     SAVE_INTENT,
     STORES_INTENT,
+    TASTE_DEBUG_INTENT,
     URBANISM_INTENT,
     Hud,
 )
@@ -589,6 +590,8 @@ class GlobalView:
             self.requested_voice = self.hud.selected_id or next(iter(self.world.residents), None)
         elif intent == PANEL_TAB_INTENT:
             self.hud.toggle_panel_tab()
+        elif intent == TASTE_DEBUG_INTENT:
+            self.hud.taste_debug = not self.hud.taste_debug
         elif intent == ROSTER_INTENT:
             # Nobody in particular: the panel goes back to listing everybody.
             self.hud.select_resident(None)

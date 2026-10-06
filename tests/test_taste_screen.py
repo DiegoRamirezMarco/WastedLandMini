@@ -10,13 +10,13 @@ import pygame
 
 from graphics.palette import PALETTE
 from scenes.global_view import FOUND_OUT_MARK, MARK_SECONDS
-from scenes.hud import PANEL_TAB_INTENT
+from scenes.hud import PANEL_TAB_INTENT, TASTE_DEBUG_INTENT
 from simulation.items.item import ItemDefinition
 from simulation.tastes.settings import EATEN, GIVEN, LOVED
 from simulation.tastes.taste import CATEGORY, ITEM, TAG, Taste
 from simulation.tastes.taste_system import FOUND_OUT_EVENT, REACTION_EVENT
-from ui.labels import MORE_TO_FIND_OUT, NOTHING_FOUND_OUT, TASTE_WORDS, UNKNOWN_TASTE, taste_rows
-from ui.resident_panel import LIFE_TAB, TASTES_TAB, inventory_hitboxes, relationship_hitboxes, tab_hitbox
+from ui.labels import MORE_TO_FIND_OUT, NOTHING_FOUND_OUT, TASTE_WORDS, UNKNOWN_TASTE, taste_debug_rows, taste_rows
+from ui.resident_panel import LIFE_TAB, TASTES_TAB, debug_hitbox, inventory_hitboxes, relationship_hitboxes, tab_hitbox
 
 
 class TasteScreenTests(unittest.TestCase):
@@ -158,6 +158,49 @@ class TasteScreenTests(unittest.TestCase):
         colours = {tuple(self.game.canvas.get_at((x, y)))[:3] for x in range(below.left + 3, below.right - 3) for y in range(below.top, below.bottom)}
         self.assertNotIn(PALETTE["bone"], colours)
         self.assertNotIn(PALETTE["lichen"], colours)
+
+    # ----- looking under the bonnet -----
+
+    def test_a_switch_on_the_tastes_shows_the_figures_the_game_keeps_to_itself(self) -> None:
+        self.hud.select_resident("raul")
+        switch = debug_hitbox(self.hud.layout.panel)
+        self.assertIsNone(self.hud.click(switch.center), "it is not there until the panel is on what they like")
+        self.hud.toggle_panel_tab()
+        self.assertFalse(self.hud.taste_debug)
+        self.view.render()
+        plain = pygame.image.tobytes(self.game.canvas.subsurface(self.hud.layout.panel), "RGB")
+        self.assertEqual(self.hud.click(switch.center), TASTE_DEBUG_INTENT)
+
+        self.view.click(switch.center)
+
+        self.assertTrue(self.hud.taste_debug)
+        self.assertEqual(self.hud.panel_tab, TASTES_TAB)
+        self.view.render()
+        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(self.hud.layout.panel), "RGB"), plain)
+        self.view.click(switch.center)
+        self.assertFalse(self.hud.taste_debug)
+        # What the player is told in play has no more in it for the switch having been used.
+        self.assertEqual(taste_rows(self.world, self.raul), [(UNKNOWN_TASTE, NOTHING_FOUND_OUT, None)])
+
+    def test_the_figures_are_every_taste_they_have_whether_it_has_shown_or_not(self) -> None:
+        self.tastes.learn(self.world, self.raul, TAG, "sweet", 1.0, 0.25)
+        rows = {label: rest for label, *rest in taste_debug_rows(self.world, self.raul)}
+        self.assertEqual(rows["Lo dulce"], [-80, 15, -65, "hated", "-"])
+        self.assertEqual(rows["La comida"], [0, 0, 0, "neutral", "-"])
+        self._eat(self.raul, 3)
+        rows = {label: rest for label, *rest in taste_debug_rows(self.world, self.raul)}
+        self.assertEqual(rows["Lo dulce"][3:], ["hated", "!"])
+        self.assertEqual(rows["La tarta"][4], "!")
+        # A thing they have been seen to take and have no feeling for of its own: how they like it as a whole.
+        self.tastes.profile(self.world, self.raul).items.pop("cake")
+        rows = {label: rest for label, *rest in taste_debug_rows(self.world, self.raul)}
+        self.assertEqual(rows["La tarta"][:2], [None, None])
+        self.assertLess(rows["La tarta"][2], -60)
+        self.assertEqual(taste_debug_rows(self.world, self.world.residents["tomas"]), [])
+        self.hud.select_resident("tomas")
+        self.hud.toggle_panel_tab()
+        self.hud.taste_debug = True
+        self.view.render()
 
     # ----- over their heads and in the log -----
 

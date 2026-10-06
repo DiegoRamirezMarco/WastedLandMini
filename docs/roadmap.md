@@ -850,6 +850,11 @@ Still open here:
 - Tastes in people are in the list with the rest. A taste in doubt again is told as one newly
   suspected: nothing says that it was thought otherwise before
 - The game's own icons for these are a heart and a cross: nobody has drawn them
+- **For the time being there is a `Debug` switch on `Gustos`**, beside the way back. It shows
+  every taste a resident has, found out or not, with the figures behind it: the leaning, what
+  was learned, the two together, and how sure the player is (`-`, `?`, `!`). It is for looking
+  under the bonnet while the tastes are being tried out, and it is to go or be hidden before
+  anyone plays for real: with it on, nothing is left to find out
 
 ## Later
 - SQLite persistence

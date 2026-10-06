@@ -4,7 +4,10 @@ from simulation.items.item import ItemInstance
 from simulation.items.item_system import FOOD_CATEGORY, WATER_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
 from simulation.residents.activity import SHELTER_ACTION
 from simulation.residents.resident import Resident
-from simulation.tastes.settings import DISLIKED, HATED, KNOWN, LIKED, LOVED, NEUTRAL, SUSPECTED
+from simulation.tastes.knowledge import PLAYER
+from simulation.tastes.reaction import reaction_to
+from simulation.tastes.settings import DISLIKED, HATED, KNOWN, LIKED, LOVED, NEUTRAL, SUSPECTED, UNKNOWN
+from simulation.tastes.taste import ITEM, KINDS, key_of, parts_of
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.work.job import JobDefinition
 from simulation.events.world_event_system import BED_USE_ACTION
@@ -28,6 +31,8 @@ TASTE_WORDS = {
 UNKNOWN_TASTE = "???"
 NOTHING_FOUND_OUT = "Todavía no se sabe nada"
 MORE_TO_FIND_OUT = "Hay más por descubrir"
+# How sure the player is of a taste, in a letter, for whoever is looking under the bonnet.
+TASTE_STATE_MARKS = {UNKNOWN: "-", SUSPECTED: "?", KNOWN: "!"}
 
 
 def format_time(timestamp: int, with_day: bool = False) -> str:
@@ -264,6 +269,41 @@ def taste_rows(world: SimulationWorld, resident: Resident) -> list[tuple[str, st
     if not rows:
         return [(UNKNOWN_TASTE, NOTHING_FOUND_OUT, None)]
     return rows + [(UNKNOWN_TASTE, MORE_TO_FIND_OUT, None)] if hidden else rows
+
+
+def taste_debug_rows(world: SimulationWorld, resident: Resident) -> list[tuple[str, int | None, int | None, int, str, str]]:
+    """Every taste a resident has, with the figures the game keeps to itself. For looking under
+    the bonnet, not for play.
+
+    Each is what it is a taste for, the leaning they came with, what they have learned, the two
+    together, which reaction that comes to, and how sure the player is of it. After them, the
+    items the player has seen them take and that they have no feeling for of their own: how much
+    they like each as a whole, which has no leaning and nothing learned to show.
+    """
+    settings = world.registries.tastes
+    knowledge = world.taste_knowledge
+    profile = world.tastes.profile(world, resident)
+
+    def label(key: str) -> str:
+        text = world.tastes.label(world, key)
+        return text[:1].upper() + text[1:]
+
+    def mark(key: str) -> str:
+        return TASTE_STATE_MARKS[knowledge.state(PLAYER, resident.resident_id, key, settings)]
+
+    rows: list[tuple[str, int | None, int | None, int, str, str]] = []
+    for kind in KINDS:
+        for name, taste in sorted(profile.of(kind).items()):
+            key = key_of(kind, name)
+            rows.append(
+                (label(key), round(taste.leaning), round(taste.learned), round(taste.value), reaction_to(taste.value, settings), mark(key))
+            )
+    for key in knowledge.keys(PLAYER, resident.resident_id):
+        kind, name = parts_of(key)
+        if kind == ITEM and name not in profile.items:
+            liked = world.tastes.liking(world, resident, world.registries.items.resolve(name))
+            rows.append((label(key), None, None, round(liked), reaction_to(liked, settings), mark(key)))
+    return rows
 
 
 def trait_names(world: SimulationWorld, resident: Resident) -> list[str]:

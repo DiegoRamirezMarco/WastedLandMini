@@ -42,6 +42,7 @@ from ui.resident_panel import (
     draw_roster,
     inventory_hitboxes,
     relationship_hitboxes,
+    debug_hitbox,
     roster_rows,
     tab_hitbox,
 )
@@ -90,6 +91,8 @@ def speed_intent(speed: int) -> tuple[str, int]:
 
 # Switches the lower part of a resident's panel between how they live and what they like.
 PANEL_TAB_INTENT = "panel_tab"
+# Shows the figures behind a resident's tastes, which the game otherwise keeps to itself. Not for play.
+TASTE_DEBUG_INTENT = "taste_debug"
 
 
 def select_intent(resident_id: str) -> tuple[str, str]:
@@ -159,6 +162,8 @@ class Hud:
         self.selected_container: str | None = None
         # Which of its two faces a resident's panel is showing. It stays as it is from one resident to the next.
         self.panel_tab = LIFE_TAB
+        # Whether the tastes are shown with the figures behind them, for looking under the bonnet.
+        self.taste_debug = False
         # Who is speaking in the dock and what they say, as last drawn. None while nobody is.
         self.spoken: tuple[str, str] | None = None
         # Where the scene draws its minimap, so that clicks on it do not fall through to the map.
@@ -294,6 +299,12 @@ class Hud:
                 return button.intent
         if self.selected_id in self.world.residents and tab_hitbox(self.layout.panel).collidepoint(position):
             return PANEL_TAB_INTENT
+        if (
+            self.selected_id in self.world.residents
+            and self.panel_tab == TASTES_TAB
+            and debug_hitbox(self.layout.panel).collidepoint(position)
+        ):
+            return TASTE_DEBUG_INTENT
         for rect, definition_id in self._inventory_items():
             if rect.collidepoint(position):
                 return edit_item_intent(definition_id)
@@ -466,6 +477,7 @@ class Hud:
                 resident,
                 self.layers,
                 self.panel_tab,
+                self.taste_debug,
             )
         elif self.container_rect() is not None:
             draw_panel(self.canvas, panel)
