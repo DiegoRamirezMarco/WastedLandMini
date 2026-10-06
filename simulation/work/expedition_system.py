@@ -137,20 +137,45 @@ class ExpeditionSystem:
                 if mark < 0:
                     break
             found[entry.item] = found.get(entry.item, 0) + 1
-        for item_id, units in found.items():
-            world.stock(resident.inventory, item_id, units, None)
         haul = ", ".join(f"{world.registries.items.resolve(item_id).name} ({units})" for item_id, units in found.items())
+        kept = self._keeps(world, resident, found)
+        if kept is not None:
+            found[kept] -= 1
+            world.stock(resident.inventory, kept, 1, resident.resident_id)
+        for item_id, units in found.items():
+            if units > 0:
+                world.stock(resident.inventory, item_id, units, None)
+        said = f"{resident.name} vuelve de fuera con {haul}" if haul else f"{resident.name} vuelve de fuera de vacío"
+        if kept is not None:
+            mine = world.registries.items.resolve(kept)
+            said = f"{said}, y se queda {mine.article} {mine.name}"
         world.emit_event(
             DomainEvent(
                 "expedition_returned",
                 RETURN_IMPORTANCE,
-                f"{resident.name} vuelve de fuera con {haul}" if haul else f"{resident.name} vuelve de fuera de vacío",
+                said,
                 [resident.resident_id],
+                data={"found": dict(found), "kept": kept},
             ),
             at=resident.tile,
         )
         if world.rng.random() < trip.danger:
             world.health.hurt(world, resident, world.rng.randint(*settings.injury), settings.injury_kind, INJURY_CAUSE)
+
+    def _keeps(self, world: "SimulationWorld", resident: Resident, found: dict[str, int]) -> str | None:
+        """The one thing of a trip that whoever made it keeps for themselves, under barter: there
+        is no wage, and it is how anybody comes by something of their own. It is the thing worth
+        most to them, and never what the settlement runs on."""
+        if world.fund.currency(world) is not None:
+            return None
+        common = set(world.registries.economy.common_finds)
+        resolve = world.registries.items.resolve
+        choices = [item_id for item_id in found if not common & set(resolve(item_id).tags)]
+        return max(
+            choices,
+            key=lambda item_id: (world.items.personal_value(world, resident, resolve(item_id)), item_id),
+            default=None,
+        )
 
     # ----- bringing the finds where they go -----
 

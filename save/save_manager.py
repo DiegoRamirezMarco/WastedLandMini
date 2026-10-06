@@ -4,7 +4,7 @@ from typing import Any
 
 from simulation.clock import SimulationClock
 from simulation.economy.merchant import Merchant
-from simulation.economy.terms import Currency, TradingState
+from simulation.economy.terms import Currency, Debt, TradingState
 from simulation.events.crisis import Crisis
 from simulation.events.decision import Decision, DecisionOption
 from simulation.events.event import DomainEvent
@@ -78,6 +78,11 @@ FIRST_RESEARCH_VERSION = 25
 # and credit as something that can be stolen. A save from before trades with the credits it
 # had, and its fund starts with what a currency just taken up would have put in it.
 FIRST_FUND_VERSION = 26
+# Version 27 added when each resident last worked and how long they have gone unpaid, what is
+# owed between residents, what waits at the gate to be carried in, who an item is being kept
+# for, and how many swaps each resident has had turned down. In a save from before everybody
+# has just worked, nobody owes anything and nothing waits.
+FIRST_UPKEEP_VERSION = 27
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 23
@@ -96,7 +101,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 26
+    CURRENT_VERSION = 27
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -124,13 +129,17 @@ class SaveManager:
                 "fund": world.trading.fund,
                 "currency_count": world.trading.currency_count,
                 "asked_on": world.trading.asked_on,
+                "refusals": dict(world.trading.refusals),
             },
+            "debts": [vars(debt) for debt in world.debts],
+            "at_gate": dict(world.at_gate),
             "merchant": (
                 {
                     "event_id": world.merchant.event_id,
                     "leaves_at": world.merchant.leaves_at,
                     "goods": dict(world.merchant.goods),
                     "purse": world.merchant.purse,
+                    "fact_id": world.merchant.fact_id,
                 }
                 if world.merchant is not None
                 else None
@@ -207,6 +216,9 @@ class SaveManager:
                     "work_progress": resident.work_progress,
                     "day_off": resident.day_off,
                     "credits": resident.credits,
+                    "last_worked": resident.last_worked,
+                    "unpaid_on": resident.unpaid_on,
+                    "unpaid_days": resident.unpaid_days,
                     "age": resident.age,
                     "couple_with": resident.couple_with,
                     "expedition": vars(resident.expedition) if resident.expedition is not None else None,
@@ -365,6 +377,10 @@ class SaveManager:
                 work_progress=int(resident_data.get("work_progress", 0)),
                 day_off=int(day_off) if day_off is not None else None,
                 credits=float(resident_data.get("credits", pocket_money)),
+                # In a save from before, everybody has just worked.
+                last_worked=int(resident_data.get("last_worked", world.clock.total_minutes)),
+                unpaid_on=int(resident_data.get("unpaid_on", 0)),
+                unpaid_days=max(0, int(resident_data.get("unpaid_days", 0))),
                 age=int(resident_data.get("age", 30)),
                 couple_with=_text_or_none(resident_data.get("couple_with")),
                 expedition=Expedition(
@@ -601,7 +617,34 @@ class SaveManager:
             fund=max(0.0, float(saved.get("fund", 0.0))),
             currency_count=max(0, int(saved.get("currency_count", 0))),
             asked_on=int(asked_on) if asked_on is not None else None,
+            refusals={
+                str(resident_id): int(times)
+                for resident_id, times in _object_or_empty(saved.get("refusals")).items()
+                if resident_id in world.residents and isinstance(times, int) and not isinstance(times, bool)
+            },
         )
+        # What is owed to or by somebody who is gone is owed no longer.
+        world.debts = [
+            Debt(
+                debtor_id=str(debt["debtor_id"]),
+                creditor_id=str(debt["creditor_id"]),
+                amount=max(0.0, float(debt.get("amount", 0.0))),
+                since=int(debt.get("since", 0)),
+                overdue=bool(debt.get("overdue", False)),
+            )
+            for debt in _list_or_empty(data.get("debts"))
+            if isinstance(debt, dict)
+            and debt.get("debtor_id") in world.residents
+            and debt.get("creditor_id") in world.residents
+        ]
+        world.at_gate = {
+            str(item_id): int(units)
+            for item_id, units in _object_or_empty(data.get("at_gate")).items()
+            if isinstance(units, int)
+            and not isinstance(units, bool)
+            and units > 0
+            and world.registries.items.find(str(item_id)) is not None
+        }
         visitor = data.get("merchant")
         events = world.registries.world_events.events
         # Whoever came with an event the game no longer has, or that is no longer a merchant, has gone.
@@ -618,6 +661,8 @@ class SaveManager:
                     and world.registries.items.find(str(item_id)) is not None
                 },
                 purse=max(0.0, float(visitor.get("purse", 0.0))),
+                # Word of them that nobody remembers is as good as never given.
+                fact_id=visitor.get("fact_id") if visitor.get("fact_id") in world.knowledge.facts else None,
             )
 
     def _restore_happenings(self, world: SimulationWorld, data: dict[str, Any], rng_data: dict[str, Any]) -> None:
@@ -936,6 +981,7 @@ def _inventory_to_data(inventory: Inventory) -> list[dict[str, Any]]:
             "condition": item.condition,
             "quantity": item.quantity,
             "given_by": item.given_by,
+            "meant_for": item.meant_for,
         }
         for item in inventory.items
     ]
@@ -955,6 +1001,7 @@ def _inventory_from_data(data: Any) -> Inventory:
                 condition=float(item.get("condition", 100.0)),
                 quantity=max(1, int(item.get("quantity", 1))),
                 given_by=_text_or_none(item.get("given_by")),
+                meant_for=_text_or_none(item.get("meant_for")),
             )
         )
     return inventory

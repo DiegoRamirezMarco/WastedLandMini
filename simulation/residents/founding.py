@@ -80,6 +80,7 @@ def found_resident(
         age=min(max(int(age), youngest), oldest),
         # A settlement that trades by barter, as a new one does, has no coin to put in a pocket.
         credits=world.registries.economy.starting_credits if world.fund.currency(world) is not None else 0.0,
+        last_worked=world.clock.total_minutes,
     )
     world.residents[resident.resident_id] = resident
     room = world.room_at(resident.tile)

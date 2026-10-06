@@ -80,7 +80,7 @@ class WorldEventSystem:
             definition = settings.events.get(upcoming.event_id)
             # What was on its way may come to nothing, if by now it cannot happen.
             if definition is not None and self._can_happen(world, definition):
-                self._happen(world, definition)
+                self._happen(world, definition, upcoming.fact_id)
         if world.clock.minute != 0 or world.clock.day <= settings.quiet_days:
             return
         for event_id, definition in settings.events.items():
@@ -304,6 +304,8 @@ class WorldEventSystem:
             traits=list(newcomer.traits),
             age=newcomer.age,
             credits=world.registries.economy.starting_credits if world.fund.currency(world) is not None else 0.0,
+            # They have the days anybody has to find something to do.
+            last_worked=world.clock.total_minutes,
             # They came to stay, and mean to pull their weight.
             seeks_work=True,
         )
@@ -373,13 +375,14 @@ class WorldEventSystem:
         taken = spots_taken(world)
         return next((tile for tile in ways_in if tile not in taken), free_tile(world, ways_in[0]))
 
-    def _happen(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
+    def _happen(self, world: "SimulationWorld", definition: WorldEventDefinition, heard: str | None = None) -> None:
+        """Carry out an event. `heard` is the fact a radio gave of it beforehand, if one did."""
         if definition.kind == STRANGER:
             self._stranger(world, definition)
         elif definition.kind == STOCK:
             self._stock(world, definition)
         elif definition.kind == MERCHANT:
-            world.merchants.arrive(world, definition)
+            world.merchants.arrive(world, definition, heard)
         elif definition.kind == WEATHER:
             minutes = world.event_rng.randint(*definition.minutes)
             world.weather = Weather(definition.event_id, world.clock.total_minutes + minutes)

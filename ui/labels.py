@@ -91,9 +91,8 @@ def selling_use(world: SimulationWorld, container_id: str):
 
 
 def price_at(world: SimulationWorld, container_id: str, item: ItemInstance) -> int:
-    """What one unit of something on a counter costs right now."""
-    definition = world.registries.items.resolve(item.definition_id)
-    return world.trade.price_of(world, definition, world.containers[container_id].count(item.definition_id))
+    """What one unit of something on a counter costs right now: less, the more worn it is."""
+    return world.trade.price_for(world, world.containers[container_id], item)
 
 
 def price_label(world: SimulationWorld, container_id: str, item: ItemInstance) -> str | None:

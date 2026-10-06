@@ -513,6 +513,8 @@ class InterventionSystem:
             ),
             at=resident.tile,
         )
+        if chosen.raises is not None:
+            world.terms.raised(world, resident, chosen.raises)
         return chosen.outcome_id
 
     def _grievance_target(self, world: "SimulationWorld", resident: Resident) -> Resident | None:

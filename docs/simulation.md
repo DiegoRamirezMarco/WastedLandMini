@@ -269,30 +269,49 @@ room. An argument's importance rises with the resentment between the two.
   The first currency a settlement takes up puts something in every pocket and in the fund. Going
   back to barter leaves what is held as it is, counting for nothing, and there if a currency is
   taken up again.
-- **With a currency** wages come out of the fund and what is paid at a counter goes back into
-  it. No coin is made or lost: it goes round. With the fund empty wages go unpaid, and it is
-  said once a day.
-- **Under barter nothing is priced.** Whoever holds a job is kept: they eat, drink at the bar
-  and have things mended for nothing, and take nothing home. Whoever holds none hands over the
-  thing of theirs worth least to them for a meal, a drink or a repair; with nothing to give
-  they are fed all the same, which is said, and go without the rest. A settlement still in its
-  opening asks nothing of anybody.
+- **The settlement keeps whoever works for it, and nobody else.** Whoever has not worked for
+  three days, post or no post, is no longer kept: it is said when it stops and when it starts
+  again. Being in no state to work does not count against anybody, someone new has those days
+  to find something to do, and a settlement still in its opening keeps everybody.
+- **With a currency** wages come out of the fund and what is paid goes back into it: at a
+  counter, at the bar, at the workbench, and one for every meal out of the commons. No coin is
+  made or lost: it goes round. Whoever the settlement keeps is fed even with an empty pocket,
+  and drinks water for nothing. Whoever it does not keep pays for both or goes without. With
+  the fund empty wages go unpaid, which is said once a day and tells on whoever went without:
+  mood, nerves, and slower work for each day running.
+- **Under barter nothing is priced.** Whoever the settlement keeps eats, drinks at the bar and
+  has things mended for nothing, and takes nothing home but one thing of each trip outside,
+  for whoever makes it. Whoever it does not keep hands over the thing of theirs worth least to
+  them for a meal, a drink of water, a drink at the bar or a repair, and with nothing to give
+  goes without.
+- **Hungry or thirsty enough, whoever is not kept and cannot pay helps themselves.** They wait
+  until nobody is looking, unless they are past caring. Whoever sees it knows it of them.
+- **Coin put by is spent.** Whoever keeps a counter can buy at it out of hours. Someone with
+  enough to spare buys a present for whoever they are fondest of and gives it the next time
+  they talk, stands a friend a drink they cannot pay for, and lends to a friend who is short.
+  A loan is paid back when the borrower next has it, and tells on the two of them if it is not.
+- **Residents raise it themselves.** Turned down at the counter often enough, somebody thinks
+  of proposing a currency; unpaid for days, of going back to barter. The player advises, they
+  decide, and if they go ahead everybody is asked with no advice.
+- **What becomes the settlement's is carried to where it is kept**, by whoever was serving or
+  whoever keeps the shop. A settlement with no counter keeps its fund in a crate.
 - **A swap at the counter.** Under barter a resident goes to the counter for a thing they would
   give something of theirs for and come out better by their own lights. They cannot know
   beforehand what whoever keeps the counter will say: the keeper takes the swap only if they do
   not lose by it as they see it. What was given goes on the shelf as the settlement's. Turned
   down, they do not ask again that day.
 - **Merchants.** While a caravan is at the gate the player sells it what is nobody's and buys
-  from it, in one deal: it gives less for a thing than it asks for one. With a currency the
+  from it, in one deal: it gives less for a thing than it asks for one, and less again for a
+  worn one. Residents who know it is there go of their own accord, once, over what is theirs. With a currency the
   difference comes out of the fund or goes into it, as far as the fund and the caravan's purse
-  go. Under barter what is handed over has to be worth what is taken. What is bought is left at
-  the shop.
+  go. Under barter what is handed over has to be worth what is taken. What is bought waits at the
+  gate for whoever keeps the shop to carry in.
 - **What is somebody's is theirs to sell.** The player can put it to a resident that they sell
   a merchant a thing of their own. They weigh what it is worth to them against what it fetches,
   and what it fetches is theirs: coin, or under barter a thing of the merchant's.
 - **Credit can be stolen.** It is a figure and not coins in a pocket, but it is taken as a thing
   is: from someone asleep, with nobody looking on, by someone the same leaning would have steal a
-  thing, and only by someone short of coin themselves. Whoever sees it knows, and holds it
+  thing, and only by someone short of coin themselves or that way inclined by a trait. Whoever sees it knows, and holds it
   against the thief; the victim misses it on waking without knowing who.
 - **So can the fund**, at the counter, when nobody is looking: coin, or under barter a thing off
   the shelf. Whoever keeps the counter sees that it is short.

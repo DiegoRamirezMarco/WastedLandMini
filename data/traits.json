@@ -1,4 +1,8 @@
 {
   "music_lover": {"name": "Le pierde la música", "tastes": {"music": 70}},
-  "sweet_tooth": {"name": "Le pierde el dulce", "tastes": {"sweet": 80}}
+  "sweet_tooth": {"name": "Le pierde el dulce", "tastes": {"sweet": 80}},
+  "kleptomaniac": {"name": "Mano larga", "thieving": 0.8},
+  "wicked": {"name": "Mala entraña", "thieving": 0.5},
+  "rogue": {"name": "Picardía", "thieving": 0.3},
+  "dim": {"name": "Pocas luces", "careless": true}
 }

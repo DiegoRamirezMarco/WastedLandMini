@@ -3,6 +3,7 @@
 import math
 from typing import TYPE_CHECKING
 
+from simulation.ai.crowd import free_tile
 from simulation.ai.navigation import path_beside
 from simulation.ai.utility_ai import ScoredAction
 from simulation.events.event import DomainEvent
@@ -13,7 +14,8 @@ from simulation.residents.resident import Resident
 from simulation.work import hauling
 from simulation.work.job import INTO_STATION, JobDefinition, SupplyRule
 from simulation.work.research import JOB_PACE
-from world.interactable import Interactable
+from world.interactable import Interactable, UseDefinition
+from world.pathfinding import find_path
 
 if TYPE_CHECKING:
     from simulation.world import SimulationWorld
@@ -21,7 +23,9 @@ if TYPE_CHECKING:
 WORK_ACTION = "work"
 # Carrying what the job makes or needs between the post and a container.
 HAUL_ACTION = "haul"
-WORK_ACTIONS = (WORK_ACTION, HAUL_ACTION)
+# Going to the gate for what was bought there, to carry it in.
+FETCH_ACTION = "fetch"
+WORK_ACTIONS = (WORK_ACTION, HAUL_ACTION, FETCH_ACTION)
 # Going to work beats idling and mild wants, and gives way to a real need.
 WORK_SCORE = 0.6
 # With a need this high a resident sees to it before starting or going back to work.
@@ -70,6 +74,13 @@ class WorkSystem:
         return any(
             resident.job_id == job_id and self.on_duty(world, resident) for resident in world.residents.values()
         )
+
+    def open_to(self, world: "SimulationWorld", resident: Resident, use: UseDefinition) -> bool:
+        """Whether a use that wants somebody at the post is open to a resident right now: someone
+        is on duty there, or the post is their own and they can serve themselves at it."""
+        if use.staffed_by is None or self.is_staffed(world, use.staffed_by):
+            return True
+        return use.repairs <= 0 and resident.job_id == use.staffed_by
 
     def sight_bonus(self, world: "SimulationWorld", resident: Resident) -> int:
         job = self.job_of(world, resident)
@@ -136,6 +147,12 @@ class WorkSystem:
             errand = world.expeditions.errand(world, resident)
             if errand is not None:
                 return ScoredAction(HAUL_ACTION, WORK_SCORE, errand)
+        # What was handed to them for the settlement, or bought for it, is carried to where it is kept.
+        errand = world.fund.takings_errand(world, resident)
+        if errand is not None:
+            return ScoredAction(HAUL_ACTION, WORK_SCORE, errand)
+        if world.fund.fetches_from_gate(world, resident):
+            return ScoredAction(FETCH_ACTION, WORK_SCORE)
         radio_id = None
         if leaving and remaining > 0:
             # Nobody who is about to go out there leaves without hearing what the radio has to say.
@@ -153,6 +170,10 @@ class WorkSystem:
         self, world: "SimulationWorld", resident: Resident, candidate: ScoredAction | None = None
     ) -> Activity | None:
         """The walk to the post, or to the container an errand leads to."""
+        if candidate is not None and candidate.name == FETCH_ACTION:
+            spot = free_tile(world, world.happenings.arrival_tile(world), resident)
+            way = find_path(resident.tile, spot, world.passable())
+            return Activity(FETCH_ACTION, None, way, HAUL_MINUTES) if way is not None else None
         hauling_to = candidate.target_id if candidate is not None and candidate.name == HAUL_ACTION else None
         placed = world.interactables.get(hauling_to or resident.post_id or "")
         path = path_beside(world, resident, placed) if placed is not None else None
@@ -208,6 +229,10 @@ class WorkSystem:
         if supplies is not None and self._called_away(world, resident, supplies, placed, activity.minutes_left):
             self._leave(resident)
             return
+        if world.fund.fetches_from_gate(world, resident) and world.users_of(placed.object_id) == 0:
+            # Something bought for the settlement waits at the gate, and nobody is being served.
+            self._leave(resident)
+            return
         if activity.minutes_left <= 0 or world.activities.urgent_needs(world, resident):
             self._leave(resident)
 
@@ -226,6 +251,8 @@ class WorkSystem:
             if done is None and job.expedition is not None:
                 done = world.expeditions.unload(world, resident, placed)
             if done is None:
+                done = world.fund.unload_takings(world, resident, placed)
+            if done is None:
                 self._leave(resident)
                 return
             activity.using = True
@@ -242,6 +269,32 @@ class WorkSystem:
                 )
             )
         world.trade.pay_wage(world, resident, job)
+        activity.minutes_left -= 1
+        if activity.minutes_left <= 0:
+            self._leave(resident)
+
+    def fetch_tick(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> None:
+        """Spend one minute at the gate, loading up with what was bought there for the settlement."""
+        job = self.job_of(world, resident)
+        if not activity.using:
+            done = world.fund.pick_up_at_gate(world, resident)
+            if done is None:
+                self._leave(resident)
+                return
+            activity.using = True
+            resident.current_action = HAUL_ACTION
+            room = world.room_at(resident.tile)
+            world.emit_event(
+                DomainEvent(
+                    "goods_hauled",
+                    WORK_EVENT_IMPORTANCE,
+                    f"{resident.name} {done}",
+                    [resident.resident_id],
+                    location_id=room.room_id if room is not None else None,
+                )
+            )
+        if job is not None:
+            world.trade.pay_wage(world, resident, job)
         activity.minutes_left -= 1
         if activity.minutes_left <= 0:
             self._leave(resident)
@@ -305,6 +358,7 @@ class WorkSystem:
         # Short of an arm the work still gets done, in more minutes.
         speed *= world.health.work_pace(world, resident)
         speed *= self.mood_pace(resident)
+        speed *= world.trade.unpaid_pace(world, resident)
         # What has been worked out about a trade makes it go faster.
         speed *= world.research.factor(world, f"{JOB_PACE}{job.job_id}")
         needed = math.ceil(rule.every_minutes / speed)

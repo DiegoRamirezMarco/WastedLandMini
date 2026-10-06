@@ -14,5 +14,22 @@
   "pilfer_max": 20,
   "trade_ask_days": 3,
   "savings_scale": 30,
-  "goods_scale": 60
+  "goods_scale": 60,
+  "meal_price": 1,
+  "idle_days": 3,
+  "gift_savings": 15,
+  "loan_size": 10,
+  "poor_below": 3,
+  "loan_days": 7,
+  "common_finds": [
+    "water",
+    "fuel",
+    "medicine",
+    "scrap"
+  ],
+  "unpaid_mood": 4,
+  "unpaid_stress": 5,
+  "grumble_swaps": 3,
+  "grumble_unpaid_days": 3,
+  "strongbox_kind": "crate"
 }

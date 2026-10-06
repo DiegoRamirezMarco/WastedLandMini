@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 26 (current)
+## Version 27 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `26` |
+| `version` | `27` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -16,8 +16,10 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `upcoming` | World events on their way: `event_id`, `at`, and the `fact_id` of the word a radio gave of it |
 | `at_the_gate`, `newcomers_seen` | ID of the newcomer waiting for an answer; IDs of all who have come before |
 | `under_raid` | ID of the raid at the gate while whoever is on watch decides what to do |
-| `trading` | How the settlement trades: `currency` (its `currency_id`, `name` and `singular`, or `null` if it never made one), `in_use` (false under barter), `fund` (the coin the settlement holds as a whole), `currency_count` and `asked_on` (the day the residents were last asked) |
-| `merchant` | Whoever has stopped by to trade, or `null`: `event_id`, `leaves_at`, `goods` (units per item ID) and `purse` |
+| `trading` | How the settlement trades: `currency` (its `currency_id`, `name` and `singular`, or `null` if it never made one), `in_use` (false under barter), `fund` (the coin the settlement holds as a whole), `currency_count`, `asked_on` (the day the residents were last asked) and `refusals` (swaps turned down per resident ID since they last made something of it) |
+| `merchant` | Whoever has stopped by to trade, or `null`: `event_id`, `leaves_at`, `goods` (units per item ID), `purse` and `fact_id` (the fact of their being there) |
+| `debts` | What residents have lent one another and not had back: `debtor_id`, `creditor_id`, `amount`, `since` (the day) and `overdue` |
+| `at_gate` | Units of what was bought for the settlement that wait at the gate to be carried in, per item ID |
 | `map_id` | ID of the map in `data/maps/` |
 | `terrain`, `rooms` | The live terrain grid and stable room records after changes made in Urbanismo |
 | `urbanism` | Stable placement counters and the terrain kept below constructed buildings, so they can be moved or removed later |
@@ -66,6 +68,11 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 27** added a resident's `last_worked`, `unpaid_on` and `unpaid_days`, an item's
+  `meant_for` (the resident it was bought as a present for, or `@fund` while it is the
+  settlement's and on its way to the till), `debts`, `at_gate` and `refusals`. In an older save
+  everybody has just worked, nobody owes anything and nothing waits. What is owed to or by
+  somebody who is gone is dropped.
 - **Version 26** added `trading`, `merchant` and a theft's `amount`. An older save trades with
   the credits it had, called as `data/economy.json` calls them, and its fund starts with what a
   currency just taken up would have put in it. A merchant whose event is gone, or is no longer

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from simulation.ai.crowd import spots_taken
 from simulation.ai.navigation import adjacent_spots
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency, ranked
+from simulation.economy.merchant import VISIT_ACTION
 from simulation.items.item_system import ITEM_ACTIONS, ItemSystem
 from simulation.residents.activity import SHELTER_ACTION, WANDER_ACTION, Activity
 from simulation.residents.needs import NEED_NAMES
@@ -59,7 +60,7 @@ class RoutineSystem:
             use = world.definition_of(placed).use
             if use is None or world.users_of(placed.object_id) >= use.capacity:
                 continue
-            if use.staffed_by is not None and not world.work.is_staffed(world, use.staffed_by):
+            if not world.work.open_to(world, resident, use):
                 continue
             score = self._score_use(world, resident, placed, use)
             if score is not None:
@@ -75,6 +76,9 @@ class RoutineSystem:
         work = world.work.candidate(world, resident)
         if work is not None:
             scored.append(ScoredAction(work.name, work.score + self._noise(world), work.target_id))
+        visit = world.merchants.candidate(world, resident)
+        if visit is not None:
+            scored.append(ScoredAction(visit.name, visit.score + self._noise(world)))
         build = world.construction.candidate(world, resident, busy=work is not None)
         if build is not None:
             scored.append(ScoredAction(build.name, build.score + self._noise(world), build.target_id))
@@ -101,9 +105,9 @@ class RoutineSystem:
         self, world: "SimulationWorld", resident: Resident, placed: Interactable, use: UseDefinition, need: str
     ) -> bool:
         """Whether a use would lower a need, as things stand: open, within their means and not empty."""
-        if use.staffed_by is not None and not world.work.is_staffed(world, use.staffed_by):
+        if not world.work.open_to(world, resident, use):
             return False
-        if not world.trade.can_afford(world, resident, use):
+        if not world.trade.can_afford(world, resident, use, placed.object_id):
             return False
         if use.per_minute.get(need, 0.0) < 0:
             return True
@@ -133,6 +137,8 @@ class RoutineSystem:
                 activity = world.construction.plan(world, resident, candidate)
             elif candidate.name == SHELTER_ACTION:
                 activity = self._shelter(world, resident)
+            elif candidate.name == VISIT_ACTION:
+                activity = world.merchants.plan(world, resident)
             elif candidate.target_id is None:
                 return self._wander(world, resident)
             else:
@@ -149,7 +155,7 @@ class RoutineSystem:
     ) -> float | None:
         """How much the resident wants this use right now. None if it has nothing to offer them."""
         distance_cost = DISTANCE_COST * manhattan(resident.tile, (placed.x, placed.y))
-        if not world.trade.can_afford(world, resident, use):
+        if not world.trade.can_afford(world, resident, use, placed.object_id):
             return None
         if use.sells or use.repairs > 0:
             want = (

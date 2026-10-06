@@ -19,7 +19,10 @@
         "impulsiveness": 70,
         "sociability": 70,
         "greed": 55
-      }
+      },
+      "traits": [
+        "kleptomaniac"
+      ]
     },
     {
       "id": "carmen",
@@ -29,7 +32,10 @@
         "aggression": 65,
         "courage": 70,
         "empathy": 40
-      }
+      },
+      "traits": [
+        "wicked"
+      ]
     },
     {
       "id": "bruno",

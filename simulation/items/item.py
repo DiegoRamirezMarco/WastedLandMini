@@ -53,6 +53,9 @@ class ItemInstance:
     quantity: int = 1
     # ID of the resident who made a present of it to its owner, if anyone did.
     given_by: str | None = None
+    # Who it is being kept for: the resident it was bought as a present for, or the settlement,
+    # when it is something handed over or bought for the fund that is still on its way there.
+    meant_for: str | None = None
 
     @property
     def broken(self) -> bool:

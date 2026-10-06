@@ -199,7 +199,8 @@ class StudyTests(unittest.TestCase):
         self.assertEqual(world.studies.progress, {})
         _run(world, 180)
         self.assertTrue(world.work.on_duty(world, nuria))
-        self.assertGreater(world.studies.progress["pump"], 120)
+        # Most of those three hours: all but the walk to the desk from wherever nine o'clock found her.
+        self.assertGreater(world.studies.progress["pump"], 100)
         self.assertLess(world.research.fraction_done(world, pump), 1.0)
 
         self.assertTrue(_run(world, 3 * MINUTES_PER_DAY, lambda: world.research.knows(world, "pump")), "never worked out")

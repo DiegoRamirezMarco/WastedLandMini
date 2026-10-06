@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from simulation.ai.crowd import Crowd, spots_taken, walking
 from simulation.ai.navigation import path_beside
 from simulation.ai.routine_system import RoutineSystem
+from simulation.economy.merchant import VISIT_ACTION
 from simulation.events.event import DomainEvent
 from simulation.health.health_system import RECOVERED_HEALTH
 from simulation.items.item_system import ITEM_ACTIONS
@@ -16,7 +17,7 @@ from simulation.residents.resident import Resident
 from simulation.social.social_system import SocialSystem
 from simulation.work.construction import BUILD_ACTION, CARRY_ACTION
 from simulation.work.expedition_system import EXPEDITION_ACTION
-from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
+from simulation.work.work_system import FETCH_ACTION, HAUL_ACTION, WORK_ACTION
 from world.interactable import UseDefinition
 from world.map import Tile
 from world.pathfinding import Point, find_path, reach, straight_ahead
@@ -87,8 +88,14 @@ class ActivitySystem:
         if resident.resident_id not in world.residents:
             # Going without took them.
             return
-        for need in self.unanswerable(world, resident):
-            world.items.report_nothing_for(world, resident, need)
+        if not world.health.is_fit_for_work(resident):
+            # Nobody is held to have stopped working for being in no state to.
+            resident.last_worked = world.clock.total_minutes
+        world.trade.watch_supply(world, resident)
+        if world.trade.supplied(world, resident):
+            # Whoever goes without because the settlement no longer keeps them is no sign that it has run out.
+            for need in self.unanswerable(world, resident):
+                world.items.report_nothing_for(world, resident, need)
         if resident.activity is None:
             world.items.notice_missing(world, resident)
             crisis = (
@@ -127,6 +134,12 @@ class ActivitySystem:
             return
         if activity.action == HAUL_ACTION:
             world.work.haul_tick(world, resident, activity)
+            return
+        if activity.action == FETCH_ACTION:
+            world.work.fetch_tick(world, resident, activity)
+            return
+        if activity.action == VISIT_ACTION:
+            world.merchants.visit_tick(world, resident, activity)
             return
         if activity.action == EXPEDITION_ACTION:
             world.expeditions.tick(world, resident, activity)
@@ -279,9 +292,9 @@ class ActivitySystem:
         if use is None or activity.target_id is None:
             resident.current_action = SHELTER_ACTION if activity.action == SHELTER_ACTION else "idle"
             return True
-        if use.staffed_by is not None and not world.work.is_staffed(world, use.staffed_by):
+        if not world.work.open_to(world, resident, use):
             return False
-        if not world.trade.can_afford(world, resident, use):
+        if not world.trade.can_afford(world, resident, use, activity.target_id):
             return False
         if use.sells:
             # Paid for and handed over at once; the event of it is the purchase itself.
@@ -300,7 +313,7 @@ class ActivitySystem:
                 return False
         elif use.item_id is not None:
             activity.item_id = use.item_id
-        world.trade.charge(world, resident, use)
+        world.trade.charge(world, resident, use, activity.target_id)
         if use.radio:
             world.happenings.hear_radio(world, resident)
         placed = world.interactables[activity.target_id]

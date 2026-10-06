@@ -8,8 +8,9 @@ from simulation.events.decision import Decision
 from simulation.events.event import DomainEvent, euphonic
 from simulation.events.event_manager import EventManager
 from simulation.economy.fund_system import FundSystem
+from simulation.economy.lending import LendingSystem
 from simulation.economy.merchant import Merchant, MerchantSystem
-from simulation.economy.terms import TradeResult, TradingState
+from simulation.economy.terms import Debt, TradeResult, TradingState
 from simulation.economy.terms_system import TermsSystem
 from simulation.economy.trade_system import TradeSystem
 from simulation.events.intervention_system import InterventionSystem
@@ -92,6 +93,11 @@ class SimulationWorld:
     trading: TradingState = field(default_factory=TradingState)
     # Whoever has stopped by the gate to trade, while they are there.
     merchant: Merchant | None = None
+    lending: LendingSystem = field(default_factory=LendingSystem)
+    # What residents have lent one another and not had back yet.
+    debts: list[Debt] = field(default_factory=list)
+    # Units of what was bought for the settlement that wait at the gate to be carried in, by item ID.
+    at_gate: dict[str, int] = field(default_factory=dict)
     bonds: BondSystem = field(default_factory=BondSystem)
     expeditions: ExpeditionSystem = field(default_factory=ExpeditionSystem)
     happenings: WorldEventSystem = field(default_factory=WorldEventSystem)
@@ -155,6 +161,7 @@ class SimulationWorld:
         self.construction.tick(self)
         self.research.tick(self)
         self.happenings.tick(self)
+        self.lending.tick(self)
         self.activities.begin_minute(self)
         for resident in list(self.residents.values()):
             # Someone may die during this very minute.
@@ -215,6 +222,10 @@ class SimulationWorld:
     def propose_barter(self, option_id: str) -> TradeResult:
         """Put it to the residents that they go back to trading a thing for a thing. They settle it."""
         return self.terms.propose_barter(self, option_id)
+
+    def rename_currency(self, name: str, singular: str | None) -> TradeResult:
+        """Give the currency the settlement has the name the player wants for it."""
+        return self.terms.rename(self, name, singular)
 
     def deal_with_merchant(self, sell: Mapping[str, int], buy: Mapping[str, int]) -> TradeResult:
         """Sell whoever has stopped to trade what belongs to nobody, and buy from them, out of the fund and into it."""
@@ -514,9 +525,11 @@ class SimulationWorld:
             Resident("tomas", "Tomás", personality=Personality(courage=75, sociability=35, aggression=55)),
             Resident("ines", "Inés", personality=Personality(empathy=65, sociability=60, greed=40)),
             Resident("vera", "Vera", personality=Personality(empathy=80, sociability=55, courage=60)),
-            Resident("paco", "Paco", personality=Personality(empathy=45, sociability=45, impulsiveness=40)),
+            Resident("paco", "Paco", personality=Personality(empathy=45, sociability=45, impulsiveness=40), traits=["dim"]),
             Resident("nuria", "Nuria", personality=Personality(empathy=55, sociability=70, greed=65)),
-            Resident("sergio", "Sergio", personality=Personality(courage=70, greed=60, impulsiveness=55)),
+            Resident(
+                "sergio", "Sergio", personality=Personality(courage=70, greed=60, impulsiveness=55), traits=["rogue"]
+            ),
         ]
         # Who works where, and the day of the week each has off. Marta cooks what Raúl and Inés
         # grow, which is where their quarrel comes from.

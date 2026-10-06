@@ -7,16 +7,21 @@ from pathlib import Path
 
 from save.save_manager import SaveManager
 from simulation.commands import (
+    ChooseOptionCommand,
     DealWithMerchantCommand,
     FoundResidentCommand,
+    RenameCurrencyCommand,
     ProposeBarterCommand,
     ProposeCurrencyCommand,
     ProposeSaleCommand,
 )
-from simulation.economy.merchant import Merchant
-from simulation.economy.pilfering import FUND_THEFT_ACTION, PILFER_ACTION
+from simulation.economy.fund_system import COMMON
+from simulation.economy.merchant import VISIT_ACTION, Merchant
+from simulation.economy.pilfering import FUND_THEFT_ACTION, PILFER_ACTION, STEAL_FOOD_ACTION
 from simulation.economy.settings import economy_settings_from_data
-from simulation.economy.terms import TradingState
+from simulation.economy.terms import Debt, TradingState
+from simulation.events.event import DomainEvent
+from simulation.health.injury import Injury
 from simulation.events.decision import decision_definition_from_data
 from simulation.events.world_event import world_event_settings_from_data
 from simulation.items.theft import FUND_VICTIM
@@ -30,6 +35,8 @@ from simulation.residents.resident import Resident
 from simulation.rng import SimulationRNG
 from simulation.tastes.taste import ITEM, Taste
 from simulation.tutorial.tutorial import TutorialState
+from simulation.work.expedition import Expedition
+from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.work.work_system import WORK_ACTION
 from simulation.world import SimulationWorld
 
@@ -129,6 +136,25 @@ def _go_and_use(world: SimulationWorld, resident: Resident, object_id: str, unti
         if _types(world).count(until) > seen:
             return
     raise AssertionError(f"{resident.name} never got as far as {until}")
+
+
+def _idle(world: SimulationWorld, resident: Resident, days: float = 3.5) -> Resident:
+    """Have a resident be someone who has not worked for days, and holds no job to go back to."""
+    resident.job_id = resident.post_id = None
+    resident.last_worked = world.clock.total_minutes - int(days * MINUTES_PER_DAY)
+    return resident
+
+
+def _known_caravan(world: SimulationWorld, goods: dict[str, int], purse: float, *knowers: str) -> Merchant:
+    """A caravan at the gate that these residents know is there."""
+    merchant = _caravan(world, goods, purse)
+    fact = world.emit_event(
+        DomainEvent("merchant_arrived", 45, "Una caravana"), at=(0, 0), fact_text="hay una caravana en la puerta"
+    )
+    merchant.fact_id = fact.fact_id
+    for resident_id in knowers:
+        learn(world, world.residents[resident_id], fact, 1.0, SOURCE_WITNESS)
+    return merchant
 
 
 def _held(world: SimulationWorld) -> float:
@@ -316,47 +342,6 @@ class BarterTests(unittest.TestCase):
             self.assertTrue(self.world.trade.can_afford(self.world, self.ines, use), kind)
             self.assertTrue(self.world.trade.charge(self.world, self.ines, use), kind)
         self.assertNotIn("keep_paid", _types(self.world))
-
-    def test_whoever_holds_no_job_gives_a_thing_for_what_has_a_price_or_goes_without(self) -> None:
-        self.ines.job_id = None
-        self.ines.inventory.items.clear()
-        bar = _use(self.world, "bar")
-        self.assertFalse(self.world.trade.can_afford(self.world, self.ines, bar))
-        self.assertFalse(self.world.trade.charge(self.world, self.ines, bar))
-        self.world.stock(self.ines.inventory, "scrap", 1, "ines")
-        radio = self.world.stock(self.ines.inventory, "old_radio", 1, "ines")
-        before = self.shop.count("scrap")
-        self.assertTrue(self.world.trade.can_afford(self.world, self.ines, bar))
-        self.assertTrue(self.world.trade.charge(self.world, self.ines, bar))
-        self.assertEqual(self.ines.inventory.items, [radio], "it is what is worth least to them that they part with")
-        self.assertEqual(self.shop.count("scrap") - before, 1)
-        self.assertIsNone(self.shop.stack_of("scrap", "ines"), "what was handed over is the settlement's now")
-        self.assertEqual(_types(self.world).count("keep_paid"), 1)
-
-    def test_whoever_holds_no_job_gives_a_thing_for_a_meal_and_is_fed_all_the_same_with_nothing(self) -> None:
-        self.ines.job_id = None
-        self.ines.inventory.items.clear()
-        self.world.stock(self.ines.inventory, "scrap", 1, "ines")
-        self.world.clock.hour = 13
-        for expected in ("keep_paid", "keep_unpaid"):
-            self.ines.needs.hunger = 80
-            _go_and_use(self.world, self.ines, "cooking_pot", "meal_started")
-            self.assertEqual(_types(self.world).count(expected), 1)
-            self.assertEqual(self.ines.inventory.items, [])
-            self.world.step(30)
-        self.ines.needs.hunger = 80
-        _go_and_use(self.world, self.ines, "cooking_pot", "meal_started")
-        self.assertEqual(_types(self.world).count("keep_unpaid"), 1, "said once a day")
-        self.assertTrue(self.world.trade.can_afford(self.world, self.ines, _use(self.world, "water_tank")))
-
-    def test_a_settlement_in_its_opening_asks_nothing_of_anybody(self) -> None:
-        world = SimulationWorld.new_settlement()
-        founder = world.residents[world.apply_command(FoundResidentCommand("Ada", 34, {}, []))]
-        pot = _use(world, "cooking_pot")
-        self.assertTrue(world.tutorial.active)
-        self.assertFalse(world.trade.owes_keep(world, founder, pot))
-        world.tutorial = TutorialState()
-        self.assertTrue(world.trade.owes_keep(world, founder, pot))
 
     def test_a_swap_at_the_counter_leaves_both_better_off_by_their_own_lights(self) -> None:
         self.ines.job_id = None
@@ -561,7 +546,7 @@ class MerchantTests(unittest.TestCase):
         result = world.apply_command(DealWithMerchantCommand(sell={"canned_beans": 2}, buy={"medicine": 1}))
         self.assertTrue(result.ok, result.message)
         self.assertEqual(world.fund.goods(world)["canned_beans"], beans - 2)
-        self.assertEqual(self.shop.count("medicine"), medicine + 1)
+        self.assertEqual((self.shop.count("medicine"), world.at_gate), (medicine, {"medicine": 1}), "it waits at the gate")
         self.assertEqual((world.trading.fund, merchant.purse), (fund - 15, 45.0))
         self.assertEqual(merchant.goods, {"medicine": 1, "canned_beans": 2})
         self.assertEqual(_types(world).count("merchant_deal"), 1)
@@ -625,6 +610,9 @@ class MerchantTests(unittest.TestCase):
         marta = world.residents["marta"]
         radio = world.containers["crate_dorm"].stack_of("old_radio", "marta")
         merchant = _caravan(world, {}, purse=60.0)
+        radio.condition = 50.0
+        self.assertEqual(world.merchants.gives(world, "old_radio", radio), 26, "a worn one fetches less")
+        radio.condition = 100.0
         sold = world.apply_command(ProposeSaleCommand("marta", radio.instance_id))
         self.assertTrue(sold.ok, sold.message)
         self.assertIsNone(world.containers["crate_dorm"].find(radio.instance_id))
@@ -824,6 +812,463 @@ class PilferingTests(unittest.TestCase):
         self.assertEqual(taken.definition_id, "old_radio", "what is worth most to them")
 
 
+class UpkeepTests(unittest.TestCase):
+    """The settlement keeps whoever works for it, and nobody else."""
+
+    def setUp(self) -> None:
+        self.world = _settled()
+        self.ines, self.raul = self.world.residents["ines"], self.world.residents["raul"]
+        self.pot, self.tank, self.bar = (_use(self.world, kind) for kind in ("cooking_pot", "water_tank", "bar"))
+
+    def test_a_meal_costs_and_what_it_costs_goes_into_the_fund(self) -> None:
+        self.ines.credits = 5.0
+        held = _held(self.world)
+        self.world.clock.hour = 13
+        self.ines.needs.hunger = 80
+        _go_and_use(self.world, self.ines, "cooking_pot", "meal_started")
+        self.assertEqual(self.ines.credits, 4.0)
+        self.assertAlmostEqual(_held(self.world), held, msg="it is not gone: the settlement has it")
+        fund = self.world.trading.fund
+        self.assertTrue(self.world.trade.charge(self.world, self.ines, self.pot))
+        self.assertEqual((self.ines.credits, self.world.trading.fund), (3.0, fund + 1.0))
+        self.assertEqual(self.world.trade.cost(self.world, self.ines, self.tank), 0.0, "water is for nothing")
+
+    def test_whoever_works_is_fed_even_with_an_empty_pocket(self) -> None:
+        self.raul.credits, fund = 0.0, self.world.trading.fund
+        self.assertTrue(self.world.trade.can_afford(self.world, self.raul, self.pot))
+        self.assertTrue(self.world.trade.charge(self.world, self.raul, self.pot))
+        self.assertEqual((self.raul.credits, self.world.trading.fund), (0.0, fund))
+        self.assertFalse(self.world.trade.can_afford(self.world, self.raul, self.bar), "a drink is another matter")
+
+    def test_three_days_without_working_and_the_settlement_stops_keeping_them(self) -> None:
+        supplied = self.world.trade.supplied
+        _idle(self.world, self.ines, days=2.9)
+        self.assertTrue(supplied(self.world, self.ines))
+        _idle(self.world, self.ines)
+        self.assertFalse(supplied(self.world, self.ines))
+        self.world.step(1)
+        self.assertTrue(any("deja de mantener a Inés: lleva 3 días sin trabajar" in line for line in self.world.event_log))
+        self.ines.credits = 0.0
+        for use in (self.pot, self.tank):
+            self.assertFalse(self.world.trade.can_afford(self.world, self.ines, use))
+        self.ines.credits = 2.0
+        self.assertTrue(self.world.trade.charge(self.world, self.ines, self.tank), "with coin they pay like anybody")
+        self.assertEqual(self.ines.credits, 1.0, "and for water as well")
+        self.world.step(30)
+        self.assertEqual(_types(self.world).count("supply_cut"), 1, "said once")
+
+    def test_it_is_not_holding_a_post_that_counts_but_working_it(self) -> None:
+        self.raul.last_worked = self.world.clock.total_minutes - 4 * MINUTES_PER_DAY
+        self.assertEqual(self.raul.job_id, "farmer")
+        self.assertFalse(self.world.trade.supplied(self.world, self.raul))
+        _put_on_duty(self.world, "raul")
+        self.world.clock.hour = 9
+        self.world.step(2)
+        self.assertTrue(self.world.trade.supplied(self.world, self.raul))
+        self.assertEqual((_types(self.world).count("supply_cut"), _types(self.world).count("supply_restored")), (1, 1))
+
+    def test_whoever_is_in_no_state_to_work_is_not_held_to_have_stopped(self) -> None:
+        _idle(self.world, self.ines)
+        self.ines.injuries = [Injury("cut", 70.0)]
+        self.assertFalse(self.world.health.is_fit_for_work(self.ines))
+        self.world.step(1)
+        self.assertTrue(self.world.trade.supplied(self.world, self.ines))
+        self.assertNotIn("supply_cut", _types(self.world))
+
+    def test_someone_new_has_three_days_and_a_settlement_in_its_opening_keeps_everybody(self) -> None:
+        world = SimulationWorld.new_settlement()
+        founder = world.residents[world.apply_command(FoundResidentCommand("Ada", 34, {}, []))]
+        founder.last_worked = -10 * MINUTES_PER_DAY
+        self.assertTrue(world.tutorial.active and world.trade.supplied(world, founder))
+        world.tutorial = TutorialState()
+        self.assertFalse(world.trade.supplied(world, founder))
+        self.assertTrue(world.trade.owes_keep(world, founder, self.pot))
+        founder.last_worked = world.clock.total_minutes
+        self.assertFalse(world.trade.owes_keep(world, founder, self.pot))
+
+    def test_hungry_enough_they_take_what_they_cannot_pay_for_and_whoever_sees_it_knows(self) -> None:
+        world = _few(_settled())
+        world.stock(world.containers["cooking_pot"], "stew", 3, None)
+        raul, lucia = world.residents["raul"], world.residents["lucia"]
+        _idle(world, raul)
+        raul.credits = 0.0
+        _place(world, "raul", (42, 6))
+        _place(world, "lucia", FAR_AWAY)
+        _place(world, "marta", FAR_AWAY)
+        tempted = lambda: [c.target_id for c in world.items.candidates(world, raul) if c.name == STEAL_FOOD_ACTION]
+        self.assertEqual(tempted(), [], "he is not hungry")
+        raul.needs.hunger = 80
+        self.assertIn("cooking_pot", tempted())
+        _place(world, "lucia", (44, 6))
+        self.assertNotIn("cooking_pot", tempted(), "not with Lucía looking")
+        raul.needs.hunger = 96
+        self.assertIn("cooking_pot", tempted(), "past caring who sees")
+        for _ in range(30):
+            world.step(1)
+            _content(world, "lucia", "marta")
+            if any("sin permiso" in line for line in world.event_log):
+                break
+        self.assertTrue(any("Raúl, a quien ya no se mantiene, coge un guiso caliente sin permiso" in line for line in world.event_log))
+        self.assertLess(raul.needs.hunger, 96)
+        self.assertEqual(world.containers["cooking_pot"].count("stew"), 2)
+        self.assertGreater(world.relationship("lucia", "raul").resentment, 0)
+        raul.credits = 5.0
+        raul.needs.hunger = 96
+        self.assertEqual(tempted(), [], "with coin he pays")
+
+    def test_under_barter_whoever_is_not_kept_gives_a_thing_or_goes_without(self) -> None:
+        world = _bartering(self.world)
+        _idle(world, self.ines)
+        self.ines.inventory.items.clear()
+        for use in (self.pot, self.tank, self.bar):
+            self.assertFalse(world.trade.can_afford(world, self.ines, use))
+        world.stock(self.ines.inventory, "scrap", 1, "ines")
+        radio = world.stock(self.ines.inventory, "old_radio", 1, "ines")
+        world.clock.hour = 13
+        self.ines.needs.hunger = 80
+        _go_and_use(world, self.ines, "cooking_pot", "meal_started")
+        self.assertEqual(self.ines.inventory.items, [radio], "it is what is worth least to them that they part with")
+        self.assertEqual(world.containers["cooking_pot"].count("scrap"), 1, "handed over where things are kept, it stays")
+        self.assertEqual(_types(world).count("keep_paid"), 1)
+
+    def test_what_is_handed_over_at_the_bar_is_carried_to_the_shop_by_whoever_serves(self) -> None:
+        world = _bartering(self.world)
+        _idle(world, self.ines)
+        self.ines.inventory.items.clear()
+        world.stock(self.ines.inventory, "scrap", 1, "ines")
+        lucia = _put_on_duty(world, "lucia", minutes=20)
+        world.clock.hour = 19
+        self.assertTrue(world.trade.charge(world, self.ines, self.bar, "bar"))
+        taken = world.fund.takings_on(lucia)
+        self.assertEqual([(item.definition_id, item.owner_id, item.meant_for) for item in taken], [("scrap", None, COMMON)])
+        shelf = world.containers[COUNTER]
+        for _ in range(240):
+            world.step(1)
+            _content(world)
+            if shelf.count("scrap"):
+                break
+        self.assertEqual((shelf.count("scrap"), world.fund.takings_on(lucia)), (1, []))
+
+
+class TraitTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.world = _few(_settled())
+        self.marta, self.raul = self.world.residents["marta"], self.world.residents["raul"]
+        _place(self.world, "lucia", FAR_AWAY)
+        self.world.trading.fund = 0.0
+
+    def test_those_they_suit_carry_them_and_they_can_be_chosen(self) -> None:
+        world = SimulationWorld.demo_world()
+        self.assertEqual((world.residents["sergio"].traits, world.residents["paco"].traits), (["rogue"], ["dim"]))
+        newcomers = {n.newcomer_id: n.traits for n in world.registries.world_events.newcomers}
+        self.assertEqual((newcomers["hugo"], newcomers["carmen"]), (("kleptomaniac",), ("wicked",)))
+        self.assertTrue({"kleptomaniac", "wicked", "rogue", "dim"} <= set(world.registries.traits.ids()))
+
+    def test_someone_that_way_inclined_takes_credit_whatever_they_have_put_by(self) -> None:
+        _asleep(self.world, "marta")
+        self.marta.credits, self.raul.credits = 15.0, 80.0
+        _place(self.world, "raul", (6, 5))
+        tempted = lambda: [c for c in self.world.items.candidates(self.world, self.raul) if c.name == PILFER_ACTION]
+        self.assertEqual(tempted(), [], "an ordinary sort with plenty put by")
+        self.raul.traits = ["kleptomaniac"]
+        self.assertEqual(len(tempted()), 1)
+        self.raul.traits = ["rogue"]
+        leaning = self.world.items.leaning_to_steal
+        self.assertAlmostEqual(leaning(self.world, self.raul, None), 0.3 - 0.25)
+        self.raul.traits = []
+        self.assertEqual(leaning(self.world, self.raul, None), 0.0)
+
+    def test_only_a_fool_parts_with_what_they_work_with(self) -> None:
+        self.raul.job_id = "farmer"
+        hoe = self.raul.inventory.stack_of("hoe", "raul")
+        self.assertEqual(self.world.items.spare(self.world, self.raul), [])
+        self.raul.traits = ["dim"]
+        self.assertEqual(self.world.items.spare(self.world, self.raul), [hoe])
+
+
+class SpendingTests(unittest.TestCase):
+    """What somebody with coin put by does with it, besides keeping it."""
+
+    def setUp(self) -> None:
+        self.world = _settled()
+        self.ines, self.tomas, self.nuria = (self.world.residents[name] for name in ("ines", "tomas", "nuria"))
+        self.shop = self.world.containers[COUNTER]
+
+    def _shops(self, resident: Resident) -> list[str]:
+        candidates = self.world.activities.routine.candidates(self.world, resident)
+        return [candidate.name for candidate in candidates if candidate.name == "shop"]
+
+    def test_whoever_keeps_the_counter_can_buy_at_it_out_of_hours(self) -> None:
+        self.world.clock.hour = 9
+        for resident in (self.nuria, self.ines):
+            resident.job_id = resident.job_id if resident is self.nuria else None
+            resident.credits = 30.0
+            resident.needs.hunger = 70
+        self.assertFalse(self.world.work.is_staffed(self.world, "shopkeeper"))
+        self.assertEqual(self._shops(self.ines), [], "nobody is behind it")
+        self.assertEqual(self._shops(self.nuria), ["shop"], "but it is hers")
+        fund = self.world.trading.fund
+        self.assertEqual(self.world.trade.buy(self.world, self.nuria, COUNTER), "canned_beans")
+        self.assertEqual((self.nuria.credits, self.world.trading.fund), (19.0, fund + 11.0), "and she pays for it")
+
+    def test_someone_with_coin_to_spare_buys_a_present_and_gives_it(self) -> None:
+        marta, raul = self.world.residents["marta"], self.world.residents["raul"]
+        marta.credits = 60.0
+        self.assertIsNone(self.world.trade.present(self.world, marta, COUNTER), "there is nobody she is fond enough of")
+        self.world.relationship("marta", "raul").affection = 70
+        marta.credits = 20.0
+        self.assertIsNone(self.world.trade.present(self.world, marta, COUNTER), "nor has she enough to spare")
+        marta.credits = 60.0
+        # She has all she wants for herself put by already.
+        for item_id in ("canned_beans", "pizza_radioactiva"):
+            self.world.stock(marta.inventory, item_id, 2, "marta")
+        self.assertIsNone(self.world.trade.best_buy(self.world, marta, COUNTER))
+        self.assertEqual(self.world.trade.buy(self.world, marta, COUNTER), "rusty_knife")
+        present = next(item for item in marta.inventory.items if item.meant_for == "raul")
+        self.assertEqual((present.definition_id, present.owner_id, marta.credits), ("rusty_knife", "marta", 20.0))
+        self.assertTrue(any("para Raúl" in line for line in self.world.event_log))
+        self.assertNotIn(present, self.world.items.spare(self.world, marta), "it is not hers to swap away")
+        self.assertIsNone(self.world.trade.present(self.world, marta, COUNTER), "one present at a time")
+        chat = self.world.registries.interactions["chat"]
+        self.world.items.after_exchange(self.world, marta, self.world.residents["lucia"], chat)
+        self.assertIn(present, marta.inventory.items, "it is for him and nobody else")
+        self.world.items.after_exchange(self.world, marta, raul, chat)
+        self.assertIs(raul.inventory.find(present.instance_id), present)
+        self.assertEqual((present.owner_id, present.given_by, present.meant_for), ("raul", "marta", None))
+
+    def test_a_friend_at_the_bar_stands_a_drink_to_whoever_cannot_pay_for_it(self) -> None:
+        bar = _use(self.world, "bar")
+        _put_on_duty(self.world, "lucia")
+        self.ines.credits, self.tomas.credits = 0.0, 40.0
+        self.assertFalse(self.world.trade.can_afford(self.world, self.ines, bar, "bar"))
+        self.tomas.activity = Activity("drink", "bar", minutes_left=30, using=True)
+        self.assertFalse(self.world.trade.can_afford(self.world, self.ines, bar, "bar"), "he is not fond enough of her")
+        self.world.relationship("tomas", "ines").affection = 50
+        self.assertTrue(self.world.trade.can_afford(self.world, self.ines, bar, "bar"))
+        fund = self.world.trading.fund
+        self.assertTrue(self.world.trade.charge(self.world, self.ines, bar, "bar"))
+        self.assertEqual((self.ines.credits, self.tomas.credits, self.world.trading.fund), (0.0, 38.0, fund + 2.0))
+        self.assertTrue(any("Tomás invita a Inés" in line for line in self.world.event_log))
+        self.assertGreater(self.world.relationship("ines", "tomas").affection, 0)
+        self.tomas.credits = 10.0
+        self.assertFalse(self.world.trade.can_afford(self.world, self.ines, bar, "bar"), "nor with so little to spare")
+
+    def test_a_friend_lends_to_whoever_is_short_and_it_tells_if_it_is_not_paid_back(self) -> None:
+        chat = self.world.registries.interactions["chat"]
+        lend = lambda: self.world.items.after_exchange(self.world, self.ines, self.tomas, chat)
+        self.ines.credits, self.tomas.credits = 1.0, 40.0
+        self.ines.inventory.items.clear()
+        self.tomas.inventory.items.clear()
+        lend()
+        self.assertEqual(self.world.debts, [], "they are nothing to each other")
+        feelings = self.world.relationship("tomas", "ines")
+        feelings.affection = 50
+        self.tomas.personality.greed = 90.0
+        lend()
+        self.assertEqual(self.world.debts, [], "he is too close with his coin")
+        self.tomas.personality.greed = 40.0
+        lend()
+        self.assertEqual(self.world.debts, [Debt("ines", "tomas", 10.0, self.world.clock.day)])
+        self.assertEqual((self.ines.credits, self.tomas.credits), (11.0, 30.0))
+        self.assertTrue(any("Tomás le presta 10 vales a Inés" in line for line in self.world.event_log))
+        self.ines.credits = 1.0
+        lend()
+        self.assertEqual(len(self.world.debts), 1, "nobody is lent more while they still owe")
+
+        trust = feelings.trust
+        self.world.clock.hour, self.world.clock.minute = 23, 59
+        self.world.clock.day += self.world.registries.economy.loan_days
+        self.world.step(1)
+        self.assertTrue(self.world.debts[0].overdue)
+        self.assertLess(feelings.trust, trust)
+        self.assertGreater(feelings.resentment, 0)
+        self.assertEqual(_types(self.world).count("loan_overdue"), 1)
+
+        self.ines.credits = 20.0
+        lend()
+        self.assertEqual((self.world.debts, self.ines.credits, self.tomas.credits), ([], 10.0, 40.0))
+        self.assertIn("loan_repaid", _types(self.world))
+
+    def test_going_unpaid_tells_on_a_worker_and_on_how_they_work(self) -> None:
+        tomas = _put_on_duty(self.world, "tomas")
+        self.world.clock.hour = 9
+        self.world.trading.fund = 0.0
+        mood = tomas.mood
+        self.world.step(1)
+        self.assertEqual((tomas.unpaid_days, tomas.unpaid_on), (1, self.world.clock.day))
+        self.assertLess(tomas.mood, mood)
+        self.assertGreater(tomas.needs.stress, 0)
+        self.world.step(30)
+        self.assertEqual(tomas.unpaid_days, 1, "once a day")
+        self.assertAlmostEqual(self.world.trade.unpaid_pace(self.world, tomas), 0.95)
+        self.world.clock.day += 1
+        self.world.step(1)
+        self.assertEqual(tomas.unpaid_days, 2)
+        self.world.clock.day += 5
+        self.assertEqual(self.world.trade.unpaid_days(self.world, tomas), 0, "paid since, it is behind them")
+        self.assertEqual(self.world.trade.unpaid_pace(self.world, tomas), 1.0)
+
+
+class OwnAccordTests(unittest.TestCase):
+    """What residents do about trade without being asked."""
+
+    def setUp(self) -> None:
+        self.world = _settled()
+        self.ines = self.world.residents["ines"]
+
+    def test_whoever_goes_outside_under_barter_keeps_one_thing_of_each_trip(self) -> None:
+        for bartering in (True, False):
+            world = _bartering(_settled()) if bartering else _settled()
+            sergio = world.residents["sergio"]
+            sergio.inventory.items.clear()
+            sergio.expedition = Expedition(returns_at=world.clock.total_minutes, finds=14, danger=0.0)
+            sergio.activity = Activity(EXPEDITION_ACTION, sergio.post_id, minutes_left=1, using=True)
+            world.step(1)
+            mine = [item for item in sergio.inventory.items if item.owner_id == "sergio"]
+            self.assertEqual(len(mine), 1 if bartering else 0)
+            self.assertEqual(sum(item.quantity for item in sergio.inventory.items), 14)
+            if bartering:
+                tags = set(world.registries.items.resolve(mine[0].definition_id).tags)
+                self.assertFalse(tags & set(world.registries.economy.common_finds), "never what the settlement runs on")
+                self.assertTrue(any("y se queda" in line for line in world.event_log))
+
+    def test_someone_who_knows_a_caravan_is_there_goes_and_buys_what_they_want_of_it(self) -> None:
+        world = self.world
+        merchant = _known_caravan(world, {"canned_beans": 2}, 10.0, "ines")
+        self.ines.job_id, self.ines.credits = None, 30.0
+        visits = lambda who: [c.name for c in world.activities.routine.candidates(world, who) if c.name == VISIT_ACTION]
+        self.assertEqual(visits(self.ines), [], "she wants for nothing")
+        self.ines.needs.hunger = 90
+        self.assertEqual(visits(self.ines), [VISIT_ACTION])
+        tomas = world.residents["tomas"]
+        tomas.job_id, tomas.credits, tomas.needs.hunger = None, 30.0, 90
+        self.assertEqual(visits(tomas), [], "nobody has told him it is there")
+        self.ines.activity = world.merchants.plan(world, self.ines)
+        for _ in range(120):
+            world.step(1)
+            _content(world, *[r for r in world.residents if r != "ines"])
+            if merchant.goods.get("canned_beans") == 1:
+                break
+        self.assertEqual((merchant.goods, merchant.purse, self.ines.credits), ({"canned_beans": 1}, 25.0, 15.0))
+        self.assertIsNotNone(self.ines.inventory.stack_of("canned_beans", "ines"))
+        self.assertTrue(any("Inés le compra unas judías en conserva a la caravana por 15 vales" in line for line in world.event_log))
+        self.ines.needs.hunger = 90
+        self.assertEqual(visits(self.ines), [], "once is enough for one caravan")
+
+    def test_someone_sells_a_caravan_only_what_fetches_more_than_it_is_worth_to_them(self) -> None:
+        world = self.world
+        _known_caravan(world, {}, 60.0, "ines")
+        self.ines.job_id = None
+        self.ines.inventory.items.clear()
+        baton = world.stock(self.ines.inventory, "baton", 1, "ines")
+        self.assertEqual(world.merchants.gives(world, "baton", baton), 9)
+        self.assertIsNone(world.merchants.own_deal(world, self.ines), "it is worth more to her than that")
+        world.registries = _registries_with("world_events.json", '"buys_at": 0.6', '"buys_at": 1.5')
+        deal = world.merchants.own_deal(world, self.ines)
+        self.assertEqual((deal.gives, deal.coin, deal.takes), (baton, -22, None))
+
+    def test_a_worn_thing_goes_for_less_at_the_counter_and_to_a_caravan(self) -> None:
+        world = self.world
+        shelf = world.containers[COUNTER]
+        hoe = shelf.stack_of("hoe", None)
+        new = world.trade.price_for(world, shelf, hoe)
+        hoe.condition = 50.0
+        self.assertEqual(world.trade.price_for(world, shelf, hoe), new // 2)
+        beans = shelf.stack_of("canned_beans", None)
+        beans.condition = 10.0
+        self.assertEqual(world.trade.price_for(world, shelf, beans), 11, "what does not wear is worth what it was")
+        _caravan(world, {}, purse=60.0)
+        self.assertEqual(world.fund.worth_of_goods(world, "hoe", 2, world.merchants.gives(world, "hoe")), 2 * 3)
+        fund = world.trading.fund
+        self.assertTrue(world.apply_command(DealWithMerchantCommand(sell={"hoe": 2})).ok)
+        self.assertEqual(world.trading.fund, fund + 6)
+
+    def test_someone_turned_down_often_enough_raises_a_currency_and_the_player_may_name_it(self) -> None:
+        world = _bartering(self.world)
+        for resident in world.residents.values():
+            resident.personality = Personality(greed=90, empathy=10, courage=90)
+        self.ines.job_id = None
+        self.ines.inventory.items.clear()
+        world.stock(self.ines.inventory, "scrap", 1, "ines")
+        _put_on_duty(world, "nuria")
+        for refusal in range(world.registries.economy.grumble_swaps):
+            self.assertEqual(world.decisions, {})
+            self.ines.needs.hunger = 95
+            self.assertIsNone(world.trade.buy(world, self.ines, COUNTER))
+        decision = next(iter(world.decisions.values()))
+        self.assertEqual((decision.kind, decision.resident_id), ("currency_raised", "ines"))
+        self.assertIn("trade_raised", _types(world))
+        self.assertEqual(world.apply_command(ChooseOptionCommand(decision.decision_id, "encourage")), "raise")
+        coin = world.fund.currency(world)
+        self.assertEqual(coin.name, "vales", "until the player says otherwise it goes by the plain name")
+        self.assertEqual(world.trading.refusals, {})
+        self.assertTrue(world.apply_command(RenameCurrencyCommand("chapas")).ok)
+        self.assertEqual((coin.name, coin.singular, coin.amount(2)), ("chapas", "chapa", "2 chapas"))
+        self.assertFalse(SimulationWorld.new_settlement().apply_command(RenameCurrencyCommand("chapas")).ok)
+
+    def test_someone_talked_out_of_it_lets_it_be(self) -> None:
+        world = _bartering(self.world)
+        world.trading.refusals["ines"] = 5
+        self.assertTrue(world.terms.maybe_raise(world, self.ines))
+        decision = next(iter(world.decisions.values()))
+        self.assertEqual(world.apply_command(ChooseOptionCommand(decision.decision_id, "discourage")), "let_be")
+        self.assertIsNone(world.fund.currency(world))
+        self.assertIsNone(world.trading.asked_on, "nobody was asked")
+        self.assertFalse(world.terms.maybe_raise(world, self.ines), "they have said their piece for now")
+
+    def test_days_without_a_wage_have_a_worker_think_of_going_back_to_barter(self) -> None:
+        world = self.world
+        world.trading.fund = 0.0
+        tomas = _put_on_duty(world, "tomas", minutes=5000)
+        world.clock.hour = 9
+        for day in range(world.registries.economy.grumble_unpaid_days):
+            self.assertEqual(world.decisions, {})
+            world.step(1)
+            world.clock.day += 1
+        self.assertEqual([decision.kind for decision in world.decisions.values()], ["barter_raised"])
+        self.assertEqual(tomas.unpaid_days, 3)
+
+    def test_what_is_bought_from_a_caravan_is_carried_in_from_the_gate_by_whoever_keeps_the_shop(self) -> None:
+        world = self.world
+        _caravan(world, {"medicine": 2}, purse=30.0)
+        nuria = world.residents["nuria"]
+        self.assertTrue(world.apply_command(DealWithMerchantCommand(buy={"medicine": 2})).ok)
+        shelf = world.containers[COUNTER]
+        self.assertEqual((world.at_gate, shelf.count("medicine")), ({"medicine": 2}, 0))
+        world.clock.hour = 12
+        seen_carrying = False
+        for _ in range(240):
+            world.step(1)
+            _content(world)
+            seen_carrying = seen_carrying or bool(world.fund.takings_on(nuria))
+            if shelf.count("medicine") == 2:
+                break
+        self.assertTrue(seen_carrying, "it was in her hands on the way")
+        self.assertEqual((world.at_gate, shelf.count("medicine")), ({}, 2))
+        self.assertTrue(any("Nuria recoge medicinas (2) en la puerta" in line for line in world.event_log))
+
+        nuria.job_id = None
+        self.assertTrue(world.apply_command(DealWithMerchantCommand(buy={})).ok is False)
+        _caravan(world, {"medicine": 1}, purse=30.0)
+        self.assertTrue(world.apply_command(DealWithMerchantCommand(buy={"medicine": 1})).ok)
+        self.assertEqual((world.at_gate, shelf.count("medicine")), ({}, 3), "with nobody to carry it, it is left there")
+
+    def test_a_settlement_with_no_counter_keeps_its_fund_in_a_box(self) -> None:
+        world = _few(_settled())
+        self.assertEqual(world.fund.till(world), COUNTER)
+        del world.interactables[COUNTER], world.containers[COUNTER]
+        self.assertEqual(world.fund.till(world), "crate_1")
+        raul = world.residents["raul"]
+        raul.personality = Personality(greed=95, empathy=5)
+        raul.credits = 0.0
+        _place(world, "raul", (33, 5))
+        for name in ("marta", "lucia"):
+            _place(world, name, (5, 26))
+        tempted = [c.target_id for c in world.items.candidates(world, raul) if c.name == FUND_THEFT_ACTION]
+        self.assertEqual(tempted, ["crate_1"])
+        self.assertTrue(world.fund.keeps_till(world, world.residents["lucia"]), "a box is everybody's to look into")
+
+
 class FundDataAndSaveTests(unittest.TestCase):
     def setUp(self) -> None:
         self.manager = SaveManager()
@@ -897,6 +1342,42 @@ class FundDataAndSaveTests(unittest.TestCase):
         self.assertEqual(loaded.trading.fund, 0.0)
         loaded.step(MINUTES_PER_DAY)
 
+    def test_a_save_from_before_upkeep_has_everybody_just_worked_and_nothing_owed(self) -> None:
+        world = SimulationWorld.demo_world(seed=5)
+        world.step(MINUTES_PER_DAY)
+        data = self.manager.to_data(world)
+        data["version"] = 26
+        del data["debts"], data["at_gate"], data["trading"]["refusals"]
+        for resident in data["residents"]:
+            del resident["last_worked"], resident["unpaid_on"], resident["unpaid_days"]
+            for item in resident["inventory"]:
+                del item["meant_for"]
+        loaded = self.manager.from_data(json.loads(json.dumps(data)))
+        now = loaded.clock.total_minutes
+        self.assertEqual({resident.last_worked for resident in loaded.residents.values()}, {now})
+        self.assertEqual((loaded.debts, loaded.at_gate, loaded.trading.refusals), ([], {}, {}))
+        loaded.step(MINUTES_PER_DAY)
+
+    def test_what_is_owed_what_waits_and_what_is_kept_for_somebody_survive_saving(self) -> None:
+        world = SimulationWorld.demo_world(seed=5)
+        ines, tomas = world.residents["ines"], world.residents["tomas"]
+        world.debts.append(Debt("ines", "tomas", 10.0, 1))
+        world.debts.append(Debt("ines", "nobody", 10.0, 1))
+        world.at_gate.update({"medicine": 2, "unobtainium": 1})
+        present = world.new_item("rusty_knife", 1, "ines")
+        present.meant_for = "tomas"
+        ines.inventory.add(present)
+        ines.last_worked, ines.unpaid_on, ines.unpaid_days = 17, 2, 3
+        world.trading.refusals.update({"ines": 2, "nobody": 4})
+        loaded = self._reloaded(world)
+        self.assertEqual(loaded.debts, [Debt("ines", "tomas", 10.0, 1)], "owed to somebody who is gone, it is owed no longer")
+        self.assertEqual((loaded.at_gate, loaded.trading.refusals), ({"medicine": 2}, {"ines": 2}))
+        kept = loaded.residents["ines"].inventory.find(present.instance_id)
+        self.assertEqual(kept.meant_for, "tomas")
+        again = loaded.residents["ines"]
+        self.assertEqual((again.last_worked, again.unpaid_on, again.unpaid_days), (17, 2, 3))
+        self.assertEqual(self.manager.to_data(self._reloaded(loaded)), self.manager.to_data(loaded))
+
     def test_bad_economy_and_merchant_data_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "negative"):
             economy_settings_from_data({"fund_per_resident": -1})
@@ -906,6 +1387,14 @@ class FundDataAndSaveTests(unittest.TestCase):
             economy_settings_from_data({"savings_scale": 0})
         with self.assertRaisesRegex(ValueError, "need a name"):
             economy_settings_from_data({"credits_name": " "})
+        with self.assertRaisesRegex(ValueError, "one or more"):
+            economy_settings_from_data({"idle_days": 0})
+        with self.assertRaisesRegex(ValueError, "list of item tags"):
+            economy_settings_from_data({"common_finds": "scrap"})
+        with self.assertRaisesRegex(ValueError, "Unknown way of trading"):
+            decision_definition_from_data(
+                "x", {"event_type": "x", "text": "x", "prompt": "x", "options": [], "outcomes": {"a": {"text": "x", "raises": "gold"}}}
+            )
         merchant = {"kind": "merchant", "chance_per_day": 0.2, "minutes": [60, 120], "sells_at": 1.5, "buys_at": 0.6}
         world_event_settings_from_data({"events": {"pedlar": merchant}})
         with self.assertRaisesRegex(ValueError, "never buy for more"):

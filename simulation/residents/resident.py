@@ -40,6 +40,12 @@ class Resident:
     day_off: int | None = None
     # What their work has earned them and they have not spent yet.
     credits: float = 0.0
+    # Game minute at which they last worked, or could not have: the settlement keeps whoever
+    # has, lately.
+    last_worked: int = 0
+    # The last day on which their wage was not paid in full, and how many days running that makes.
+    unpaid_on: int = 0
+    unpaid_days: int = 0
     # Age in years. Romance is only ever between adults.
     age: int = 30
     # ID of the resident they are a couple with, who names them in turn.

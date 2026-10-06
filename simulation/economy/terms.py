@@ -1,6 +1,6 @@
 """How a settlement trades: by barter, a thing for a thing, or with a currency of its own making."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 NAME_LENGTH = 16
 
@@ -34,6 +34,22 @@ class TradingState:
     currency_count: int = 0
     # Day on which the residents were last asked how they would trade.
     asked_on: int | None = None
+    # How many swaps each resident has had turned down at a counter since they last made
+    # something of it, by resident ID.
+    refusals: dict[str, int] = field(default_factory=dict)
+
+
+@dataclass
+class Debt:
+    """Credit one resident has lent another, until it is paid back."""
+
+    debtor_id: str
+    creditor_id: str
+    amount: float
+    # Day on which it was lent.
+    since: int
+    # True once it has gone unpaid long enough to tell on what the lender thinks of them.
+    overdue: bool = False
 
 
 @dataclass(frozen=True)

@@ -56,6 +56,12 @@ BROKEN_IMPORTANCE = 30
 # The chance, from 0 to 1, that eating or drinking a thing makes whoever does it ill, as a property of the item.
 SICKENS = "sickens"
 SICKNESS = "sickness"
+# The least of what a thing is worth new that is left in it, however worn.
+WORN_FLOOR = 0.25
+# What a trait may say of whoever has it: how much more given they are to taking what is not
+# theirs, and whether they are fool enough to part with what they work with.
+THIEVING = "thieving"
+CARELESS = "careless"
 
 
 def _named(definition: ItemDefinition) -> str:
@@ -75,6 +81,22 @@ class ItemSystem:
         """What an item is worth to this resident: its base value as their tastes, their needs
         and its scarcity make it. With `item`, one in particular, which may be a keepsake."""
         return world.tastes.worth(world, resident, definition, item)
+
+    def condition_share(self, world: "SimulationWorld", item: ItemInstance) -> float:
+        """How much of what a thing is worth new is left in it, for how worn it is. All of it, for
+        what does not wear."""
+        if world.registries.items.resolve(item.definition_id).properties.get("wear", 0.0) <= 0:
+            return 1.0
+        return max(WORN_FLOOR, min(1.0, item.condition / 100.0))
+
+    def thieving(self, world: "SimulationWorld", resident: Resident) -> float:
+        """How much more given to taking what is not theirs a resident is, for the traits they have."""
+        traits = (world.registries.traits.find(trait_id) or {} for trait_id in resident.traits)
+        return sum(float(trait.get(THIEVING, 0.0)) for trait in traits)
+
+    def careless(self, world: "SimulationWorld", resident: Resident) -> bool:
+        """Whether a resident has it in them to part with the very thing they work with."""
+        return any((world.registries.traits.find(trait_id) or {}).get(CARELESS) for trait_id in resident.traits)
 
     def use_effects(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> dict[str, float]:
         """Need changes from using or eating the item, including the pleasure of a food to their
@@ -209,7 +231,11 @@ class ItemSystem:
     # ----- choosing to use or steal something -----
 
     def candidates(self, world: "SimulationWorld", resident: Resident) -> list[ScoredAction]:
-        return self._use_candidates(world, resident) + self._theft_candidates(world, resident)
+        return (
+            self._use_candidates(world, resident)
+            + pilfering.hunger_candidates(world, resident)
+            + self._theft_candidates(world, resident)
+        )
 
     def _use_candidates(self, world: "SimulationWorld", resident: Resident) -> list[ScoredAction]:
         """Own things worth using right now, wherever they are kept."""
@@ -219,7 +245,8 @@ class ItemSystem:
             placed = world.interactables.get(container_id) if container_id else None
             distance = manhattan(resident.tile, (placed.x, placed.y)) if placed is not None else 0
             for item in inventory.items:
-                if item.owner_id != resident.resident_id or item.broken:
+                if item.owner_id != resident.resident_id or item.broken or item.meant_for is not None:
+                    # What is being kept for somebody is not theirs to use.
                     continue
                 definition = world.registries.items.resolve(item.definition_id)
                 relief = self._relief(resident, self.use_effects(world, resident, definition))
@@ -243,13 +270,14 @@ class ItemSystem:
     def leaning_to_steal(self, world: "SimulationWorld", thief: Resident, owner: Resident | None) -> float:
         """How given a resident is to taking what is not theirs, from 0 for not at all.
 
-        Greed and a grudge against the owner push towards it; empathy holds back. With no owner
-        it is what the settlement holds in common, and there is nobody to bear the grudge.
+        Greed and a grudge against the owner push towards it; empathy holds back, and some are
+        that way inclined whatever else they are. With no owner it is what the settlement holds
+        in common, and there is nobody to bear the grudge.
         """
         feelings = world.relationships.get((thief.resident_id, owner.resident_id)) if owner is not None else None
         resentment = feelings.resentment if feelings is not None else 0.0
         drive = (thief.personality.greed - 50.0) / 50.0 + resentment / 100.0 - thief.personality.empathy / 200.0
-        return max(0.0, drive)
+        return max(0.0, drive + self.thieving(world, thief))
 
     def _theft_candidates(self, world: "SimulationWorld", resident: Resident) -> list[ScoredAction]:
         """Other people's things in containers nobody is watching, their credit, and what is everybody's."""
@@ -451,6 +479,7 @@ class ItemSystem:
         """Things that change hands once two residents have talked: `resident`'s side of it."""
         if definition.returns_stolen:
             self._return_stolen(world, resident, partner)
+        world.lending.after_exchange(world, resident, partner)
         if not self._maybe_gift(world, resident, partner):
             self._maybe_trade(world, resident, partner)
 
@@ -466,12 +495,13 @@ class ItemSystem:
     def spare(self, world: "SimulationWorld", resident: Resident) -> list[ItemInstance]:
         """Things of their own that a resident carries and could part with.
 
-        Nobody gives away what they work with: the tool of their job stays with them. One they
-        have besides it is theirs to give like anything else.
+        Nobody gives away what they work with: the tool of their job stays with them, unless
+        they are fool enough. One they have besides it is theirs to give like anything else.
+        What they are keeping for somebody is for that somebody.
         """
-        owned = self.owned(world, resident)
+        owned = [item for item in self.owned(world, resident) if item.meant_for is None]
         job = world.work.job_of(world, resident)
-        if job is None or job.tool is None:
+        if job is None or job.tool is None or self.careless(world, resident):
             return owned
         resolve = world.registries.items.resolve
         kept = world.work.tool_of(world, resident, job) or next(
@@ -515,16 +545,26 @@ class ItemSystem:
             )
 
     def _maybe_gift(self, world: "SimulationWorld", giver: Resident, receiver: Resident) -> bool:
+        # Something bought for them is handed over the first time the two of them talk.
+        present = next(
+            (
+                item
+                for item in giver.inventory.items
+                if item.meant_for == receiver.resident_id and item.owner_id == giver.resident_id
+            ),
+            None,
+        )
         gifts = self.spare(world, giver)
         feelings = world.relationship(giver.resident_id, receiver.resident_id)
-        if not gifts or feelings.affection < GIFT_AFFECTION or giver.personality.greed > GIFT_MAX_GREED:
-            return False
-        if world.rng.random() >= GIFT_CHANCE:
-            return False
+        if present is None:
+            if not gifts or feelings.affection < GIFT_AFFECTION or giver.personality.greed > GIFT_MAX_GREED:
+                return False
+            if world.rng.random() >= GIFT_CHANCE:
+                return False
         resolve = world.registries.items.resolve
-        item = max(
+        item = present or max(
             gifts,
-            key=lambda i: (self._gift_appeal(world, giver, receiver, resolve(i.definition_id)), i.instance_id),
+            key=lambda i: (self.gift_appeal(world, giver, receiver, resolve(i.definition_id)), i.instance_id),
         )
         definition = resolve(item.definition_id)
         if item.quantity > 1:
@@ -532,7 +572,7 @@ class ItemSystem:
             given = world.stock(receiver.inventory, item.definition_id, 1, receiver.resident_id)
         else:
             giver.inventory.remove(item.instance_id)
-            item.owner_id = receiver.resident_id
+            item.owner_id, item.meant_for = receiver.resident_id, None
             receiver.inventory.add(item)
             given = item
         given.given_by = giver.resident_id
@@ -559,7 +599,7 @@ class ItemSystem:
         world.tastes.react(world, receiver, definition, GIVEN, giver)
         return True
 
-    def _gift_appeal(
+    def gift_appeal(
         self, world: "SimulationWorld", giver: Resident, receiver: Resident, definition: ItemDefinition
     ) -> float:
         """How good a present something looks to the giver: what it is worth, and what they

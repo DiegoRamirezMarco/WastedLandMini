@@ -68,6 +68,8 @@ class OutcomeDefinition:
     builds: bool = False
     # Whether choosing this means going along with what was put to them: a sale, a way of trading.
     agrees: bool = False
+    # What choosing this puts to everyone as the way to trade: `currency` or `barter`.
+    raises: str | None = None
 
 
 @dataclass(frozen=True)
@@ -137,6 +139,9 @@ def _outcome_from_data(kind: str, outcome_id: str, data: dict[str, Any]) -> Outc
     raid = str(data["raid"]) if "raid" in data else None
     if raid is not None and raid not in RAID_CHOICES:
         raise ValueError(f"Unknown raid choice in {where}: {raid}")
+    raises = str(data["raises"]) if "raises" in data else None
+    if raises is not None and raises not in ("currency", "barter"):
+        raise ValueError(f"Unknown way of trading in {where}: {raises}")
     return OutcomeDefinition(
         outcome_id=outcome_id,
         score=score,
@@ -151,4 +156,5 @@ def _outcome_from_data(kind: str, outcome_id: str, data: dict[str, Any]) -> Outc
         raid=raid,
         builds=bool(data.get("builds", False)),
         agrees=bool(data.get("agrees", False)),
+        raises=raises,
     )

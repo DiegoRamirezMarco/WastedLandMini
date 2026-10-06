@@ -668,5 +668,97 @@
         "influence": {}
       }
     ]
+  },
+  "currency_raised": {
+    "event_type": "trade_raised",
+    "window_minutes": 60,
+    "cooldown_minutes": 4320,
+    "anger_threshold": 0,
+    "importance": 50,
+    "text": "{name} está harto de que no le cambien nada y piensa en proponer una moneda",
+    "prompt": "Con una moneda no pasaría esto. ¿Se lo digo a todos?",
+    "outcomes": {
+      "raise": {
+        "score": {
+          "bias": 0.3,
+          "courage": 0.3,
+          "sociability": 0.2,
+          "stress": 0.2
+        },
+        "raises": "currency",
+        "text": "{name} propone a todos comerciar con moneda"
+      },
+      "let_be": {
+        "score": {
+          "bias": 0.5,
+          "empathy": 0.1
+        },
+        "text": "{name} se lo calla"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Dilo, a ver qué dicen",
+        "influence": {
+          "raise": 0.4,
+          "let_be": -0.2
+        }
+      },
+      {
+        "id": "discourage",
+        "text": "Déjalo estar",
+        "influence": {
+          "raise": -0.4,
+          "let_be": 0.3
+        }
+      }
+    ]
+  },
+  "barter_raised": {
+    "event_type": "trade_raised",
+    "window_minutes": 60,
+    "cooldown_minutes": 4320,
+    "anger_threshold": 0,
+    "importance": 50,
+    "text": "{name} lleva días sin cobrar y piensa en proponer volver al trueque",
+    "prompt": "Para lo que vale esta moneda... ¿Les digo que volvamos al trueque?",
+    "outcomes": {
+      "raise": {
+        "score": {
+          "bias": 0.3,
+          "courage": 0.3,
+          "sociability": 0.2,
+          "stress": 0.2
+        },
+        "raises": "barter",
+        "text": "{name} propone a todos volver al trueque"
+      },
+      "let_be": {
+        "score": {
+          "bias": 0.5,
+          "greed": 0.1
+        },
+        "text": "{name} se lo calla"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Dilo, a ver qué dicen",
+        "influence": {
+          "raise": 0.4,
+          "let_be": -0.2
+        }
+      },
+      {
+        "id": "discourage",
+        "text": "Déjalo estar",
+        "influence": {
+          "raise": -0.4,
+          "let_be": 0.3
+        }
+      }
+    ]
   }
 }

@@ -60,6 +60,9 @@ class CommandTarget(Protocol):
     def propose_barter(self, option_id: str) -> TradeResult:
         ...
 
+    def rename_currency(self, name: str, singular: str | None) -> TradeResult:
+        ...
+
     def deal_with_merchant(self, sell: Mapping[str, int], buy: Mapping[str, int]) -> TradeResult:
         ...
 
@@ -277,6 +280,18 @@ class ProposeBarterCommand:
 
     def apply(self, world: CommandTarget) -> TradeResult:
         return world.propose_barter(self.option_id)
+
+
+@dataclass(frozen=True)
+class RenameCurrencyCommand:
+    """The player's name for the currency the settlement has, when it took one up of its own
+    accord under the plain name such a thing goes by. What anybody holds of it is the same."""
+
+    name: str
+    singular: str | None = None
+
+    def apply(self, world: CommandTarget) -> TradeResult:
+        return world.rename_currency(self.name, self.singular)
 
 
 @dataclass(frozen=True)

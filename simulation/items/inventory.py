@@ -22,9 +22,16 @@ class Inventory:
         return None
 
     def stack_of(self, definition_id: str, owner_id: str | None) -> ItemInstance | None:
-        """The stack of this kind of item belonging to this owner, if there is one here."""
+        """The stack of this kind of item belonging to this owner, if there is one here.
+
+        What is being kept for somebody is never part of it.
+        """
         return next(
-            (item for item in self.items if item.definition_id == definition_id and item.owner_id == owner_id),
+            (
+                item
+                for item in self.items
+                if item.definition_id == definition_id and item.owner_id == owner_id and item.meant_for is None
+            ),
             None,
         )
 

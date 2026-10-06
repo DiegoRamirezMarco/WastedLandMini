@@ -398,6 +398,8 @@ class ConstructionSystem:
                 )
             )
         resident.needs.apply(world.registries.construction.per_minute)
+        # Putting something up is work for the settlement like any other.
+        resident.last_worked = world.clock.total_minutes
         pace = world.health.work_pace(world, resident) * world.work.mood_pace(resident)
         site.progress += pace * world.research.factor(world, BUILD_PACE)
         activity.minutes_left -= 1

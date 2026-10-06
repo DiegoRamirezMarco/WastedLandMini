@@ -511,6 +511,19 @@ settlement is created, in `SimulationWorld.demo_world`.
   something over for. `pilfer_max` is the most credit taken at once. `trade_ask_days` is how long
   the residents cannot be asked again how they would trade, and `savings_scale` and `goods_scale`
   are the credits and the worth of belongings at which either weighs all it can on their answer.
+- More of how it trades, in the same file: `meal_price` (what a meal out of the commons costs
+  with a currency), `idle_days` (days without working before the settlement stops keeping
+  somebody), `gift_savings` (what somebody keeps by them before spending on anybody else),
+  `loan_size`, `poor_below` and `loan_days`, `common_finds` (tags of what whoever goes outside
+  never keeps for themselves), `unpaid_mood` and `unpaid_stress`, `grumble_swaps` and
+  `grumble_unpaid_days` (how much of either before somebody raises trading another way) and
+  `strongbox_kind` (the kind of container a fund is kept in where there is no counter).
+- A trait in `data/traits.json` may give `"thieving": 0.5`, which is added to how given its
+  owner is to taking what is not theirs and has coin tempt them whatever they have, and
+  `"careless": true`, which has them part with the tool they work with.
+- The game also opens `currency_raised` and `barter_raised` by ID, for a resident who has had
+  enough of how things are traded. An outcome's `"raises"` (`currency` or `barter`) is what it
+  puts to everyone.
 - In `data/decisions.json` the game puts `currency_proposal`, `barter_proposal` and
   `sale_proposal` to residents by ID. An outcome with `"agrees": true` is going along with what
   was put. Their scores may weigh `savings`, `goods` and `bargain` (how good a sale is by the

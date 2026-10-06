@@ -1160,24 +1160,82 @@ Found by running ten weeks with a fund that can run dry, and put right:
   for one, where raiders got in three times and it was down to its last few meals at the end.
   The rest never had fewer than twenty-seven by them, against seventeen before
 
+Closed since, with what the player said of it and what was asked:
+the settlement keeps whoever works and nobody else; credit is stolen by whoever is short of it
+or is that way inclined; only a fool parts with what they work with; food is paid for; whoever
+has coin put by spends it at their own counter, on presents, on a friend's drink and on loans;
+whoever goes outside under barter keeps a thing of each trip; going unpaid tells on mood and
+on work; residents deal with a caravan over what is theirs; a worn thing is worth less;
+residents raise a currency themselves; what becomes the settlement's is carried by hand; and a
+settlement with no shop keeps its fund in a box.
+
+- **The settlement keeps whoever works for it.** Three days without working, post or no post,
+  and it stops: it is said, and said again when they go back to work. Whoever is in no state to
+  work is not held to have stopped, someone new has those three days, and a settlement in its
+  opening keeps everybody. Putting something up counts as work
+- **Whoever is not kept pays for what comes out of the commons**, water included: coin, or
+  under barter the thing of theirs worth least to them. With nothing to pay with they go
+  without. Nobody is fed for nothing any longer
+- **Hungry or thirsty enough, they take it without leave.** They wait for nobody to be looking
+  unless they are past caring. Whoever sees it knows and holds it against them
+- **With a currency a meal out of the commons costs one**, and it goes into the fund. Whoever
+  the settlement keeps is fed even with an empty pocket; a drink at the bar is another matter
+- **Traits that say who steals and who is a fool**, as data (`thieving`, `careless`): `Mano
+  larga`, `Mala entraña` and `Picardía` make somebody more given to taking what is not theirs,
+  things and coin alike, whatever they have put by. `Pocas luces` is who parts with the tool
+  they work with. All four can be chosen for a first resident. Sergio has `Picardía`, Paco
+  `Pocas luces`, and of those who may come to the gate Hugo has `Mano larga` and Carmen `Mala
+  entraña`
+- **Whoever keeps a counter can serve themselves at it out of hours**, paying like anybody
+- **A present is bought**: someone with more than fifteen to spare, and nothing they want for
+  themselves, buys what they believe whoever they are fondest of would like, keeps it apart,
+  and hands it over the first time the two of them talk
+- **A friend at the bar stands a drink** to whoever cannot pay for it, if they are fond enough
+  of them and have coin to spare. It is not forgotten
+- **A friend lends**: whoever is down to less than three is lent ten by someone fond of them
+  who trusts them and has it to spare, at the end of a chat. It is a fact between the two. It
+  is paid back the next time they talk with it in hand, and after a week unpaid it tells on
+  what the lender thinks of them
+- **Under barter whoever goes outside keeps one thing of each trip**: the one worth most to
+  them, and never water, fuel, medicine or scrap
+- **A day without their wage tells on a worker**: mood, nerves, and a twentieth slower at
+  their work for each day running, down to four fifths
+- **Residents go to a caravan of their own accord** over what is theirs, if they know it is
+  there: they saw it come, heard it forecast or were told. With a currency they buy what they
+  want at what is asked, or sell what fetches more than it is worth to them; under barter they
+  swap. Once for each caravan
+- **A worn thing is worth less**: to a caravan, on the counter and in a swap, down to a quarter
+- **A resident raises it themselves**: three swaps turned down and they think of proposing a
+  currency; three days without a wage, of going back to barter. Whether they do is theirs to
+  decide and the player's to advise on. If they do, everybody answers with no advice. A
+  currency taken up this way goes by `vales` until the player names it (`RenameCurrencyCommand`)
+- **What becomes the settlement's is carried to where it is kept.** What is handed over at the
+  bar or the workbench is taken by whoever serves and carried to the till after. What is
+  bought from a caravan waits at the gate for whoever keeps the shop to bring in, six at a
+  time. Handed over at a pantry or a pot, it stays there
+- **A settlement with no counter keeps its fund in a crate**, which is where it is stolen
+  from, and everybody's to look into
+- Save version 27
+
+Done when: sixteen seeds run for ten weeks end with a fund of 229 to 297, from 270, with every
+wage paid, nobody holding more than twenty-six, nobody dead and never fewer than eleven meals
+by them; whoever stops working is cut off after three days and helps themselves when hungry
+enough; and a save from before loads with everybody having just worked.
+
 Still open here:
-- With nobody to sell to a caravan the fund runs dry in about a month: more is paid out in
-  wages than comes back at the counter, and what is saved never comes back. From then on wages
-  are paid as far as the day's takings go, to whoever is at work when they come in. Taxes are
-  S28
-- Whoever keeps the shop can never buy at it, so what they earn piles up: after ten weeks the
-  shopkeeper holds two thirds of the coin there is
-- Under barter nobody comes by anything of their own but by a present, a swap or a theft, so
-  the shop moves little: whoever is kept takes nothing home
-- Nobody minds going unpaid, and nobody minds someone who holds no job being fed for nothing
-- What is handed over at the bar or the workbench under barter is on the shop's shelf at once,
-  with nobody carrying it there, and so is what is bought from a caravan (S8)
-- A caravan is not seen at the gate, and nobody goes to meet it. Residents do not deal with it
-  unless the player puts it to them
-- Nobody proposes a currency, or going back to barter, unasked
-- A settlement with no shop has nowhere for its fund to be stolen from
-- A thing sold to a caravan is sold as new, however worn
-- Residents still never sell for coin: under a currency the counter only sells (S8)
+- Everybody lives hand to mouth: a day's wage is seven and three meals take three of it, so few
+  ever have the fifteen to spare that a present, a drink for a friend or a loan asks for. In
+  ten weeks there is a loan or two and no present. What a wage and a meal ought to be is a guess
+- The fund sits where it started: nothing the settlement does of its own accord spends it but
+  wages. It is the player's to spend at a caravan, and that has no screen until P25
+- Nobody minds someone who is not kept beyond what they see them take
+- A caravan is not seen at the gate, and what waits there is neither seen nor stolen
+- With nobody whose job it is to keep the till, what is bought from a caravan is at the shop at
+  once
+- Residents do not sell at the counter for coin: only to a caravan
+- A thing sold to a caravan as nobody's by its kind is taken from wherever it lies, with nobody
+  carrying it out
+- A resident who takes up a currency unasked cannot name it: it is `vales` until the player does
 
 ### S24 — Substances (needs S20) — planned
 - **A substance is a consumable like any other, as data**: an item with a `substance` property

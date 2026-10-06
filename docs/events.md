@@ -19,11 +19,16 @@ Event types emitted so far:
 | `meal_started` | A resident starts eating, with the food ID in `data.item_id` | 5 |
 | `work_started` | A resident takes up their post | 5 |
 | `goods_hauled` | A worker leaves a load in a container, or fetches one from it | 5 |
-| `item_bought` | A resident buys something over the counter, with `item_id` and `price` in `data` | 15 |
+| `item_bought` | A resident buys something over the counter, with `item_id`, `price` and `for` (who it is a present for, or null) in `data`. From a merchant, `merchant` names the event that brought them | 15 |
 | `item_swapped` | Under barter, a resident has something off the counter for a thing of their own, with `item_id` and `given_id` in `data` | 15 |
 | `swap_refused` | Whoever keeps the counter will not have any of what a resident offers for a thing (once a day for each resident) | 20 |
-| `keep_paid` | Under barter, someone who holds no job hands a thing over for a meal, a drink or a repair, with `item_id` in `data` | 10 |
-| `keep_unpaid` | Under barter, someone who holds no job is fed with nothing to give for it (once a day for each) | 20 |
+| `keep_paid` | Under barter, someone the settlement no longer keeps hands a thing over for a meal, a drink or a repair, with `item_id` in `data` | 10 |
+| `supply_cut`, `supply_restored` | The settlement stops keeping someone who has not worked for days, or takes them back | 40 |
+| `drink_stood` | Someone pays for what a friend at the same bar could not | 15 |
+| `loan_made`, `loan_repaid` | A resident lends another credit, or has it back, with `amount` in `data` | 20 |
+| `loan_overdue` | A loan has gone unpaid long enough to tell on the two of them | 35 |
+| `trade_raised` | A resident thinks of putting a currency, or going back to barter, to everyone, and waits for advice | 50 |
+| `currency_named` | The player gives the currency its name, with `currency_id` in `data` | 30 |
 | `wages_unpaid` | The fund has nothing left to pay a wage with (once a day) | 35 |
 | `trade_proposed` | A resident is asked whether the settlement should trade with a currency, or go back to barter | 30 |
 | `trade_terms_changed` | The residents take up a currency, or go back to barter, with `currency_id` in `data` (null for barter) | 60 |
@@ -56,7 +61,7 @@ Event types emitted so far:
 | `taste_found_out` | The player comes to suspect or to know a taste of a resident, with `resident_id`, `taste`, `state` and `leaning` in `data`. Never a number | 12 suspected, 22 known |
 | `taste_mentioned` | A resident speaks of something they like or cannot stand, at the end of a friendly exchange | 10 |
 | `trade_refused` | A resident will not take a thing in a swap because it is not to their liking (once a day between the two) | 12 |
-| `theft_committed` | A resident takes someone else's thing or credit, or takes from what the settlement holds in common. For credit and the fund, `victim_id` (`@fund` for the settlement) and `amount` in `data` | 45 |
+| `theft_committed` | A resident takes someone else's thing or credit, or takes from what the settlement holds in common. For credit and the fund, `victim_id` (`@fund` for the settlement) and `amount` in `data` | 45, or 30 for a meal or a drink taken without leave |
 | `theft_noticed` | An owner sees that something of theirs is gone, or whoever keeps the counter that the fund is short | 40 |
 | `item_returned` | A stolen thing, or stolen credit, is handed back | 25 |
 | `crisis_opened` | A resident boils over and waits for advice | 50 to 69, by anger |
@@ -77,7 +82,7 @@ Event types emitted so far:
 | `couple_broke_up` | The couple is over | 65 |
 | `expedition_left` | A resident leaves the settlement to scavenge | 15 |
 | `risky_find` | A resident out there comes on something that looks dangerous, and waits for advice | 50 |
-| `expedition_returned` | A resident comes back with what they found | 30 |
+| `expedition_returned` | A resident comes back with what they found, with `found` and `kept` (what they keep for themselves under barter, or null) in `data` | 30 |
 | `stranger_at_gate` | Someone asks to be let in, and the guard waits for advice | 55 |
 | `newcomer_joined` | A stranger is let in and stays | 60 |
 | `stranger_turned_away` | A stranger is sent on their way | 40 |
@@ -86,7 +91,7 @@ Event types emitted so far:
 | `merchant_left` | They move on | 20 |
 | `merchant_deal` | The player sells them what is nobody's and buys from them, with `sold`, `bought` and `paid` (out of the fund, or into it if negative) in `data` | 30 |
 | `sale_proposed` | A resident is asked to sell a merchant a thing of their own | 30 |
-| `item_sold` | They do, with `item_id`, `for_item` and `price` in `data` | 25 |
+| `item_sold` | They do, or sell or swap one of their own accord, with `item_id`, `for_item` and `price` in `data` | 25, or 15 of their own accord |
 | `goods_left` | A world event of kind `stock` leaves things in a container for nothing | 30 |
 | `weather_changed` | A storm rises, or passes | 45, 30 |
 | `food_spoiled` | Vermin eat part of what is in the pantries | 45 |
