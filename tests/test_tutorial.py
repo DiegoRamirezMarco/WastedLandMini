@@ -187,6 +187,22 @@ class NewSettlementTests(unittest.TestCase):
         }
         self.assertEqual(stock, {"crate": {"scrap": 6}, "pantry": {"canned_beans": 30}, "water_tank": {"water": 120}})
 
+    def test_the_old_radio_that_the_radio_is_worked_out_from_comes_with_the_settlement(self) -> None:
+        # It turns up seldom outside, and the radio is what gives word of what is coming.
+        settle(self.world, until="study")
+        radios = lambda: sum(inventory.count("old_radio") for inventory in self.world.containers.values())  # noqa: E731
+        self.assertEqual(radios(), 0)
+        settle(self.world)
+        crate = next(
+            inventory
+            for object_id, inventory in self.world.containers.items()
+            if self.world.interactables[object_id].kind == "crate"
+        )
+        # Nobody's, so that whoever studies can take it; and the one the subject asks for.
+        self.assertEqual(crate.stack_of("old_radio", None).quantity, 1)
+        radio = self.world.registries.research.subjects["radio"]
+        self.assertEqual((radio.item, radio.count), ("old_radio", 1))
+
     def test_the_stranger_of_the_opening_is_answered_by_whoever_is_there_and_decided_by_them(self) -> None:
         settle(self.world, until="stranger")
         founder = next(iter(self.world.residents.values()))

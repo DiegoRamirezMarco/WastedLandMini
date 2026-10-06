@@ -571,7 +571,8 @@ own; and a subject takes time, other subjects before it, and now and then a thin
 - **A settlement that is already running knows how to make what it has standing**, and so does
   a save from before. A new one knows nothing, and can put up only what takes no knowing,
   during its opening as after it
-- **The opening says so** before it ends, in a step of its own
+- **The opening says so** before it ends, in a step of its own, and leaves an old radio in
+  the crate: asked for by hand, since the radio matters and one turns up seldom outside
 - On screen: `Estudio` in the menu, or `E`, lists what is in hand, what can be chosen and what
   waits for something else, each with what it is for, and names what is known. Urbanismo lists
   what nobody knows how to make yet, marked as such, and says what it waits for
@@ -583,8 +584,8 @@ generator until electricity is known; three weeks of study, with three seeds, wo
 things out and leave nobody dead; and a save keeps what is known and what is half worked out.
 
 Still open here:
-- Nobody is sent for the thing a subject studies: it is whatever a trip happens to bring, and
-  an old radio turns up seldom
+- Nobody is sent for the thing a subject studies: it is whatever a trip happens to bring. A
+  settlement that has lost the old radio it began with may wait long for another
 - Whoever studies is no better or worse at it than anybody else, and nothing of what they are
   like comes into it
 - Subjects are the game's alone: a content pack cannot add one yet

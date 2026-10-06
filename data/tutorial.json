@@ -199,10 +199,11 @@
     {
       "id": "study",
       "title": "Lo que no se sabe hacer",
-      "text": "En el catálogo hay cosas marcadas como por averiguar: un taller, un generador, una enfermería. Para eso pon una mesa de estudio (Muebles), propón a alguien el puesto de Estudio y elige el tema en Estudio (tecla E). Algunos piden algo que estudiar, que hay que traer de fuera.",
+      "text": "En el catálogo hay cosas marcadas como por averiguar: un taller, un generador, una enfermería. Para eso pon una mesa de estudio (Muebles), propón a alguien el puesto de Estudio y elige el tema en Estudio (tecla E). Algunos piden algo que estudiar. En el macuto venía una radio vieja: se queda en la caja para el día en que toque averiguar cómo se hace una, que es lo que avisa de lo que viene de fuera.",
       "goal": {"type": "acknowledged"},
+      "gifts": [{"item": "old_radio", "count": 1, "into": "crate"}],
       "focus": "research",
-      "done": "Lo que falta por saber se puede averiguar"
+      "done": "En la caja queda una radio vieja: hará falta para averiguar la radio"
     },
     {
       "id": "free",
