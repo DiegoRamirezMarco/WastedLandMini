@@ -27,6 +27,7 @@ from simulation.work.expedition import Expedition
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.tutorial.tutorial import TutorialState
 from simulation.world import SimulationWorld
+from world.build import BuildSite
 from world.interactable import Interactable
 from world.map import TileMap
 from world.room import Room
@@ -65,6 +66,8 @@ FIRST_ECONOMY_VERSION = 8
 # Version 23 added medicine, kept in the clinic's cabinet, and the dose each resident is under. A
 # save from before has nobody under one, finds its cabinet stocked as the map stocks it, and has
 # the furniture of the south house moved to where nobody is walled in by it.
+# Version 24 added building: the sites that are being worked on. A save from before has none,
+# and what stands in it stands as it did.
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 23
@@ -83,7 +86,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 23
+    CURRENT_VERSION = 24
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -137,6 +140,21 @@ class SaveManager:
                 {"id": placed.object_id, "kind": placed.kind, "x": placed.x, "y": placed.y}
                 for placed in world.interactables.values()
             ],
+            "sites": [
+                {
+                    "id": site.site_id,
+                    "kind": site.kind,
+                    "what": site.what,
+                    "x": site.x,
+                    "y": site.y,
+                    "in_charge": site.in_charge,
+                    "delivered": dict(site.delivered),
+                    "progress": site.progress,
+                    "started_at": site.started_at,
+                }
+                for site in world.sites.values()
+            ],
+            "site_count": world.site_count,
             "residents": [
                 {
                     "id": resident.resident_id,
@@ -272,7 +290,7 @@ class SaveManager:
                 tile = spawns[index % len(spawns)]
                 activity = None
             facing = str(resident_data.get("facing", "down"))
-            if activity is not None and activity.target_id not in (None, *world.interactables):
+            if activity is not None and activity.target_id not in (None, *world.interactables, *world.sites):
                 activity = None
             if activity is not None and not all(self._can_stand(world, step) for step in activity.path):
                 activity = None
@@ -652,6 +670,32 @@ class SaveManager:
             for object_id, placed in world.interactables.items()
             if world.definition_of(placed).container
         }
+        self._restore_sites(world, data)
+
+    def _restore_sites(self, world: SimulationWorld, data: dict[str, Any]) -> None:
+        """Put back what was being built. A site for something no longer defined, or that no
+        longer fits on the map, is dropped along with what had been brought to it."""
+        world.site_count = max(0, int(data.get("site_count", 0)))
+        for saved in _list_or_empty(data.get("sites")):
+            if not isinstance(saved, dict) or "id" not in saved:
+                continue
+            site = BuildSite(
+                site_id=str(saved["id"]),
+                kind=str(saved.get("kind", "")),
+                what=str(saved.get("what", "")),
+                x=int(saved.get("x", 0)),
+                y=int(saved.get("y", 0)),
+                in_charge=_text_or_none(saved.get("in_charge")),
+                delivered={
+                    str(item_id): int(units)
+                    for item_id, units in _object_or_empty(saved.get("delivered")).items()
+                    if isinstance(units, int) and not isinstance(units, bool) and units > 0
+                },
+                progress=max(0.0, float(saved.get("progress", 0.0))),
+                started_at=int(saved.get("started_at", 0)),
+            )
+            if world.construction.measure(world, site) and all(world.tile_map.in_bounds(tile) for tile in site.tiles):
+                world.sites[site.site_id] = site
 
     def _move_what_the_map_moved(self, world: SimulationWorld) -> None:
         """Put objects an older save has where the map used to have them where the map has them now.
@@ -834,6 +878,8 @@ def _decision_to_data(decision: Decision) -> dict[str, Any]:
         "deadline": decision.deadline,
         "crisis": vars(decision.crisis) if decision.crisis is not None else None,
         "job_id": decision.job_id,
+        "subject": decision.subject,
+        "inputs": dict(decision.inputs),
     }
 
 
@@ -864,6 +910,12 @@ def _decision_from_data(data: dict[str, Any]) -> Decision:
         if isinstance(crisis, dict)
         else None,
         job_id=_text_or_none(data.get("job_id")),
+        subject=_text_or_none(data.get("subject")),
+        inputs={
+            str(name): float(value)
+            for name, value in _object_or_empty(data.get("inputs")).items()
+            if isinstance(value, (int, float)) and not isinstance(value, bool)
+        },
     )
 
 

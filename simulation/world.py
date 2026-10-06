@@ -33,9 +33,11 @@ from simulation.tastes.taste import TasteProfile
 from simulation.tastes.taste_system import TasteSystem
 from simulation.tutorial.tutorial import TutorialState
 from simulation.tutorial.tutorial_system import TutorialSystem
+from simulation.work.construction import ConstructionSystem
 from simulation.work.expedition_system import ExpeditionSystem
 from simulation.work.staffing import StaffingSystem
 from simulation.work.work_system import WORK_ACTION, WorkSystem
+from world.build import BUILDING_SITE, OBJECT_SITE, BuildSite
 from world.interactable import Interactable, InteractableDefinition
 from world.map import Tile, TileMap
 from world.pathfinding import manhattan
@@ -107,6 +109,10 @@ class SimulationWorld:
     # Day on which each once-a-day notice was last given.
     notices: dict[str, int] = field(default_factory=dict)
     urbanism: UrbanismSystem = field(default_factory=UrbanismSystem)
+    construction: ConstructionSystem = field(default_factory=ConstructionSystem)
+    # Ground marked out for what somebody has agreed to put up, by site ID.
+    sites: dict[str, BuildSite] = field(default_factory=dict)
+    site_count: int = 0
     tastes: TasteSystem = field(default_factory=TasteSystem)
     # What each resident likes and loathes, by resident ID. Kept apart from the resident.
     taste_profiles: dict[str, TasteProfile] = field(default_factory=dict)
@@ -131,6 +137,7 @@ class SimulationWorld:
         self.interventions.tick(self)
         self.items.tick_world(self)
         self.staffing.tick(self)
+        self.construction.tick(self)
         self.happenings.tick(self)
         self.activities.begin_minute(self)
         for resident in list(self.residents.values()):
@@ -157,7 +164,8 @@ class SimulationWorld:
         return self.interventions.suggest_job(self, resident_id, job_id, option_id)
 
     def place_object(self, kind: str, tile: Tile) -> UrbanismResult:
-        return self.urbanism.place_object(self, kind, tile)
+        """Put an object down at once, which only what takes nothing to build can be."""
+        return self.construction.place(self, OBJECT_SITE, kind, tile)
 
     def move_object(self, object_id: str, tile: Tile) -> UrbanismResult:
         return self.urbanism.move_object(self, object_id, tile)
@@ -166,7 +174,19 @@ class SimulationWorld:
         return self.urbanism.remove_object(self, object_id)
 
     def place_building(self, blueprint_id: str, tile: Tile) -> UrbanismResult:
-        return self.urbanism.place_building(self, blueprint_id, tile)
+        """Put a building down at once, which only what takes nothing to build can be."""
+        return self.construction.place(self, BUILDING_SITE, blueprint_id, tile)
+
+    def propose_object(self, kind: str, tile: Tile, resident_id: str, option_id: str) -> UrbanismResult:
+        """Put it to a resident that they put an object up. They weigh it and decide for themselves."""
+        return self.construction.propose(self, OBJECT_SITE, kind, tile, resident_id, option_id)
+
+    def propose_building(self, blueprint_id: str, tile: Tile, resident_id: str, option_id: str) -> UrbanismResult:
+        """Put it to a resident that they put a building up. They weigh it and decide for themselves."""
+        return self.construction.propose(self, BUILDING_SITE, blueprint_id, tile, resident_id, option_id)
+
+    def cancel_site(self, site_id: str) -> UrbanismResult:
+        return self.construction.cancel(self, site_id)
 
     def move_building(self, room_id: str, tile: Tile) -> UrbanismResult:
         return self.urbanism.move_building(self, room_id, tile)
@@ -405,7 +425,8 @@ class SimulationWorld:
     def passable(self, also: Collection[Tile] = ()) -> Callable[[Tile], bool]:
         """Return a walkability test for the current map and objects.
 
-        Tiles in `also` count as walkable even if an object stands on them.
+        Tiles in `also` count as walkable even if an object stands on them. Ground marked out
+        for something that will be in the way once it is up is kept off meanwhile.
         """
         blocked = {
             tile
@@ -413,6 +434,7 @@ class SimulationWorld:
             if self.definition_of(placed).blocks
             for tile in placed.footprint(self.definition_of(placed))
         } - set(also)
+        blocked.update(tile for site in self.sites.values() if site.blocks for tile in site.tiles)
         terrain = self.registries.terrain
         tile_map = self.tile_map
 

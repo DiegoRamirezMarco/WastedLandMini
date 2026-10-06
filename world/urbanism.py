@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from simulation.events.event import DomainEvent
 from simulation.items.inventory import Inventory
+from world.build import BUILDING_SITE, BuildRule, BuildSite, build_rule_from_data
 from world.interactable import Interactable, InteractableDefinition
 from world.map import Tile
 from world.pathfinding import NEIGHBOURS
@@ -17,6 +18,8 @@ if TYPE_CHECKING:
 
 BUILDING_EVENT_IMPORTANCE = 20
 BUILDABLE_TERRAIN = {"dirt", "grass", "soil"}
+SITE_IN_THE_WAY = "Ese espacio está marcado para una obra"
+CUT_OFF = "Dejaría un rincón sin salida"
 
 
 @dataclass(frozen=True)
@@ -27,6 +30,8 @@ class BuildingDefinition:
     height: int
     floor: str = "floor_wood"
     privacy: float = 0.4
+    # What putting one up takes. None for a building that is simply put down.
+    build: BuildRule | None = None
 
 
 def building_definition_from_data(blueprint_id: str, data: dict[str, Any]) -> BuildingDefinition:
@@ -40,6 +45,7 @@ def building_definition_from_data(blueprint_id: str, data: dict[str, Any]) -> Bu
         height=int(data["height"]),
         floor=str(data.get("floor", "floor_wood")),
         privacy=float(data.get("privacy", 0.4)),
+        build=build_rule_from_data(f"building {blueprint_id}", data.get("build")),
     )
     if definition.width < 2 or definition.height < 2:
         raise ValueError(f"Building {blueprint_id} must be at least 2 by 2 tiles inside")
@@ -68,15 +74,21 @@ class UrbanismSystem:
         error = self.object_error(world, kind, tile)
         if error is not None:
             return UrbanismResult(False, error)
+        object_id = self.raise_object(world, kind, tile)
+        definition = world.registries.interactables.get(kind)
+        self._announce(world, f"Se coloca {definition.article} {definition.name}", tile, object_id)
+        return UrbanismResult(True, f"{definition.name.capitalize()} colocado", object_id)
+
+    def raise_object(self, world: SimulationWorld, kind: str, tile: Tile) -> str:
+        """Stand an object where it has already been settled that it can go. Returns its ID."""
         object_id = self._fresh_object_id(world, kind)
         placed = Interactable(object_id, kind, tile[0], tile[1])
         world.interactables[object_id] = placed
-        if world.definition_of(placed).container:
-            world.containers[object_id] = Inventory()
         definition = world.definition_of(placed)
-        self._invalidate_routes(world, set(placed.footprint(definition)))
-        self._announce(world, f"Se coloca {definition.article} {definition.name}", tile, object_id)
-        return UrbanismResult(True, f"{definition.name.capitalize()} colocado", object_id)
+        if definition.container:
+            world.containers[object_id] = Inventory()
+        self.invalidate_routes(world, set(placed.footprint(definition)))
+        return object_id
 
     def move_object(self, world: SimulationWorld, object_id: str, tile: Tile) -> UrbanismResult:
         placed = world.interactables.get(object_id)
@@ -86,7 +98,7 @@ class UrbanismSystem:
         if error is not None:
             return UrbanismResult(False, error, object_id)
         placed.x, placed.y = tile
-        self._invalidate_routes(
+        self.invalidate_routes(
             world,
             set(placed.footprint(world.definition_of(placed))),
             target_ids={object_id},
@@ -116,7 +128,7 @@ class UrbanismSystem:
         definition = world.definition_of(placed)
         del world.interactables[object_id]
         world.containers.pop(object_id, None)
-        self._invalidate_routes(world, set(), target_ids={object_id})
+        self.invalidate_routes(world, set(), target_ids={object_id})
         self._announce(world, f"Se retira {definition.name}", (placed.x, placed.y), object_id)
         return UrbanismResult(True, f"{definition.name.capitalize()} retirado")
 
@@ -147,6 +159,8 @@ class UrbanismSystem:
         }
         if footprint & occupied:
             return "Ese espacio ya está ocupado"
+        if footprint & self._marked_out(world):
+            return SITE_IN_THE_WAY
         if any(not resident.away and resident.tile in footprint for resident in world.residents.values()):
             return "Hay un residente en ese espacio"
         others = [placed for placed in world.interactables.values() if placed.object_id != ignore_object]
@@ -164,6 +178,13 @@ class UrbanismSystem:
         error = self.building_error(world, definition.width, definition.height, tile)
         if error is not None:
             return UrbanismResult(False, error)
+        room_id = self.raise_building(world, blueprint_id, tile)
+        self._announce(world, f"Se construye {definition.name}", tile, room_id)
+        return UrbanismResult(True, f"{definition.name.capitalize()} construido", room_id)
+
+    def raise_building(self, world: SimulationWorld, blueprint_id: str, tile: Tile) -> str:
+        """Stand a building where it has already been settled that it can go. Returns its room's ID."""
+        definition = world.registries.buildings[blueprint_id]
         room_id = self._fresh_building_id(world, blueprint_id)
         room = Room(
             room_id,
@@ -177,9 +198,8 @@ class UrbanismSystem:
             blueprint_id,
         )
         self._construct(world, room, definition.floor)
-        self._invalidate_routes(world, set(self._building_tiles(room)))
-        self._announce(world, f"Se construye {definition.name}", tile, room_id)
-        return UrbanismResult(True, f"{definition.name.capitalize()} construido", room_id)
+        self.invalidate_routes(world, set(self._building_tiles(room)))
+        return room_id
 
     def move_building(self, world: SimulationWorld, room_id: str, tile: Tile) -> UrbanismResult:
         room = world.rooms.get(room_id)
@@ -193,7 +213,7 @@ class UrbanismSystem:
         self._restore_underlay(world, room)
         room.x, room.y = tile
         self._construct(world, room, floor)
-        self._invalidate_routes(world, old_tiles | set(self._building_tiles(room)))
+        self.invalidate_routes(world, old_tiles | set(self._building_tiles(room)))
         self._announce(world, f"Se traslada {room.name}", tile, room_id)
         return UrbanismResult(True, "Edificio movido", room_id)
 
@@ -215,7 +235,7 @@ class UrbanismSystem:
             return UrbanismResult(False, blocked, room_id)
         self._restore_underlay(world, room)
         del world.rooms[room_id]
-        self._invalidate_routes(world, set(self._building_tiles(room)))
+        self.invalidate_routes(world, set(self._building_tiles(room)))
         self._announce(world, f"Se derriba {room.name}", (room.x, room.y), room_id)
         return UrbanismResult(True, f"{room.name.capitalize()} retirado")
 
@@ -241,6 +261,8 @@ class UrbanismSystem:
         }
         if footprint & occupied:
             return "Hay muebles u objetos en ese espacio"
+        if footprint & self._marked_out(world):
+            return SITE_IN_THE_WAY
         if any(not resident.away and resident.tile in footprint for resident in world.residents.values()):
             return "Hay un residente en ese espacio"
         # A building being moved stands on its own walls and floor; what counts is the ground below.
@@ -284,14 +306,29 @@ class UrbanismSystem:
     # ----- keeping everything within reach -----
 
     @staticmethod
+    def site_tiles(world: SimulationWorld, kind: str, what: str, tile: Tile) -> list[Tile]:
+        """Every tile that an object or a building put at a tile would stand on, walls and all."""
+        if kind == BUILDING_SITE:
+            definition = world.registries.buildings[what]
+            room = Room("site", "", x=tile[0], y=tile[1], width=definition.width, height=definition.height)
+            return UrbanismSystem._building_tiles(room)
+        return Interactable("site", what, tile[0], tile[1]).footprint(world.registries.interactables.get(what))
+
+    @staticmethod
+    def _marked_out(world: SimulationWorld) -> set[Tile]:
+        """Every tile marked out for something that is being put up."""
+        return {tile for site in world.sites.values() for tile in site.tiles}
+
+    @staticmethod
     def _walkable(world: SimulationWorld) -> set[Tile]:
-        """Every tile whose ground can be walked on, whatever stands on it."""
+        """Every tile whose ground can be walked on, whatever stands on it. Not what a site has shut off."""
         terrain = world.registries.terrain
+        shut = {tile for site in world.sites.values() if site.blocks for tile in site.tiles}
         return {
             (x, y)
             for y, row in enumerate(world.tile_map.tiles)
             for x, terrain_id in enumerate(row)
-            if terrain_id in terrain and terrain[terrain_id].walkable
+            if terrain_id in terrain and terrain[terrain_id].walkable and (x, y) not in shut
         }
 
     @staticmethod
@@ -370,13 +407,28 @@ class UrbanismSystem:
             }
             if room.roofed and inside & before and not inside & after:
                 return f"Taparía la entrada: {room.name}"
+        for site in world.sites.values():
+            if self._beside(site, before) and not self._beside(site, after):
+                return "Dejaría sin paso una obra"
         if candidate is not None:
             definition = world.definition_of(candidate)
             if self._needs_access(world, definition) and not self._within_reach(candidate, definition, after):
                 return "No se podría llegar hasta ahí"
         if new_room is not None and self._door_of(new_room) not in after:
             return "La puerta quedaría tapada"
+        # Ground that can be walked to now and could not be then: whoever stepped onto it, as off
+        # the far side of a bed, would have no way back.
+        taken = set(self._building_tiles(new_room)) if new_room is not None else set()
+        if candidate is not None:
+            taken |= set(candidate.footprint(world.definition_of(candidate)))
+        if before - after - taken:
+            return CUT_OFF
         return None
+
+    @staticmethod
+    def _beside(site: BuildSite, reached: set[Tile]) -> bool:
+        """Whether someone can get next to a site, to bring things to it and to work on it."""
+        return any((x + dx, y + dy) in reached for x, y in site.tiles for dx, dy in NEIGHBOURS)
 
     def _restore_underlay(self, world: SimulationWorld, room: Room) -> None:
         for point, terrain in self._ground_below(room).items():
@@ -395,6 +447,8 @@ class UrbanismSystem:
             for placed in world.interactables.values()
         ):
             return "Retira primero los muebles y objetos del edificio"
+        if area & self._marked_out(world):
+            return "Hay una obra dentro del edificio"
         if any(not resident.away and resident.tile in area for resident in world.residents.values()):
             return "No se puede editar mientras haya alguien dentro"
         return None
@@ -408,7 +462,7 @@ class UrbanismSystem:
         return None
 
     @staticmethod
-    def _invalidate_routes(
+    def invalidate_routes(
         world: SimulationWorld,
         changed: set[Tile],
         target_ids: set[str] | None = None,

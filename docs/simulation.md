@@ -437,6 +437,40 @@ Everything here is between adults, and nothing happens to anyone who does not wa
   proportion to credibility. Nobody reacts to something they have not learned, and hearing it
   again does not make them react twice.
 
+## Building
+
+- What an object kind or a blueprint takes to put up is its `build`: a `cost` in units of
+  items by tag, `minutes` of work, and a `job` that has to do it. With none it is put down at
+  once, as everything is while a new settlement is in its opening.
+- **Proposals.** `ProposeObjectCommand` and `ProposeBuildingCommand` put a thing and a place to
+  a resident on the player's word. The place is judged as Urbanismo judges it. They answer at
+  once, by the `build_proposal` decision: agreeing grows likelier with good spirits, empathy
+  and nothing else to do, and less likely with stress, with each site already in their charge,
+  with a long job and with nothing in store to build it with. Whoever refuses is not asked
+  again until the decision's cooldown has passed; whoever agrees can be asked again at once.
+  Nobody is asked who is away, unfit for work, in the middle of a decision, or who does not
+  hold the job the thing asks for.
+- **A site** is ground marked out, with whoever agreed in charge of it. Nothing else can be
+  put there, and where what is coming blocks, the ground is shut off meanwhile.
+  `CancelSiteCommand` gives it up and leaves what was brought in the nearest container.
+- **Who works on it.** It is one more thing a resident may choose to do, when they have no work
+  of their own to go to, no pressing need, and light to see by, and when the site is not out in
+  a storm. Whoever is in charge wants to most. Anybody else may lend a hand, the more so the
+  more they feel for others, and not at all for somebody they resent.
+- **What they do.** While a site lacks something, they fetch it from the nearest container
+  that holds any as nobody's, a load at a time, and carry it over. Things for sale are not
+  taken, and nobody fetches what somebody else is already bringing. Once everything is there
+  they work on it: each minute of each pair of hands counts, slower for a missing limb or low
+  spirits, with only so many at a site at a time. A stint ends for a need, for nightfall, for
+  their own shift or after `stint_minutes`.
+- **When it is done** the thing stands where it was marked out, `site_finished` is emitted,
+  and whoever saw to it is the better for it. If somebody is standing on ground it would shut
+  off, it waits for them to move.
+- Once an hour, a site that nothing can be done about gives notice, once a day: nothing to
+  build it with anywhere, or nobody holding the job it asks for.
+- What somebody is left holding when a site no longer wants it is taken back to where such
+  things are kept. Whoever goes outside does not put away as a find what a site is waiting for.
+
 ## Crises and advice
 
 - A resident who resents someone enough, and is stressed or hot-tempered enough, reaches a
@@ -475,8 +509,9 @@ Everything here is between adults, and nothing happens to anyone who does not wa
   `stranger`: one comes to the gate for whoever is in and awake to answer, as soon as there is a
   bed to spare, and the step is done once they have been let in or sent away.
 - Urbanismo refuses any change that would leave out of reach something that is within reach
-  now: an object that is used, holds things or is a post, or the inside of a building. Reach is
-  walked out from the map's `arrivals` and `spawns`. A bed is reached from beside its head.
+  now: an object that is used, holds things or is a post, the inside of a building, a site, or
+  any ground at all. Reach is walked out from the map's `arrivals` and `spawns`. A bed is
+  reached from beside its head.
 
 ## Determinism
 

@@ -130,11 +130,19 @@ A minimal patch can change only the displayed name:
 ```
 
 Editable fields are `name`, `article`, `width`, `height`, `blocks`, `container`, `display_of`,
-`light`, `category` and `use`. `category` is `furniture` or `decor` and decides where the kind
+`light`, `category`, `use` and `build`. `category` is `furniture` or `decor` and decides where the kind
 appears in the Urbanismo catalogue. A `use` object is itself patched field by field, so
 `{"id":"bed", "use":{"minutes":480}}` keeps the sleeping action and changes only its duration.
 Set `"use": null` to remove the use entirely. Every placed object of that kind receives the
 modified definition; object instances and saved games continue to store only their stable IDs.
+
+`build` says what putting one up takes: `{"cost": {"scrap": 2}, "minutes": 60, "job": "mechanic"}`.
+`cost` is units by the tag of the items that will do, `minutes` the work once they are there, and
+`job` the job whoever does that work has to hold; all three are optional, and `build` is patched
+field by field like `use`. A kind with no `build`, or with `"build": null`, is put down at once
+and for nothing. A cost in a tag that no item carries, or a job that does not exist, is refused.
+`data/construction.json` holds what is the same for everything: how much is carried in a trip,
+how long somebody works before looking up, how many hands fit on a site, and how keen people are.
 
 `sprite.png` replaces `assets/sprites/objects/<id>.png`. Each animation frame is `width × 16`
 pixels wide, frames are laid side by side, and the picture must be at least `height × 16` pixels
@@ -236,7 +244,7 @@ checked when the game starts. A gift of an item that is not defined is left out.
 
 Urbanismo gets its built-in building blueprints from `data/urbanism.json`. A content pack can add
 one with `custom_content/buildings/<id>/data.json`; it uses `id`, display `name`, interior `width`
-and `height`, `floor`, and optional `privacy`. Put its art in `sprite.png` in the same folder. If
+and `height`, `floor`, and optional `privacy` and `build` (as for objects, above). Put its art in `sprite.png` in the same folder. If
 art is absent, the game supplies a procedural wasteland building that can then be opened in the
 building art editor.
 

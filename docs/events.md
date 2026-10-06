@@ -24,6 +24,11 @@ Event types emitted so far:
 | `post_vacant` | A job has been short of people too long (once per vacancy) | 35 |
 | `job_offered` | A resident is asked to take a vacant job and waits for advice | 50 |
 | `job_changed` | A resident takes up a job | 40 |
+| `site_laid` | Somebody has agreed to build something and its ground is marked out, with `site_id` in `data` | 20 |
+| `build_started` | A resident sets to work on a site, with `site_id` in `data` | 5 |
+| `site_waiting` | A site cannot be got on with: nothing to build it with, or nobody holding the job it asks for (once a day) | 30 |
+| `site_finished` | What was being built stands, with `site_id`, `entity_id`, `kind` and `what` in `data` | 35 |
+| `site_cancelled` | A site is given up | 20 |
 | `chat_started` | Two residents start a friendly chat | 10 |
 | `argument_started` | Two residents start an argument | 35, plus up to 30 with the resentment between them, plus 15 if one went looking for the other |
 | `heart_to_heart_started` | A resident talks things out after a crisis | 30 |

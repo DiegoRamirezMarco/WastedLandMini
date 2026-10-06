@@ -1,5 +1,8 @@
 """Settlement layout editor, worked by dragging: out of the catalogue to add, across the map to move.
 
+What takes building is not put down: once it has been dropped where it is to go, the player
+says who it is proposed to, and that resident agrees to it or does not.
+
 Input becomes simulation commands; pygame owns only the UI.
 """
 
@@ -18,10 +21,13 @@ from graphics.palette import PALETTE
 from graphics.screen_layers import ScreenLayers
 from scenes.scene import canvas_position
 from simulation.commands import (
+    CancelSiteCommand,
     MoveBuildingCommand,
     MoveObjectCommand,
     PlaceBuildingCommand,
     PlaceObjectCommand,
+    ProposeBuildingCommand,
+    ProposeObjectCommand,
     RemoveBuildingCommand,
     RemoveObjectCommand,
 )
@@ -29,6 +35,7 @@ from simulation.world import SimulationWorld
 from ui.button import Button
 from ui.panel import draw_panel
 from ui.tutorial_panel import BUILDING_ART_FOCUS, lit, owed_object, tutorial_heading
+from world.build import BUILDING_SITE, OBJECT_SITE, BuildRule, BuildSite
 from world.interactable import InteractableDefinition
 from world.map import Tile
 from world.room import Room
@@ -58,6 +65,11 @@ TERRAIN_COLORS = {
 
 GHOST_ALPHA = 150
 DEFAULT_MESSAGE = "Arrastra algo del catálogo al mapa"
+WHO_MESSAGE = "¿A quién se lo propones?"
+# Where the message goes, and how many lines of it there is room for above the buttons.
+MESSAGE_TOP = 357
+MESSAGE_LINES = 2
+SITE = "site"
 
 Selection = tuple[str, str]
 
@@ -81,6 +93,18 @@ class Held:
 
     def origin(self, pointer: Tile) -> Tile:
         return (pointer[0] - self.grip[0], pointer[1] - self.grip[1])
+
+
+@dataclass(frozen=True)
+class Proposal:
+    """Something that takes building, dropped where it is to go and waiting to be put to somebody."""
+
+    held: Held
+    tile: Tile
+
+    @property
+    def site_kind(self) -> str:
+        return BUILDING_SITE if self.held.kind == "building" else OBJECT_SITE
 
 
 class UrbanismEditor:
@@ -110,6 +134,8 @@ class UrbanismEditor:
         # What the pressed button is dragging, from the press until the release.
         self.drag: Held | None = None
         self.selection: Selection | None = None
+        # What has been dropped on the map and takes building, until it is put to somebody or let go.
+        self.proposal: Proposal | None = None
         self.confirm_delete = False
         self.message = DEFAULT_MESSAGE
         self.pointer: tuple[int, int] = (0, 0)
@@ -156,6 +182,7 @@ class UrbanismEditor:
         self.requested_art_room = None
         self.requested_art_object = None
         self.drag = None
+        self.proposal = None
         self._judged = None
         # Whatever was drawn while this was out of sight is read again.
         self._drawn = {}
@@ -184,10 +211,29 @@ class UrbanismEditor:
             for index, (entry_id, name) in enumerate(entries)
         ]
 
+    def _resident_buttons(self) -> list[Button]:
+        """Whoever the thing waiting to be built can be put to, in place of the catalogue."""
+        buttons = []
+        for index, resident in enumerate(self.world.residents.values()):
+            theirs = sum(1 for site in self.world.sites.values() if site.in_charge == resident.resident_id)
+            label = resident.name if not theirs else f"{resident.name} ({theirs} en marcha)"
+            if resident.away:
+                label = f"{resident.name} (fuera)"
+            buttons.append(
+                Button(
+                    pygame.Rect(MARGIN, CATALOG_TOP + index * ROW_HEIGHT, PANEL_WIDTH - MARGIN * 2, ROW_HEIGHT - 1),
+                    self.font.truncate(label, PANEL_WIDTH - MARGIN * 4),
+                    ("propose", resident.resident_id),
+                )
+            )
+        return buttons
+
     def _action_buttons(self) -> list[Button]:
+        if self.proposal is not None:
+            return [Button.at(self.font, MARGIN, 382, "Dejarlo", ("drop_proposal",))]
         if self.selection is None:
             return []
-        label = "Confirmar" if self.confirm_delete else "Retirar"
+        label = "Confirmar" if self.confirm_delete else ("Abandonar" if self.selection[0] == SITE else "Retirar")
         buttons = [Button.at(self.font, MARGIN, 382, label, ("remove",))]
         if self._can_draw(self.selection):
             x = buttons[-1].rect.right + 4
@@ -210,6 +256,8 @@ class UrbanismEditor:
 
     @property
     def buttons(self) -> list[Button]:
+        if self.proposal is not None:
+            return [self.close_button, *self._resident_buttons(), *self._action_buttons()]
         return [
             *self.category_buttons,
             self.close_button,
@@ -219,7 +267,7 @@ class UrbanismEditor:
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            if self.drag is not None:
+            if self.drag is not None or self.proposal is not None:
                 self._let_go()
             else:
                 self.closed = True
@@ -239,7 +287,7 @@ class UrbanismEditor:
             intent = next((button.intent for button in self.buttons if button.contains(self.pointer)), None)
             if intent is not None:
                 self._apply_intent(intent)
-            elif self.pointer_tile is not None:
+            elif self.pointer_tile is not None and self.proposal is None:
                 self._press_map(self.pointer_tile)
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self._point(canvas_position(event.pos))
@@ -266,7 +314,11 @@ class UrbanismEditor:
             self.catalog_id = str(intent[1])
             self.selection, self.confirm_delete = None, False
             self.drag = self._catalog_held()
-            self.message = "Suéltalo en el mapa; un clic coloca otro igual"
+            self.message = self._cost_of(self.drag) or "Suéltalo en el mapa; un clic coloca otro igual"
+        elif intent[0] == "propose":
+            self._propose_to(str(intent[1]))
+        elif intent == ("drop_proposal",):
+            self._let_go()
         elif intent == ("remove",):
             self._remove_selected()
         elif intent == ("art",) and self.selection is not None:
@@ -310,6 +362,18 @@ class UrbanismEditor:
         if held.catalog_id is None:
             return
         target = held.origin(tile)
+        site_kind = BUILDING_SITE if held.kind == "building" else OBJECT_SITE
+        building = self.world.construction
+        if building.needs_building(self.world, site_kind, held.catalog_id):
+            # It is not put down: it is settled where it goes, and then who is asked to see to it.
+            error = building.site_error(self.world, site_kind, held.catalog_id, target)
+            if error is not None:
+                self._accept(UrbanismResult(False, error))
+                return
+            self.proposal = Proposal(held, target)
+            self.selection, self.confirm_delete = None, False
+            self.message = WHO_MESSAGE
+            return
         command = (
             PlaceBuildingCommand(held.catalog_id, target)
             if held.kind == "building"
@@ -331,9 +395,51 @@ class UrbanismEditor:
             return step.focus == BUILDING_ART_FOCUS
         return owed_object(self.world) is not None
 
+    def _propose_to(self, resident_id: str) -> None:
+        """Put what is waiting to be built to a resident. If they will not, somebody else can be asked."""
+        proposal = self.proposal
+        if proposal is None or proposal.held.catalog_id is None:
+            return
+        command = (
+            ProposeBuildingCommand(proposal.held.catalog_id, proposal.tile, resident_id)
+            if proposal.held.kind == "building"
+            else ProposeObjectCommand(proposal.held.catalog_id, proposal.tile, resident_id)
+        )
+        result = self.world.apply_command(command)
+        self._accept(result)
+        if isinstance(result, UrbanismResult) and result.ok and result.entity_id is not None:
+            self.proposal = None
+            self.selection = (SITE, result.entity_id)
+
+    def _cost_of(self, held: Held | None) -> str:
+        """What the thing in hand takes to build, in a few words. Nothing for what is simply put down."""
+        if held is None or held.catalog_id is None:
+            return ""
+        site_kind = BUILDING_SITE if held.kind == "building" else OBJECT_SITE
+        building = self.world.construction
+        if not building.needs_building(self.world, site_kind, held.catalog_id):
+            return ""
+        return f"Hay que construirlo: {self._rule_text(building.rule_for(self.world, site_kind, held.catalog_id))}"
+
+    def _rule_text(self, rule: BuildRule | None) -> str:
+        if rule is None:
+            return ""
+        parts = [f"{units} de {self._material(tag)}" for tag, units in rule.cost.items()]
+        if rule.minutes:
+            parts.append(f"{rule.minutes} min de obra")
+        job = self.world.registries.jobs.get(rule.job or "")
+        if job is not None:
+            parts.append(f"puesto: {job.name}")
+        return ", ".join(parts)
+
+    def _material(self, tag: str) -> str:
+        items = self.world.registries.items
+        return next((items.get(item_id).name for item_id in items.ids() if tag in items.get(item_id).tags), tag)
+
     def _let_go(self) -> None:
         """Put down whatever is in hand without changing the settlement."""
         self.drag, self.catalog_id, self.confirm_delete = None, None, False
+        self.proposal = None
         self.message = self._selection_name() or DEFAULT_MESSAGE
 
     def _catalog_held(self) -> Held | None:
@@ -369,6 +475,9 @@ class UrbanismEditor:
 
     def _entity_origin(self, selection: Selection) -> Tile | None:
         kind, entity_id = selection
+        if kind == SITE:
+            # What is being built stays where it was agreed: it is given up, not moved.
+            return None
         entity = (self.world.rooms if kind == "building" else self.world.interactables).get(entity_id)
         return (entity.x, entity.y) if entity is not None else None
 
@@ -396,7 +505,10 @@ class UrbanismEditor:
             self.message = "Pulsa Confirmar para retirar definitivamente"
             return
         kind, entity_id = self.selection
-        command = RemoveObjectCommand(entity_id) if kind == "object" else RemoveBuildingCommand(entity_id)
+        if kind == SITE:
+            command = CancelSiteCommand(entity_id)
+        else:
+            command = RemoveObjectCommand(entity_id) if kind == "object" else RemoveBuildingCommand(entity_id)
         result = self.world.apply_command(command)
         self._accept(result)
         if result.ok:
@@ -419,6 +531,9 @@ class UrbanismEditor:
         )
 
     def _pick(self, tile: tuple[int, int]) -> Selection | None:
+        site = next((site for site in self.world.sites.values() if tile in site.tiles), None)
+        if site is not None:
+            return (SITE, site.site_id)
         objects = [
             placed
             for placed in self.world.interactables.values()
@@ -433,11 +548,28 @@ class UrbanismEditor:
         if self.selection is None:
             return ""
         kind, entity_id = self.selection
+        if kind == SITE:
+            site = self.world.sites.get(entity_id)
+            return self._site_name(site) if site is not None else ""
         if kind == "building":
             room = self.world.rooms.get(entity_id)
             return room.name.capitalize() if room is not None else ""
         placed = self.world.interactables.get(entity_id)
         return self.world.definition_of(placed).name.capitalize() if placed is not None else ""
+
+    def _site_name(self, site: BuildSite) -> str:
+        """What a site is for, how far along it is, who has it in hand and what it still waits for."""
+        building = self.world.construction
+        thing = building.thing(self.world, site.kind, site.what) or site.what
+        done = round(building.fraction_done(self.world, site) * 100)
+        text = f"Obra: {thing}, {done}%"
+        in_charge = self.world.residents.get(site.in_charge or "")
+        if in_charge is not None:
+            text += f", de {in_charge.name}"
+        lacking = building.lacking(self.world, site)
+        if lacking:
+            text += ". Falta " + ", ".join(f"{units} de {self._material(tag)}" for tag, units in lacking.items())
+        return text
 
     @staticmethod
     def _room_tiles(room: Room) -> set[tuple[int, int]]:
@@ -468,14 +600,22 @@ class UrbanismEditor:
         self._render_step()
         self._render_map()
         self._render_held()
+        width = PANEL_WIDTH - MARGIN * 2
         selected = self._selection_name()
-        if selected:
-            self.font.draw(self.canvas, f"Seleccionado: {selected}", (MARGIN, 346), PALETTE["paper"])
-        hint = self.font.truncate(self.message, PANEL_WIDTH - MARGIN * 2)
-        self.font.draw(self.canvas, hint, (MARGIN, 365), PALETTE["glow"])
+        if self.proposal is not None:
+            selected = self._proposal_name(self.proposal)
+        elif selected and self.selection is not None and self.selection[0] != SITE:
+            selected = f"Seleccionado: {selected}"
+        # What is selected is said above the message, and gives way to the catalogue where they meet.
+        lines = self.font.wrap(selected, width) if selected else []
+        top = MESSAGE_TOP - LINE_HEIGHT * len(lines)
+        for index, line in enumerate(lines):
+            self.font.draw(self.canvas, line, (MARGIN, top + index * LINE_HEIGHT), PALETTE["paper"])
+        for index, line in enumerate(self.font.wrap(self.message, width)[:MESSAGE_LINES]):
+            self.font.draw(self.canvas, line, (MARGIN, MESSAGE_TOP + index * LINE_HEIGHT), PALETTE["glow"])
         self.font.draw(
             self.canvas,
-            "Arrastra para colocar o mover   Clic derecho: soltar   Supr: retirar   Esc: volver",
+            "Arrastra para colocar o mover   Clic derecho: soltar   Supr: retirar o abandonar   Esc: volver",
             (PANEL_WIDTH + MARGIN, self.canvas.get_height() - LINE_HEIGHT - 4),
             PALETTE["dust"],
         )
@@ -509,12 +649,22 @@ class UrbanismEditor:
             definition = self.world.definition_of(placed)
             rect = self._tiles_rect(placed.x, placed.y, definition.width, definition.height)
             self.canvas.blit(self._object_image(definition, rect.size), rect)
+        for site in self.world.sites.values():
+            self._render_site(site)
         for resident in self.world.residents.values():
             if not resident.away:
                 pygame.draw.circle(self.canvas, PALETTE["glow"], self._tile_rect(resident.tile).center, max(2, self.tile_px // 3))
+        if self.proposal is not None:
+            held, tile = self.proposal.held, self.proposal.tile
+            rect = self._tiles_rect(
+                tile[0] - held.margin, tile[1] - held.margin, held.width + held.margin * 2, held.height + held.margin * 2
+            )
+            self._draw_ghost(held, rect, "ochre")
         if self.selection is not None:
             kind, entity_id = self.selection
-            if kind == "object" and entity_id in self.world.interactables:
+            if kind == SITE and entity_id in self.world.sites:
+                pygame.draw.rect(self.canvas, PALETTE["glow"], self._site_rect(self.world.sites[entity_id]), 2)
+            elif kind == "object" and entity_id in self.world.interactables:
                 placed = self.world.interactables[entity_id]
                 definition = self.world.definition_of(placed)
                 rect = self._tiles_rect(placed.x, placed.y, definition.width, definition.height)
@@ -531,10 +681,33 @@ class UrbanismEditor:
             pygame.draw.rect(self.canvas, PALETTE["paper"], self._tile_rect(self.pointer_tile), 1)
         pygame.draw.rect(self.canvas, PALETTE["iron"], self.map_rect, 1)
 
+    def _proposal_name(self, proposal: Proposal) -> str:
+        building = self.world.construction
+        thing = building.thing(self.world, proposal.site_kind, proposal.held.catalog_id or "") or ""
+        rule = building.rule_for(self.world, proposal.site_kind, proposal.held.catalog_id or "")
+        return f"Obra: {thing}. {self._rule_text(rule).capitalize()}"
+
+    def _site_rect(self, site: BuildSite) -> pygame.Rect:
+        columns = [x for x, _ in site.tiles] or [site.x]
+        rows = [y for _, y in site.tiles] or [site.y]
+        return self._tiles_rect(
+            min(columns), min(rows), max(columns) - min(columns) + 1, max(rows) - min(rows) + 1
+        )
+
+    def _render_site(self, site: BuildSite) -> None:
+        """Ground marked out for something being built: its outline, filled as far as it is done."""
+        rect = self._site_rect(site)
+        done = self.world.construction.fraction_done(self.world, site)
+        shade = pygame.Surface(rect.size, pygame.SRCALPHA)
+        shade.fill((*PALETTE["ochre"], GHOST_ALPHA // 3))
+        shade.fill((*PALETTE["lichen"], GHOST_ALPHA), (0, 0, round(rect.width * done), rect.height))
+        self.canvas.blit(shade, rect)
+        pygame.draw.rect(self.canvas, PALETTE["ochre"], rect, 1)
+
     def _render_held(self) -> None:
         """Show where the held thing would land, and whether the settlement has room for it there."""
         held = self.drag or self._catalog_held()
-        if held is None:
+        if held is None or self.proposal is not None:
             return
         size = ((held.width + held.margin * 2) * self.tile_px, (held.height + held.margin * 2) * self.tile_px)
         if self.pointer_tile is None:

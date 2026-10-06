@@ -12,6 +12,7 @@ from simulation.residents.needs import NEED_NAMES
 from simulation.residents.resident import Resident
 from simulation.social.bonds import TRYST, TRYST_ACTION
 from simulation.social.social_system import SocialSystem
+from simulation.work.construction import BUILD_ACTIONS
 from simulation.work.work_system import WORK_ACTIONS
 from world.interactable import Interactable, UseDefinition
 from world.map import Tile
@@ -74,6 +75,9 @@ class RoutineSystem:
         work = world.work.candidate(world, resident)
         if work is not None:
             scored.append(ScoredAction(work.name, work.score + self._noise(world), work.target_id))
+        build = world.construction.candidate(world, resident, busy=work is not None)
+        if build is not None:
+            scored.append(ScoredAction(build.name, build.score + self._noise(world), build.target_id))
         if world.happenings.is_stormy(world) and not world.under_roof(resident.tile):
             # The worse their nerves, the sooner they get out of it.
             wish = SHELTER_SCORE + 0.5 * need_urgency(resident, "stress")
@@ -125,6 +129,8 @@ class RoutineSystem:
                 activity = self.items.plan(world, resident, candidate)
             elif candidate.name in WORK_ACTIONS:
                 activity = world.work.plan(world, resident, candidate)
+            elif candidate.name in BUILD_ACTIONS:
+                activity = world.construction.plan(world, resident, candidate)
             elif candidate.name == SHELTER_ACTION:
                 activity = self._shelter(world, resident)
             elif candidate.target_id is None:

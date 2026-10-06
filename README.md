@@ -13,6 +13,8 @@ watches, advises and intervenes, but does not control them.
   work earns credits and credits buy things, and a post left empty is taken up by someone else.
 - Consequences that last: injuries, a clinic, fights you can try to stop, a limb lost for good
   to a blade, and death.
+- Building that is proposed and not ordered: somebody agrees to put a thing up, or does not,
+  and it goes up in spare time out of scrap carried to the site.
 - A world beyond the fence: someone goes out to scavenge, is gone for hours, and comes back with
   what stocks the shop and mends the tools, or comes back hurt.
 - A world that does not leave it alone: strangers who ask to stay, caravans, dust storms to take
@@ -135,6 +137,11 @@ python -m simulation.headless --days 7 --seed 7
   remove it after confirmation, or press `Arte` to draw it: a building in its four parts, a piece
   of furniture once for all of its kind. Time stops while the
   editor is open and the changed layout is part of the save
+- Once the opening of a new settlement is over, most of what is in the catalogue has to be
+  built: drop it where it is to go, and the residents are listed for you to choose who to
+  propose it to. They may say no, and somebody else can be asked. Whoever agrees builds it in
+  their spare time, with scrap carried to the site, and others lend a hand. A site shows how
+  far along it is; click it to see what it waits for, or to give it up
 - `Guardar` in the menu, or `F5`, saves the game to `saves/quicksave.json`; `F9` loads it
 - `M`: sound on / off, voices and all
 - `Esc`: back to the menu, where the settlement waits; `Salir` there leaves the game

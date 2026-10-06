@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from world.build import BuildRule, build_rule_from_data
 from world.map import Tile
 
 USE_POSITIONS = ("adjacent", "on")
@@ -69,6 +70,8 @@ class InteractableDefinition:
     # Where this kind appears in the urbanism catalogue. This is presentation metadata stored
     # with the domain definition so built-in and custom objects follow the same rules.
     urbanism_category: str = "furniture"
+    # What putting one up takes. None for something that is simply put down.
+    build: BuildRule | None = None
 
 
 @dataclass
@@ -102,6 +105,7 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         display_of=str(data["display_of"]) if data.get("display_of") is not None else None,
         light=int(data.get("light", 0)),
         urbanism_category=str(data.get("category", "furniture")),
+        build=build_rule_from_data(f"interactable {kind}", data.get("build")),
     )
     if definition.light < 0:
         raise ValueError(f"Interactable {kind} gives a negative amount of light")

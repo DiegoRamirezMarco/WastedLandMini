@@ -1,0 +1,18 @@
+{
+  "carry": 6,
+  "stint_minutes": 90,
+  "score": {
+    "in_charge": 0.45,
+    "helping": 0.25
+  },
+  "per_minute": {
+    "tiredness": 0.03
+  },
+  "burden_sites": 3,
+  "long_minutes": 480,
+  "finished_mood": 4,
+  "hands": {
+    "object": 2,
+    "building": 4
+  }
+}

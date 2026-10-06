@@ -22,6 +22,7 @@ from simulation.social.bonds import BondSettings, bond_settings_from_data
 from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
 from simulation.tastes.settings import TasteSettings, taste_settings_from_data
 from simulation.tutorial.tutorial import BUILDING, JOB, OBJECT, TutorialDefinition, tutorial_definition_from_data
+from simulation.work.construction import ConstructionSettings, construction_settings_from_data
 from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
 from world.interactable import InteractableDefinition, interactable_definition_from_data
@@ -147,6 +148,8 @@ class BuiltInRegistries:
     economy: EconomySettings = field(default_factory=EconomySettings)
     bonds: BondSettings = field(default_factory=BondSettings)
     expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
+    # How building is gone about. What each thing takes is in its own definition.
+    construction: ConstructionSettings = field(default_factory=ConstructionSettings)
     world_events: WorldEventSettings = field(default_factory=WorldEventSettings)
     # How tastes are made, how they are taken, and what they are called.
     tastes: TasteSettings = field(default_factory=TasteSettings)
@@ -226,6 +229,9 @@ class BuiltInRegistries:
         expeditions_path = root / "expeditions.json"
         if expeditions_path.is_file():
             registries.expeditions = expedition_settings_from_data(_read_object(expeditions_path))
+        construction_path = root / "construction.json"
+        if construction_path.is_file():
+            registries.construction = construction_settings_from_data(_read_object(construction_path))
         bonds_path = root / "relationships.json"
         if bonds_path.is_file():
             registries.bonds = bond_settings_from_data(_read_object(bonds_path))
@@ -257,6 +263,17 @@ class BuiltInRegistries:
         for blueprint_id, building in self.buildings.items():
             if building.floor not in self.terrain:
                 raise ValueError(f"Building {blueprint_id} uses unknown floor terrain: {building.floor}")
+        material_tags = {tag for item_id in self.items.ids() for tag in self.items.get(item_id).tags}
+        built = [(f"Building {blueprint_id}", building.build) for blueprint_id, building in self.buildings.items()]
+        built += [(f"Interactable {kind}", self.interactables.get(kind).build) for kind in self.interactables.kinds()]
+        for label, rule in built:
+            if rule is None:
+                continue
+            if rule.job is not None and rule.job not in self.jobs and self.jobs:
+                raise ValueError(f"{label} is built by an unknown job: {rule.job}")
+            unknown = sorted(tag for tag in rule.cost if tag not in material_tags)
+            if unknown:
+                raise ValueError(f"{label} is built with what no item is tagged as: {unknown}")
         for interaction_id, interaction in self.interactions.items():
             if interaction.dialogue is not None and interaction.dialogue not in self.dialogue:
                 raise ValueError(f"Interaction {interaction_id} uses unknown dialogue: {interaction.dialogue}")

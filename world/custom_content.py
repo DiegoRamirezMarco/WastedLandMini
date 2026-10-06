@@ -7,6 +7,7 @@ from numbers import Real
 from pathlib import Path
 from typing import Any, Protocol
 
+from world.build import build_rule_data
 from world.interactable import InteractableDefinition, UseDefinition, interactable_definition_from_data
 from world.urbanism import BuildingDefinition, building_definition_from_data
 
@@ -66,6 +67,7 @@ def _definition_data(definition: InteractableDefinition) -> dict[str, Any]:
         "display_of": definition.display_of,
         "light": definition.light,
         "category": definition.urbanism_category,
+        "build": build_rule_data(definition.build),
     }
 
 
@@ -88,11 +90,13 @@ def merged_interactable_data(
             "display_of": None,
             "light": 0,
             "category": "furniture",
+            "build": None,
         }
     )
     patch = dict(data)
-    if isinstance(merged.get("use"), dict) and isinstance(patch.get("use"), dict):
-        patch["use"] = {**merged["use"], **patch["use"]}
+    for part in ("use", "build"):
+        if isinstance(merged.get(part), dict) and isinstance(patch.get(part), dict):
+            patch[part] = {**merged[part], **patch[part]}
     merged.update(patch)
     return merged
 

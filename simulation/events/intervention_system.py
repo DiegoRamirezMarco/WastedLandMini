@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 GRIEVANCE = "grievance"
 BRAWL = "brawl"
 JOB_OFFER = "job_offer"
+BUILD_PROPOSAL = "build_proposal"
 CONFESSION = "confession"
 BREAKUP = "breakup"
 BROOD_ACTION = "brood"
@@ -86,6 +87,10 @@ def score_inputs(world: "SimulationWorld", resident: Resident, target: Resident 
         "health": resident.health / 100.0,
         "vacancy": 0.0,
         "idle": 0.0,
+        "mood": resident.mood / 100.0,
+        "burden": 0.0,
+        "effort": 0.0,
+        "short": 0.0,
     }
     if target is not None:
         feelings = world.relationship(resident.resident_id, target.resident_id)
@@ -252,6 +257,36 @@ class InterventionSystem:
             return "asked_recently"
         return None
 
+    def asking_obstacle(self, world: "SimulationWorld", resident: Resident, kind: str) -> str | None:
+        """What stands in the way of putting a decision of this kind to a resident, as a short code.
+
+        `unknown` for a kind that is not defined, `deciding` when they have a decision open,
+        `asked_recently` within the cooldown. None if nothing does.
+        """
+        definition = world.registries.decisions.get(kind)
+        if definition is None:
+            return "unknown"
+        if self.pending_for(world, resident.resident_id) is not None:
+            return "deciding"
+        if self._cooling_down(world, definition, resident):
+            return "asked_recently"
+        return None
+
+    def propose_build(
+        self, world: "SimulationWorld", resident: Resident, thing: str, inputs: dict[str, float], option_id: str | None
+    ) -> bool:
+        """The player puts it to a resident that they put something up, with one of the usual advices.
+
+        They decide on the spot, weighing `inputs` with the rest. Returns whether they took it on.
+        Whoever says yes can be asked again at once; whoever says no has said so for a while.
+        """
+        definition = world.registries.decisions.get(BUILD_PROPOSAL)
+        if definition is None or self.asking_obstacle(world, resident, BUILD_PROPOSAL) is not None:
+            return False
+        decision = self._decision(world, resident, None, definition, 0.0, subject=thing, inputs=inputs)
+        outcome = definition.outcomes.get(self._settle(world, decision, option_id, waiting=False) or "")
+        return outcome is not None and outcome.builds
+
     def _cooldown_key(self, kind: str, resident_id: str) -> str:
         return resident_id if kind == GRIEVANCE else f"{kind}:{resident_id}"
 
@@ -267,8 +302,10 @@ class InterventionSystem:
         definition: DecisionDefinition,
         anger_value: float,
         job_id: str | None = None,
+        subject: str | None = None,
+        inputs: dict[str, float] | None = None,
     ) -> Decision:
-        """A decision for `resident` about `target`, or about taking up a job. It is not open yet."""
+        """A decision for `resident` about `target`, a job or a thing. It is not open yet."""
         world.decision_count += 1
         importance = min(
             MAX_IMPORTANCE, definition.importance + round((anger_value - definition.anger_threshold) / 2)
@@ -276,10 +313,12 @@ class InterventionSystem:
         decision = Decision(
             decision_id=f"decision_{world.decision_count}",
             resident_id=resident.resident_id,
-            prompt=self.fill(world, definition.prompt, resident, target, job_id),
+            prompt=self.fill(world, definition.prompt, resident, target, job_id, subject),
             options=[
                 DecisionOption(
-                    option.option_id, self.fill(world, option.text, resident, target, job_id), dict(option.influence)
+                    option.option_id,
+                    self.fill(world, option.text, resident, target, job_id, subject),
+                    dict(option.influence),
                 )
                 for option in definition.options
             ],
@@ -294,6 +333,8 @@ class InterventionSystem:
                 intent="",
             ),
             job_id=job_id,
+            subject=subject,
+            inputs=dict(inputs or {}),
         )
         decision.crisis.intent = self.leaning(world, decision)
         return decision
@@ -352,6 +393,7 @@ class InterventionSystem:
         inputs = score_inputs(world, resident, target, crisis.anger if crisis else 0.0)
         if decision.job_id is not None:
             inputs.update(world.staffing.decision_inputs(world, resident, decision.job_id))
+        inputs.update(decision.inputs)
         heed = advice_influence(resident, ADVICE_STRENGTH)
         if option is not None:
             # Some cannot stand being told what to do, and some would rather be.
@@ -409,7 +451,7 @@ class InterventionSystem:
             world.memories.remember(
                 resident.resident_id,
                 Memory(
-                    text=self.fill(world, chosen.memory, resident, target, decision.job_id),
+                    text=self.fill(world, chosen.memory, resident, target, decision.job_id, decision.subject),
                     importance=float(crisis.urgency if crisis else definition.importance),
                     emotional_value=memory_mood,
                     people=[target.resident_id] if target is not None else [],
@@ -424,7 +466,7 @@ class InterventionSystem:
         if chosen.expedition is not None:
             world.expeditions.choose(world, resident, chosen.expedition)
         # The answer is put into words before the gate is opened or shut, while the visitor still has a name.
-        answer = self.fill(world, chosen.text, resident, target, decision.job_id)
+        answer = self.fill(world, chosen.text, resident, target, decision.job_id, decision.subject)
         if chosen.gate is not None:
             world.happenings.answer_gate(world, chosen.gate)
         if chosen.raid is not None:
@@ -436,7 +478,9 @@ class InterventionSystem:
             resident.activity = None
             resident.current_action = "idle"
 
-        world.crisis_cooldowns[self._cooldown_key(decision.kind, resident.resident_id)] = world.clock.total_minutes
+        if not chosen.builds:
+            # Whoever has just taken a piece of building on can be asked about another at once.
+            world.crisis_cooldowns[self._cooldown_key(decision.kind, resident.resident_id)] = world.clock.total_minutes
         advice = f"consejo: {option.text}" if option is not None else "sin consejo"
         world.emit_event(
             DomainEvent(
@@ -469,6 +513,7 @@ class InterventionSystem:
         resident: Resident,
         target: Resident | None,
         job_id: str | None = None,
+        subject: str | None = None,
     ) -> str:
         """Put the names of who and what a decision is about into one of its texts."""
         job = world.registries.jobs.get(job_id or "")
@@ -478,4 +523,5 @@ class InterventionSystem:
             .replace("{target}", target.name if target else "nadie")
             .replace("{job}", job.name if job else "ninguno")
             .replace("{visitor}", visitor.name if visitor else "alguien")
+            .replace("{thing}", subject or "algo")
         )

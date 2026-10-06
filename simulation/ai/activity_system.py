@@ -14,6 +14,7 @@ from simulation.residents.activity import MOVE_TILES_PER_MINUTE, SHELTER_ACTION,
 from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
 from simulation.residents.resident import Resident
 from simulation.social.social_system import SocialSystem
+from simulation.work.construction import BUILD_ACTION, CARRY_ACTION
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
 from world.interactable import UseDefinition
@@ -130,6 +131,12 @@ class ActivitySystem:
         if activity.action == EXPEDITION_ACTION:
             world.expeditions.tick(world, resident, activity)
             return
+        if activity.action == BUILD_ACTION:
+            world.construction.build_tick(world, resident, activity)
+            return
+        if activity.action == CARRY_ACTION:
+            world.construction.carry_tick(world, resident, activity)
+            return
         use = self._use_of(world, activity)
         if not activity.using:
             if not self._begin(world, resident, activity, use):
@@ -205,6 +212,9 @@ class ActivitySystem:
         placed = world.interactables.get(activity.target_id or "")
         if placed is not None:
             return path_beside(world, resident, placed, crowd.passable())
+        site = world.sites.get(activity.target_id or "")
+        if site is not None:
+            return world.construction.path_to(world, resident, site, crowd.passable())
         return [] if activity.action == WANDER_ACTION else None
 
     def _make_room(self, world: "SimulationWorld", resident: Resident, activity: Activity, other: Resident) -> bool:

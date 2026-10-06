@@ -19,6 +19,12 @@
       ],
       "unaware": true,
       "until": "tiredness"
+    },
+    "build": {
+      "cost": {
+        "scrap": 2
+      },
+      "minutes": 60
     }
   },
   "pantry": {
@@ -31,7 +37,13 @@
       "consumes": "food",
       "capacity": 2
     },
-    "container": true
+    "container": true,
+    "build": {
+      "cost": {
+        "scrap": 2
+      },
+      "minutes": 60
+    }
   },
   "campfire": {
     "name": "hoguera",
@@ -47,22 +59,46 @@
       "capacity": 4,
       "interruptible": true
     },
-    "light": 6
+    "light": 6,
+    "build": {
+      "cost": {
+        "scrap": 1
+      },
+      "minutes": 30
+    }
   },
   "table": {
     "name": "mesa",
     "article": "una",
-    "width": 2
+    "width": 2,
+    "build": {
+      "cost": {
+        "scrap": 2
+      },
+      "minutes": 45
+    }
   },
   "stool": {
     "name": "taburete",
     "article": "un",
-    "blocks": false
+    "blocks": false,
+    "build": {
+      "cost": {
+        "scrap": 1
+      },
+      "minutes": 20
+    }
   },
   "crate": {
     "name": "caja",
     "article": "una",
-    "container": true
+    "container": true,
+    "build": {
+      "cost": {
+        "scrap": 1
+      },
+      "minutes": 30
+    }
   },
   "cooking_pot": {
     "name": "olla",
@@ -75,7 +111,13 @@
       "consumes": "food",
       "capacity": 3
     },
-    "light": 3
+    "light": 3,
+    "build": {
+      "cost": {
+        "scrap": 2
+      },
+      "minutes": 45
+    }
   },
   "bar": {
     "name": "barra",
@@ -98,17 +140,33 @@
       ],
       "price": 2
     },
-    "light": 4
+    "light": 4,
+    "build": {
+      "cost": {
+        "scrap": 4
+      },
+      "minutes": 120
+    }
   },
   "crop_bed": {
     "name": "bancal",
     "article": "un",
-    "category": "decor"
+    "category": "decor",
+    "build": {
+      "cost": {},
+      "minutes": 60
+    }
   },
   "guard_post": {
     "name": "puesto de guardia",
     "article": "un",
-    "category": "decor"
+    "category": "decor",
+    "build": {
+      "cost": {
+        "scrap": 2
+      },
+      "minutes": 60
+    }
   },
   "workbench": {
     "name": "banco de trabajo",
@@ -124,7 +182,13 @@
       "material": "scrap",
       "material_from": "scrap_pile"
     },
-    "light": 3
+    "light": 3,
+    "build": {
+      "cost": {
+        "scrap": 3
+      },
+      "minutes": 90
+    }
   },
   "shop_counter": {
     "name": "mostrador",
@@ -139,18 +203,36 @@
       "staffed_by": "shopkeeper",
       "capacity": 2
     },
-    "light": 3
+    "light": 3,
+    "build": {
+      "cost": {
+        "scrap": 3
+      },
+      "minutes": 90
+    }
   },
   "shelf": {
     "name": "estantería",
     "article": "una",
     "width": 2,
-    "display_of": "shop_counter"
+    "display_of": "shop_counter",
+    "build": {
+      "cost": {
+        "scrap": 2
+      },
+      "minutes": 45
+    }
   },
   "barrel": {
     "name": "bidón",
     "article": "un",
-    "light": 4
+    "light": 4,
+    "build": {
+      "cost": {
+        "scrap": 1
+      },
+      "minutes": 20
+    }
   },
   "scrap_pile": {
     "name": "montón de chatarra",
@@ -170,13 +252,26 @@
       "minutes": 8,
       "consumes": "water",
       "capacity": 3
+    },
+    "build": {
+      "cost": {
+        "scrap": 4
+      },
+      "minutes": 120
     }
   },
   "generator": {
     "name": "generador",
     "article": "un",
     "width": 2,
-    "container": true
+    "container": true,
+    "build": {
+      "cost": {
+        "scrap": 6
+      },
+      "minutes": 180,
+      "job": "mechanic"
+    }
   },
   "clinic_bed": {
     "name": "camilla",
@@ -192,13 +287,25 @@
       "care_item": "medicine",
       "care_from": "medicine_cabinet",
       "dose_minutes": 720
+    },
+    "build": {
+      "cost": {
+        "scrap": 2
+      },
+      "minutes": 60
     }
   },
   "medicine_cabinet": {
     "name": "botiquín",
     "article": "un",
     "container": true,
-    "light": 3
+    "light": 3,
+    "build": {
+      "cost": {
+        "scrap": 2
+      },
+      "minutes": 45
+    }
   },
   "grave": {
     "name": "tumba",
@@ -208,7 +315,13 @@
   "lamp": {
     "name": "farol",
     "article": "un",
-    "light": 5
+    "light": 5,
+    "build": {
+      "cost": {
+        "scrap": 1
+      },
+      "minutes": 30
+    }
   },
   "wreck": {
     "name": "coche oxidado",
@@ -230,7 +343,13 @@
   },
   "handcart": {
     "name": "carro",
-    "article": "un"
+    "article": "un",
+    "build": {
+      "cost": {
+        "scrap": 3
+      },
+      "minutes": 90
+    }
   },
   "radio_set": {
     "name": "radio del asentamiento",
@@ -249,6 +368,12 @@
         10
       ],
       "radio": true
+    },
+    "build": {
+      "cost": {
+        "scrap": 3
+      },
+      "minutes": 90
     }
   }
 }

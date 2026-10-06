@@ -492,5 +492,53 @@
         }
       }
     ]
+  },
+  "build_proposal": {
+    "event_type": "build_proposed",
+    "window_minutes": 0,
+    "cooldown_minutes": 180,
+    "anger_threshold": 0,
+    "importance": 40,
+    "text": "Se le propone una obra a {name}: {thing}",
+    "prompt": "¿Que me ponga yo con eso? ¿Con {thing}?",
+    "outcomes": {
+      "agree": {
+        "score": {
+          "bias": 0.2,
+          "empathy": 0.3,
+          "mood": 0.4,
+          "idle": 0.2,
+          "burden": -0.7,
+          "effort": -0.15,
+          "short": -0.2,
+          "stress": -0.3
+        },
+        "builds": true,
+        "text": "{name} se hace cargo de una obra: {thing}"
+      },
+      "refuse": {
+        "score": {
+          "bias": 0.5,
+          "greed": 0.15,
+          "aggression": 0.1
+        },
+        "text": "{name} no quiere ponerse con una obra: {thing}"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Hace falta",
+        "influence": {
+          "agree": 0.5,
+          "refuse": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Si te parece",
+        "influence": {}
+      }
+    ]
   }
 }

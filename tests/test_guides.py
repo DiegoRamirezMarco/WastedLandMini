@@ -16,7 +16,6 @@ from graphics.object_art import ObjectArtStore
 from graphics.object_sprites import ObjectSprites
 from graphics.palette import PALETTE
 from settings import SCALE
-from simulation.commands import PlaceBuildingCommand
 from simulation.registries import builtin_registries
 
 LIMBS = (
@@ -207,7 +206,7 @@ class EditorGuideTests(unittest.TestCase):
         for y in range(8, world.tile_map.height - 8):
             for x in range(2, world.tile_map.width - 8):
                 if world.urbanism.building_error(world, 4, 3, (x, y)) is None:
-                    placed = world.apply_command(PlaceBuildingCommand("shack", (x, y)))
+                    placed = world.urbanism.place_building(world, "shack", (x, y))
                     break
             if placed is not None:
                 break

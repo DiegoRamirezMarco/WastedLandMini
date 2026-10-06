@@ -66,6 +66,7 @@ def settle(world: SimulationWorld, until: str | None = None) -> None:
         ],
         "stranger": lambda: world.apply_command(ChooseOptionCommand(next(iter(world.decisions)), "open")),
         "outside": lambda: world.apply_command(AcknowledgeTutorialCommand()),
+        "building": lambda: world.apply_command(AcknowledgeTutorialCommand()),
         "free": lambda: world.apply_command(AcknowledgeTutorialCommand()),
     }
     for _ in range(len(moves) + 1):
@@ -284,11 +285,13 @@ class AfterTheOpeningTests(unittest.TestCase):
         return [line.split(" | ")[1] for line in self.world.event_log]
 
     def _room_for_more(self) -> None:
-        self.assertTrue(self.world.apply_command(PlaceBuildingCommand("house", (20, 3))).ok)
+        # What is asked here is who comes and how they fare, so it stands without being built.
+        urbanism = self.world.urbanism
+        self.assertTrue(urbanism.place_building(self.world, "house", (20, 3)).ok)
         for x in (20, 22, 24):
-            self.assertTrue(self.world.apply_command(PlaceObjectCommand("bed", (x, 3))).ok)
+            self.assertTrue(urbanism.place_object(self.world, "bed", (x, 3)).ok)
         for x in (24, 26):
-            self.assertTrue(self.world.apply_command(PlaceObjectCommand("crop_bed", (x, 16))).ok)
+            self.assertTrue(urbanism.place_object(self.world, "crop_bed", (x, 16)).ok)
 
     def test_with_no_bed_to_spare_nobody_comes_however_long_it_is(self) -> None:
         self.world.step(MINUTES_PER_DAY * 30)
@@ -309,7 +312,7 @@ class AfterTheOpeningTests(unittest.TestCase):
 
     def test_whoever_takes_the_cart_goes_out_and_what_they_bring_ends_up_where_the_settlement_keeps_things(self) -> None:
         self._room_for_more()
-        self.assertTrue(self.world.apply_command(PlaceObjectCommand("handcart", (28, 24))).ok)
+        self.assertTrue(self.world.urbanism.place_object(self.world, "handcart", (28, 24)).ok)
         # No shop, no scrap pile, no generator: only a crate, a pantry and a tank.
         kinds = {placed.kind for placed in self.world.interactables.values()}
         self.assertFalse(kinds & {"shop_counter", "scrap_pile", "generator"})
@@ -872,13 +875,14 @@ class DrawingLessonsTests(unittest.TestCase):
         self.assertFalse(self.game.world.tutorial.active)
         self._key(pygame.K_ESCAPE)
         self._key(pygame.K_u, "u")
-        self._put_down("furniture", "stool", (30, 12))
+        # Tyres take no building: they are put down, as everything was during the opening.
+        self._put_down("decor", "tyres", (30, 12))
         self.assertEqual(self.game.scene_name, "urbanism")
         editor = self.game.urbanism_editor
         self.assertEqual(editor.selection[0], "object")
         self._click(self._button(editor, ("art",)))
         self.assertEqual(self.game.scene_name, "object_editor")
-        self.assertEqual(self.game.object_editor.kind, "stool")
+        self.assertEqual(self.game.object_editor.kind, "tyres")
         self._frame()
 
 

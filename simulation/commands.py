@@ -40,6 +40,15 @@ class CommandTarget(Protocol):
     def remove_building(self, room_id: str) -> UrbanismResult:
         ...
 
+    def propose_object(self, kind: str, tile: Tile, resident_id: str, option_id: str) -> UrbanismResult:
+        ...
+
+    def propose_building(self, blueprint_id: str, tile: Tile, resident_id: str, option_id: str) -> UrbanismResult:
+        ...
+
+    def cancel_site(self, site_id: str) -> UrbanismResult:
+        ...
+
     def found_resident(
         self,
         name: str,
@@ -117,6 +126,8 @@ class SuggestJobCommand:
 
 @dataclass(frozen=True)
 class PlaceObjectCommand:
+    """Put an object down at once. Only one that takes nothing to build can be."""
+
     kind: str
     tile: Tile
 
@@ -143,6 +154,8 @@ class RemoveObjectCommand:
 
 @dataclass(frozen=True)
 class PlaceBuildingCommand:
+    """Put a building down at once. Only one that takes nothing to build can be."""
+
     blueprint_id: str
     tile: Tile
 
@@ -165,6 +178,46 @@ class RemoveBuildingCommand:
 
     def apply(self, world: CommandTarget) -> UrbanismResult:
         return world.remove_building(self.room_id)
+
+
+@dataclass(frozen=True)
+class ProposeObjectCommand:
+    """The player's proposal to a resident that they put an object up somewhere.
+
+    They agree or they do not. If they do, the ground is marked out and the result names the site.
+    """
+
+    kind: str
+    tile: Tile
+    resident_id: str
+    # The advice it is given with, one of the options of the building proposal decision.
+    option_id: str = "encourage"
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.propose_object(self.kind, self.tile, self.resident_id, self.option_id)
+
+
+@dataclass(frozen=True)
+class ProposeBuildingCommand:
+    """The player's proposal to a resident that they put a building up somewhere."""
+
+    blueprint_id: str
+    tile: Tile
+    resident_id: str
+    option_id: str = "encourage"
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.propose_building(self.blueprint_id, self.tile, self.resident_id, self.option_id)
+
+
+@dataclass(frozen=True)
+class CancelSiteCommand:
+    """Give up something that is being built. What had been brought to it is put away."""
+
+    site_id: str
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.cancel_site(self.site_id)
 
 
 @dataclass(frozen=True)

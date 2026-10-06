@@ -497,10 +497,56 @@ Still open here:
   runs short only where people are hurt often
 - Nobody is sent for medicine or fuel when it runs out: it is whatever a trip happens to bring
 
-### S16 — Building — planned
-- Things to build, as data: what they cost, how long they take, who builds them
-- Sites: materials carried to them, work done at them, and the thing standing at the end
-- The player proposes what to build and where. The residents do it, or do not
+### S16 — Building — done
+Asked first, and answered: everything put down from Urbanismo takes building, as its data says;
+whoever has a spare moment does the work; a thing is proposed to somebody, who answers; and a
+new settlement puts down for nothing until its opening is over.
+
+- **What a thing takes is data** (`build`, in `data/interactables.json` and `data/urbanism.json`,
+  and in a pack's `data.json`): units of what it is made with, by the tag of the item, minutes
+  of work, and the job that has to do it, if any. A thing with no such entry is put down at
+  once as before: the wrecks, tyres and junk that are lying about
+- **The player proposes it to somebody**, where it is to go. They weigh it and answer on the
+  spot, as with a post: their mood and their nerves, how much they already have on their hands,
+  how big a job it is and whether there is anything to build it with. Advice counts and does
+  not settle it. Whoever says no is not asked again for three hours; whoever says yes can be
+  asked again at once, and sooner or later has enough
+- **A site is ground marked out**: nothing else goes there, and if what is coming will be in
+  the way, nobody walks there meanwhile. It can be given up, and what had been brought to it is
+  put away
+- **It is built in spare time**: by whoever agreed, first of all, and by anybody else with a
+  moment and a mind to help, which is nobody who has it in for them. Never on a shift, in the
+  dark, with a need that presses or out in a storm. What it takes is carried from wherever it
+  is kept, a load at a time, and then it is worked on, by no more hands than there is room for.
+  What asks for a job is carried to by anyone and worked on only by whoever holds it
+- **A site that cannot be got on with says so once a day**: there is nothing to build it with,
+  or nobody holds the job it asks for
+- **The opening puts down for nothing**, and says before it ends that from there on things are
+  built
+- **Nothing can be put down that cuts ground off from the way in.** Found while this was run: a
+  bed across the one-tile strip behind the houses let somebody step off its far side into a
+  corner with no way out, where they died of thirst. And what is fetched for a site is not a
+  find for whoever goes outside to put away again
+- On screen: in Urbanismo a thing that takes building is dropped where it goes and then put to
+  one of the residents, who are listed in place of the catalogue. Sites are marked out on both
+  maps with how far along they are, and in Urbanismo they can be selected and given up. A
+  building that goes up while the map is on show stands there at once
+
+Done when: in the settlement that comes ready made, with three seeds, a shack proposed to
+somebody who agrees stands within two days, built out of shift with scrap carried from where it
+was kept; somebody in no mood for it refuses and nothing is marked out; a site with nothing to
+build it with waits and says so once a day; four weeks of building one thing and another leave
+nobody dead; a new settlement puts down for nothing until its opening is over; and a save with
+a house half built goes on from where it was.
+
+Still open here:
+- Moving and pulling down are still done at once and for nothing, and what is pulled down
+  gives nothing back
+- Nobody builds anything unasked: every site is the player's proposal
+- Nobody is sent for scrap when a site waits for it: it is whatever a trip happens to bring
+- A site has no picture of its own, only its outline, and whoever works on it does as at a post
+- What each thing takes is a first guess, and tools do not come into it
+- Everybody knows of every site there is, without having seen it or been told
 
 ### S17 — Research — planned
 - Things to work out, as data: what each needs and what it opens up

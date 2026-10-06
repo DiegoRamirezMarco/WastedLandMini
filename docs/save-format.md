@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 23 (current)
+## Version 24 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `23` |
+| `version` | `24` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -20,6 +20,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `terrain`, `rooms` | The live terrain grid and stable room records after changes made in Urbanismo |
 | `urbanism` | Stable placement counters and the terrain kept below constructed buildings, so they can be moved or removed later |
 | `interactables` | Placed objects: `id`, `kind`, tile `x` and `y` |
+| `sites`, `site_count` | What is being built: `id`, `kind` (`object` or `building`), `what` (the object kind or blueprint ID), tile `x` and `y`, `in_charge` (the resident who agreed to it), `delivered` (units brought so far, per item definition), `progress` (minutes of work done) and `started_at`; and the counter behind site IDs |
 | `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them) |
 | `containers` | Per container object ID, the items inside |
 | `item_count` | Counter behind item IDs |
@@ -29,7 +30,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `facts` | Recorded facts: `fact_id`, `event_type`, `text`, `subject_ids`, `importance`, `timestamp`, `location_id`, `expires_at` |
 | `beliefs` | Per resident ID, the facts they know: `fact_id`, `credibility`, `source`, `learned_at`, `told_by` |
 | `vacancies` | Per job ID, the game minute since which it has been short of people |
-| `decisions` | Open decisions with their options, deadline, crisis and, for a job offer, `job_id` |
+| `decisions` | Open decisions with their options, deadline, crisis and, for a job offer, `job_id`; for one about a thing, its `subject` and the `inputs` that weigh on it |
 | `decision_count`, `crisis_cooldowns` | Counter for decision IDs; game minute of each resident's last crisis, and of the last time each vacant job was offered |
 | `deaths` | Everyone who has died: `resident_id`, `name`, `timestamp`, `cause`, `killer_id`, `grave_id` |
 | `history` | Every noteworthy event so far, in full, with its `data` |
@@ -39,7 +40,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `taste_knowledge` | Per onlooker (`@player`, or a resident ID), per resident, per taste (`tag:sweet`, `item:stew`, `category:food`): how much of it has been seen |
 | `tutorial` | Where a new settlement is in its opening: `step` (a step ID from `data/tutorial.json`, or `null` once it is over or if it never had one), `since` (game minute the step began), `opened`, `acknowledged`, the `deeds` the player has done of what the step asks them to do themselves, and the IDs of the steps `done` |
 
-A resident's `activity` is `null` or `action`, `target_id` (an object ID), `partner_id` (a resident
+A resident's `activity` is `null` or `action`, `target_id` (an object ID, or a site ID), `partner_id` (a resident
 ID, when talking or walking over to talk), `intent` (the exchange they are set on having), the
 remaining `path` as tiles, `minutes_left`, `using` and `held_up` (minutes running that somebody
 in the way has kept them from a step along that path).
@@ -62,6 +63,9 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 24** added `sites`. An older save has nothing being built, and what stands in it
+  stands as it did. A site for an object kind or a blueprint that is no longer defined, or that
+  no longer fits on the map, is dropped along with what had been brought to it.
 - **Version 23** added `dosed_until` and medicine in the clinic's cabinet. An older save has nobody
   under a dose, and its cabinet starts with what the map puts in it; no other container is
   restocked. On the built-in map the south house's two beds and its crate are moved to where

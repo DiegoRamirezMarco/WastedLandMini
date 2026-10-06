@@ -38,7 +38,7 @@ class ExpeditionSystem:
             and shift_left >= MIN_SHIFT_LEFT
             and bool(world.registries.expeditions.loot)
             and not (job.outdoors and world.happenings.is_stormy(world))
-            and not self._finds_on(resident)
+            and not self._finds_on(world, resident)
         )
 
     def stays_in(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> bool:
@@ -152,9 +152,13 @@ class ExpeditionSystem:
 
     # ----- bringing the finds where they go -----
 
-    def _finds_on(self, resident: Resident) -> list[ItemInstance]:
-        """What a resident carries that is nobody's yet."""
-        return [item for item in resident.inventory.items if item.owner_id is None]
+    def _finds_on(self, world: "SimulationWorld", resident: Resident) -> list[ItemInstance]:
+        """What a resident carries that is nobody's yet. Not what a site is waiting for: that goes there."""
+        return [
+            item
+            for item in resident.inventory.items
+            if item.owner_id is None and not world.construction.awaits(world, item)
+        ]
 
     def _goes_to(self, world: "SimulationWorld", item: ItemInstance) -> str | None:
         """The kind of container a find is taken to: the first it belongs in that the settlement has.
@@ -173,7 +177,7 @@ class ExpeditionSystem:
 
     def errand(self, world: "SimulationWorld", resident: Resident) -> str | None:
         """The container to walk to with what was brought back: the nearest that takes the first find."""
-        for item in self._finds_on(resident):
+        for item in self._finds_on(world, resident):
             kind = self._goes_to(world, item)
             places = [world.interactables[object_id] for object_id, _ in containers_of_kind(world, kind or "")]
             if places:
@@ -186,7 +190,7 @@ class ExpeditionSystem:
         if container is None:
             return None
         left = []
-        for item in self._finds_on(resident):
+        for item in self._finds_on(world, resident):
             if self._goes_to(world, item) != placed.kind:
                 continue
             resident.inventory.remove(item.instance_id)

@@ -294,7 +294,7 @@ class WorkSystem:
         speed = job.tool.speed if job.tool is not None and tool is not None else 1.0
         # Short of an arm the work still gets done, in more minutes.
         speed *= world.health.work_pace(world, resident)
-        speed *= self._mood_pace(resident)
+        speed *= self.mood_pace(resident)
         needed = math.ceil(rule.every_minutes / speed)
         resident.work_progress = min(resident.work_progress + 1, needed)
         if resident.work_progress < needed:
@@ -310,7 +310,7 @@ class WorkSystem:
             world.items.wear(world, resident, tool)
         return True
 
-    def _mood_pace(self, resident: Resident) -> float:
+    def mood_pace(self, resident: Resident) -> float:
         """Low spirits make productive work drag; good spirits do not make it superhuman."""
         if resident.mood >= 50.0:
             return 1.0

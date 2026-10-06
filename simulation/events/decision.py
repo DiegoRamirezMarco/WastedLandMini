@@ -11,6 +11,7 @@ from simulation.work.expedition import EXPEDITION_CHOICES
 SCORE_INPUTS = (
     "bias", "anger", "aggression", "impulsiveness", "empathy", "courage", "sociability", "greed",
     "stress", "affection", "resentment", "fear", "attraction", "health", "vacancy", "idle",
+    "mood", "burden", "effort", "short",
 )
 
 
@@ -38,6 +39,10 @@ class Decision:
     crisis: Crisis | None = None
     # Job the decision is about, when it is about taking up a post.
     job_id: str | None = None
+    # What the decision is about, as it is named in a sentence, when it is about a thing.
+    subject: str | None = None
+    # Particulars of what is being decided that weigh on it, each from 0 to 1, by score input.
+    inputs: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -59,6 +64,8 @@ class OutcomeDefinition:
     gate: str | None = None
     # What choosing this does about raiders: `stand_ground` or `give_way`.
     raid: str | None = None
+    # Whether choosing this means taking on the piece of building the decision is about.
+    builds: bool = False
 
 
 @dataclass(frozen=True)
@@ -140,4 +147,5 @@ def _outcome_from_data(kind: str, outcome_id: str, data: dict[str, Any]) -> Outc
         expedition=expedition,
         gate=gate,
         raid=raid,
+        builds=bool(data.get("builds", False)),
     )

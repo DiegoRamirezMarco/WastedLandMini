@@ -57,6 +57,7 @@ from simulation.items.item_system import USE_ITEM_ACTION
 from simulation.residents.manner import EAT, FIGHT, WALK
 from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
 from simulation.tastes.taste_system import FOUND_OUT_EVENT, REACTION_EVENT
+from simulation.work.construction import BUILD_ACTION, FINISHED_EVENT
 from simulation.work.work_system import WORK_ACTION
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
@@ -74,6 +75,7 @@ from ui.tutorial_panel import (
     owed_object,
 )
 from ui.tutorial_panel import DRAW_INTENT as TUTORIAL_DRAW_INTENT
+from world.build import BUILDING_SITE, BuildSite
 from world.interactable import Interactable
 from world.map import Tile
 from world.room import Room
@@ -254,20 +256,10 @@ class GlobalView:
         self.container_hitboxes: dict[str, pygame.Rect] = {}
         # Decision the player asked to open by clicking a resident. The game shell picks it up.
         self.requested_decision: str | None = None
-        tileset = Tileset(self.assets.image(SETTLEMENT_SHEET, size=SETTLEMENT_SHEET_SIZE), SETTLEMENT_CELLS)
-        self.terrain = render_terrain(world.tile_map, tileset)
-        # What stands on the ground, without the ground: it goes over an illustrated one.
-        self.raised_terrain = render_terrain(world.tile_map, tileset, without=GROUND_TILES)
-        # The tiles that roofs cover, and the same terrain with those roofs on, which is what the minimap shows.
-        self.roofs = roof_names(world.tile_map, world.rooms.values())
-        roof_tiles = Tileset(self.assets.image(ROOF_SHEET, size=ROOF_SHEET_SIZE), ROOF_CELLS)
-        self.roofed_terrain = render_roofs(self.terrain, self.roofs, roof_tiles)
+        self._read_layout()
         # On the map itself a building with its roof on is one picture, standing on the terrain.
         self.buildings = BuildingRenderer(assets, custom)
         self.building_art = BuildingArtStore(self.illustrations, self.buildings, world.tile_map)
-        self.roof_tiles: dict[str, set[Tile]] = {
-            room.room_id: set(roof_names(world.tile_map, [room])) for room in world.rooms.values() if room.roofed
-        }
         # Whether buildings have their roof on from close. Off, every one of them stands open.
         self.roofs_on = True
         # Canvas position of the mouse, as far as the scene has been told.
@@ -277,9 +269,7 @@ class GlobalView:
         # Buildings that stand closed this frame, by room ID.
         self._closed: set[str] = set()
         self.lights = LightMap()
-        tiles = (world.tile_map.width, world.tile_map.height)
-        self._minimap = minimap_base(self.roofed_terrain, tiles)
-        width, height = minimap_size(tiles)
+        width, height = minimap_size((world.tile_map.width, world.tile_map.height))
         # The part of the canvas that shows the map, and the map pixel at its top-left corner.
         self.viewport = self.hud.layout.map.copy()
         # The minimap keeps to the bottom left of the map, out of the way of what opens on the right.
@@ -462,9 +452,28 @@ class GlobalView:
             self.camera[axis] = map_point[axis] - offset * TILE_SIZE / self.tile_px
         self.scroll(0, 0)
 
+    def _read_layout(self) -> None:
+        """Make the pictures that depend on where the walls and roofs are. Again whenever a building goes up."""
+        tile_map, rooms = self.world.tile_map, self.world.rooms
+        tileset = Tileset(self.assets.image(SETTLEMENT_SHEET, size=SETTLEMENT_SHEET_SIZE), SETTLEMENT_CELLS)
+        self.terrain = render_terrain(tile_map, tileset)
+        # What stands on the ground, without the ground: it goes over an illustrated one.
+        self.raised_terrain = render_terrain(tile_map, tileset, without=GROUND_TILES)
+        # The tiles that roofs cover, and the same terrain with those roofs on, which is what the minimap shows.
+        self.roofs = roof_names(tile_map, rooms.values())
+        roof_tiles = Tileset(self.assets.image(ROOF_SHEET, size=ROOF_SHEET_SIZE), ROOF_CELLS)
+        self.roofed_terrain = render_roofs(self.terrain, self.roofs, roof_tiles)
+        self.roof_tiles: dict[str, set[Tile]] = {
+            room.room_id: set(roof_names(tile_map, [room])) for room in rooms.values() if room.roofed
+        }
+        self._minimap = minimap_base(self.roofed_terrain, (tile_map.width, tile_map.height))
+
     def on_events(self, events: Iterable[DomainEvent]) -> None:
         """React to what the simulation just emitted."""
         events = list(events)
+        if any(event.event_type == FINISHED_EVENT and event.data.get("kind") == BUILDING_SITE for event in events):
+            # A building has gone up while the map was on show: its walls and its roof are new.
+            self._read_layout()
         self.hud.on_events(events)
         self.bodies.on_events(self.world, events)
         for event in events:
@@ -737,6 +746,9 @@ class GlobalView:
         for placed in self.world.interactables.values():
             if (placed.x, placed.y) not in self._hidden:
                 draws.append(self._object_draw(placed))
+        for site in self.world.sites.values():
+            if (site.x, site.y) not in self._hidden:
+                draws.append(self._site_draw(site))
         for resident in self.world.residents.values():
             if resident.away:
                 # Whoever is outside the settlement is nowhere on its map.
@@ -1096,6 +1108,31 @@ class GlobalView:
 
         return (bottom, 0, draw)
 
+    def _site_draw(self, site: BuildSite) -> Draw:
+        """Ground marked out for something that is being put up: a string round it between four
+        stakes, and along its near side how far along it is."""
+        columns = [x for x, _ in site.tiles] or [site.x]
+        rows = [y for _, y in site.tiles] or [site.y]
+        area = pygame.Rect(
+            min(columns) * TILE_SIZE,
+            min(rows) * TILE_SIZE,
+            (max(columns) - min(columns) + 1) * TILE_SIZE,
+            (max(rows) - min(rows) + 1) * TILE_SIZE,
+        )
+        done = self.world.construction.fraction_done(self.world, site)
+
+        def draw() -> None:
+            rect = area.move(-self._scene_origin[0], -self._scene_origin[1])
+            pygame.draw.rect(self._scene, PALETTE["ochre"], rect.inflate(-2, -2), 1)
+            for corner in (rect.topleft, (rect.right - 3, rect.top), (rect.left, rect.bottom - 3), (rect.right - 3, rect.bottom - 3)):
+                pygame.draw.rect(self._scene, PALETTE["bone"], (*corner, 3, 3))
+            bar = pygame.Rect(rect.left + 3, rect.bottom - 6, rect.width - 6, 2)
+            pygame.draw.rect(self._scene, PALETTE["shadow"], bar)
+            pygame.draw.rect(self._scene, PALETTE["lichen"], (bar.left, bar.top, round(bar.width * done), bar.height))
+
+        # Flat on the ground: whatever stands on the same row is drawn over it.
+        return (area.top, -1, draw)
+
     def _resident_draw(self, resident: Resident) -> Draw:
         lying_in = self._lying_in(resident)
         if lying_in is not None:
@@ -1241,7 +1278,8 @@ class GlobalView:
             return (ARGUE_CLIP, CLIP_RATES[ARGUE_CLIP])
         if activity.action == EAT_ACTION:
             return self._way_of(resident, EAT)
-        return (WORK_CLIP, CLIP_RATES[WORK_CLIP]) if activity.action == WORK_ACTION else (IDLE_CLIP, 0.0)
+        working = activity.action in (WORK_ACTION, BUILD_ACTION)
+        return (WORK_CLIP, CLIP_RATES[WORK_CLIP]) if working else (IDLE_CLIP, 0.0)
 
     def _meal_in_hand(self, resident: Resident) -> str | None:
         """Definition ID of the food in a resident's hand during an active meal."""
@@ -1405,7 +1443,8 @@ class GlobalView:
             return "sleep"
         if resident.health < HURT_HEALTH:
             return "hurt"
-        return "work" if activity is not None and activity.using and activity.action == WORK_ACTION else None
+        at_work = activity is not None and activity.using and activity.action in (WORK_ACTION, BUILD_ACTION)
+        return "work" if at_work else None
 
     def _bond_icon(self, resident: Resident) -> str | None:
         """What a resident is to whoever is selected: their partner, someone they hold as a friend, or neither."""
