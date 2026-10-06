@@ -118,6 +118,10 @@ python -m simulation.headless --days 7 --seed 7
 - `Dibujar` in the menu, or `F2`: draw the selected resident. Paint their body and their head
   over the guide, watch them move as you go, and save: from then on that is how they look, in the
   settlement and in their portrait. `Esc` goes back without saving
+- In every drawing screen: a brush, a rubber and a bucket; a straight line, a box, an oval and a
+  polygon, hollow or filled, laid down in one go (a polygon corner by corner, closed with a right
+  click, `Enter` or a click on its first corner); the ready colours, and under them a field to
+  pick any other from. `Ctrl+Z` undoes, and `Esc` lets go of a shape half made
 - `Edificios` in the menu, or `F4`: draw a roofed place in four aligned parts: its empty
   interior, walls, roof and door. The preview exchanges the roof for the inside; `Guardar` writes
   the four PNGs under `illustrations/buildings/`. `Esc` goes back without saving

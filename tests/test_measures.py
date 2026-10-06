@@ -130,7 +130,7 @@ class DollBuildTests(unittest.TestCase):
             DollBuild(joints={"shin.end": -(unit_length - SHORTEST_PART / 2)}),  # hardly a shin left
             DollBuild(joints={"shin.end": -unit_length - 1.0}),  # inside out
             DollBuild(joints={"neck.end": 2.0}),  # off the top of the paper
-            DollBuild(joints={"hand.end": 4.0}),  # down into the legs
+            DollBuild(joints={"hand.end": 14.0}),  # off the foot of the paper
             DollBuild(joints={"hips.end": 6.0}),  # so are these
             DollBuild(points={"skull.start": (10.0, 0.0)}),  # off the head's paper
             DollBuild(attach={"clavicle": (9.0, 0.0)}),  # an arm nowhere near the body

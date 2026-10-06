@@ -22,6 +22,16 @@ from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from scenes.scene import canvas_position
 from simulation.world import SimulationWorld
 from ui.button import Button
+from ui.paintbox import (
+    FILLED_LABEL,
+    HOLLOW_LABEL,
+    POLYGON_NOTICE,
+    POLYGON_TOOL,
+    SHAPE_LABELS,
+    ColorField,
+    ShapeDraft,
+    draw_chosen,
+)
 from ui.panel import draw_panel
 from ui.tutorial_panel import (
     BUILDING_ART_FOCUS,
@@ -59,6 +69,9 @@ ZONE_NAMES = {
     "gap": "hueco",
 }
 UNDO_STEPS = 30
+# Under the tools, the field any colour is picked from, and beside the word the one in hand.
+FIELD_SIZE = (168, 44)
+CHOSEN = pygame.Rect(40, 44, 22, 10)
 PAPER = PALETTE["bone"]
 SAVED_TEXT = "Guardado: el edificio ya usa estos dibujos"
 NOTES_TEXT = (
@@ -107,6 +120,10 @@ class BuildingEditor:
         self.notice = ""
         self._undo: list[tuple[str, pygame.Surface]] = []
         self._stroke: tuple[int, int] | None = None
+        # A shape being laid down, whether shapes are filled, and whether the mouse is held on the field of colour.
+        self._draft: ShapeDraft | None = None
+        self.filled = False
+        self._picking = False
 
         self.swatches = [
             (
@@ -133,6 +150,12 @@ class BuildingEditor:
         self.guide_button.rect.width = 110
         y += 18
         self.starter_button = Button.at(font, TOOLS_LEFT, y, "Arte de partida", ("starter",))
+        y += 18
+        self.shape_buttons = self._row(y, [(label, ("tool", tool)) for tool, label in SHAPE_LABELS.items()])
+        y += 18
+        self.fill_button = Button.at(font, TOOLS_LEFT, y, HOLLOW_LABEL, ("fill",))
+        y += 20
+        self.field = ColorField(pygame.Rect(TOOLS_LEFT, y, *FIELD_SIZE))
         self.top_buttons = self._row(
             6,
             [("<", ("step", -1)), (">", ("step", 1)), ("Guardar", ("save",)), ("Volver", ("close",))],
@@ -160,7 +183,9 @@ class BuildingEditor:
             *self.top_buttons,
             *self.part_buttons,
             *self.tool_buttons,
+            *self.shape_buttons,
             *self.edit_buttons,
+            self.fill_button,
             self.guide_button,
             self.starter_button,
             self.preview_button,
@@ -218,6 +243,7 @@ class BuildingEditor:
         self.part = part
         self.guide_picture = self._named_guide(part)
         self._stroke = None
+        self._draft = None
 
     def _named_guide(self, part: str) -> pygame.Surface:
         """The guide of a part with each of its stretches named on it."""
@@ -282,9 +308,43 @@ class BuildingEditor:
         if self.room_id in rooms:
             self.open(rooms[(rooms.index(self.room_id) + by) % len(rooms)])
 
+    def _pick(self, position: tuple[int, int]) -> None:
+        """Take the colour under the mouse off the field: any colour, not only the ready ones."""
+        self.color = self.field.color_at(position)
+        if self.tool == ERASER_TOOL:
+            self.tool = BRUSH_TOOL
+        self._did(COLOR_DEED)
+
+    def _shape_press(self, at: tuple[int, int]) -> None:
+        """Begin a shape on the paper, or put down the next corner of the polygon being made."""
+        draft = self._draft
+        if draft is not None and draft.tool == POLYGON_TOOL:
+            if draft.corner(at):
+                self._lay_down()
+            return
+        self._draft = ShapeDraft(self.tool, "", at)
+        if self.tool == POLYGON_TOOL:
+            self.notice = POLYGON_NOTICE
+
+    def _lay_down(self) -> None:
+        """Put the shape in hand on the part being drawn for good. A polygon of fewer than three corners is nothing."""
+        draft, self._draft = self._draft, None
+        if draft is None or (draft.tool == POLYGON_TOOL and len(draft.fixed) < 3):
+            return
+        self._remember()
+        draft.paint(self.drawings[self.part], self.color, self.size, self.filled)
+        self.notice = ""
+        self._did(STROKE_DEED)
+
     def _apply(self, intent: tuple) -> None:
         if intent[0] == "tool":
             self.tool = intent[1]
+            # Whatever shape was half made with the other tool is let go of.
+            self._draft = None
+        elif intent[0] == "fill":
+            self.filled = not self.filled
+            self.fill_button.label = FILLED_LABEL if self.filled else HOLLOW_LABEL
+            self.fill_button.rect.width = self.font.width(self.fill_button.label) + 8
         elif intent[0] == "undo":
             self.undo()
         elif intent[0] == "clear":
@@ -322,6 +382,13 @@ class BuildingEditor:
         alike.connected_component(at).to_surface(surface, setcolor=(*self.color, 255), unsetcolor=None)
 
     def press(self, position: tuple[int, int]) -> None:
+        if self.area.collidepoint(position) and self.tool in SHAPE_LABELS:
+            self._shape_press((position[0] - self.area.x, position[1] - self.area.y))
+            return
+        if self.field.contains(position):
+            self._picking = True
+            self._pick(position)
+            return
         if self.area.collidepoint(position):
             at = (position[0] - self.area.x, position[1] - self.area.y)
             self._remember()
@@ -349,6 +416,12 @@ class BuildingEditor:
                 return
 
     def drag(self, position: tuple[int, int]) -> None:
+        if self._picking:
+            self._pick(position)
+            return
+        if self._draft is not None:
+            self._draft.move((position[0] - self.area.x, position[1] - self.area.y))
+            return
         if self._stroke is None:
             return
         at = (position[0] - self.area.x, position[1] - self.area.y)
@@ -356,6 +429,13 @@ class BuildingEditor:
         self._stroke = at
 
     def release(self) -> None:
+        self._picking = False
+        if self._draft is not None and self._draft.tool != POLYGON_TOOL:
+            # Let go where it was pressed, it is no shape at all.
+            if self._draft.drawn:
+                self._lay_down()
+            else:
+                self._draft = None
         if self._stroke is not None:
             self._stroke = None
             self._did(STROKE_DEED)
@@ -367,8 +447,15 @@ class BuildingEditor:
             self.drag(canvas_position(event.pos))
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.release()
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and self._draft is not None:
+            self._lay_down()
+        elif event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER) and self._draft is not None:
+            self._lay_down()
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_z and event.mod & pygame.KMOD_CTRL:
             self.undo()
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE and self._draft is not None:
+            # Out of the shape, not out of the drawing.
+            self._draft, self.notice = None, ""
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.closed = True
 
@@ -391,6 +478,11 @@ class BuildingEditor:
             button.draw(self.canvas, self.font)
 
         self.font.draw(self.canvas, "Color", (TOOLS_LEFT, 44), PALETTE["dust"])
+        draw_chosen(self.canvas, CHOSEN, self.color)
+        self.field.draw(self.canvas)
+        for button in self.shape_buttons:
+            button.draw(self.canvas, self.font, active=button.intent == ("tool", self.tool))
+        self.fill_button.draw(self.canvas, self.font, active=self.filled)
         for rect, color in self.swatches:
             pygame.draw.rect(self.canvas, color, rect.inflate(-2, -2))
             if color == self.color and self.tool != ERASER_TOOL:
@@ -434,7 +526,11 @@ class BuildingEditor:
         if self.guide == GUIDE_UNDER:
             self.guide_picture.set_alpha(GUIDE_ALPHA[GUIDE_UNDER])
             screen.blit(pygame.transform.scale(self.guide_picture, place.size), place)
-        screen.blit(pygame.transform.scale(self.drawings[self.part], place.size), place)
+        picture = self.drawings[self.part]
+        if self._draft is not None:
+            # The shape in hand is seen on the paper before it is on it.
+            picture = self._draft.shown_on(picture, self.color, self.size, self.filled)
+        screen.blit(pygame.transform.scale(picture, place.size), place)
         if self.guide == GUIDE_OVER:
             self.guide_picture.set_alpha(GUIDE_ALPHA[GUIDE_OVER])
             screen.blit(pygame.transform.scale(self.guide_picture, place.size), place)

@@ -647,8 +647,30 @@ Still open here:
 - Both sides are always alike: nobody has one arm longer than the other
 - There is no making a part wider on the guide, only longer. Wider is simply drawn wider
 - The whole doll cannot be made larger or smaller at a stroke
-- Arms have little room to grow on the paper before they reach the legs
 - The game's own pixel bodies, for whoever has not been drawn, are all of one build
+
+### P20 — Room to draw, and more to draw with (needs P19) — done
+- **A wider paper for the body**, 384 across where it was 320: the arms, the trunk and the legs
+  each stand in columns of their own, and an arm can be made a good deal longer without running
+  into a leg. The head and the moving figure went to the right edge of the screen to make room
+- **Drawings made on the narrower paper are still read**: taken apart as they were cut and each
+  part put where it goes now, with nothing redrawn or resized. Their files are left as they are
+  until they are saved again
+- **Shapes laid down in one go**, in all three drawing screens: a straight line, a box, an oval
+  and a polygon, hollow or filled, seen on the paper while they are made. A polygon is clicked
+  out corner by corner and closed with a right click, `Enter` or a click on its first corner
+- **Any colour**: under the ready ones, a field to pick from, round the colours from left to
+  right, lighter above and darker below, full in its upper half and muted in its lower, with the
+  greys beside it. The colour in hand is shown by the word
+- `Esc` lets go of a shape half made before it leaves the drawing
+
+Still open here:
+- A colour is picked by eye: there is no taking one off the drawing, and no typing one in
+- A colour picked off the field is not kept anywhere: the next one is picked again
+- There is no zoom, no layers, no moving or resizing what has been drawn
+- Shapes have hard edges, like the brush
+- The trunk still stands over the legs on the paper: a very long trunk and very long legs meet
+- The paper cannot be laid out a third way without losing the way to read the first
 
 ## Later
 - SQLite persistence

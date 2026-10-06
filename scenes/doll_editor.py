@@ -31,6 +31,16 @@ from simulation.world import SimulationWorld
 from skeleton.plan import SkeletonPlan
 from skeleton.rig import Skeleton
 from ui.button import Button
+from ui.paintbox import (
+    FILLED_LABEL,
+    HOLLOW_LABEL,
+    POLYGON_NOTICE,
+    POLYGON_TOOL,
+    SHAPE_LABELS,
+    ColorField,
+    ShapeDraft,
+    draw_chosen,
+)
 from ui.panel import draw_panel
 from ui.tutorial_panel import (
     COLOR_DEED,
@@ -46,12 +56,15 @@ from ui.tutorial_panel import (
 )
 
 BODY_AT = (196, 58)
-HEAD_AT = (530, 58)
-PREVIEW = pygame.Rect(530, 272, 192, 170)
-NOTES = pygame.Rect(8, 290, 180, 156)
+HEAD_AT = (604, 58)
+PREVIEW = pygame.Rect(604, 272, 192, 170)
+NOTES = pygame.Rect(8, 308, 180, 138)
 TOOLS_LEFT = 8
-SWATCH = (28, 16)
+SWATCH = (28, 12)
 SWATCHES_PER_ROW = 6
+# Under the ready colours, the field any other is picked from, and beside the word the one in hand.
+FIELD_SIZE = (168, 44)
+CHOSEN = pygame.Rect(40, 44, 22, 10)
 BRUSHES = (2, 5, 10, 18)
 BRUSH_TOOL, ERASER_TOOL, FILL_TOOL = "brush", "eraser", "fill"
 # Not a way of painting: with it in hand the joints of the guide are what the mouse takes hold of.
@@ -66,7 +79,6 @@ HEAD_NAME = "cabeza"
 MEASURE_PREVIEW = "Arrastra hombros, piernas y cabeza"
 MEASURE_NOTES = (
     "Arrastra los puntos del papel: la pieza se alarga o se acorta, y lo que cuelga de ella la sigue.",
-    "El muñeco mide lo que mide en el papel. Si lo quieres paticorto, acorta aquí las piernas.",
     "En la figura de la derecha se mueven hombros, piernas y cabeza hasta donde encajen.",
     "Lo ya pintado no se mueve con los puntos: mejor ajustar las medidas antes de dibujar.",
 )
@@ -104,10 +116,9 @@ PREVIEW_CLIPS = ("walk", "idle", "work", "fight")
 PREVIEW_SECONDS = 4.0
 SAVED_TEXT = "Guardado: ya anda así por el asentamiento"
 NOTES_TEXT = (
-    "Cada zona de color es una pieza, con su nombre: lo que pintes dentro se mueve con ella.",
-    "Las rayas rojas son los cortes, por donde se dobla. Un brazo o una pierna se dibuja de un tirón, cruzándolas.",
-    "El muñeco de debajo es un ejemplo para fijarte o calcar. Hazlo más gordo o como quieras, hasta el borde de la zona.",
-    "Naranja: lado de delante. Azul: el de detrás. Ctrl+Z deshace, Esc vuelve sin guardar.",
+    "Cada zona es una pieza: lo que pintes dentro se mueve con ella. Las rayas rojas son los cortes, por donde se dobla.",
+    "El muñeco de debajo es un ejemplo para fijarte o calcar. Naranja: delante. Azul: detrás.",
+    "Las formas se sueltan de un tirón; el polígono, esquina a esquina. Ctrl+Z deshace, Esc vuelve sin guardar.",
 )
 
 
@@ -171,25 +182,34 @@ class DollEditor:
         # The canvas being drawn on and where the stroke last was, while the button is held.
         self._stroke: tuple[str, tuple[int, int]] | None = None
         self._preview: Doll | None = None
+        # A shape being laid down, whether shapes are filled, and whether the mouse is held on the field of colour.
+        self._draft: ShapeDraft | None = None
+        self.filled = False
+        self._picking = False
 
         self.swatches = [
             (pygame.Rect(TOOLS_LEFT + (index % SWATCHES_PER_ROW) * SWATCH[0], 58 + (index // SWATCHES_PER_ROW) * SWATCH[1], *SWATCH), color)
             for index, color in enumerate(self.colors)
         ]
-        y = self.swatches[-1][0].bottom + 8
-        self.brush_buttons = [(pygame.Rect(TOOLS_LEFT + index * 42, y, 40, 26), size) for index, size in enumerate(BRUSHES)]
-        y += 32
+        y = self.swatches[-1][0].bottom + 4
+        self.field = ColorField(pygame.Rect(TOOLS_LEFT, y, *FIELD_SIZE))
+        y = self.field.rect.bottom + 6
+        self.brush_buttons = [(pygame.Rect(TOOLS_LEFT + index * 42, y, 40, 22), size) for index, size in enumerate(BRUSHES)]
+        y += 26
         self.tool_buttons = self._row(y, [(TOOL_LABELS[tool], ("tool", tool)) for tool in TOOL_LABELS])
-        y += 18
+        y += 16
+        self.shape_buttons = self._row(y, [(label, ("tool", tool)) for tool, label in SHAPE_LABELS.items()])
+        y += 16
         self.edit_buttons = self._row(y, [("Deshacer", ("undo",)), ("Limpiar", ("clear",))])
-        y += 18
+        self.fill_button = Button.at(font, self.edit_buttons[-1].rect.right + 3, y, HOLLOW_LABEL, ("fill",))
+        y += 16
         self.guide_button = Button.at(font, TOOLS_LEFT, y, GUIDE_LABELS[GUIDE_UNDER], ("guide",))
         self.guide_button.rect.width = 110
-        y += 18
+        y += 16
         self.mannequin_button = Button.at(font, TOOLS_LEFT, y, "Maniquí de partida", ("mannequin",))
-        y += 18
+        y += 16
         self.measures_button = Button.at(font, TOOLS_LEFT, y, "Medidas de partida", ("measures",))
-        self.top_buttons = self._row(6, [("<", ("step", -1)), (">", ("step", 1)), ("Guardar", ("save",)), ("Volver", ("close",))], left=530)
+        self.top_buttons = self._row(6, [("<", ("step", -1)), (">", ("step", 1)), ("Guardar", ("save",)), ("Volver", ("close",))], left=HEAD_AT[0])
 
     def _row(self, y: int, entries: list[tuple[str, tuple]], left: int = TOOLS_LEFT) -> list[Button]:
         buttons, x = [], left
@@ -202,8 +222,8 @@ class DollEditor:
     @property
     def buttons(self) -> list[Button]:
         return [
-            *self.top_buttons, *self.tool_buttons, *self.edit_buttons, self.guide_button, self.mannequin_button,
-            self.measures_button,
+            *self.top_buttons, *self.tool_buttons, *self.shape_buttons, *self.edit_buttons, self.fill_button,
+            self.guide_button, self.mannequin_button, self.measures_button,
         ]
 
     def open(self, resident_id: str | None) -> None:
@@ -324,11 +344,11 @@ class DollEditor:
     def _hint_rect(self, hint: str | None) -> pygame.Rect | None:
         """Where on the screen what a lesson is about is."""
         if hint == "palette":
-            return self.swatches[0][0].unionall([rect for rect, _ in self.swatches])
+            return self.swatches[0][0].unionall([*(rect for rect, _ in self.swatches), self.field.rect])
         if hint == "canvas":
             return self.areas[BODY_CANVAS]
         if hint == "tools":
-            return self.tool_buttons[0].rect.unionall([button.rect for button in self.tool_buttons])
+            return self.tool_buttons[0].rect.unionall([button.rect for button in (*self.tool_buttons, *self.shape_buttons)])
         if hint == "edit":
             return self.edit_buttons[0].rect.unionall([button.rect for button in self.edit_buttons])
         if hint == "save":
@@ -466,9 +486,44 @@ class DollEditor:
         if self.resident_id in residents:
             self.open(residents[(residents.index(self.resident_id) + by) % len(residents)])
 
+    def _pick(self, position: tuple[int, int]) -> None:
+        """Take the colour under the mouse off the field: any colour, not only the ready ones."""
+        self.color = self.field.color_at(position)
+        if self.tool == ERASER_TOOL:
+            self.tool = BRUSH_TOOL
+        self._did(COLOR_DEED)
+
+    def _shape_press(self, name: str, at: tuple[int, int]) -> None:
+        """Begin a shape on a drawing, or put down the next corner of the polygon being made there."""
+        draft = self._draft
+        if draft is not None and draft.tool == POLYGON_TOOL and draft.where == name:
+            if draft.corner(at):
+                self._lay_down()
+            return
+        self._draft = ShapeDraft(self.tool, name, at)
+        if self.tool == POLYGON_TOOL:
+            self.notice = POLYGON_NOTICE
+
+    def _lay_down(self) -> None:
+        """Put the shape in hand on its drawing for good. A polygon of fewer than three corners is nothing."""
+        draft, self._draft = self._draft, None
+        if draft is None or (draft.tool == POLYGON_TOOL and len(draft.fixed) < 3):
+            return
+        self._remember(draft.where)
+        draft.paint(self.drawings[draft.where], self.color, self.size, self.filled)
+        self.notice = ""
+        self._cut()
+        self._did(STROKE_DEED)
+
     def _apply(self, intent: tuple) -> None:
         if intent[0] == "tool":
             self.tool = intent[1]
+            # Whatever shape was half made with the other tool is let go of.
+            self._draft = None
+        elif intent[0] == "fill":
+            self.filled = not self.filled
+            self.fill_button.label = FILLED_LABEL if self.filled else HOLLOW_LABEL
+            self.fill_button.rect.width = self.font.width(self.fill_button.label) + 8
         elif intent[0] == "undo":
             self.undo()
         elif intent[0] == "clear":
@@ -518,6 +573,13 @@ class DollEditor:
         if on is not None and self.tool == MEASURE_TOOL:
             # With the measures in hand nothing is painted: a slip of the mouse spoils no drawing.
             return
+        if on is not None and self.tool in SHAPE_LABELS:
+            self._shape_press(*on)
+            return
+        if self.field.contains(position):
+            self._picking = True
+            self._pick(position)
+            return
         if on is not None:
             name, at = on
             self._remember(name)
@@ -550,6 +612,13 @@ class DollEditor:
         if self._grab is not None:
             self._pull(position)
             return
+        if self._picking:
+            self._pick(position)
+            return
+        if self._draft is not None:
+            area = self.areas[self._draft.where]
+            self._draft.move((position[0] - area.x, position[1] - area.y))
+            return
         if self._stroke is None:
             return
         name, last = self._stroke
@@ -564,6 +633,13 @@ class DollEditor:
             # Let go: now the drawing is cut again by the measures it was left with.
             self.set_build(self.build)
             self._did(MEASURE_DEED)
+        self._picking = False
+        if self._draft is not None and self._draft.tool != POLYGON_TOOL:
+            # Let go where it was pressed, it is no shape at all.
+            if self._draft.drawn:
+                self._lay_down()
+            else:
+                self._draft = None
         if self._stroke is not None:
             self._stroke = None
             self._cut()
@@ -576,8 +652,15 @@ class DollEditor:
             self.drag(canvas_position(event.pos))
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.release()
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and self._draft is not None:
+            self._lay_down()
+        elif event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER) and self._draft is not None:
+            self._lay_down()
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_z and event.mod & pygame.KMOD_CTRL:
             self.undo()
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE and self._draft is not None:
+            # Out of the shape, not out of the drawing.
+            self._draft, self.notice = None, ""
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.closed = True
 
@@ -596,15 +679,18 @@ class DollEditor:
             button.draw(canvas, font)
 
         font.draw(canvas, "Color", (TOOLS_LEFT, 44), PALETTE["dust"])
+        draw_chosen(canvas, CHOSEN, self.color)
         for rect, color in self.swatches:
             pygame.draw.rect(canvas, color, rect.inflate(-2, -2))
             if color == self.color and self.tool != ERASER_TOOL:
                 pygame.draw.rect(canvas, PALETTE["paper"], rect, 1)
+        self.field.draw(canvas)
         for rect, size in self.brush_buttons:
             draw_panel(canvas, rect, fill="shadow", border="lamp" if size == self.size else "iron")
             pygame.draw.circle(canvas, PALETTE["bone"], rect.center, max(1, size // 2))
-        for button in self.tool_buttons:
+        for button in (*self.tool_buttons, *self.shape_buttons):
             button.draw(canvas, font, active=button.intent == ("tool", self.tool))
+        self.fill_button.draw(canvas, font, active=self.filled)
         for button in (*self.edit_buttons, self.guide_button, self.mannequin_button, self.measures_button):
             button.draw(canvas, font)
 
@@ -632,6 +718,8 @@ class DollEditor:
         y = NOTES.y
         for note in MEASURE_NOTES if measuring else NOTES_TEXT:
             for line in font.wrap(note, NOTES.width):
+                if y + LINE_HEIGHT > NOTES.bottom:
+                    break
                 font.draw(canvas, line, (NOTES.x, y), PALETTE["bone"])
                 y += LINE_HEIGHT
             y += 3
@@ -664,7 +752,11 @@ class DollEditor:
             if self.guide == GUIDE_UNDER:
                 guide.set_alpha(GUIDE_ALPHA[GUIDE_UNDER])
                 screen.blit(pygame.transform.scale(guide, place.size), place)
-            screen.blit(pygame.transform.scale(self.drawings[name], place.size), place)
+            picture = self.drawings[name]
+            if self._draft is not None and self._draft.where == name:
+                # The shape in hand is seen on the paper before it is on it.
+                picture = self._draft.shown_on(picture, self.color, self.size, self.filled)
+            screen.blit(pygame.transform.scale(picture, place.size), place)
             if self.guide == GUIDE_OVER:
                 guide.set_alpha(GUIDE_ALPHA[GUIDE_OVER])
                 screen.blit(pygame.transform.scale(guide, place.size), place)

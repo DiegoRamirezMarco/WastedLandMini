@@ -272,6 +272,10 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   moved (`skull.start`, where a head sits on its neck); and `attach` how far from where the
   `doll` view has them the bones that join a limb on end (`clavicle`, `pelvis`). Names carry no
   side: both arms are one. Measures a doll cannot have are ignored whole.
+- `doll.former` says how the paper was laid out before it was last changed: the size its
+  `canvases` had, and where each part that has since been moved used to run `from`. A drawing of
+  that size is taken apart as it was cut then and each part put where it goes now. Change the
+  layout again and the layout before this one can no longer be read: redraw or re-save first.
 - `doll.build`, in `data/skeleton.json`, is the same three tables: the measures every doll
   starts from. Whoever has not been drawn yet is given them, and `Medidas de partida` goes back
   to them. The `from` and `to` of the parts stay as they are under them: a drawing kept without

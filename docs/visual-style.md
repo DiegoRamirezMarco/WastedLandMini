@@ -140,8 +140,10 @@ illustrations/                   free of the style contract: see Illustrations
 A resident whose body has been drawn is no longer pixel art. They are a paper doll: one drawing,
 cut apart where the body bends, each part laid along its bone and turned as the bone turns.
 
-- **Two canvases of a fixed size.** The body is 320×384 and the head 192×192, sixteen pixels of
-  drawing to one of the skeleton's. The figure is seen from the side, facing right.
+- **Two canvases of a fixed size.** The body is 384×384 and the head 192×192, sixteen pixels of
+  drawing to one of the skeleton's. The figure is seen from the side, facing right. The body's
+  paper was 320 wide once: a drawing of that size is still read, and its parts are put where
+  the wider paper has them, each as it was drawn.
 - **A guide to draw over.** Each part has a place on the body's canvas: trunk, hips, neck, upper
   arms, forearms, hands, thighs, shins and feet. The trunk stops at the shoulders and the neck
   comes out of it, a part of its own, so that the head does not sit on the body. Below the waist

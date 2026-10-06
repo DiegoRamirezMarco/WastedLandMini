@@ -181,6 +181,34 @@ class DollTemplate:
     # The measures a doll nobody has drawn yet starts from. The parts above say where the guide's
     # joints are before any measures: drawings made before there were measures are cut by those.
     start: DollBuild = field(default_factory=DollBuild)
+    # The template as it was before its paper was last laid out anew, if it ever was: drawings
+    # kept from then are of that size, with their parts where it had them.
+    former: "DollTemplate | None" = None
+
+    def adopted(self, canvas: str, drawing: pygame.Surface, build: DollBuild) -> pygame.Surface:
+        """A drawing as this template lays its paper out, whichever way it was laid out when drawn.
+
+        One of the size the paper used to be is taken apart as it was cut then, and each part put
+        where it goes now. Nothing of anybody's is drawn again or resized. Any other is left as it is.
+        """
+        former = self.former
+        if former is None or drawing.get_size() == self.canvases.get(canvas):
+            return drawing
+        if drawing.get_size() != former.canvases.get(canvas):
+            return drawing
+        was, now = former.built(build), self.built(build)
+        moved = pygame.Surface(self.canvases[canvas], pygame.SRCALPHA)
+        for bone, spec in now.parts.items():
+            if spec.canvas != canvas:
+                continue
+            piece = drawing.copy()
+            keep = pygame.Surface(piece.get_size(), pygame.SRCALPHA)
+            keep.fill((255, 255, 255, 0))
+            keep.blit(was.cut_mask(bone, drawing), (0, 0), special_flags=pygame.BLEND_RGBA_MAX)
+            piece.blit(keep, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            before = was.parts[bone]
+            moved.blit(piece, (round(spec.start[0] - before.start[0]), round(spec.start[1] - before.start[1])))
+        return moved
 
     def starting(self) -> DollBuild:
         """The measures a new doll is given to begin with: the template's, if a doll can have them."""
@@ -238,7 +266,7 @@ class DollTemplate:
             bone: replace(spec, start=at(spec.canvas, spec.start), end=at(spec.canvas, spec.end))
             for bone, spec in self.parts.items()
         }
-        return DollTemplate(self.unit, self.canvases, parts, self.start)
+        return DollTemplate(self.unit, self.canvases, parts, self.start, self.former)
 
     def handles(self, built: "DollTemplate") -> list[JointHandle]:
         """The joints of a doll's guide that can be taken hold of, where its own measures have them."""
@@ -493,7 +521,33 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
             bool(values.get("free_end", False)),
             str(values.get("wears", "")),
         )
-    return DollTemplate(unit, canvases, parts, build_from_data(data.get("build")))
+    start = build_from_data(data.get("build"))
+    return DollTemplate(unit, canvases, parts, start, _former(unit, canvases, parts, start, data.get("former")))
+
+
+def _former(
+    unit: int, canvases: dict[str, tuple[int, int]], parts: dict[str, PartSpec], start: DollBuild, data: Any
+) -> DollTemplate | None:
+    """The template as it was laid out before: the same parts, as long, from where they used to start."""
+    if not isinstance(data, dict):
+        return None
+    sizes = dict(canvases)
+    for name, size in (data.get("canvases") or {}).items():
+        if name not in canvases:
+            raise ValueError(f"The doll's former layout has an unknown canvas: {name}")
+        sizes[str(name)] = (int(size[0] * unit), int(size[1] * unit))
+    was = dict(parts)
+    for bone, point in (data.get("from") or {}).items():
+        if bone not in parts:
+            raise ValueError(f"The doll's former layout places an unknown part: {bone}")
+        spec = parts[bone]
+        # Both ends are moved by the same amount, worked out the same way for every part of a limb,
+        # so that parts which meet at a joint now met at the very same point then.
+        back = (spec.start[0] - point[0] * unit, spec.start[1] - point[1] * unit)
+        was[str(bone)] = replace(
+            spec, start=(spec.start[0] - back[0], spec.start[1] - back[1]), end=(spec.end[0] - back[0], spec.end[1] - back[1])
+        )
+    return DollTemplate(unit, sizes, was, start)
 
 
 def load_template(path: Path = PLAN_PATH) -> DollTemplate:
@@ -674,7 +728,7 @@ class DollStore:
             return self.template.starting()
         path = (root / build_path(body_id)).resolve()
         if not path.is_relative_to(root) or not path.is_file():
-            return DollBuild() if self.drawings(body_id) else self.template.starting()
+            return DollBuild() if self._kept(body_id) else self.template.starting()
         try:
             build = build_from_data(json.loads(path.read_text(encoding="utf-8")))
         except (OSError, ValueError) as error:
@@ -688,12 +742,20 @@ class DollStore:
         plan = doll_plan(self.plan, template, build) if self.plan is not None else None
         return Doll(template, drawings, plan)
 
-    def drawings(self, body_id: str) -> dict[str, pygame.Surface]:
-        """The drawings kept for a body, by canvas. Empty if nobody has drawn it."""
+    def _kept(self, body_id: str) -> dict[str, pygame.Surface]:
+        """The drawings kept for a body, as they are in their files."""
         if self._illustrations is None:
             return {}
         found = {canvas: self._illustrations.find(doll_path(body_id, canvas)) for canvas in self.template.canvases}
         return {canvas: picture for canvas, picture in found.items() if picture is not None}
+
+    def drawings(self, body_id: str) -> dict[str, pygame.Surface]:
+        """The drawings kept for a body, by canvas, laid out as the paper is now. Empty if nobody has drawn it."""
+        kept = self._kept(body_id)
+        if not kept:
+            return {}
+        build = self.build(body_id)
+        return {canvas: self.template.adopted(canvas, picture, build) for canvas, picture in kept.items()}
 
     def get(self, body_id: str) -> Doll | None:
         """The doll of a body. None unless its body has been drawn."""
