@@ -387,7 +387,9 @@ class BeyondTheFenceTests(unittest.TestCase):
         self.assertGreaterEqual(repairs, 2)
         self.assertGreaterEqual(_scrap(world), scrap - repairs, "what the repairs used came out of the piles")
         self.assertTrue(any("Sergio deja chatarra" in line for line in world.event_log))
-        self.assertEqual(len(world.residents), 9)
+        # Whether anybody came to stay that week goes by what the week brought. Nobody was lost in it.
+        self.assertGreaterEqual(len(world.residents), 9)
+        self.assertEqual(world.deaths, [])
 
 
 if __name__ == "__main__":

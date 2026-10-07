@@ -709,7 +709,9 @@ class WorkingEconomyTests(unittest.TestCase):
         self.assertNotIn("no_food", types)
         pocket = world.registries.economy.starting_credits
         self.assertTrue(all(resident.credits != pocket for resident in world.residents.values()), "everyone earned")
-        self.assertEqual(len(world.residents), 9)
+        # Whether anybody came to stay that week goes by what the week brought. Nobody was lost in it.
+        self.assertGreaterEqual(len(world.residents), 9)
+        self.assertEqual(world.deaths, [])
 
     def test_the_same_seed_gives_the_same_week(self) -> None:
         logs = []

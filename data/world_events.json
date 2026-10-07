@@ -63,8 +63,8 @@
       "kind": "merchant",
       "chance_per_day": 0.2,
       "hours": [
-        9,
-        18
+        8,
+        10
       ],
       "cooldown_days": 4,
       "container": "shop_counter",
@@ -94,7 +94,7 @@
           "weight": 0.3
         }
       ],
-      "text": "Una caravana para junto a la puerta a comerciar",
+      "text": "Zacarías, el caravanero, para su carro junto a la puerta y se queda a comerciar hasta que anochezca",
       "lead_hours": 5,
       "forecast": "el paso de una caravana",
       "name": "la caravana",
@@ -108,7 +108,13 @@
         20,
         60
       ],
-      "end_text": "La caravana recoge y sigue su camino"
+      "end_text": "Zacarías recoge la caravana y sigue su camino",
+      "leaves_hour": 21,
+      "keeper": {
+        "id": "caravaneer",
+        "name": "Zacarías"
+      },
+      "cart": "caravan_cart"
     },
     "dust_storm": {
       "kind": "weather",

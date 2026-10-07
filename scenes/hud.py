@@ -63,6 +63,8 @@ from ui.resident_panel import (
     roster_rows,
     tab_hitbox,
 )
+from ui.trade_board import PANEL_WIDTH as TRADE_WIDTH
+from ui.trade_board import BUY, chosen, draw_trade_board, goods_rows, trade_board_height, trade_buttons
 from ui.tutorial_panel import PANEL_WIDTH as TUTORIAL_WIDTH
 from ui.tutorial_panel import draw_tutorial, tutorial_button, tutorial_height
 
@@ -202,6 +204,13 @@ class Hud:
         self.stores_open = False
         self.research_open = False
         self.government_open = False
+        # Dealing with whoever has stopped by the gate: what of theirs is being bought and what
+        # of the settlement's sold, as units by item ID, until the deal is closed.
+        self.trade_open = False
+        self.trade_buy: dict[str, int] = {}
+        self.trade_sell: dict[str, int] = {}
+        # Whether there is somewhere to keep drawings, and so whoever comes can be drawn.
+        self.drawable = drawable
         # The kind of government the player has pressed for once, and has to press for again.
         self.government_armed: str | None = None
         # What the player can tell whoever is selected, while they stand stopped to be told: the
@@ -297,6 +306,10 @@ class Hud:
             return fixed + study_buttons(self.font, self.research_rect(), self.world)
         if self.government_open:
             return fixed + choose_buttons(self.font, self.government_rect(), self.world, self.government_armed)
+        if self.trading:
+            return fixed + trade_buttons(
+                self.font, self.trade_rect(), self.world, self.trade_buy, self.trade_sell, self.drawable
+            )
         if self.affect_open and self.selected_id in self.world.residents:
             return fixed + affect_rows(
                 self.affect_rect(), self.world, self.selected_id or "", self.affect_group, self.affect_kind
@@ -307,10 +320,13 @@ class Hud:
 
     def _open_only(self, panel: str) -> None:
         """Open one of the panels that share a corner, or shut it if it is the one open, and shut the rest."""
-        for name in ("log_open", "jobs_open", "stores_open", "research_open", "government_open", "affect_open"):
+        for name in (
+            "log_open", "jobs_open", "stores_open", "research_open", "government_open", "trade_open", "affect_open"
+        ):
             setattr(self, name, name == panel and not getattr(self, name))
         self.affect_group = self.affect_kind = None
         self.government_armed = None
+        self.trade_buy, self.trade_sell = {}, {}
 
     def toggle_log(self) -> None:
         self._open_only("log_open")
@@ -326,6 +342,30 @@ class Hud:
 
     def toggle_government(self) -> None:
         self._open_only("government_open")
+
+    @property
+    def trading(self) -> bool:
+        """Whether the deal with whoever is at the gate is on show: it is open, and they are still there."""
+        return self.trade_open and self.world.merchant is not None
+
+    def open_trade(self) -> None:
+        """Show the dealing with whoever has stopped by the gate, in place of whatever else was open there."""
+        if self.world.merchant is not None and not self.trade_open:
+            self._open_only("trade_open")
+
+    def trade_step(self, side: str, item_id: str, by: int) -> None:
+        """Put one more of a thing in the deal, or take one out, within what there is of it."""
+        brought, held = goods_rows(self.world, self.trade_buy, self.trade_sell)
+        row = next((row for row in (brought if side == BUY else held) if row.item_id == item_id), None)
+        if row is None:
+            return
+        wanted = self.trade_buy if side == BUY else self.trade_sell
+        wanted[item_id] = max(0, min(row.units, row.chosen + by))
+
+    def trade_deal(self) -> tuple[dict[str, int], dict[str, int]]:
+        """What the deal chosen so far sells and what it buys, as units by item ID."""
+        brought, held = goods_rows(self.world, self.trade_buy, self.trade_sell)
+        return chosen(held), chosen(brought)
 
     def open_affect(self, group: str | None = None, kind: str | None = None) -> None:
         """Show what whoever is selected can be told, in place of whatever else was open there."""
@@ -436,6 +476,7 @@ class Hud:
         panels += [self.stores_rect()] if self.stores_open else []
         panels += [self.research_rect()] if self.research_open else []
         panels += [self.government_rect()] if self.government_open else []
+        panels += [self.trade_rect()] if self.trading else []
         panels += [self.affect_rect()] if self.affect_open else []
         return any(rect is not None and rect.collidepoint(position) for rect in panels)
 
@@ -456,6 +497,9 @@ class Hud:
 
     def government_rect(self) -> pygame.Rect:
         return self._float(GOVERNMENT_WIDTH, government_board_height(self.font, self.world))
+
+    def trade_rect(self) -> pygame.Rect:
+        return self._float(TRADE_WIDTH, trade_board_height(self.world))
 
     def affect_rect(self) -> pygame.Rect:
         height = affect_board_height(self.world, self.selected_id or "", self.affect_group, self.affect_kind)
@@ -524,6 +568,14 @@ class Hud:
         if self.government_open:
             draw_government_board(
                 self.canvas, self.font, self.government_rect(), self.world, self.government_armed, band_hue("government")
+            )
+        if self.trade_open and self.world.merchant is None:
+            # They have packed up and gone, and the deal with them.
+            self.trade_open, self.trade_buy, self.trade_sell = False, {}, {}
+        if self.trading:
+            draw_trade_board(
+                self.canvas, self.font, self.icons, self.trade_rect(), self.world, self.trade_buy, self.trade_sell,
+                self.drawable, band_hue("stores"),
             )
         if self.affect_open and self.selected_id in self.world.residents:
             draw_affect_board(

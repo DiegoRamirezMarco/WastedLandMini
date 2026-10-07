@@ -25,7 +25,9 @@ def walking(resident: Resident) -> bool:
 
 def spots_taken(world: "SimulationWorld", resident: Resident | None = None) -> set[Tile]:
     """Where the others stand or are on their way to stand: no place for a resident to plan to end up."""
-    return {other.destination for other in world.residents.values() if other is not resident and not other.away}
+    taken = {other.destination for other in world.residents.values() if other is not resident and not other.away}
+    # Nor where whoever has come to trade stands, with their cart.
+    return taken | world.merchants.spots(world)
 
 
 def free_tile(world: "SimulationWorld", near: Tile, resident: Resident | None = None) -> Tile:

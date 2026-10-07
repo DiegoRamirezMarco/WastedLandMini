@@ -171,6 +171,50 @@ def _handcart() -> pygame.Surface:
     return surface
 
 
+def _caravan_cart() -> pygame.Surface:
+    surface = _blank(32, 32)
+    # A covered cart, loaded: the shaft it is pulled by, a patched awning over the goods, and two wheels.
+    fill(surface, "ink", (0, 21, 5, 1))
+    fill(surface, "rust", (0, 20, 4, 1))
+    # The awning, rounded off at the top, with its hoops showing through.
+    fill(surface, "ink", (7, 4, 20, 1))
+    fill(surface, "ink", (5, 5, 24, 1))
+    fill(surface, "ink", (4, 6, 26, 12))
+    fill(surface, "bone", (7, 5, 20, 1))
+    fill(surface, "bone", (5, 6, 24, 11))
+    fill(surface, "paper", (7, 6, 20, 2))
+    fill(surface, "dust", (5, 14, 24, 3))
+    for x in (11, 17, 23):
+        fill(surface, "dust", (x, 6, 1, 11))
+    fill(surface, "sand", (18, 9, 4, 4))
+    dots(surface, "rust", [(18, 9), (21, 12), (19, 11)])
+    # What it carries, seen at the open back: a crate, a sack and a lamp hung from the hoop.
+    fill(surface, "shadow", (24, 8, 5, 9))
+    fill(surface, "copper", (25, 12, 4, 5))
+    fill(surface, "sand", (25, 12, 4, 1))
+    dots(surface, "lamp", [(26, 9), (26, 10)])
+    dots(surface, "glow", [(27, 9)])
+    # The bed of the cart.
+    _box(surface, (4, 18, 25, 6), "copper")
+    fill(surface, "sand", (4, 18, 25, 1))
+    fill(surface, "rust", (4, 21, 25, 1))
+    fill(surface, "rust_dark", (4, 23, 25, 1))
+    for x in (10, 16, 22):
+        fill(surface, "rust_dark", (x, 19, 1, 4))
+    # A bucket and a bundle slung under it.
+    fill(surface, "ink", (14, 24, 5, 4))
+    fill(surface, "stone", (15, 25, 3, 2))
+    for x in (5, 21):
+        fill(surface, "ink", (x + 1, 22, 6, 1))
+        fill(surface, "ink", (x, 23, 8, 8))
+        fill(surface, "ink", (x + 1, 31, 6, 1))
+        fill(surface, "iron", (x + 1, 24, 6, 6))
+        fill(surface, "shadow", (x + 2, 25, 4, 4))
+        fill(surface, "dust", (x + 3, 26, 2, 2))
+        dots(surface, "stone", [(x + 1, 24), (x + 6, 24), (x + 1, 29), (x + 6, 29)])
+    return surface
+
+
 def _radio_set() -> pygame.Surface:
     surface = _blank(16, 32)
     # A big old receiver on a crate, with a wire for an aerial run up the wall.
@@ -394,6 +438,7 @@ def build() -> dict[str, pygame.Surface]:
         "shelf": _shelf,
         "lamp": _lamp,
         "handcart": _handcart,
+        "caravan_cart": _caravan_cart,
         "radio_set": _radio_set,
         "wreck": _wreck,
         "tyres": _tyres,

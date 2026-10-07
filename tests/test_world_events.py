@@ -235,7 +235,7 @@ class StrangerTests(unittest.TestCase):
 class CaravanAndVerminTests(unittest.TestCase):
     def test_a_caravan_stops_to_trade_and_leaves_nothing_on_the_shop_counter(self) -> None:
         world = _settled()
-        _only(world, "caravan", hour=4)
+        _only(world, "caravan", hour=2)
         counter = world.containers["shop_counter"]
         before = sum(item.quantity for item in counter.items)
         world.step(60)
@@ -244,7 +244,8 @@ class CaravanAndVerminTests(unittest.TestCase):
         self.assertEqual(sum(item.quantity for item in counter.items), before, "what it brings has to be bought")
         self.assertTrue(8 <= sum(world.merchant.goods.values()) <= 14, world.merchant.goods)
         self.assertEqual(_types(world).count("merchant_arrived"), 1)
-        self.assertIn("Una caravana para junto a la puerta a comerciar:", world.event_log[-1])
+        self.assertIn("merchant_arrived | Zacarías, el caravanero", world.event_log[-1])
+        self.assertEqual(world.clock.hour, 8, "it comes in the morning, to stay the day")
 
     def test_vermin_eat_a_share_of_what_is_in_the_pantries_and_leave_private_stores_alone(self) -> None:
         world = _settled()

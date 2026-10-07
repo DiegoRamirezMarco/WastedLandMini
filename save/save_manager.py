@@ -140,7 +140,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 32
+    CURRENT_VERSION = 33
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -179,6 +179,8 @@ class SaveManager:
                     "goods": dict(world.merchant.goods),
                     "purse": world.merchant.purse,
                     "fact_id": world.merchant.fact_id,
+                    "tile": list(world.merchant.tile) if world.merchant.tile is not None else None,
+                    "cart": list(world.merchant.cart) if world.merchant.cart is not None else None,
                 }
                 if world.merchant is not None
                 else None
@@ -925,6 +927,12 @@ class SaveManager:
                 # Word of them that nobody remembers is as good as never given.
                 fact_id=visitor.get("fact_id") if visitor.get("fact_id") in world.knowledge.facts else None,
             )
+            # Where they stand and where their cart is. A save from before they were anywhere has
+            # them found a place now.
+            tile, cart = _tile_or_none(visitor.get("tile")), _tile_or_none(visitor.get("cart"))
+            if "tile" not in visitor:
+                tile, cart = world.merchants.stand(world, events[world.merchant.event_id])
+            world.merchant.tile, world.merchant.cart = tile, cart
 
     def _restore_happenings(self, world: SimulationWorld, data: dict[str, Any], rng_data: dict[str, Any]) -> None:
         """Put back the weather, the gate and what has already happened from outside."""
@@ -1420,6 +1428,13 @@ def _text_or_none(value: Any) -> str | None:
 
 def _object_or_empty(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _tile_or_none(value: Any) -> tuple[int, int] | None:
+    """A tile as it was saved: two whole numbers. None for anything else."""
+    if isinstance(value, list) and len(value) == 2 and all(isinstance(each, int) and not isinstance(each, bool) for each in value):
+        return (value[0], value[1])
+    return None
 
 
 def _list_or_empty(value: Any) -> list[Any]:

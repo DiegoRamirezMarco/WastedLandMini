@@ -525,10 +525,10 @@ class MerchantTests(unittest.TestCase):
         self.world = _settled()
         self.shop = self.world.containers[COUNTER]
 
-    def test_a_caravan_stops_for_some_hours_and_leaves_nothing_for_nothing(self) -> None:
+    def test_a_caravan_stops_for_the_day_and_leaves_nothing_for_nothing(self) -> None:
         world = self.world
         world.event_rng = _Certain(1)
-        world.clock.day, world.clock.hour, world.clock.minute = 2, 4, 0
+        world.clock.day, world.clock.hour, world.clock.minute = 2, 2, 0
         world.happened = {other: 2 for other in world.registries.world_events.events if other != "caravan"}
         before = sum(item.quantity for item in self.shop.items)
         world.step(60)
@@ -541,8 +541,12 @@ class MerchantTests(unittest.TestCase):
         self.assertTrue(20 <= merchant.purse <= 60)
         self.assertEqual(sum(item.quantity for item in self.shop.items), before, "nothing is left at the shop")
         self.assertEqual(_types(world).count("merchant_arrived"), 1)
-        self.assertTrue(any("Una caravana para junto a la puerta a comerciar:" in line for line in world.event_log))
-        world.step(6 * 60)
+        self.assertTrue(any("merchant_arrived | Zacarías, el caravanero" in line for line in world.event_log))
+        self.assertEqual(world.clock.hour, 8, "it comes in the morning")
+        self.assertEqual(merchant.leaves_at % (24 * 60), 21 * 60, "and packs up as night falls")
+        world.step(12 * 60 + 59)
+        self.assertIs(world.merchant, merchant, "it is there all day")
+        world.step(1)
         self.assertIsNone(world.merchant)
         self.assertEqual(_types(world).count("merchant_left"), 1)
         self.assertEqual(_types(world).count("merchant_arrived"), 1, "one at a time, and not again for days")
@@ -1319,10 +1323,12 @@ class FundDataAndSaveTests(unittest.TestCase):
         self.assertEqual(loaded.trading, world.trading)
         self.assertEqual(loaded.merchant, world.merchant)
         self.assertEqual(loaded.fund.currency(loaded).amount(3), "3 chapas")
+        until = world.merchant.leaves_at
         world.step(MINUTES_PER_DAY)
         loaded.step(MINUTES_PER_DAY)
         self.assertEqual(self.manager.to_data(loaded), self.manager.to_data(world))
-        self.assertIsNone(loaded.merchant, "they moved on")
+        # Another may have come since, to stay its own day.
+        self.assertNotEqual(getattr(loaded.merchant, "leaves_at", None), until, "they moved on")
 
     def test_a_theft_of_credit_is_saved_with_what_was_taken(self) -> None:
         world = _few(_settled())
@@ -1427,7 +1433,7 @@ class FundDataAndSaveTests(unittest.TestCase):
         registries = _registries_with("world_events.json", '"kind": "merchant"', '"kind": "stock"')
         world = SimulationWorld.demo_world(registries=registries)
         world.event_rng = _Certain(1)
-        world.clock.day, world.clock.hour, world.clock.minute = 2, 4, 0
+        world.clock.day, world.clock.hour, world.clock.minute = 2, 2, 0
         world.happened = {other: 2 for other in registries.world_events.events if other != "caravan"}
         counter = world.containers[COUNTER]
         before = sum(item.quantity for item in counter.items)

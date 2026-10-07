@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from simulation.ai.crowd import free_tile
+from simulation.ai.crowd import free_tile, spots_taken
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction
 from simulation.economy.terms import TradeResult
 from simulation.economy.trade_system import BASE_DESIRE, MAX_WANT, MIN_WANT, SHOP_APPEAL
@@ -25,7 +25,8 @@ from simulation.knowledge.knowledge_system import learn
 from simulation.residents.activity import Activity
 from simulation.residents.resident import Resident
 from simulation.work.hauling import containers_of_kind
-from world.pathfinding import find_path, manhattan
+from world.map import Tile
+from world.pathfinding import find_path, manhattan, reach
 
 if TYPE_CHECKING:
     from simulation.world import SimulationWorld
@@ -36,6 +37,8 @@ ADVICE = "encourage"
 VISIT_ACTION = "visit_merchant"
 VISIT_MINUTES = 5
 VISITED_NOTICE = "merchant:"
+# How far from the way in a place is looked for, for whoever comes to trade and for their cart.
+STAND_REACH = 8
 ARRIVAL_IMPORTANCE = 45
 LEFT_IMPORTANCE = 20
 DEAL_IMPORTANCE = 30
@@ -59,6 +62,9 @@ class Merchant:
     purse: float = 0.0
     # The fact of their being at the gate, which whoever saw them come knows and can pass on.
     fact_id: str | None = None
+    # Where they stand while they are here, and where their cart is, by its left tile.
+    tile: Tile | None = None
+    cart: Tile | None = None
 
 
 @dataclass(frozen=True)
@@ -88,8 +94,14 @@ class MerchantSystem:
         """
         goods = world.happenings.draw_goods(world, definition)
         leaves_at = world.clock.total_minutes + world.event_rng.randint(*definition.minutes)
+        now = world.clock.total_minutes
+        dusk = now - now % (24 * 60) + (definition.leaves_hour or 0) * 60
+        if definition.leaves_hour is not None and dusk > now:
+            # They are here for the day: until the hour they pack up at.
+            leaves_at = dusk
+        tile, cart = self.stand(world, definition)
         world.merchant = Merchant(
-            definition.event_id, leaves_at, goods, float(world.event_rng.randint(*definition.purse))
+            definition.event_id, leaves_at, goods, float(world.event_rng.randint(*definition.purse)), None, tile, cart
         )
         brought = self._listed(world, goods) or "nada"
         fact = world.emit_event(
@@ -99,7 +111,7 @@ class MerchantSystem:
                 f"{definition.text}: {brought}",
                 data={"event_id": definition.event_id, "goods": dict(goods)},
             ),
-            at=world.happenings.arrival_tile(world),
+            at=tile,
             fact_text=f"hay {definition.name} en la puerta",
             expires_at=leaves_at,
         )
@@ -119,6 +131,64 @@ class MerchantSystem:
         world.merchant = None
         if definition is not None and definition.end_text:
             world.emit_event(DomainEvent("merchant_left", LEFT_IMPORTANCE, definition.end_text))
+
+    # ----- where they are -----
+
+    def stand(self, world: "SimulationWorld", definition: WorldEventDefinition) -> tuple[Tile, Tile | None]:
+        """Where whoever comes to trade stands, and where their cart is put, by its left tile.
+
+        As near the way in as there is room for both side by side, in the open, on nothing
+        that stands there and on none of the tiles people come in by. With no room for the
+        cart they stand without one.
+        """
+        gate = world.happenings.arrival_tile(world)
+        passable = world.passable()
+        kept_clear = set(world.entry_tiles()) | spots_taken(world)
+        for placed in world.interactables.values():
+            kept_clear.update(placed.footprint(world.definition_of(placed)))
+        for site in world.sites.values():
+            kept_clear.update(site.tiles)
+
+        def clear(tile: Tile) -> bool:
+            room = world.room_at(tile)
+            return passable(tile) and tile not in kept_clear and (room is None or not room.roofed)
+
+        kind = world.registries.interactables.find(definition.cart or "")
+        width = kind.width if kind is not None else 0
+        spots = [tile for tile in reach(gate, STAND_REACH, passable) if clear(tile)]
+        # Beside the way in before in front of it: whoever comes in walks straight on.
+        spots.sort(key=lambda tile: tile[1] != gate[1])
+        for tile in spots if width else []:
+            for left in (tile[0] + 1, tile[0] - width):
+                if all(clear((left + step, tile[1])) for step in range(width)):
+                    return tile, (left, tile[1])
+        return (spots[0] if spots else free_tile(world, gate)), None
+
+    def spots(self, world: "SimulationWorld") -> set[Tile]:
+        """The ground whoever is here to trade takes up, cart and all: no place for anybody to stop."""
+        merchant, definition = world.merchant, self.definition(world)
+        if merchant is None or merchant.tile is None:
+            return set()
+        taken = {merchant.tile}
+        kind = world.registries.interactables.find(definition.cart or "") if definition is not None else None
+        if merchant.cart is not None and kind is not None:
+            taken.update((merchant.cart[0] + step, merchant.cart[1]) for step in range(kind.width))
+        return taken
+
+    def keepers(self, world: "SimulationWorld") -> dict[str, str]:
+        """Everybody who may come to trade and is somebody in particular: their name, by their ID."""
+        return {
+            definition.keeper_id: definition.keeper_name
+            for definition in world.registries.world_events.events.values()
+            if definition.keeper_id
+        }
+
+    def where(self, world: "SimulationWorld") -> Tile:
+        """Where whoever is here to trade is to be found: where they stand, or else the way in."""
+        merchant = world.merchant
+        if merchant is not None and merchant.tile is not None:
+            return merchant.tile
+        return world.happenings.arrival_tile(world)
 
     # ----- what things go for -----
 
@@ -357,12 +427,12 @@ class MerchantSystem:
         deal = self.own_deal(world, resident)
         if deal is None:
             return None
-        gate = world.happenings.arrival_tile(world)
+        gate = self.where(world)
         return ScoredAction(VISIT_ACTION, deal.want * SHOP_APPEAL - DISTANCE_COST * manhattan(resident.tile, gate))
 
     def plan(self, world: "SimulationWorld", resident: Resident) -> Activity | None:
         """The walk to the gate, where whoever has stopped to trade is."""
-        spot = free_tile(world, world.happenings.arrival_tile(world), resident)
+        spot = free_tile(world, self.where(world), resident)
         path = find_path(resident.tile, spot, world.passable())
         if path is None:
             return None

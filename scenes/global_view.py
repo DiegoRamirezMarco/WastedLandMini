@@ -56,6 +56,7 @@ from settings import SCALE, TILE_SIZE
 from simulation.commands import (
     AcknowledgeTutorialCommand,
     ChooseGovernmentCommand,
+    DealWithMerchantCommand,
     SetPausedCommand,
     SetResearchCommand,
     SetSpeedCommand,
@@ -78,6 +79,9 @@ from simulation.world import SimulationWorld
 from skeleton.plan import IDLE_CLIP, builtin_plan
 from skeleton.rig import Skeleton
 from ui.affect_board import AFFECT_INTENT, BACK_INTENT, CLOSE_INTENT
+from ui.trade_board import CART_INTENT as TRADE_CART_INTENT
+from ui.trade_board import DEAL_INTENT as TRADE_DEAL_INTENT
+from ui.trade_board import DRAW_INTENT as TRADE_DRAW_INTENT
 from ui.bubble import MARK_SIZE, MARK_TAIL, draw_mark
 from ui.labels import away_residents
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
@@ -306,6 +310,9 @@ class GlobalView:
         self.sound: Callable[[str], object] | None = None
         # Whoever the player has stopped to tell something, while they are choosing what.
         self._affected: str | None = None
+        # Whoever has come to trade, as a body to draw. They are no resident: the settlement keeps
+        # no more of them than where they stand.
+        self._visitor_body: Resident | None = None
         # Where on the canvas the left button went down on the map and where the mouse last was
         # with it held, and whether it has moved far enough since to be dragging.
         self._press: tuple[int, int] | None = None
@@ -605,7 +612,12 @@ class GlobalView:
         elif not self.hud.covers(position) and self.viewport.collidepoint(position):
             # The resident drawn last is in front, so it is the one picked.
             picked = [rid for rid, rect in self.hitboxes.items() if rect.collidepoint(position)]
-            if picked:
+            visitor = self.visitor()
+            if picked and visitor is not None and picked[-1] == visitor.resident_id:
+                # Whoever has come to trade is nobody to select: a click on them is to deal with them.
+                self._sound("open")
+                self.hud.open_trade()
+            elif picked:
                 self._sound("select")
                 self.hud.select_resident(picked[-1])
             else:
@@ -636,6 +648,16 @@ class GlobalView:
             self.hud.toggle_government()
         elif isinstance(intent, tuple) and intent[0] == "choose_government":
             self._choose_government(intent[1])
+        elif isinstance(intent, tuple) and intent[0] == "trade_step":
+            self.hud.trade_step(intent[1], intent[2], intent[3])
+        elif intent == TRADE_DEAL_INTENT:
+            self._close_deal()
+        elif intent == TRADE_DRAW_INTENT and self.dolls is not None:
+            definition = self.world.merchants.definition(self.world)
+            self.requested_editor = definition.keeper_id if definition is not None and definition.keeper_id else None
+        elif intent == TRADE_CART_INTENT and self.illustrations is not None and self.illustrations.root is not None:
+            definition = self.world.merchants.definition(self.world)
+            self.requested_object_editor = definition.cart if definition is not None else None
         elif intent == SAVE_INTENT:
             self.requested_save = True
         elif intent == URBANISM_INTENT:
@@ -822,6 +844,17 @@ class GlobalView:
         if not result.ok:
             self._sound("refuse")
 
+    def _close_deal(self) -> None:
+        """Do the deal chosen with whoever is at the gate, out of the fund and into it, and say what came of it."""
+        sell, buy = self.hud.trade_deal()
+        result = self.world.apply_command(DealWithMerchantCommand(sell=sell, buy=buy))
+        self.hud.notify(result.message)
+        if result.ok:
+            self.hud.trade_buy, self.hud.trade_sell = {}, {}
+        # A deal that is done is heard as what happened is; one that is not, as a refusal.
+        if not result.ok:
+            self._sound("refuse")
+
     def _suggest_job(self, job_id: str) -> None:
         """Put a job to the selected resident and say what came of it. The choice is theirs."""
         resident = self.world.residents.get(self.hud.selected_id or "")
@@ -902,7 +935,7 @@ class GlobalView:
         for area, picture in pictures:
             # Remove only where a drawing has paint. Clear corners continue to show the ground.
             self._erase_for_picture(area, picture)
-        for placed in self.world.interactables.values():
+        for placed in self._standing():
             if (placed.x, placed.y) not in self._hidden:
                 draws.append(self._object_draw(placed))
         for site in self.world.sites.values():
@@ -915,6 +948,9 @@ class GlobalView:
             # Someone under a roof is still found: their face is shown on it, as from afar.
             unseen = self.overview or resident.tile in self._hidden
             draws.append(self._marker_draw(resident) if unseen else self._resident_draw(resident))
+        visitor = self.visitor()
+        if visitor is not None:
+            draws.append(self._marker_draw(visitor) if self.overview else self._resident_draw(visitor))
         for remains in self.bodies.remains:
             # The dead are not picked out from afar, and a roof hides them like anything else.
             if not self.overview and remains.tile not in self._hidden:
@@ -1232,7 +1268,7 @@ class GlobalView:
             return []
         drawn: list[tuple[pygame.Rect, pygame.Surface]] = []
         scale = self.layers.scale
-        for placed in self.world.interactables.values():
+        for placed in self._standing():
             if (placed.x, placed.y) in self._hidden:
                 continue
             area = self._object_area(placed)
@@ -1243,6 +1279,30 @@ class GlobalView:
             if picture is not None:
                 drawn.append((area, picture))
         return drawn
+
+    def visitor(self) -> Resident | None:
+        """Whoever has stopped by the gate to trade, as somebody to draw and to click on. None with nobody there."""
+        merchant, definition = self.world.merchant, self.world.merchants.definition(self.world)
+        if merchant is None or merchant.tile is None or definition is None:
+            return None
+        visitor_id = definition.keeper_id or definition.event_id
+        if self._visitor_body is None or self._visitor_body.resident_id != visitor_id:
+            self._visitor_body = Resident(visitor_id, definition.keeper_name, x=merchant.tile[0], y=merchant.tile[1])
+        body = self._visitor_body
+        body.x, body.y = merchant.tile
+        # They face their cart, which is where what they sell is.
+        body.facing = "left" if merchant.cart is not None and merchant.cart[0] < merchant.tile[0] else "right"
+        return body
+
+    def _standing(self) -> list[Interactable]:
+        """Everything that stands on the map: what has been placed, and the cart of whoever has come to trade."""
+        placed = list(self.world.interactables.values())
+        merchant, definition = self.world.merchant, self.world.merchants.definition(self.world)
+        if merchant is None or merchant.cart is None or definition is None:
+            return placed
+        if self.world.registries.interactables.find(definition.cart or "") is None:
+            return placed
+        return placed + [Interactable(f"visitor:{definition.event_id}", definition.cart, *merchant.cart)]
 
     def _object_draw(self, placed: Interactable) -> Draw:
         definition = self.world.definition_of(placed)

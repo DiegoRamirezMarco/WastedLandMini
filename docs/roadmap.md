@@ -1123,7 +1123,7 @@ goes into it as things; and under barter whoever works is kept, and takes nothin
   only if they do not lose by it as they see it (S19). What was given goes on the shelf as the
   settlement's. Turned down, they do not ask again that day
 - **A caravan is a merchant** (`merchant`, a kind of world event): it stops for four to six
-  hours with eight to fourteen things and some coin, asks half as much again as a thing is
+  hours (the whole day, since S39) with eight to fourteen things and some coin, asks half as much again as a thing is
   worth and gives six tenths for one. A pack can still have things left for nothing (`stock`)
 - **Buying from merchants and selling to them is the player's to do**, out of the fund and
   into it, in one deal: only what is nobody's is sold this way. Under barter what is handed
@@ -1230,7 +1230,7 @@ Still open here:
 - The fund sits where it started: nothing the settlement does of its own accord spends it but
   wages. It is the player's to spend at a caravan, and that has no screen until P25
 - Nobody minds someone who is not kept beyond what they see them take
-- A caravan is not seen at the gate, and what waits there is neither seen nor stolen
+- What waits at the gate is neither seen nor stolen. The caravan is seen since P37
 - With nobody whose job it is to keep the till, what is bought from a caravan is at the shop at
   once
 - Residents do not sell at the counter for coin: only to a caravan
@@ -1492,8 +1492,8 @@ Still open here:
 - The fund in the bar, beside what the settlement has in food and scrap
 - Putting a currency, or going back to barter, to the residents, and how each of them answered
 - A caravan seen at the gate, and dealing with it: what it brings and asks, what the settlement
-  has that is nobody's, and putting a sale to a resident. Until then S23 can only be played by
-  commands
+  has that is nobody's, and putting a sale to a resident. Built in P37, but for putting a
+  sale to a resident
 - A substance seen to be taken, each of the four ways, and seen on whoever is under it: how
   they walk, the smoke round them
 - A resident's family in their panel, and the tree of it on a screen of its own
@@ -2634,6 +2634,74 @@ Still open here:
 - The editors and Urbanismo get the new panels and buttons, and their own tools, swatches and
   catalogue are as they were
 - Under the dock, the lower entries of the menu are still covered while it is open
+
+### S39 — A caravan stays the day (needs S23) — done
+The user's words: "La caravana debe verse y estar todo el dia, debe ser un caravanero al lado de
+la puerta". Asked first, and answered: it comes as often as it did, and when it does it is there
+the whole day; whoever comes is always the same, somebody with a name.
+
+- **A caravan comes in the morning and packs up as night falls**: between eight and ten, until
+  nine at night, where it used to stop for four to six hours at any time of day. It still comes
+  one day in several, and a radio still gives word of it five hours before
+- **`leaves_hour`**, in a merchant's data, is the hour of the day they go at. One that names
+  none stops for `minutes`, as before
+- **Whoever comes is somebody**: `keeper`, in the data, with an ID of their own and a name. The
+  caravan the game comes with is Zacarías's. They are no resident: nobody feels anything for
+  them, and they hold nothing against anybody
+- **They have a place**: beside the way in rather than in front of it, in the open, on nothing
+  that stands there, with their cart at their side. It goes by the map, not by chance. With no
+  room for the cart, or no cart in their data, they stand alone
+- **The cart is a kind of object** (`cart`, in the data: `caravan_cart`), two tiles wide. It is
+  not placed in the settlement: it is theirs, and goes when they do
+- **Nobody plans to stop where they or their cart are**, and whoever goes to deal with them
+  stands next to them, not on the way in
+- Where they stand is saved. Save version 33
+
+Decided without asking:
+- The hours: in between eight and ten, out at nine at night
+- They and their cart are not in anybody's way: people walk past them, and through them if the
+  way is narrow, as nothing but residents are in each other's way yet (S22)
+- The name. It is data: `data/world_events.json`
+
+Still open here:
+- Nobody has anything to do with them but buying and selling: no talk, no liking or disliking,
+  and they are neither robbed nor hurt in a raid
+- How much water is left after six weeks goes by the seed far more than by anything else: of
+  220, from 36 to 219 with the caravan's hours as they were, and from 56 to 221 as they are, in
+  the same four seeds. The test of it now runs on one where it is kept up, having been on one
+  where it was by luck. Whether a settlement can keep itself in water is not settled (S15)
+- A caravan that is there all day is visited by more residents than one of a few hours was.
+  What that does to pockets over weeks has not been measured
+
+### P37 — The caravaneer at the gate, and dealing with him (needs S39) — done
+Asked first, and answered: a click on him opens the deal; he is a figure of the game's that the
+player can draw over, and so is his cart.
+
+- **Whoever has come to trade is seen where they stand**, with their name over their head, as a
+  resident is: the game's own figure, or their paper doll once somebody has drawn it. From afar
+  they are a face. Their cart stands beside them
+- **A click on them opens the deal**, over the corner of the map, and selects nobody
+- **What they bring and what the settlement has that is nobody's**, side by side: each thing
+  with how many there are and what one goes for, and `-` and `+` to put it in the deal. Only
+  what they would give something for is listed
+- **How the deal comes out is said before it is closed**: what the fund pays or takes, or under
+  barter what is given against what is asked, and in red when it cannot be done
+- **`Cerrar trato`** does it in one go (`DealWithMerchantCommand`, S23), and says what came of
+  it or why not. What was chosen is kept when it could not be done
+- **`Dibujarle` and `Dibujar carro`**, where there is somewhere to keep drawings: the doll
+  editor on the caravaneer, as on a resident, and the object editor on his cart
+- When they go, the panel goes with them
+- The cart can also be put in the settlement as scenery, from `Decorado` in Urbanismo
+
+Decided without asking:
+- One unit at a time. There is no way yet to take ten or all of a thing in one press
+- Nothing says on the bar that a caravan is there: the news of its coming does, and the name
+  over his head
+
+Still open here, which is the rest of P25:
+- Putting it to a resident that they sell a thing of their own is still a command
+- What waits at the gate to be carried in is not seen
+- Nothing shows on the minimap where he is
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

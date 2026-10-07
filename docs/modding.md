@@ -461,7 +461,12 @@ settlement is created, in `SimulationWorld.demo_world`.
     `purse` of coin, both ranges. They ask `sells_at` times a thing's base value for it and give
     `buys_at` times for one, which must not be more. What is bought from them is left in the first
     container of kind `container`, or else in the one nearest the way in. It says `text` when they
-    come and `end_text` when they go.
+    come and `end_text` when they go. With `leaves_hour` they stay until that hour of the day
+    they come on, whatever `minutes` says: it must not be before the `hours` they may come in
+    are over. `keeper` says who it is, as an `id` of their own and a `name`: that is who is
+    seen by the gate, and whose doll is drawn under `illustrations/dolls/<id>/`. `cart` is the
+    kind of object, from `data/interactables.json`, that stands beside them while they are
+    there. All three can be left out.
   - `weather`: lasts `minutes`, is called `name`, adds `stress_per_minute` to anyone not under a
     roof, and says `text` when it comes and `end_text` when it goes. A job marked
     `"outdoors": true` makes nothing while it lasts.

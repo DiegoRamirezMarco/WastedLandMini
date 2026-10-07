@@ -80,6 +80,13 @@ class WorldEventDefinition:
     sells_at: float = 1.0
     buys_at: float = 1.0
     purse: tuple[int, int] = (0, 0)
+    # merchant: the hour of the day they move on at, when they stay until then whatever
+    # `minutes` says; who it is that comes, by an ID of their own and by name; and the kind
+    # of object that stands beside them while they are there.
+    leaves_hour: int | None = None
+    keeper_id: str = ""
+    keeper_name: str = ""
+    cart: str | None = None
 
 
 @dataclass(frozen=True)
@@ -159,6 +166,10 @@ def world_event_settings_from_data(data: dict[str, Any]) -> WorldEventSettings:
             sells_at=float(values.get("sells_at", 1.0)),
             buys_at=float(values.get("buys_at", 1.0)),
             purse=_pair(values.get("purse"), (0, 0)),
+            leaves_hour=int(values["leaves_hour"]) if "leaves_hour" in values else None,
+            keeper_id=str(values.get("keeper", {}).get("id", "")),
+            keeper_name=str(values.get("keeper", {}).get("name", "")),
+            cart=str(values["cart"]) if "cart" in values else None,
         )
         start, end = definition.hours
         if not (0.0 <= definition.chance_per_day <= 1.0 and 0 <= start < end <= 24):
@@ -171,6 +182,10 @@ def world_event_settings_from_data(data: dict[str, Any]) -> WorldEventSettings:
             stay, purse = definition.minutes, definition.purse
             if not (0 < stay[0] <= stay[1] and 0 <= purse[0] <= purse[1]):
                 raise ValueError(f"World event {event_id} needs minutes to stop for, and a purse that is not negative")
+            if definition.leaves_hour is not None and not end <= definition.leaves_hour <= 24:
+                raise ValueError(f"World event {event_id} cannot move on before the hours it may come in are over")
+            if bool(definition.keeper_id) != bool(definition.keeper_name):
+                raise ValueError(f"World event {event_id} needs both an id and a name for whoever comes, or neither")
             if not 0.0 <= definition.buys_at <= definition.sells_at or definition.sells_at <= 0:
                 # Giving more for a thing than they ask for it would be coin for nothing.
                 raise ValueError(f"World event {event_id} must sell for something, and never buy for more")

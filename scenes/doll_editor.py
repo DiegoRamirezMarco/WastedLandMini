@@ -231,7 +231,9 @@ class DollEditor:
     def open(self, resident_id: str | None) -> None:
         """Start drawing a resident, from what has been drawn of them so far."""
         residents = list(self.world.residents)
-        self.resident_id = resident_id if resident_id in self.world.residents else (residents[0] if residents else None)
+        # Whoever comes to trade is drawn as a resident is, though they are none.
+        known = resident_id in self.world.residents or resident_id in self.world.merchants.keepers(self.world)
+        self.resident_id = resident_id if known else (residents[0] if residents else None)
         self.closed = self.resident_id is None
         self.notice = ""
         self._undo = []
@@ -674,7 +676,8 @@ class DollEditor:
         canvas, font = self.canvas, self.font
         canvas.fill(PALETTE["ink"])
         resident = self.world.residents.get(self.resident_id or "")
-        title = f"Dibujar a {resident.name}" if resident is not None else "Dibujar"
+        name = resident.name if resident is not None else self.world.merchants.keepers(self.world).get(self.resident_id or "")
+        title = f"Dibujar a {name}" if name else "Dibujar"
         font.draw(canvas, title, (TOOLS_LEFT, 4), PALETTE["glow"], scale=2)
         font.draw(canvas, self.notice or "El tiempo está detenido", (TOOLS_LEFT, 30), PALETTE["lamp" if self.notice else "stone"])
         for button in self.top_buttons:

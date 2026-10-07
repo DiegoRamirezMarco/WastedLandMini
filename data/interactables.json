@@ -425,5 +425,11 @@
       },
       "minutes": 120
     }
+  },
+  "caravan_cart": {
+    "name": "carro de caravana",
+    "article": "un",
+    "width": 2,
+    "category": "decor"
   }
 }

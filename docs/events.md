@@ -135,7 +135,7 @@ Event types emitted so far:
 | `newcomer_joined` | A stranger is let in and stays | 60 |
 | `stranger_turned_away` | A stranger is sent on their way | 40 |
 | `stranger_unanswered` | Someone knocks and there is no gatekeeper to answer | 35 |
-| `merchant_arrived` | A merchant stops by the gate to trade, with `event_id` and `goods` in `data` | 45 |
+| `merchant_arrived` | A merchant stops by the gate to trade, with `event_id` and `goods` in `data`. It happens where they stand | 45 |
 | `merchant_left` | They move on | 20 |
 | `merchant_deal` | The player sells them what is nobody's and buys from them, with `sold`, `bought` and `paid` (out of the fund, or into it if negative) in `data` | 30 |
 | `sale_proposed` | A resident is asked to sell a merchant a thing of their own | 30 |

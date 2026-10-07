@@ -422,7 +422,9 @@ class WorkingWeekTests(unittest.TestCase):
         for _ in range(7 * MINUTES_PER_DAY):
             world.step(1)
             for resident_id, resident in world.residents.items():
-                hours[resident_id][resident.current_action] += 1
+                # Whoever comes to stay in the middle of the week is not held to a week of it.
+                if resident_id in hours:
+                    hours[resident_id][resident.current_action] += 1
                 for need in ("hunger", "tiredness", "social", "stress"):
                     self.assertLess(getattr(resident.needs, need), 100.0, (resident.name, need, world.clock.label))
         for resident_id, actions in hours.items():

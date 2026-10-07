@@ -210,9 +210,12 @@ room. An argument's importance rises with the resentment between the two.
 - **Looking for work.** Someone newly arrived looks for a job without waiting to be asked: the
   one most missed that has a free post. It is put to them as any job offer is, and they take it
   unless they are talked out of it.
-- **A caravan** stops by the gate for some hours with things drawn from its own list and some
-  coin, and leaves nothing for nothing. Dealing with it is the player's to do: see *The fund,
-  barter and currency*.
+- **A caravan** comes in the morning and stays by the gate until night falls, with things drawn
+  from its own list and some coin, and leaves nothing for nothing. Whoever brings it is
+  somebody with a name, always the same, and no resident. They stand beside the way in, in
+  the open, with their cart at their side; nobody plans to stop where they are, and whoever
+  goes to deal with them stands next to them. Dealing with it is the player's to do: see
+  *The fund, barter and currency*.
 - **A storm** lasts some hours. While it does, work in the open stops and whoever does it leaves
   their post, nobody sets out on a trip, and anyone not under a roof grows more stressed by the
   minute. So people get out of it: taking shelter is one more thing a resident can choose, ahead

@@ -163,6 +163,10 @@ python -m simulation.headless --days 7 --seed 7
 - `Estudio` in the menu, or `E`: what the settlement knows, what it is working out and what
   is left. `Estudiar` beside a subject takes it in hand, and `Dejar` puts it down; somebody
   has to hold the post of `Estudio`, at a study desk, for anything to come of it
+- When a caravan comes, the caravaneer stands by the gate with his cart from morning until
+  night. Click him to deal: `+` and `-` beside what he brings and what the settlement has
+  that is nobody's, and `Cerrar trato` to buy and sell out of the fund in one go. `Dibujarle`
+  and `Dibujar carro` there open their drawings
 - `Gobierno` in the menu, or `P`: how the settlement is governed, who holds its seats, how
   things stand as seven bars, and the laws in force. `Elegir` beside a kind, and then
   `Confirmar`, gives the settlement that kind of government: it starts as legitimate as the
