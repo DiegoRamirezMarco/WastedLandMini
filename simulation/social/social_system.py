@@ -326,6 +326,8 @@ class SocialSystem:
             ),
             subjects=subjects,
         )
+        if definition.romance == TRYST:
+            world.family.kin_together(world, speaker, listener)
 
     def _heat(self, world: "SimulationWorld", resident: Resident, towards: Resident) -> float:
         feelings = world.relationship(resident.resident_id, towards.resident_id)

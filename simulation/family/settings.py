@@ -2,6 +2,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from simulation.family.kin import BOTH, DRAWN_TO, GENDERS, SEXES
+from simulation.residents.personality import Personality
+
+# Which end of a side of a way of being is the worse one.
+HIGH, LOW = "high", "low"
 
 
 @dataclass(frozen=True)
@@ -34,6 +38,18 @@ class ChildSettings:
     # chance of taking each trait of theirs.
     mix_spread: float = 15.0
     trait_chance: float = 0.5
+    # For a child of two who are kin by blood: the sides of a way of being of which it takes the
+    # worse of its parents' outright, and which end of each is the worse one, `high` or `low`.
+    worse: dict[str, str] = field(
+        default_factory=lambda: {
+            "aggression": "high",
+            "empathy": "low",
+            "impulsiveness": "high",
+            "sociability": "low",
+            "greed": "high",
+            "courage": "low",
+        }
+    )
     # How fast a bundle gets hungry, from how hungry it is fed, and what feeding it costs whoever does.
     hunger_per_minute: float = 0.3
     feed_from: float = 60.0
@@ -58,6 +74,7 @@ def _children(data: dict[str, Any]) -> ChildSettings:
     defaults = ChildSettings()
     bundle = data.get("bundle", {})
     seen = data.get("seen", {})
+    inbred = data.get("inbred", {})
     settings = ChildSettings(
         chance=float(data.get("chance", defaults.chance)),
         carried_weeks=int(data.get("carried_weeks", defaults.carried_weeks)),
@@ -68,6 +85,7 @@ def _children(data: dict[str, Any]) -> ChildSettings:
         drawn_by_chance=bool(data.get("drawn_by_chance", defaults.drawn_by_chance)),
         mix_spread=float(data.get("mix_spread", defaults.mix_spread)),
         trait_chance=float(data.get("trait_chance", defaults.trait_chance)),
+        worse={str(side): str(end) for side, end in inbred.get("worse", defaults.worse).items()},
         hunger_per_minute=float(bundle.get("hunger_per_minute", defaults.hunger_per_minute)),
         feed_from=float(bundle.get("feed_from", defaults.feed_from)),
         feed_cost={str(need): float(delta) for need, delta in bundle.get("feed_cost", defaults.feed_cost).items()},
@@ -83,6 +101,9 @@ def _children(data: dict[str, Any]) -> ChildSettings:
     )
     if not 0.0 <= settings.chance <= 1.0 or not 0.0 <= settings.trait_chance <= 1.0:
         raise ValueError("The chance of a child, and of a child taking a trait, must be from 0 to 1")
+    sides = set(vars(Personality()))
+    if any(side not in sides or end not in (HIGH, LOW) for side, end in settings.worse.items()):
+        raise ValueError(f"The worse end of a side of a way of being is `high` or `low`, of one of {sorted(sides)}")
     if min(settings.carried_weeks, settings.weeks, settings.grown_at) < 1 or settings.left_scale <= 0:
         raise ValueError("A child is carried and is a bundle for a week or more, and grows to an age of one or more")
     if min([settings.hunger_per_minute, settings.hunger_harm, *settings.harm.values()]) < 0:

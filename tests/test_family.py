@@ -12,7 +12,9 @@ from simulation.family.kin import KinRecord
 from simulation.residents.personality import Personality
 from simulation.rng import SimulationRNG
 from simulation.work.work_system import WORK_ACTION
-from simulation.family.family_system import SLEEP_ROUGH_ACTION
+from simulation.family.family_system import KIN_TOGETHER, SLEEP_ROUGH_ACTION
+from simulation.knowledge.fact import SOURCE_TOLD
+from simulation.knowledge.knowledge_system import learn
 from simulation.family.settings import family_settings_from_data
 from simulation.residents.activity import Activity
 from simulation.residents.needs import Needs
@@ -267,18 +269,131 @@ class DrawnToTests(unittest.TestCase):
         self.bonds.resolve(self.world, self.ines, self.tomas, confession)
         self.assertEqual((self.ines.couple_with, self.tomas.couple_with), ("tomas", "ines"))
 
-    def test_nothing_of_it_with_anyone_under_age_or_between_close_kin(self) -> None:
+    def test_nothing_of_it_with_anyone_under_age_and_being_kin_keeps_nobody_apart(self) -> None:
         self.assertTrue(self.family.may_court(self.world, self.tomas, self.ines))
         self.ines.age, self.ines.personality.libido = 17, 100.0
         self.assertFalse(self.family.may_court(self.world, self.tomas, self.ines))
+        self.assertFalse(self.family.may_court(self.world, self.ines, self.tomas))
         self.assertEqual(self.bonds.attraction_rate(self.world, self.tomas, self.ines), 0.0)
         self.ines.age = 33
         marta, vera = self.world.residents["marta"], self.world.residents["vera"]
         marta.drawn_to = vera.drawn_to = "f"
         self.assertTrue(self.family.kin.close(self.world, "marta", "vera"))
-        self.assertFalse(self.family.may_court(self.world, vera, marta), "they are sisters")
-        self.family.kin.record(self.world, "ines").parents.append("tomas")
-        self.assertFalse(self.family.may_court(self.world, self.tomas, self.ines))
+        self.assertTrue(self.family.may_court(self.world, vera, marta), "being sisters does not stop them")
+        self.family.kin.make_siblings(self.world, "tomas", "ines")
+        self.assertGreater(self.bonds.attraction_rate(self.world, self.tomas, self.ines), 0)
+        self.assertIs(self.bonds.confession_target(self.world, self.tomas), self.ines)
+
+
+class KinTogetherTests(unittest.TestCase):
+    """Nothing keeps close kin apart, and whoever comes to know of it thinks the worse of both."""
+
+    def setUp(self) -> None:
+        self.world = _settled()
+        self.marta, self.vera = _apart(self.world, "marta", "vera")
+        self.marta.drawn_to = self.vera.drawn_to = "f"
+        _fond(self.world, "marta", "vera", affection=70, attraction=90)
+        self.raul, self.nuria = self.world.residents["raul"], self.world.residents["nuria"]
+        self.family = self.world.family
+
+    def _facts(self) -> list:
+        return [fact for fact in self.world.knowledge.facts.values() if fact.event_type == KIN_TOGETHER]
+
+    def _feels(self, one: str, other: str) -> tuple[float, float, float]:
+        feelings = self.world.relationship(one, other)
+        return (feelings.affection, feelings.trust, feelings.resentment)
+
+    def test_whoever_sees_two_sisters_become_a_couple_thinks_the_worse_of_both(self) -> None:
+        self.raul.x, self.raul.y = 40, 13
+        self.world.relationship("raul", "marta").affection = 50.0
+        confession = self.world.registries.interactions["confession"]
+        self.world.bonds.resolve(self.world, self.marta, self.vera, confession)
+        self.assertEqual((self.marta.couple_with, self.vera.couple_with), ("vera", "marta"))
+        self.assertIn(KIN_TOGETHER, _types(self.world))
+        self.assertEqual(self._facts()[0].text, "Marta anda con Vera, su hermana")
+        of_marta, of_vera = self._feels("raul", "marta"), self._feels("raul", "vera")
+        self.assertLess(of_marta[0], 50.0 - 20)
+        self.assertLess(of_vera[0], -20, "he takes no side: it is held against the two of them alike")
+        self.assertAlmostEqual(50.0 - of_marta[0], 0.0 - of_vera[0])
+        self.assertGreater(of_vera[2], 10)
+        self.assertLess(of_vera[1], -10)
+        self.assertEqual(self._feels("marta", "vera")[0], 70.0, "nothing changes between the two of them")
+        self.assertIsNone(self.world.relationships.get(("nuria", "vera")), "whoever was not there knows nothing of it")
+
+    def test_whoever_is_told_of_it_thinks_the_worse_of_them_too_and_the_two_keep_it_to_themselves(self) -> None:
+        fact = self.family.kin_together(self.world, self.marta, self.vera)
+        self.assertIsNone(self.world.knowledge.belief("nuria", fact.fact_id))
+        learn(self.world, self.nuria, fact, 0.8, SOURCE_TOLD, told_by="raul")
+        self.assertLess(self._feels("nuria", "marta")[0], -15)
+        self.assertGreater(self._feels("nuria", "vera")[2], 8)
+        self.assertEqual(self.world.registries.event_settings["reactions"][KIN_TOGETHER]["secret"], 2)
+
+    def test_there_is_one_fact_of_it_however_often_they_are_come_across(self) -> None:
+        self.assertIsNone(self.family.kin_together(self.world, self.raul, self.nuria), "they are no kin")
+        first = self.family.kin_together(self.world, self.marta, self.vera)
+        self.assertIs(self.family.kin_together(self.world, self.vera, self.marta), first)
+        self.assertEqual(len(self._facts()), 1)
+        self.assertEqual(_types(self.world).count(KIN_TOGETHER), 1)
+        self.assertIsNone(self.world.relationships.get(("raul", "vera")), "nobody was about")
+        self.raul.x, self.raul.y = 40, 13
+        self.world.bonds.seen(self.world, self.marta, self.vera)
+        seen_once = self._feels("raul", "vera")
+        self.assertLess(seen_once[0], -20)
+        self.world.bonds.seen(self.world, self.marta, self.vera)
+        self.assertEqual(self._feels("raul", "vera"), seen_once, "it is news only once")
+        self.assertEqual(len(self._facts()), 1)
+
+    def test_a_child_of_two_who_are_kin_by_blood_takes_the_worse_of_each_side_and_every_flaw(self) -> None:
+        world = _children(_settled(), trait_chance=0.0)
+        tomas, ines = world.residents["tomas"], world.residents["ines"]
+        world.family.kin.make_siblings(world, "tomas", "ines")
+        tomas.personality = Personality(aggression=80, empathy=20, courage=90, greed=10, libido=30)
+        ines.personality = Personality(aggression=30, empathy=60, courage=40, greed=70, libido=70)
+        tomas.traits, ines.traits = ["rogue"], ["music_lover", "dim"]
+        child = _born(world)
+        sides = child.personality
+        self.assertEqual((sides.aggression, sides.empathy, sides.courage, sides.greed), (80, 20, 40, 70))
+        self.assertEqual((sides.impulsiveness, sides.sociability), (50.0, 50.0))
+        spread = world.registries.family.children.mix_spread
+        self.assertTrue(50 - spread <= sides.libido <= 50 + spread, "what has no worse end is mixed as in anyone")
+        self.assertEqual(child.traits, ["dim", "rogue"], "the flaws of both for certain, and nothing else by chance")
+        self.assertTrue(world.children.inbred(world, child.child_id))
+        self.assertTrue(world.history[-1].data["of_kin"])
+
+    def test_a_child_of_two_taken_in_by_the_same_person_is_like_any_other(self) -> None:
+        world = _children(_settled(), trait_chance=0.0)
+        tomas, ines = world.residents["tomas"], world.residents["ines"]
+        for each in ("tomas", "ines"):
+            world.family.kin.record(world, each).adoptive.append("vera")
+        self.assertTrue(world.family.kin.close(world, "tomas", "ines"))
+        self.assertFalse(world.family.kin.blood(world, "tomas", "ines"))
+        self.assertIsNotNone(world.family.kin_together(world, tomas, ines), "it is ill seen all the same")
+        tomas.personality, ines.personality = Personality(courage=90), Personality(courage=10)
+        tomas.traits, ines.traits = ["rogue"], ["dim"]
+        child = _born(world)
+        spread = world.registries.family.children.mix_spread
+        self.assertTrue(50 - spread <= child.personality.courage <= 50 + spread)
+        self.assertEqual(child.traits, [])
+        self.assertFalse(world.children.inbred(world, child.child_id))
+        self.assertFalse(world.children.inbred(world, _born(_settled()).child_id))
+
+    def test_who_is_kin_by_blood_is_worked_out_from_who_was_born_to_whom(self) -> None:
+        kin = self.family.kin
+        self.assertTrue(kin.blood(self.world, "marta", "vera"))
+        for child in ("lucia", "paco"):
+            kin.record(self.world, child).parents.extend(["marta", "raul"])
+        kin.record(self.world, "sergio").parents.append("lucia")
+        related = {other: kin.blood(self.world, "lucia", other) for other in ("marta", "paco", "sergio", "tomas")}
+        self.assertEqual(related, {"marta": True, "paco": True, "sergio": True, "tomas": False})
+        self.assertTrue(kin.blood(self.world, "sergio", "raul"), "a grandfather")
+        self.assertFalse(kin.blood(self.world, "lucia", "lucia"))
+
+    def test_the_worse_end_of_a_side_has_to_be_one_of_a_side_there_is(self) -> None:
+        for worse in ({"luck": "high"}, {"courage": "middling"}):
+            with self.assertRaises(ValueError):
+                family_settings_from_data({"children": {"inbred": {"worse": worse}}})
+        settings = family_settings_from_data({"children": {"inbred": {"worse": {"libido": "high"}}}})
+        self.assertEqual(settings.children.worse, {"libido": "high"})
 
 
 class CasualTests(unittest.TestCase):

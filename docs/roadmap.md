@@ -1380,7 +1380,11 @@ which is not forgotten.
 - **Kin matter.** What is felt for a child, a parent, a brother or a sister starts from being
   kin, in each direction by itself as always, and what is done to one of them is taken as done
   to one's own
-- Romance and sex stay between adults, as they are (S9), and are never between close kin
+- Romance and sex stay between adults, as they are (S9)
+- **Being kin keeps nobody apart** (said once it was built, in place of "never between close
+  kin"): whoever comes to know of two close kin being together thinks the worse of both, and a
+  child of two who are kin by blood takes the worse of its parents in every side of its way of
+  being, and the flaws of both
 - A save from before loads with nobody kin to anybody
 
 Done when: over a long headless run a couple marries and has a child; two who are no couple,
@@ -1399,7 +1403,8 @@ dead grandparent still in it; and someone whose brother is hurt takes it worse t
 whom he is nobody.
 
 Tests it is not done without: a child's parents, and brothers and sisters worked out from them;
-no romance or sex with anyone under age, whatever their libido, or between close kin; libido
+no romance or sex with anyone under age, whatever their libido; close kin not kept apart,
+ill seen by whoever knows of it, and their child the worse for it; libido
 deciding who goes off with whom; being drawn to someone, or not, deciding it first; sex
 deciding who can have a child, and gender deciding nothing of it; nine weeks from conception to
 birth; the date worked out from the day, through months and years; a child's age week by week
@@ -1440,6 +1445,22 @@ As it was built, where the lines above leave it open:
 - **Whoever sleeps on the ground** rests a little over half as fast as in a bed, and wakes on edge
 - Who somebody is can be said where a first resident is made and with `SetIdentityCommand`.
   Save version 29
+
+Changed once it was built, as the rule above says:
+- **Two close kin** court, become a couple, marry and go off alone together like any two. It
+  is one fact about the two of them (`kin_together`), which they keep to themselves, which
+  whoever sees them become a couple, marry or be alone together learns, and which is passed on
+  like any other. Whoever learns it thinks the worse of both alike, without taking a side:
+  less affection and trust, more resentment, and nerves. Having been taken in by the same
+  people counts as being kin for this
+- **A child of two who are kin by blood** takes the higher of its parents' aggression,
+  impulsiveness and greed and the lower of their empathy, sociability and courage, outright,
+  and every trait of theirs that is marked a flaw, before any other and as far as there is
+  room. Libido has no worse end and is mixed as in anyone. Having been taken in does not
+  count for this
+- Still open: nobody knows whose a child is, so nobody thinks the worse of a child for it,
+  nor of its parents for having it; the two feel nothing about it themselves; and there is
+  nothing to stop it, by law or otherwise (S28)
 
 Found by running half a year, and put right:
 - **The garden takes more hands as more people live here** (`per_residents`, on a job): with

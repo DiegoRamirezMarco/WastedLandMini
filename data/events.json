@@ -107,6 +107,18 @@
       "needs": {
         "stress": 8.0
       }
+    },
+    "kin_together": {
+      "secret": 2,
+      "blame_target": "all",
+      "blame": {
+        "affection": -25.0,
+        "trust": -15.0,
+        "resentment": 15.0
+      },
+      "needs": {
+        "stress": 5.0
+      }
     }
   }
 }

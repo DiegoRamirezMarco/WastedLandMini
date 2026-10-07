@@ -149,6 +149,16 @@
     "drawn_by_chance": true,
     "mix_spread": 15,
     "trait_chance": 0.5,
+    "inbred": {
+      "worse": {
+        "aggression": "high",
+        "empathy": "low",
+        "impulsiveness": "high",
+        "sociability": "low",
+        "greed": "high",
+        "courage": "low"
+      }
+    },
     "bundle": {
       "hunger_per_minute": 0.3,
       "feed_from": 60,

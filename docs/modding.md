@@ -502,6 +502,9 @@ settlement is created, in `SimulationWorld.demo_world`.
   `both`), and their `siblings` and `parents` by ID. `arrive_together` lists pairs of newcomers
   who come to the gate together.
 - `libido` is a side of a personality like any other, from 0 to 100.
+- `children.inbred.worse` in `data/family.json` lists the sides of a way of being of which a
+  child of two who are kin by blood takes the worse of its parents', and which end of each is
+  the worse one: `"high"` or `"low"`. A side left out is mixed as in any child.
 - A job with `"per_residents": 4.5` takes one more worker for every so many people who live in
   the settlement, and never fewer than `needed`.
 - The game opens `proposal`, `strangers` (two at the gate: an outcome's `"gate"` may also be
@@ -569,6 +572,8 @@ settlement is created, in `SimulationWorld.demo_world`.
 - A trait in `data/traits.json` may give `"thieving": 0.5`, which is added to how given its
   owner is to taking what is not theirs and has coin tempt them whatever they have, and
   `"careless": true`, which has them part with the tool they work with.
+- A trait may be marked `"flaw": true`: a child of two who are kin by blood takes every flaw
+  its parents have, before any other trait of theirs.
 - The game also opens `currency_raised` and `barter_raised` by ID, for a resident who has had
   enough of how things are traded. An outcome's `"raises"` (`currency` or `barter`) is what it
   puts to everyone.
@@ -665,6 +670,8 @@ In `data/events.json`, a reaction can now also say:
   onlookers do not blame them.
 - `"rival"`: what someone it was done to feels about the other one, when the one who wronged them
   is their own partner.
+- `"blame_target": "all"`: nobody takes a side, and everyone who did it is held to it in full.
+  `kin_together` is the reaction to two close kin being together.
 
 ## Decisions
 

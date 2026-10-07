@@ -167,6 +167,9 @@ def react(world: "SimulationWorld", resident: Resident, fact: Fact, credibility:
     blamed = {subject: 1.0 for subject in involved}
     if rule.get("blame_target") == "actor":
         blamed = {actor: 1.0} if actor in world.residents else {}
+    elif rule.get("blame_target") == "all":
+        # Nobody takes a side: everyone in it is held to it in full.
+        pass
     elif len(involved) == 2:
         first, second = involved
         lean = (

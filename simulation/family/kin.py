@@ -102,8 +102,28 @@ class Kinship:
 
     def close(self, world: "SimulationWorld", person_id: str, other_id: str) -> bool:
         """Whether two people are kin by blood or by having been taken in, close enough that
-        there is never romance between them."""
+        anything between them is ill seen by whoever comes to know of it."""
         return self.tie(world, person_id, other_id) not in (None, "spouse")
+
+    def blood(self, world: "SimulationWorld", person_id: str, other_id: str) -> bool:
+        """Whether two people are close kin by birth: parent and child, grandparent and
+        grandchild, or brothers and sisters. Having been taken in does not count."""
+        mine, theirs = world.kinship.get(person_id), world.kinship.get(other_id)
+        if mine is None or theirs is None or person_id == other_id:
+            return False
+
+        def born_to(parents: list[str]) -> set[str]:
+            return {each for parent in parents if parent in world.kinship for each in world.kinship[parent].parents}
+
+        return bool(
+            other_id in mine.parents
+            or person_id in theirs.parents
+            or set(mine.parents) & set(theirs.parents)
+            or other_id in mine.siblings
+            or person_id in theirs.siblings
+            or other_id in born_to(mine.parents)
+            or person_id in born_to(theirs.parents)
+        )
 
     def word(self, world: "SimulationWorld", person_id: str, other_id: str) -> str:
         """What somebody calls one of their kin: `hermana`, `padre`, `hijo`."""

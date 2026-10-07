@@ -178,9 +178,9 @@ class BondSystem:
     def attraction_rate(self, world: "SimulationWorld", resident: Resident, other: Resident) -> float:
         """How fast a friendly exchange draws `resident` towards `other`, as a multiple of its base.
 
-        It takes a spark, or an attraction that is there already, both being adults, the other
-        being of a sex they are drawn to, and the two not being close kin. Someone who has a
-        partner is slower to be drawn to anyone else.
+        It takes a spark, or an attraction that is there already, both being adults and the
+        other being of a sex they are drawn to. Someone who has a partner is slower to be drawn
+        to anyone else.
         """
         if not world.family.may_court(world, resident, other):
             return 0.0
@@ -307,7 +307,9 @@ class BondSystem:
         ]
 
     def seen(self, world: "SimulationWorld", resident: Resident, other: Resident) -> None:
-        """Let whoever comes across two residents alone together learn of it."""
+        """Let whoever comes across two residents alone together learn of it, and of their
+        being kin if they are."""
+        world.family.kin_together(world, resident, other)
         fact = self._latest_fact(world, resident, other)
         if fact is None:
             return
@@ -383,6 +385,7 @@ class BondSystem:
                 f"{asker.name} y {asked.name} se casan",
                 f"{asker.name} y {asked.name} se casaron",
             )
+            world.family.kin_together(world, asker, asked)
             world.children.together(world, asker, asked)
             return
         asker.needs.apply({"stress": 12.0})
@@ -417,6 +420,7 @@ class BondSystem:
                 f"{asker.name} y {asked.name} están juntos",
                 f"{asker.name} y {asked.name} están juntos",
             )
+            world.family.kin_together(world, asker, asked)
             return
         asker.needs.apply({"stress": 15.0})
         mine.adjust("attraction", -10.0)

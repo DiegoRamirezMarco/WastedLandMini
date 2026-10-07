@@ -238,7 +238,11 @@ room. An argument's importance rises with the resentment between the two.
   small chance of dying of old age, which doubles every five years.
 - **Who somebody is.** A sex, `m` or `f`; a gender, which is how they are spoken of and nothing
   else; and the sex of those they are drawn to, or both. Nobody courts, becomes a couple with or
-  goes off alone with someone they are not drawn to, anyone under age, or close kin.
+  goes off alone with someone they are not drawn to, or anyone under age.
+- **Kin together.** Being close kin keeps no two apart. Whoever sees them become a couple,
+  marry or be alone together, or is told of it, thinks the worse of both. A child of two who
+  are kin by blood takes the worse of its parents in every side of its way of being, and the
+  flaws of both.
 - **Libido** is one more side of a way of being. What it weighs at a given time falls with
   nerves, low spirits, tiredness and a hurt body. Two who get on very well and both want it
   enough go off alone together without being a couple.

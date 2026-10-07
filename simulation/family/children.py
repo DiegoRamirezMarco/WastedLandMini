@@ -14,6 +14,7 @@ from simulation.ai.crowd import free_tile
 from simulation.events.event import DomainEvent
 from simulation.family.calendar import DAYS_PER_YEAR
 from simulation.family.kin import BOTH, DRAWN_TO, SEXES
+from simulation.family.settings import HIGH
 from simulation.health.injury import Death
 from simulation.knowledge.knowledge_system import witnesses_of
 from simulation.memory.memory import Memory
@@ -39,6 +40,8 @@ CHILD_DIED_IMPORTANCE = 90
 SEEN_IMPORTANCE = 30
 BIRTH_MEMORY = 85.0
 NEGLECT_CAUSE = "el abandono"
+# What marks a trait, in its data, as one nobody would wish on a child.
+FLAW = "flaw"
 
 
 @dataclass
@@ -134,6 +137,7 @@ class ChildSystem:
         settings = self.settings(world)
         father_id, mother.expecting_with, mother.due_day = mother.expecting_with, None, 0
         father = world.residents.get(father_id or "")
+        of_kin = father_id is not None and world.family.kin.blood(world, mother.resident_id, father_id)
         sex = SEXES[world.rng.randint(0, 1)]
         taken = {*world.kinship, *(bundle.name for bundle in world.bundles.values())}
         names = [name for name in settings.names.get(sex, ()) if name not in {r.name for r in world.residents.values()}]
@@ -149,8 +153,8 @@ class ChildSystem:
             sex,
             DRAWN_TO[world.rng.randint(0, len(DRAWN_TO) - 1)] if settings.drawn_by_chance else BOTH,
             world.clock.day,
-            self._mixed(world, mother, father),
-            self._inherited(world, mother, father),
+            self._mixed(world, mother, father, of_kin),
+            self._inherited(world, mother, father, of_kin),
             carried_by=mother.resident_id,
             place=CARRIED,
             x=mother.x,
@@ -176,30 +180,58 @@ class ChildSystem:
                 f"{mother.name} da a luz a {name}",
                 [mother.resident_id],
                 location_id=room.room_id if room is not None else None,
-                data={"child_id": child_id, "parents": list(record.parents), "sex": sex},
+                data={"child_id": child_id, "parents": list(record.parents), "sex": sex, "of_kin": of_kin},
             ),
             at=mother.tile,
             fact_text=f"{mother.name} tuvo a {name}",
         )
         return bundle
 
-    def _mixed(self, world: "SimulationWorld", mother: Resident, father: Resident | None) -> Personality:
-        """A way of being of a child's own: each side near the middle of its parents', by chance."""
-        spread = self.settings(world).mix_spread
+    def inbred(self, world: "SimulationWorld", child_id: str) -> bool:
+        """Whether somebody was born to two who are kin by blood."""
+        record = world.kinship.get(child_id)
+        return (
+            record is not None
+            and len(record.parents) >= 2
+            and world.family.kin.blood(world, record.parents[0], record.parents[1])
+        )
+
+    def _mixed(
+        self, world: "SimulationWorld", mother: Resident, father: Resident | None, of_kin: bool = False
+    ) -> Personality:
+        """A way of being of a child's own: each side near the middle of its parents', by chance.
+
+        A child of two who are kin by blood takes the worse of the two outright, in every side
+        that has a worse end.
+        """
+        settings = self.settings(world)
+        worse = settings.worse if of_kin else {}
         sides = {}
         for side, hers in vars(mother.personality).items():
-            middle = (hers + getattr(father.personality, side)) / 2.0 if father is not None else hers
-            sides[side] = max(0.0, min(100.0, round(middle + (world.rng.random() * 2.0 - 1.0) * spread, 1)))
+            his = getattr(father.personality, side) if father is not None else hers
+            if side in worse:
+                sides[side] = max(hers, his) if worse[side] == HIGH else min(hers, his)
+                continue
+            middle = (hers + his) / 2.0
+            sides[side] = max(0.0, min(100.0, round(middle + (world.rng.random() * 2.0 - 1.0) * settings.mix_spread, 1)))
         return Personality(**sides)
 
-    def _inherited(self, world: "SimulationWorld", mother: Resident, father: Resident | None) -> list[str]:
-        """The traits a child takes from its parents: each of theirs by chance, and no more than anybody has."""
+    def _inherited(
+        self, world: "SimulationWorld", mother: Resident, father: Resident | None, of_kin: bool = False
+    ) -> list[str]:
+        """The traits a child takes from its parents: each of theirs by chance, and no more than
+        anybody has. A child of two who are kin by blood takes the flaws of both first, for certain."""
         chance = self.settings(world).trait_chance
+        theirs = [trait for parent in (mother, father) if parent is not None for trait in parent.traits]
         traits: list[str] = []
-        for parent in (mother, father):
-            for trait in parent.traits if parent is not None else ():
-                if trait not in traits and len(traits) < MAX_TRAITS and world.rng.random() < chance:
+        if of_kin:
+            for trait in theirs:
+                flaw = (world.registries.traits.find(trait) or {}).get(FLAW)
+                if flaw and trait not in traits and len(traits) < MAX_TRAITS:
                     traits.append(trait)
+        for trait in theirs:
+            if trait not in traits and len(traits) < MAX_TRAITS and world.rng.random() < chance:
+                traits.append(trait)
         return traits
 
     def _grow_up(self, world: "SimulationWorld", bundle: Bundle) -> Resident:

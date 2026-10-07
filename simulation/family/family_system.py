@@ -9,6 +9,8 @@ from simulation.ai.utility_ai import ScoredAction, need_urgency
 from simulation.events.event import DomainEvent
 from simulation.family.calendar import DAYS_PER_YEAR, Date, date_of, day_of_year_for, years_between
 from simulation.family.kin import BOTH, DRAWN_TO, GENDERS, SEXES, Kinship
+from simulation.knowledge.fact import SOURCE_WITNESS, Fact
+from simulation.knowledge.knowledge_system import learn, witnesses_of
 from simulation.memory.memory import Memory
 from simulation.residents.activity import Activity
 from simulation.residents.resident import Resident
@@ -25,6 +27,9 @@ OLD_AGE_CAUSE = "la vejez"
 # How much less than a bed the ground is wanted, tiredness for tiredness.
 ROUGH_APPEAL = 0.8
 PARTED_IMPORTANCE = 60
+# Two close kin being a couple, or going off alone together.
+KIN_TOGETHER = "kin_together"
+KIN_TOGETHER_IMPORTANCE = 60
 PARTED_MEMORY = 80.0
 
 
@@ -99,12 +104,43 @@ class FamilySystem:
 
     def may_court(self, world: "SimulationWorld", resident: Resident, other: Resident) -> bool:
         """Whether there can be anything between one resident and another, as far as the first
-        goes: both are adults, the first is drawn to the other, and they are not close kin."""
-        return (
-            world.bonds.is_adult(world, resident)
-            and world.bonds.is_adult(world, other)
-            and self.drawn(resident, other)
-            and not self.kin.close(world, resident.resident_id, other.resident_id)
+        goes: both are adults and the first is drawn to the other. Being kin does not stop it."""
+        return world.bonds.is_adult(world, resident) and world.bonds.is_adult(world, other) and self.drawn(resident, other)
+
+    def kin_together(self, world: "SimulationWorld", one: Resident, other: Resident) -> Fact | None:
+        """Two residents are a couple, have married or have gone off alone together: if they
+        are close kin, it is a fact that whoever sees them learns, and nobody takes it well.
+
+        There is one such fact for the two of them however often they are seen. Returns it,
+        or None if they are not kin.
+        """
+        if not self.kin.close(world, one.resident_id, other.resident_id):
+            return None
+        pair = {one.resident_id, other.resident_id}
+        known = next(
+            (
+                fact
+                for fact in world.knowledge.facts.values()
+                if fact.event_type == KIN_TOGETHER and set(fact.subject_ids[:2]) == pair
+            ),
+            None,
+        )
+        if known is not None:
+            for witness_id in witnesses_of(world, one.tile, exclude=list(pair)):
+                learn(world, world.residents[witness_id], known, 1.0, SOURCE_WITNESS)
+            return known
+        text = f"{one.name} anda con {other.name}, su {self.kin.word(world, one.resident_id, other.resident_id)}"
+        room = world.room_at(one.tile)
+        return world.emit_event(
+            DomainEvent(
+                KIN_TOGETHER,
+                KIN_TOGETHER_IMPORTANCE,
+                text,
+                [one.resident_id, other.resident_id],
+                location_id=room.room_id if room is not None else None,
+            ),
+            at=one.tile,
+            fact_text=text,
         )
 
     def desire(self, world: "SimulationWorld", resident: Resident) -> float:
