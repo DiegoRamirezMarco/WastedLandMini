@@ -1994,6 +1994,177 @@ Still to settle:
 - Whether an animal is drawn by the player, as a resident is (P17, P19), or comes drawn
 - How a song a pack adds is heard: a recording the pack brings, or only its name and its mood
 
+### S34 — What is said (needs S2, S3 and S20) — planned
+Conversation comes in two milestones, S34 and S35, and a screen, P29. They are the user's brief:
+talk is a real part of the simulation, and tells on relationships, knowledge, rumours, feelings
+and decisions. No dialogue is written out by a language model yet.
+
+What holds for all of it:
+- **The simulation decides what a conversation means, and the presentation how it is put.**
+  Text is never the truth of the game: no words, generated or not, change the world
+- A conversation holds meaning: a topic, an intent, a tone, facts, keywords, who is in it, its
+  turns and what came of it. The screen holds the wording
+- **Nobody is all-knowing.** A resident speaks only of facts they know, rumours they have heard,
+  and what the game expressly lets them work out. Nothing is taken from what the world knows
+- A rumour and a fact stay two things: what is told keeps who told it and how far it is believed
+- Topics are never chosen by chance alone. The settlement's own randomness breaks ties and
+  gives a little variety, and the same seed gives the same talk
+- Small talk fills neither memory nor the event log
+- What talk does to people comes of the simulation, each way by itself as always
+- The player influences and never controls: where talk leads to something irreversible, the
+  usual chance to advise is kept (S4)
+- Whatever writes dialogue one day only puts into words what has already been settled
+- All of it runs headless, without pygame
+
+What there is already to build on, and is not to be made twice: exchanges as data (`chat`,
+`argument`, `heart_to_heart`, `fight` and those of romance, S2 and S9); facts and beliefs with
+their source and credibility, and rumours passed on in a chat (S3); the decision before a fight
+(`fight_brewing`, S4); tastes that show when something is mentioned (S20); and what each
+resident holds about the government (S26).
+
+This one:
+- **A conversation is a thing of its own** (`Conversation`): an ID, who is in it and who began
+  it, a topic, an intent, a tone, where and when, how much it matters, the facts it is about,
+  its keywords, its turns, a status (`active`, `finished`, `interrupted`) and an outcome. It
+  keeps no narrative text as its truth. It grows out of the exchanges there are, in
+  `simulation/social/`: `conversation.py`, `conversation_turn.py`, `topics.py`, `intents.py`,
+  `topic_selection.py`, `conversation_resolution.py`, or whatever names sit better with what
+  is there
+- **Topics have stable IDs and are data**, so that a pack can add one: `daily_life`, `food`,
+  `food_shortage`, `water`, `work`, `weather`, `merchant`, `theft`, `fight`, `injury`, `death`,
+  `romance`, `breakup`, `friendship`, `rumor`, `politics`, `government`, `election`,
+  `punishment`, `expedition`, `newcomer`, `pet`, `music`, `book`, `hobby` to begin with
+- **What somebody is after is kept apart from what it is about** (`intent`): `chat`, `gossip`,
+  `inform`, `ask`, `ask_help`, `complain`, `convince`, `debate`, `accuse`, `defend`,
+  `apologize`, `comfort`, `thank`, `negotiate`, `flirt`, `confess`, `threaten`, `warn`. Two may
+  talk of the same theft wanting different things of it
+- **How it goes is a tone**, which may change as it goes: `neutral`, `friendly`, `excited`,
+  `nervous`, `sad`, `angry`, `hostile`, `secretive`, `romantic`, `awkward`
+- **A turn is a thing said, with no sentence to it** (`ConversationTurn`): who speaks and to
+  whom, the speech act, who and which facts it is about, how strongly it is felt, a stance and
+  when. Three to eight turns as a rule, set by kind and by how things stand. How long it takes
+  in game time is worked out apart
+- **What can be said is what is known.** Marta, who knows food is missing and not who took it,
+  can speak of the theft, the food and the pantry, and not of Raúl. If she has heard it said
+  that it was Raúl she can pass that on, as hearsay and no surer than she holds it
+- **Telling passes knowledge on**: whoever is told has it from then on, with who told them, how
+  far it is to be believed, and whether it was seen or only heard. They may believe it, doubt
+  it or make something else of it. A rumour is never made true by being repeated
+- **A topic is chosen by a score**: how recent it is, how much it stirs them, how much it
+  interests them, how much it has to do with whoever listens and with what they need just now,
+  what the two are to each other, what it is worth as gossip and how much it matters to the
+  settlement, less for having been gone over lately
+- **What matters gets talked about because people know of it**: a killing, a caravan, a theft,
+  an election, a death, a newcomer, a storm, a wedding, a birth, a raid. There is no switch for
+  "everybody is talking about it": each speaks of it only if it has reached them
+- **Who has talked of what with whom lately is kept, lightly** (`ConversationHistory`), so that
+  the same thing is not gone over again and again
+- **Who to talk to is chosen too**: by who is near, how sociable they are, friendship,
+  affection, trust, attraction, resentment, fear, how much they want company, what they have
+  in common, and what there is to say to them. Not always whoever is liked best
+- **Talk may tell on** affection, trust, resentment, attraction, fear, mood, nerves, what is
+  known, rumours, memories, friendship and what there is between two. Much of it changes
+  nothing but the want of company
+- **Keywords are made from what is really known of the topic**: the topic's own words, who is
+  in it, where, what things are called, the facts that matter. They are for showing, and
+  nothing in the game depends on them
+- **A snapshot for whoever shows it** (`PresentationSnapshot`): topic, tone, keywords,
+  importance and who is in it
+- **A way to put a turn into words, apart from what it means** (`DialogueRenderer`): it is
+  given the turn, the conversation, what is publicly known of who speaks and the facts they
+  know, and gives back text. It can make no fact, change no feeling, settle no outcome, add no
+  knowledge and touch no memory. The first one gives keywords and murmur. No language model is
+  wired in
+- **Only talk that matters makes itself known**: small talk is of low importance, a rumour of
+  weight or a serious quarrel more, a threat or a grave accusation the most
+- **A memory only where it counts**: strong feeling, high importance, a relationship that
+  changes for good, a secret out, a confession, a threat, a humiliation, a making-up. Never one
+  for each turn
+- Events with who took part, who saw it and where, as events have: `conversation_started`,
+  `conversation_finished`, `conversation_interrupted`, `topic_shared`, `rumor_shared`. None for
+  a turn of no account
+- What is kept of a conversation that matters, and who has talked of what lately, is saved
+
+Done when: two residents talk about a theft, one to gossip and one to accuse; a resident who
+does not know who did it cannot name them, and one who has heard it said passes it on as
+hearsay; yesterday's killing is what people who know of it talk about and last week's weather
+is not; the same two do not go over the same thing all day; and all of it can be followed with
+not one sentence written.
+
+Tests it is not done without: a conversation between two residents; a resident not speaking of
+a fact they do not know; a rumour being passed on; a rumour not becoming true by itself; a
+recent topic coming first; the same topic not being gone over constantly; what two are to each
+other telling on who is talked to; friendly talk improving a relationship; keywords coming of
+known facts; a conversation working with no full text; conversations that matter surviving a
+save, if any need to; the simulation importing no pygame; the same seed giving the same
+result; and the renderer changing nothing in the game.
+
+Still to settle, to be asked before it is built:
+- Whether `chat`, `argument` and `heart_to_heart` as they are become kinds of conversation, or
+  stay and conversation is laid over them
+- What a resident may work out for themselves, beyond what they saw and were told: nothing yet,
+  or a few plain inferences such as "it went missing while only he was there"
+- Whether a listener's doubt goes by who tells it alone, as now, or also by what they already
+  believe and by what they would rather were true
+- How much of a finished conversation is kept, and for how long
+- Whether a pack's topic can bring its own way of scoring, or only its words and its weights
+
+### S35 — Where talk leads (needs S34, S26 and S31) — planned
+- **Three or more can be in it.** Each has a stance, a response of their own and how willing
+  they are to speak: on how the place should be run, Marta wants a vote, Raúl a strong hand, and
+  Inés food and quiet before either
+- **Talk can turn**: friendly, then a disagreement, an argument, an insult, a fight brewing. Most
+  disagreements go no further. It goes by aggression, impulsiveness, nerves, resentment, what
+  the two are to each other, how touchy the topic is, the tone and what has been said so far
+- **A fight never starts out of a conversation directly**: talk that comes to `fight_brewing`
+  goes through the decision there is, with the player given a say (S4)
+- **Talk can mend as well**: an apology taken, a making-up (`conversation_reconciled`)
+- **Flirting and saying what one feels are intents**, and go into the romance there is (S9).
+  Talk does not make two people a couple: what settles that already settles it
+- **Talk about politics** changes what somebody holds, passes arguments and political rumours
+  on, and raises or lowers support (S26). No sentence changes a vote: talk moves what a vote is
+  later worked out from (S27)
+- **What people do gives them something to say**: a song somebody loved, a book just finished,
+  a new animal in the settlement, a hand of cards that ended in jokes or in a quarrel (S30 to S33)
+- **A conversation can be cut short**, by work, by hunger that will not wait, by a fight, an
+  emergency, the two being parted, a death or something grave happening, and is left with an
+  outcome that makes sense of it
+- Events: `argument_escalated`, `conversation_reconciled`
+
+Done when: three residents talk over how the place is run and one of them comes away thinking
+differently, with nobody's vote having been touched; a quarrel over missing food comes to a
+fight brewing and the player is asked before a blow lands; somebody who has just finished a
+book brings it up; and a conversation broken off by a raid is on record as interrupted.
+
+Tests it is not done without: a conversation of a group; an argument raising resentment; a
+grave argument coming to `fight_brewing`; `fight_brewing` keeping the chance to intervene; a
+political topic telling on what somebody holds; and something cultural giving a topic.
+
+Still to settle:
+- Whether a third can walk up and join two who are talking, and whether anybody can listen in
+  without being in it (S3)
+- Whether somebody can be talked round to a thing they will then do, such as leaving a partner
+  or standing for a seat, and how that sits with the player's own say
+- Whether a threat is only talk, or something the one threatened acts on
+- Which topics are touchy, and whether that is the same for everybody
+
+### P29 — Talk overheard (needs S34) — planned
+- **What is seen of a conversation goes by how close the view is**: a bubble from afar, a word
+  or two from nearer, and close by the murmur of it: "pss... comida... robo... Raúl..."
+- **Its tone is seen in how it is written**: loud and broken where it is hostile ("¡COMIDA!...
+  ¡RAÚL!..."), trailing where it is sad ("...Tomás... hospital...")
+- Icons for topics and for what somebody is after, single words, murmur and short summaries
+- **How near the player looks changes nothing of what residents know**: the player watches, and
+  is nobody standing there
+- Only talk that matters is brought to the player's notice
+- A place for the `DialogueRenderer` to be changed for another, with the game none the wiser
+
+Still to settle:
+- Whether voices (P14) murmur along with it, by tone
+- Whether the player may hear everything said in the settlement, or only what is near where
+  they are looking
+- Whether a language model is ever wired in, and if so where it runs
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it
