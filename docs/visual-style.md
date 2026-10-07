@@ -110,6 +110,7 @@ illustrations/                   free of the style contract: see Illustrations
     faces/<resident_id>/<expression>.png
     dolls/<resident_id>/body.png, head.png
     ui/panel.png
+    ui/icons/<name>.png
 ```
 
 ### Loading
@@ -206,11 +207,13 @@ on displays of different resolutions.
 | Part | Where | What it holds |
 |---|---|---|
 | Bar | Across the top, 26 high | The day on a plaque, sun or moon and the hour, pause and speed, what the settlement has (people and beds, food, water, fuel, medicine, scrap) as an icon and a figure each, the weather, and zoom. Under them one line: a word from the game, whoever waits for advice, or the latest news |
-| Menu | Down the left, 58 wide | An icon at ×2 over a word for each entry: residents, posts, stores, events, map. The open one is framed in `lamp` |
+| Menu | Down the left, 58 wide | A row 30 high for each entry: its icon on a tile of its own colour, 18 across, over a word. The entries of the settlement come first, and those of the game (save, urbanism, the editors) a little apart. The open one stands on a plate framed in `lamp`, and the one under the pointer on a dimmer one |
 | Map | The middle | The settlement. What the menu opens floats over its top right corner, one thing at a time; the minimap keeps to its bottom left |
 | Panel | Down the right, 196 wide | Whoever is selected, in full; a container's contents; or, with nothing selected, everybody at a glance |
 | Dock | Under the map, 136 high | A scene between two faces, or else what has been going on |
 
+- **The interface is drawn at the resolution of the window** wherever there is a window under
+  the canvas: see The interface below.
 - **A resident in the panel**: their face at 64×64, wearing how things stand with them; the name
   at ×2; credits, what they are doing and their post; a bar for health, one for each need and
   one for mood;
@@ -227,6 +230,30 @@ on displays of different resolutions.
   its way. Nothing is kept open down there.
 - **What has been going on** is read from `Eventos` in the menu, in a panel over the corner of
   the map wide enough for whole lines, and put away the same way.
+
+### The interface
+Panels, buttons, bars and icons are not pixel art. Like illustrations they are shown at the
+resolution of the window, under the canvas, and are free of the style contract: smooth edges,
+gradients and any colour.
+
+- `graphics/ui_art.py` draws them by code: `frame` (a panel, with a band for a heading, rivets
+  or a shadow), `pill` (the back of a button), `bar`, `tile` (an icon on a tile of its colour)
+  and `icon` (an icon alone, with a dark line round it). An icon is drawn with a `Pen` on a
+  square of 48 units, many times over and then brought down, which is what smooths it.
+  `GLYPHS` and `HUES` list them by name.
+- `graphics/ui_skin.py` puts them on the window. `ui/panel.py` offers every `draw_panel`,
+  `draw_button` and `draw_bar` to it first: it clears the canvas there and puts the picture
+  under it, so text and whatever else is drawn afterwards on the canvas stays in front.
+- It leaves a thing flat, as it always was, when the canvas cannot be seen through (a game with
+  no `illustrations/` folder), when the thing is drawn on some other surface, when the canvas
+  is clipped to less than the whole of it, and when a panel is under 20×12.
+- The bar, the menu, the panel and the dock are plates of dark blue with brass round them. A
+  panel anywhere else takes the `fill` and `border` it is asked for as the colour of its face
+  and of the line round it, so that a `lamp` border still says what it said.
+- A panel the menu opens passes `band`: its title stands on a band of the colour of its entry.
+- Text is still the pixel font on the canvas, over all of it (P36).
+- A picture of your own takes the place of any of it: `illustrations/ui/panel.png` for the
+  plates and `illustrations/ui/icons/<name>.png` for an icon. `illustrations/README.md` lists them.
 
 ## Global view
 - Top-down settlement, outdoors and post-apocalyptic: bare ground and dry grass, shacks of salvaged

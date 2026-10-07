@@ -175,6 +175,35 @@ class Leadership:
         )
         return PoliticsResult(True, text)
 
+    def choose(self, world: "SimulationWorld", government_id: str) -> PoliticsResult:
+        """The player says how the settlement is governed, and it is: while it is choosing, or
+        in place of the kind it has. Nobody is asked, and what each would have had is still
+        what it starts with: its legitimacy is how many of them wanted it, whoever wanted
+        another trusts it less, and a change in the middle of a game shakes the place."""
+        state = world.government
+        definition = world.registries.politics.governments.get(government_id)
+        if definition is None:
+            return PoliticsResult(False, "No hay tal manera de gobernarse")
+        if state.kind == government_id:
+            return PoliticsResult(False, f"El asentamiento ya se gobierna así: {definition.name}")
+        if state.kind is None and state.choosing_until is None:
+            return PoliticsResult(False, "Aún son pocos para tener que gobernarse")
+        wanted = self.wanted(world)
+        if state.kind is None:
+            self.establish(world, government_id, wanted, imposed=True)
+        else:
+            self.change_kind(world, government_id, wanted, imposed=True)
+        return PoliticsResult(True, f"El asentamiento se gobernará así: {definition.name}", government_id)
+
+    def wanted(self, world: "SimulationWorld") -> dict[str, str]:
+        """The kind each adult who is here would have, by what they hold."""
+        wanted: dict[str, str] = {}
+        for voter in self.present(world):
+            scores = self.appeal(world, voter)
+            # Between two they like the same, the one that comes first in the data.
+            wanted[voter.resident_id] = max(scores, key=lambda government_id: scores[government_id])
+        return wanted
+
     def appeal(self, world: "SimulationWorld", resident: Resident) -> dict[str, float]:
         """What a resident makes of each kind of government, by what they hold. The kind the
         player put to everyone counts for more with whoever heeds advice."""
@@ -200,21 +229,19 @@ class Leadership:
         if not voters:
             state.choosing_until = world.clock.total_minutes + PUT_OFF_MINUTES
             return None
-        wanted: dict[str, str] = {}
-        for voter in voters:
-            scores = self.appeal(world, voter)
-            # Between two they like the same, the one that comes first in the data.
-            wanted[voter.resident_id] = max(scores, key=lambda government_id: scores[government_id])
+        wanted = self.wanted(world)
         count = Counter(wanted.values())
         chosen = max(world.registries.politics.governments, key=lambda government_id: count[government_id])
         self.establish(world, chosen, wanted)
         return chosen
 
-    def establish(self, world: "SimulationWorld", government_id: str, wanted: dict[str, str] | None = None) -> None:
+    def establish(
+        self, world: "SimulationWorld", government_id: str, wanted: dict[str, str] | None = None, imposed: bool = False
+    ) -> None:
         """Give the settlement this kind of government, and fill its seats at once.
 
         `wanted` is the kind each resident who was asked would have had: how many of them
-        wanted this one is how legitimate it starts.
+        wanted this one is how legitimate it starts. `imposed` says the player chose it.
         """
         settings = world.registries.politics
         definition = settings.governments[government_id]
@@ -232,16 +259,19 @@ class Leadership:
             PoliticalEvent(
                 "government_chosen",
                 CHOSEN_IMPORTANCE,
-                f"El asentamiento se gobernará así: {definition.name} ({behind} de {len(wanted)} lo querían)",
+                f"{'Se decide que el' if imposed else 'El'} asentamiento se gobernará así: "
+                f"{definition.name} ({behind} de {len(wanted)} lo querían)",
                 list(wanted),
-                data={"government": government_id, "wanted": dict(Counter(wanted.values()))},
+                data={"government": government_id, "wanted": dict(Counter(wanted.values())), "imposed": imposed},
                 government=government_id,
             )
         )
         self.fill_seats(world, definition, at_once=True)
         world.politics.legitimacy.measure(world)
 
-    def change_kind(self, world: "SimulationWorld", government_id: str, wanted: dict[str, str] | None = None) -> bool:
+    def change_kind(
+        self, world: "SimulationWorld", government_id: str, wanted: dict[str, str] | None = None, imposed: bool = False
+    ) -> bool:
         """Have a settlement that has a government take another kind, in the middle of a game.
 
         Whoever held a seat holds it no longer, and the seats of the new kind are filled by its
@@ -262,11 +292,11 @@ class Leadership:
                 "government_changed",
                 CHANGED_IMPORTANCE,
                 f"El asentamiento cambia su manera de gobernarse: {name}",
-                data={"from": state.kind, "to": government_id},
+                data={"from": state.kind, "to": government_id, "imposed": imposed},
                 government=government_id,
             )
         )
-        self.establish(world, government_id, wanted)
+        self.establish(world, government_id, wanted, imposed)
         # What the place has been through is not wiped by a new name for who runs it.
         state.measures.update({measure: kept[measure] for measure in ("corruption", "unrest")})
         if wanted is None:

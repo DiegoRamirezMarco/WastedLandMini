@@ -48,6 +48,10 @@ class PoliticsSystem:
         """The player's one proposal of a kind of government, while the settlement chooses."""
         return self.leadership.propose(world, government_id)
 
+    def choose_government(self, world: "SimulationWorld", government_id: str) -> PoliticsResult:
+        """The player says how the settlement is governed, and it is."""
+        return self.leadership.choose(world, government_id)
+
     def propose(
         self,
         world: "SimulationWorld",

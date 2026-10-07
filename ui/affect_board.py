@@ -108,7 +108,7 @@ def draw_affect_board(
     kind: str | None,
     pointer: tuple[int, int] | None = None,
 ) -> None:
-    draw_panel(target, rect)
+    draw_panel(target, rect, band=PADDING + LINE_HEIGHT)
     title, _lines_ = _lines(world, resident_id, group, kind)
     x, y = rect.x + PADDING, rect.y + PADDING
     font.draw(target, font.truncate(title, rect.width - PADDING * 2), (x, y), PALETTE["paper"])

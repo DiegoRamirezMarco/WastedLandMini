@@ -321,6 +321,10 @@ class SimulationWorld:
         """Put a kind of government to everyone, while the settlement is choosing one. They settle it."""
         return self.politics.propose_government(self, government_id)
 
+    def choose_government(self, government_id: str) -> PoliticsResult:
+        """Give the settlement a kind of government, while it is choosing one or in place of the one it has."""
+        return self.politics.choose_government(self, government_id)
+
     def propose(
         self,
         kind: str,

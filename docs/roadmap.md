@@ -1525,7 +1525,8 @@ Politics comes in four milestones, S26 to S29, and a screen, P26. It has a modul
 
 What holds for all four:
 - The player is not the mayor and is nobody in the settlement. They propose, advise and
-  influence, and never govern
+  influence, and never govern. Set aside in one thing since (S38): the kind of government
+  is the player's to say
 - Whoever leads is a resident like any other, with a role. There is never a mayor apart from
   `Resident`
 - Fear, support, legitimacy and loyalty are four things, and none stands in for another
@@ -1637,7 +1638,8 @@ Still open here:
 - How much each kind appeals, and every weight in a vote, are first guesses. With the nine of
   the ready-made settlement, forty seeds chose a commune sixteen times, an assembly twelve, a
   council four, a ruler four, a mayor three and a commander once
-- None of it is on screen: P26. Until then a government is proposed by command
+- None of it is on screen: P26. Until then a government is proposed by command. Since
+  S38 and P34 the player chooses the kind, from `Gobierno` in the menu
 
 ### S27 — Proposals, votes and laws (needs S26) — done
 Asked first, in two batches, and answered: residents propose things of their own too, those the
@@ -1902,6 +1904,8 @@ Still to settle:
   the watch
 
 ### P26 — Politics on screen (needs S26 to S29) — planned
+The entry in the menu, the kind, the seats, the measures and the laws in force are built: P34.
+
 - A government entry in the menu: its kind, who leads, who sits on the council, the laws in force
 - The choosing of a government, when the third resident comes, as something seen and advised on
 - Charisma and leadership where the first resident is made, beside the other sides (P16)
@@ -2531,8 +2535,118 @@ the strip at the foot, which is left to conversations.
 Still open here:
 - The dock coming and going as a selected resident starts and ends a chat moves the minimap
   each time
-- The names of the menu are cut by the row under them; with the menu taller there is room to
-  space the rows, but the lower ones would be under the dock while it is open
+- The lower entries of the menu are under the dock while it is open. The names are no longer
+  cut by the row under them: P35
+
+### S38 — The player says how they are governed (needs S26) — done
+The user's words: "en el menu lateral izquierdo, añadiremos el apartado gobierno, ahi se puede
+elegir". Asked first, and answered: choosing is the player's, whenever they like, and it is done,
+not put to anybody. It starts with the legitimacy of how many wanted it, and changing it in the
+middle of a game costs stability. This is the second place where the player's word is an order
+and not advice, after affecting a resident (S37), and it sets aside what S26 began with, that
+the player never governs: who leads, what is decided and what is voted are still the residents'.
+
+- **`ChooseGovernmentCommand`** gives the settlement a kind of government: while it is choosing
+  one, in place of what the residents would have settled on, or in place of the kind it has
+- **Nobody is asked, and what each would have had still counts**: every adult who is there has a
+  kind they would have, by what they hold (S26). How many of them it is, is how legitimate the
+  government starts; whoever wanted it trusts it the more, and whoever wanted another, the less
+- **A change in the middle of a game is the change there already was** (S27): whoever held a
+  seat holds it no longer, the seats of the new kind are filled by its own ways, stability
+  drops, and corruption and unrest are carried over
+- **It cannot be done before there is anything to govern**: a settlement of fewer than three is
+  not choosing, and is refused. Nor is the kind it already has given to it again
+- **The residents can still undo it**: what they propose and vote (S27), and what comes of
+  unrest (S29), change the kind as before
+- The one proposal of S26 (`ProposeGovernmentCommand`) is still there, as a command
+- `government_chosen` and `government_changed` say in `data` whether it was `imposed`
+- Nothing new is saved
+
+Decided without asking:
+- There is no wait between one change and the next. Each costs stability, which is what holds
+  it back
+- A kind chosen while the residents are still talking it over ends the talking: they do not
+  choose over it twelve hours later
+- What the player proposed earlier, if they did, still weighs in what each would have had
+
+Still open here:
+- Nobody remembers that it was put on them rather than chosen: it tells on trust and
+  legitimacy, and on nothing they say or hold against the player (S27's trust in the player)
+- A kind nobody wanted starts at the floor of legitimacy and nothing else comes of it until
+  unrest does (S29)
+
+### P34 — How they are governed, on screen (needs S38) — done
+Asked first, and answered: the seven measures are shown as bars in colour, with no figure.
+
+- **`Gobierno` in the menu, or `P`**, opens a panel over the corner of the map, as the others do
+- **How things stand**: the kind and the day it began, whoever leads by the name of their role,
+  who sits on the council and how many seats stand empty, a vote that has been called and in
+  how many hours; or that they are too few, or that they are talking it over and for how long
+- **Seven bars**, one for each measure of the settlement, each in a colour of its own. What a
+  resident holds is still not read off any panel
+- **The laws in force**, by name
+- **Every kind there is**, with a line on how it works made from its data: who decides, how
+  the next to lead comes to it, how votes are taken and how long a term is. `Elegir` beside
+  each, and `En vigor` beside the one they have
+- **Choosing takes two presses**: the first says which and the button reads `Confirmar`; the
+  second means it. Pressing for another, or shutting the panel, forgets the first
+
+Decided without asking: the two presses, since one click would change a government; and `P`
+for the key, `G` being taken.
+
+Still open here, which is the rest of P26:
+- Proposals, votes, elections, laws to propose, and whoever breaks one are still commands
+- Who holds which role is not seen on the map or in their panel
+
+### P35 — An interface drawn fine (no dependency) — done
+The user's words: "dale una mejora visual a las interfaces son suuuuuuper cutres, dale un poco
+mas de alegria no 3 x 3 pixeles cuadrados cutres". Asked first, and answered: drawn by code at
+the resolution of the window, each icon one a picture of the user's can take the place of; and
+the letters are changed afterwards, as a milestone of their own (P36).
+
+- **Panels, buttons, bars and icons are drawn at the resolution of the window**, smooth and in
+  colour, under the canvas, where the canvas is left clear for them (P13). `graphics/ui_art.py`
+  draws them and `graphics/ui_skin.py` puts them there
+- **Nothing that draws a panel had to change**: `draw_panel`, a button and a bar are offered to
+  the skin first, and are flat as before where there is no window under the canvas, on any
+  surface that is not the canvas, and where they are too small for a frame
+- **The bar, the menu, the panel and the dock are plates** with a line of brass round them and
+  rivets in their corners. A picture at `illustrations/ui/panel.png` still takes their place
+- **What the menu opens has a band of its entry's colour** over its title, and a soft shadow
+- **Every entry of the menu has an icon of its own on a tile of its own colour**, 36 pixels of
+  the window where there were 8 doubled. Three pairs of entries no longer share one. The entry
+  that is open stands on a lit plate, and so does the one under the pointer
+- **The rows of the menu are spaced** so that no word is cut by the row under it, and the
+  entries of the game (save, urbanism, the editors) stand a little apart from the settlement's
+- **The icons of the bar on top** are drawn the same way, at 22 pixels
+- **Buttons are raised and light up under the pointer**; the one that is on is lit
+- **A picture at `illustrations/ui/icons/<name>.png` takes the place of an icon**, at any size
+
+Decided without asking:
+- The colours: dark blue plates with brass, and a hue for each entry of the menu
+- Signs over buildings and the small frames are dressed too, down to 20 by 12 on the canvas
+- The game's 8 by 8 icons stay for what is drawn over residents, and for a game with no
+  window under its canvas
+
+Still open here:
+- The letters are still the pixel font doubled: P36
+- What is over a resident on the map (bubbles, marks, the bar of a task) is still pixel art
+- The editors and Urbanismo get the new panels and buttons, and their own tools, swatches and
+  catalogue are as they were
+- Under the dock, the lower entries of the menu are still covered while it is open
+
+### P36 — Letters as fine as the rest (needs P35) — planned
+Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
+window, as a milestone of its own, because it touches every screen.
+
+- One letter for the whole game, drawn at the resolution of the window
+- Every measure of text the screens lay themselves out by goes on working: width, wrapping and
+  cutting short
+- The pixel font stays for a game with no window under its canvas
+
+Still to settle, to be asked before it is built:
+- Which letter: one that comes with the game as a file, so that it looks the same on any machine
+- Whether sizes change with it, now that small text would be readable
 
 ## Later
 - SQLite persistence

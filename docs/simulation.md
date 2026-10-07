@@ -272,6 +272,12 @@ room. An argument's importance rises with the resentment between the two.
 - **No government until there are three.** When a third resident lives there the adults take
   twelve hours to settle on a kind, each by what they hold, and the player may put one kind to
   them all, once. The ready-made settlement does it on its first day.
+- **The kind of government is the player's to say** (`ChooseGovernmentCommand`), while they
+  are settling on one or in place of the one they have. Nobody is asked, and what each would
+  have had still counts: how many of them wanted it is how legitimate it starts, whoever
+  wanted another trusts it less, and a change in the middle of a game unseats whoever governed
+  and costs stability. A settlement of fewer than three is refused. What the residents vote
+  and what comes of unrest can change it again.
 - **A kind of government** says whether somebody leads, whether there is a council, and how the
   next leader comes to be: voted for by everyone or by the council, whoever is strongest,
   whoever the last one would have had, or whoever has the most behind them. Where there are

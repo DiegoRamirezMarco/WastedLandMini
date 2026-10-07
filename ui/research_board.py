@@ -6,6 +6,7 @@ import pygame
 
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
+from graphics.ui_art import band_hue
 from simulation.work.research import CLOSED, IN_HAND, KNOWN, OPEN, SubjectDefinition
 from simulation.world import SimulationWorld
 from ui.button import HEIGHT as BUTTON_HEIGHT
@@ -104,7 +105,7 @@ def _studying(world: SimulationWorld) -> bool:
 
 
 def draw_research_board(target: pygame.Surface, font: BitmapFont, rect: pygame.Rect, world: SimulationWorld) -> None:
-    draw_panel(target, rect)
+    draw_panel(target, rect, band=PADDING + LINE_HEIGHT, band_color=band_hue("study"))
     x, y = rect.x + PADDING, rect.y + PADDING
     font.draw(target, "Estudio: lo que se sabe y lo que falta por saber", (x, y), PALETTE["paper"])
     y += LINE_HEIGHT + 2

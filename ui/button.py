@@ -7,6 +7,7 @@ import pygame
 
 from graphics.font import CELL_SIZE, BitmapFont
 from graphics.palette import PALETTE
+from ui.panel import draw_button
 
 PADDING_X = 4
 HEIGHT = CELL_SIZE[1] + 2
@@ -26,7 +27,6 @@ class Button:
         return self.rect.collidepoint(position)
 
     def draw(self, target: pygame.Surface, font: BitmapFont, active: bool = False) -> None:
-        pygame.draw.rect(target, PALETTE["lamp" if active else "shadow"], self.rect)
-        pygame.draw.rect(target, PALETTE["iron"], self.rect, 1)
+        draw_button(target, self.rect, active)
         color = PALETTE["ink" if active else "bone"]
         font.draw(target, self.label, (self.rect.x + PADDING_X, self.rect.y + (self.rect.height - CELL_SIZE[1]) // 2), color)

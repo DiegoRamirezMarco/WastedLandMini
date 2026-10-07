@@ -9,6 +9,7 @@ import pygame
 from graphics.assets import ASSETS_DIR, AssetStore
 from graphics.face_renderer import FACE_SIZE, FaceRenderer
 from graphics.illustrations import Illustrations, nine_slice
+from graphics.palette import PALETTE
 from graphics.screen_layers import ScreenLayers
 from settings import SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE
 from simulation.commands import AdvanceTimeCommand
@@ -160,8 +161,10 @@ class IllustratedGameTests(unittest.TestCase):
         view.centre_on((4, 20))
         window = self._shown(game)
         self.assertNotEqual(tuple(window.get_at(self._on_window(view, (0.5, 20.5))))[:3], GROUND)
-        # Round the map everything is as it was: the bar is drawn on the canvas.
-        self.assertEqual(game.canvas.get_at((300, 5))[3], 255)
+        # Round the map none of it shows: the bar is a plate of its own, under its text.
+        in_bar = (view.hud.layout.top.right - 60, 20)
+        self.assertEqual(game.canvas.get_at(in_bar)[3], 0)
+        self.assertFalse(_is(tuple(window.get_at((in_bar[0] * SCALE, in_bar[1] * SCALE))), GROUND))
         # It grows with the zoom like the rest of the map.
         for zoom in range(4):
             view.set_zoom(zoom)
@@ -255,12 +258,20 @@ class IllustratedGameTests(unittest.TestCase):
         plate_row = [tuple(window.get_at(((dock.x + x) * SCALE, (dock.bottom - 12) * SCALE)))[:3] for x in range(40, 100)]
         self.assertTrue(any(color != FACE for color in plate_row))
 
-    def test_a_folder_with_nothing_in_it_changes_nothing(self) -> None:
+    def test_a_folder_with_nothing_in_it_leaves_the_map_as_it_was_and_dresses_what_is_round_it(self) -> None:
         game = self._game()
         window = self._shown(game)
-        self.assertFalse(game.layers.active)
-        for spot in ((10, 10), (400, 200), (700, 400)):
-            self.assertEqual(tuple(window.get_at((spot[0] * SCALE, spot[1] * SCALE)))[:3], tuple(game.canvas.get_at(spot))[:3])
+        # The map is the game's own art, on the canvas.
+        on_map = (400, 200)
+        self.assertEqual(game.canvas.get_at(on_map)[3], 255)
+        self.assertEqual(tuple(window.get_at((on_map[0] * SCALE, on_map[1] * SCALE)))[:3], tuple(game.canvas.get_at(on_map))[:3])
+        # With a window to be seen through the canvas, the frame is drawn on it by the game itself (P35).
+        self.assertTrue(game.layers.active)
+        layout = game.global_view.hud.layout
+        for part in (layout.sidebar, layout.panel):
+            spot = (part.centerx, part.bottom - 20)
+            self.assertEqual(game.canvas.get_at(spot)[3], 0)
+            self.assertNotEqual(tuple(window.get_at((spot[0] * SCALE, spot[1] * SCALE)))[:3], PALETTE["ink"])
 
 
 if __name__ == "__main__":

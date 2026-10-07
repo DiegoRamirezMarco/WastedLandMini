@@ -34,6 +34,7 @@ from scenes.body_stage import BodyStage, Remains, ground_spot
 from audio.voice_player import VoicePlayer
 from scenes.hud import (
     BUILD_INTENT,
+    GOVERNMENT_INTENT,
     VOICE_INTENT,
     DRAW_INTENT,
     JOBS_INTENT,
@@ -54,6 +55,7 @@ from scenes.scene import canvas_position
 from settings import SCALE, TILE_SIZE
 from simulation.commands import (
     AcknowledgeTutorialCommand,
+    ChooseGovernmentCommand,
     SetPausedCommand,
     SetResearchCommand,
     SetSpeedCommand,
@@ -332,6 +334,8 @@ class GlobalView:
             self._apply(JOBS_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_e:
             self._apply(RESEARCH_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+            self._apply(GOVERNMENT_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
             self.centre_on_resident(self.hud.selected_id)
             self.following = self.hud.selected_id
@@ -628,6 +632,10 @@ class GlobalView:
             self.hud.toggle_stores()
         elif intent == RESEARCH_INTENT:
             self.hud.toggle_research()
+        elif intent == GOVERNMENT_INTENT:
+            self.hud.toggle_government()
+        elif isinstance(intent, tuple) and intent[0] == "choose_government":
+            self._choose_government(intent[1])
         elif intent == SAVE_INTENT:
             self.requested_save = True
         elif intent == URBANISM_INTENT:
@@ -802,6 +810,17 @@ class GlobalView:
         elif not self.world.affect.is_held(self.world, resident_id):
             if not self.world.apply_command(HoldResidentCommand(resident_id)).ok:
                 self._affect_back(close=True)
+
+    def _choose_government(self, government_id: str) -> None:
+        """Give the settlement a kind of government. It is asked for twice: once to say which, and once to mean it."""
+        if self.hud.government_armed != government_id:
+            self.hud.government_armed = government_id
+            return
+        self.hud.government_armed = None
+        result = self.world.apply_command(ChooseGovernmentCommand(government_id))
+        self.hud.notify(result.message)
+        if not result.ok:
+            self._sound("refuse")
 
     def _suggest_job(self, job_id: str) -> None:
         """Put a job to the selected resident and say what came of it. The choice is theirs."""

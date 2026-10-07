@@ -7,6 +7,7 @@ import pygame
 
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE, Color
+from graphics.ui_art import band_hue
 from simulation.events.event import DomainEvent
 from simulation.tastes.taste_system import FOUND_OUT_EVENT
 from ui.labels import format_time
@@ -53,7 +54,7 @@ class EventFeed:
         font.draw(target, line, position, self.color(event))
 
     def draw_panel(self, target: pygame.Surface, font: BitmapFont, rect: pygame.Rect, title: str = "Registro") -> None:
-        draw_panel(target, rect)
+        draw_panel(target, rect, band=PADDING + LINE_HEIGHT, band_color=band_hue("events"))
         x, y = rect.x + PADDING, rect.y + PADDING
         font.draw(target, title, (x, y), PALETTE["paper"])
         y += LINE_HEIGHT + 2

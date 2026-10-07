@@ -10,11 +10,13 @@ from graphics.assets import AssetStore
 from graphics.face_renderer import FaceRenderer
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.icons import ICON_SIZE, icon_path
-from graphics.illustrations import Illustrations, nine_slice
+from graphics.illustrations import Illustrations
 from graphics.item_icons import ICON_SIZE as ITEM_ICON_SIZE
 from graphics.item_icons import ItemIcons
 from graphics.palette import PALETTE
-from graphics.screen_layers import TRANSPARENT, ScreenLayers
+from graphics.screen_layers import ScreenLayers
+from graphics.ui_art import band_hue
+from graphics.ui_skin import WindowSkin
 from settings import SPEEDS
 from simulation.events.event import DomainEvent
 from simulation.residents.resident import Resident
@@ -24,6 +26,8 @@ from ui.dock import draw_scene
 from ui.event_log import EventFeed
 from ui.affect_board import AFFECT_INTENT, affect_board_height, affect_rows, draw_affect_board
 from ui.affect_board import PANEL_WIDTH as AFFECT_WIDTH
+from ui.government_board import PANEL_WIDTH as GOVERNMENT_WIDTH
+from ui.government_board import choose_buttons, draw_government_board, government_board_height
 from ui.inventory_view import (
     container_item_hitboxes,
     container_panel_height,
@@ -68,15 +72,25 @@ LOG_SIZE = (340, 232)
 STORES_WIDTH = 184
 OUTLOOK_WIDTH = 300
 OUTLOOK_PADDING = 4
-# Rows of the menu on the left: compact enough for the game and editor controls together.
-MENU_ROW = 28
-MENU_ICON_SCALE = 2
+# Rows of the menu on the left: compact enough for the game and editor controls together. Each
+# is the tile of its icon over a word, and the entries that are not of the settlement stand a
+# little apart from the ones that are.
+MENU_ROW = 30
+MENU_TOP = 2
+MENU_TILE = 18
+MENU_GAP = 4
+# How large the icons of the bar on top are shown.
+TOP_ICON = 11
+# The plate behind the entry of the menu that is open, and behind the one the pointer is on.
+MENU_OPEN = ((58, 74, 90), PALETTE["lamp"])
+MENU_POINTED = ((46, 59, 72), (96, 120, 132))
 
 PAUSE_INTENT = ("pause",)
 LOG_INTENT = ("log",)
 JOBS_INTENT = ("jobs",)
 STORES_INTENT = ("stores",)
 RESEARCH_INTENT = ("research",)
+GOVERNMENT_INTENT = ("government",)
 ROSTER_INTENT = ("roster",)
 MINIMAP_INTENT = ("minimap",)
 SAVE_INTENT = ("save",)
@@ -97,9 +111,7 @@ FOCUS_INTENTS = {
 CLOCK_FOCUS = "clock"
 STORES_TITLE = "Almacén: lo que es de todos"
 STORES_EMPTY = "No queda nada"
-# The picture that the large parts of the screen wear, if there is one, and how wide its border is drawn.
-SKIN_PATH = "ui/panel.png"
-SKIN_BORDER_PIXELS = 20
+STORES_BAND = MARGIN + LINE_HEIGHT - 1
 
 
 def speed_intent(speed: int) -> tuple[str, int]:
@@ -136,15 +148,24 @@ class MenuButton:
     def contains(self, position: tuple[int, int]) -> bool:
         return self.rect.collidepoint(position)
 
-    def draw(self, target: pygame.Surface, font: BitmapFont, assets: AssetStore, active: bool = False) -> None:
-        if active:
-            pygame.draw.rect(target, PALETTE["shadow"], self.rect)
-            pygame.draw.rect(target, PALETTE["lamp"], self.rect, 1)
-        size = (ICON_SIZE[0] * MENU_ICON_SCALE, ICON_SIZE[1] * MENU_ICON_SCALE)
-        icon = pygame.transform.scale(assets.image(icon_path(self.icon), size=ICON_SIZE), size)
-        target.blit(icon, (self.rect.centerx - size[0] // 2, self.rect.y + 3))
+    def draw(
+        self, target: pygame.Surface, font: BitmapFont, skin: WindowSkin, active: bool = False, pointed: bool = False
+    ) -> None:
+        plate = self.rect.inflate(-4, 0)
+        if active or pointed:
+            fill, trim = MENU_OPEN if active else MENU_POINTED
+            if not skin.plate(target, plate, fill, trim):
+                pygame.draw.rect(target, PALETTE["shadow"], plate)
+                pygame.draw.rect(target, PALETTE["lamp" if active else "iron"], plate, 1)
+        place = pygame.Rect(self.rect.centerx - MENU_TILE // 2, self.rect.y + 2, MENU_TILE, MENU_TILE)
+        scale = skin.layers.scale if skin.layers is not None else 1
+        lit = active or pointed
+        if not skin.picture(target, skin.tile(self.icon, MENU_TILE * scale, lit), place):
+            # With no window to show it finer on, the same tile at the size of the canvas.
+            target.blit(pygame.transform.smoothscale(skin.tile(self.icon, MENU_TILE * 4, lit), place.size), place)
         left = self.rect.centerx - font.width(self.label) // 2
-        font.draw(target, self.label, (left, self.rect.y + 5 + size[1]), PALETTE["paper" if active else "bone"])
+        # The top of a line of text is room for accents: the word sits close under the tile.
+        font.draw(target, self.label, (left, place.bottom - 2), PALETTE["paper" if lit else "bone"])
 
 
 class Hud:
@@ -169,18 +190,20 @@ class Hud:
         self.faces = faces
         self.assets = assets
         self.layout: Layout = layout_for(canvas.get_size())
-        # The bar, the menu, the panel and the dock, while it is open, wear the skin, if the game has
-        # been given one.
-        self._skin_source = illustrations.find(SKIN_PATH) if illustrations is not None and layers is not None else None
-        self._skinned = {tuple(part) for part in (self.layout.top, self.layout.sidebar, self.layout.panel, self.layout.dock)}
-        self._skins: dict[tuple[int, int, int, int], pygame.Surface] = {}
-        set_skin(self._dress if self._skin_source is not None else None)
-        # The log, the job board, the stores and what is studied share a corner of the map, so only
-        # one of them is open at a time.
+        # Where there is a window under the canvas, everything is dressed at its resolution. The
+        # bar, the menu, the panel and the dock, while it is open, are the plates of the frame.
+        self.skin = WindowSkin(canvas, layers, illustrations)
+        self.skin.parts = {tuple(part) for part in (self.layout.top, self.layout.sidebar, self.layout.panel, self.layout.dock)}
+        set_skin(self.skin if self.skin.usable else None)
+        # The log, the job board, the stores, what is studied and how the settlement is governed
+        # share a corner of the map, so only one of them is open at a time.
         self.log_open = False
         self.jobs_open = False
         self.stores_open = False
         self.research_open = False
+        self.government_open = False
+        # The kind of government the player has pressed for once, and has to press for again.
+        self.government_armed: str | None = None
         # What the player can tell whoever is selected, while they stand stopped to be told: the
         # kind of thing chosen so far, and the thing, on the way to who or what it is about.
         self.affect_open = False
@@ -212,7 +235,7 @@ class Hud:
 
         top, sidebar = self.layout.top, self.layout.sidebar
         self.clock_left = sidebar.right + MARGIN
-        self.pause_button = Button.at(font, self.clock_left + ICON_SIZE[0] + 40, 1, "II", PAUSE_INTENT)
+        self.pause_button = Button.at(font, self.clock_left + TOP_ICON + 40, 1, "II", PAUSE_INTENT)
         self.speed_buttons: list[Button] = []
         x = self.pause_button.rect.right + 4
         for speed in SPEEDS:
@@ -234,38 +257,33 @@ class Hud:
             ("people", "Residentes", ROSTER_INTENT),
             ("work", "Puestos", JOBS_INTENT),
             ("study", "Estudio", RESEARCH_INTENT),
-            ("scrap", "Almacén", STORES_INTENT),
-            ("log", "Eventos", LOG_INTENT),
+            ("stores", "Almacén", STORES_INTENT),
+            ("government", "Gobierno", GOVERNMENT_INTENT),
+            ("events", "Eventos", LOG_INTENT),
             ("map", "Mapa", MINIMAP_INTENT),
-            ("log", "Guardar", SAVE_INTENT),
-            ("map", "Urbanismo", URBANISM_INTENT),
+            ("save", "Guardar", SAVE_INTENT),
+            ("urbanism", "Urbanismo", URBANISM_INTENT),
         ]
         if drawable:
             # Where there is somewhere to keep drawings, residents can be drawn.
-            entries.append(("brush", "Dibujar", DRAW_INTENT))
-            entries.append(("brush", "Edificios", BUILD_INTENT))
+            entries.append(("draw", "Dibujar", DRAW_INTENT))
+            entries.append(("buildings", "Edificios", BUILD_INTENT))
         if voiced:
             # And where there are voices to choose from, they can be given one.
             entries.append(("voice", "Voz", VOICE_INTENT))
-        self.menu = [
-            MenuButton(pygame.Rect(sidebar.x, sidebar.y + index * MENU_ROW, sidebar.width, MENU_ROW), icon, label, intent)
-            for index, (icon, label, intent) in enumerate(entries)
-        ]
+        self.menu: list[MenuButton] = []
+        # Where the line is drawn between what is of the settlement and what is of the game.
+        self.menu_rule = 0
+        y = sidebar.y + MENU_TOP
+        for icon, label, intent in entries:
+            if intent == SAVE_INTENT:
+                self.menu_rule = y + MENU_GAP // 2
+                y += MENU_GAP
+            self.menu.append(MenuButton(pygame.Rect(sidebar.x, y, sidebar.width, MENU_ROW), icon, label, intent))
+            y += MENU_ROW
         self.jobs_button = next(button for button in self.menu if button.intent == JOBS_INTENT)
         self.log_button = next(button for button in self.menu if button.intent == LOG_INTENT)
         self.research_button = next(button for button in self.menu if button.intent == RESEARCH_INTENT)
-
-    def _dress(self, target: pygame.Surface, rect: pygame.Rect) -> bool:
-        """Put the skin under one of the large parts of the screen, and clear the canvas there to show it."""
-        key = tuple(rect)
-        if target is not self.canvas or key not in self._skinned:
-            return False
-        if key not in self._skins:
-            size = self.layers.on_screen(rect).size
-            self._skins[key] = nine_slice(self._skin_source, size, SKIN_BORDER_PIXELS)
-        target.fill(TRANSPARENT, rect)
-        self.layers.picture_under(self._skins[key], rect)
-        return True
 
     @property
     def buttons(self) -> list[Button | MenuButton]:
@@ -277,6 +295,8 @@ class Hud:
             fixed.append(step_button)
         if self.research_open:
             return fixed + study_buttons(self.font, self.research_rect(), self.world)
+        if self.government_open:
+            return fixed + choose_buttons(self.font, self.government_rect(), self.world, self.government_armed)
         if self.affect_open and self.selected_id in self.world.residents:
             return fixed + affect_rows(
                 self.affect_rect(), self.world, self.selected_id or "", self.affect_group, self.affect_kind
@@ -287,9 +307,10 @@ class Hud:
 
     def _open_only(self, panel: str) -> None:
         """Open one of the panels that share a corner, or shut it if it is the one open, and shut the rest."""
-        for name in ("log_open", "jobs_open", "stores_open", "research_open", "affect_open"):
+        for name in ("log_open", "jobs_open", "stores_open", "research_open", "government_open", "affect_open"):
             setattr(self, name, name == panel and not getattr(self, name))
         self.affect_group = self.affect_kind = None
+        self.government_armed = None
 
     def toggle_log(self) -> None:
         self._open_only("log_open")
@@ -302,6 +323,9 @@ class Hud:
 
     def toggle_research(self) -> None:
         self._open_only("research_open")
+
+    def toggle_government(self) -> None:
+        self._open_only("government_open")
 
     def open_affect(self, group: str | None = None, kind: str | None = None) -> None:
         """Show what whoever is selected can be told, in place of whatever else was open there."""
@@ -411,6 +435,7 @@ class Hud:
         panels += [self.jobs_rect()] if self.jobs_open else []
         panels += [self.stores_rect()] if self.stores_open else []
         panels += [self.research_rect()] if self.research_open else []
+        panels += [self.government_rect()] if self.government_open else []
         panels += [self.affect_rect()] if self.affect_open else []
         return any(rect is not None and rect.collidepoint(position) for rect in panels)
 
@@ -429,13 +454,16 @@ class Hud:
     def research_rect(self) -> pygame.Rect:
         return self._float(RESEARCH_WIDTH, research_board_height(self.world, self.font))
 
+    def government_rect(self) -> pygame.Rect:
+        return self._float(GOVERNMENT_WIDTH, government_board_height(self.font, self.world))
+
     def affect_rect(self) -> pygame.Rect:
         height = affect_board_height(self.world, self.selected_id or "", self.affect_group, self.affect_kind)
         return self._float(AFFECT_WIDTH, height)
 
     def stores_rect(self) -> pygame.Rect:
         rows = max(1, len(settlement_stock(self.world)))
-        return self._float(STORES_WIDTH, MARGIN * 2 + LINE_HEIGHT + 2 + rows * (ITEM_ICON_SIZE[1] + 2))
+        return self._float(STORES_WIDTH, MARGIN * 2 + LINE_HEIGHT + 4 + rows * (ITEM_ICON_SIZE[1] + 2))
 
     def outlook_rect(self) -> pygame.Rect | None:
         """Where the forecasts the settlement has heard are listed, when it has heard any."""
@@ -468,13 +496,10 @@ class Hud:
         return pygame.Rect(panel.x, panel.y, panel.width, min(panel.height, container_panel_height(inventory)))
 
     def render(self) -> None:
+        # Buttons light up under the pointer while it is this that is being drawn.
+        self.skin.pointer = self.pointer
         self._render_top()
-        draw_panel(self.canvas, self.layout.sidebar, border="ink")
-        pointed = FOCUS_INTENTS.get(self.focus or "")
-        for button in self.menu:
-            button.draw(self.canvas, self.font, self.assets, active=self._menu_active(button.intent))
-            if button.intent == pointed and self.lit:
-                pygame.draw.rect(self.canvas, PALETTE["glow"], button.rect, 2)
+        self._render_menu()
         self._render_panel()
         self._render_dock()
 
@@ -496,11 +521,35 @@ class Hud:
             self._render_stores(self.stores_rect())
         if self.research_open:
             draw_research_board(self.canvas, self.font, self.research_rect(), self.world)
+        if self.government_open:
+            draw_government_board(
+                self.canvas, self.font, self.government_rect(), self.world, self.government_armed, band_hue("government")
+            )
         if self.affect_open and self.selected_id in self.world.residents:
             draw_affect_board(
                 self.canvas, self.font, self.affect_rect(), self.world, self.selected_id or "",
                 self.affect_group, self.affect_kind, self.pointer,
             )
+        self.skin.pointer = None
+
+    def _render_menu(self) -> None:
+        sidebar = self.layout.sidebar
+        draw_panel(self.canvas, sidebar, border="ink")
+        if self.menu_rule:
+            pygame.draw.line(self.canvas, PALETTE["iron"], (sidebar.x + 8, self.menu_rule), (sidebar.right - 9, self.menu_rule))
+        focused = FOCUS_INTENTS.get(self.focus or "")
+        for button in self.menu:
+            pointed = self.pointer is not None and button.contains(self.pointer)
+            button.draw(self.canvas, self.font, self.skin, self._menu_active(button.intent), pointed)
+            if button.intent == focused and self.lit:
+                pygame.draw.rect(self.canvas, PALETTE["glow"], button.rect, 2)
+
+    def _top_icon(self, name: str, x: int) -> None:
+        """One of the icons of the bar on top: as fine as the window shows it, or else the game's own small one."""
+        place = pygame.Rect(x, 2, TOP_ICON, TOP_ICON)
+        if self.skin.usable and self.skin.picture(self.canvas, self.skin.icon(name, TOP_ICON * self.layers.scale), place):
+            return
+        self.canvas.blit(self.assets.image(icon_path(name), size=ICON_SIZE), (x, 3))
 
     def _menu_active(self, intent: Hashable) -> bool:
         if intent == ROSTER_INTENT:
@@ -512,6 +561,7 @@ class Hud:
             STORES_INTENT: self.stores_open,
             LOG_INTENT: self.log_open,
             RESEARCH_INTENT: self.research_open,
+            GOVERNMENT_INTENT: self.government_open,
         }
         return open_panels.get(intent, False)
 
@@ -523,10 +573,9 @@ class Hud:
         day = f"Día {clock.day}"
         self.font.draw(self.canvas, day, (plaque.centerx - self.font.width(day) // 2, plaque.y + 5), PALETTE["lamp"])
 
-        sky = self.assets.image(icon_path("moon" if self.world.is_dark() else "sun"), size=ICON_SIZE)
-        self.canvas.blit(sky, (self.clock_left, 3))
+        self._top_icon("moon" if self.world.is_dark() else "sun", self.clock_left)
         hour = f"{clock.hour:02d}:{clock.minute:02d}"
-        self.font.draw(self.canvas, hour, (self.clock_left + ICON_SIZE[0] + 4, 2), PALETTE["paper"])
+        self.font.draw(self.canvas, hour, (self.clock_left + TOP_ICON + 4, 2), PALETTE["paper"])
         self.pause_button.draw(self.canvas, self.font, active=clock.paused)
         for button, speed in zip(self.speed_buttons, SPEEDS):
             button.draw(self.canvas, self.font, active=clock.speed == speed and not clock.paused)
@@ -538,9 +587,9 @@ class Hud:
 
         x = self.counts_left
         for icon, figure in settlement_counts(self.world):
-            self.canvas.blit(self.assets.image(icon_path(icon), size=ICON_SIZE), (x, 3))
-            self.font.draw(self.canvas, figure, (x + ICON_SIZE[0] + 3, 2), PALETTE["bone"])
-            x += ICON_SIZE[0] + 3 + self.font.width(figure) + 12
+            self._top_icon(icon, x)
+            self.font.draw(self.canvas, figure, (x + TOP_ICON + 3, 2), PALETTE["bone"])
+            x += TOP_ICON + 3 + self.font.width(figure) + 10
         weather = describe_weather(self.world)
         if weather is not None and x + self.font.width(weather) < self.counts_right:
             self.font.draw(self.canvas, weather, (self.counts_right - self.font.width(weather), 2), PALETTE["sand"])
@@ -645,10 +694,10 @@ class Hud:
             y += 2
 
     def _render_stores(self, rect: pygame.Rect) -> None:
-        draw_panel(self.canvas, rect)
-        x, y = rect.x + MARGIN, rect.y + MARGIN
+        draw_panel(self.canvas, rect, band=STORES_BAND, band_color=band_hue("stores"))
+        x, y = rect.x + MARGIN, rect.y + MARGIN - 1
         self.font.draw(self.canvas, STORES_TITLE, (x, y), PALETTE["paper"])
-        y += LINE_HEIGHT + 2
+        y += LINE_HEIGHT + 4
         stock = settlement_stock(self.world)
         if not stock:
             self.font.draw(self.canvas, STORES_EMPTY, (x, y + 3), PALETTE["stone"])

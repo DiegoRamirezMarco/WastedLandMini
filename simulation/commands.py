@@ -103,6 +103,9 @@ class CommandTarget(Protocol):
     def propose_government(self, government_id: str) -> PoliticsResult:
         ...
 
+    def choose_government(self, government_id: str) -> PoliticsResult:
+        ...
+
     def propose(
         self,
         kind: str,
@@ -403,6 +406,18 @@ class ProposeGovernmentCommand:
 
     def apply(self, world: CommandTarget) -> PoliticsResult:
         return world.propose_government(self.government_id)
+
+
+@dataclass(frozen=True)
+class ChooseGovernmentCommand:
+    """The player says how the settlement is governed, and it is (S38): while it is choosing a
+    kind, or in place of the one it has. How many would have had it is how legitimate it starts.
+    """
+
+    government_id: str
+
+    def apply(self, world: CommandTarget) -> PoliticsResult:
+        return world.choose_government(self.government_id)
 
 
 @dataclass(frozen=True)

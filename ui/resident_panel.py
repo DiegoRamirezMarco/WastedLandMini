@@ -31,7 +31,7 @@ from ui.labels import (
     taste_rows,
     trait_names,
 )
-from ui.panel import draw_panel
+from ui.panel import draw_bar, draw_panel
 
 PADDING = 6
 BAR_LEFT = 44
@@ -314,10 +314,7 @@ def draw_resident_panel(
     for label, value, color in bars:
         font.draw(target, label, (x, y - 1), PALETTE["bone"])
         bar = pygame.Rect(x + BAR_LEFT, y + 3, bar_width, 5)
-        pygame.draw.rect(target, PALETTE["shadow"], bar)
-        filled = round(bar_width * value / 100.0)
-        if filled:
-            pygame.draw.rect(target, PALETTE[color], (bar.x, bar.y, filled, bar.height))
+        draw_bar(target, bar, value / 100.0, color)
         number = str(round(value))
         font.draw(target, number, (panel.right - PADDING - font.width(number), y - 1), PALETTE["dust"])
         y += BAR_ROW

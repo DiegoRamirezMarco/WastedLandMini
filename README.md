@@ -163,6 +163,10 @@ python -m simulation.headless --days 7 --seed 7
 - `Estudio` in the menu, or `E`: what the settlement knows, what it is working out and what
   is left. `Estudiar` beside a subject takes it in hand, and `Dejar` puts it down; somebody
   has to hold the post of `Estudio`, at a study desk, for anything to come of it
+- `Gobierno` in the menu, or `P`: how the settlement is governed, who holds its seats, how
+  things stand as seven bars, and the laws in force. `Elegir` beside a kind, and then
+  `Confirmar`, gives the settlement that kind of government: it starts as legitimate as the
+  number of residents who wanted it, and changing it later shakes the place
 - `Guardar` in the menu, or `F5`, saves the game to `saves/quicksave.json`; `F9` loads it
 - `M`: sound on / off, voices and all
 - `Esc`: back to the menu, where the settlement waits; `Salir` there leaves the game

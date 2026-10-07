@@ -86,8 +86,8 @@ Event types emitted so far:
 | `child_died` | A bundle nobody looked after dies, with `child_id` in `data` | 90 |
 | `government_choosing` | The settlement has grown to where it wants a government, with `until` and the `kinds` there are in `data` | 65 |
 | `government_proposed` | The player puts one kind to everyone, with `government` in `data` | 40 |
-| `government_chosen` | The residents settle on a kind, with `government` and how many `wanted` each in `data` | 75 |
-| `government_changed` | A settlement that had one kind of government takes another, with `from` and `to` in `data` | 75 |
+| `government_chosen` | The residents settle on a kind, or the player gives them one, with `government`, how many `wanted` each and whether it was `imposed` in `data` | 75 |
+| `government_changed` | A settlement that had one kind of government takes another, with `from`, `to` and whether it was `imposed` in `data` | 75 |
 | `leader_chosen` | Somebody comes to lead, with their `role`, the `way` and, after a show of hands, their `backers` in `data` | 65 |
 | `council_seated` | Seats on the council are filled, with the `role` and the whole `council` in `data` | 55 |
 | `leader_lost` | Whoever led is dead or gone, with `resident_id`, `role` and `died` in `data` | 75 |

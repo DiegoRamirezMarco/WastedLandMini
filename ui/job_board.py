@@ -6,6 +6,7 @@ import pygame
 
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
+from graphics.ui_art import band_hue
 from simulation.world import SimulationWorld
 from ui.button import HEIGHT as BUTTON_HEIGHT
 from ui.button import Button
@@ -86,7 +87,7 @@ def draw_job_board(
     world: SimulationWorld,
     selected_id: str | None,
 ) -> None:
-    draw_panel(target, rect)
+    draw_panel(target, rect, band=PADDING + LINE_HEIGHT, band_color=band_hue("work"))
     x, y = rect.x + PADDING, rect.y + PADDING
     font.draw(target, "Puestos", (x, y), PALETTE["paper"])
     y += LINE_HEIGHT + 2

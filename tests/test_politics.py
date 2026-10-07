@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from save.save_manager import SaveManager
-from simulation.commands import ChooseOptionCommand, ProposeGovernmentCommand
+from simulation.commands import ChooseGovernmentCommand, ChooseOptionCommand, ProposeGovernmentCommand
 from simulation.events.event import DomainEvent
 from simulation.knowledge.fact import SOURCE_TOLD
 from simulation.knowledge.knowledge_system import learn
@@ -247,6 +247,70 @@ class FoundingTests(unittest.TestCase):
         self.assertAlmostEqual(legitimacy, floor + (100 - floor) * behind / 9, delta=abs(seat) + 0.01)
         trust = sorted({profile.trust for profile in world.political_profiles.values()})
         self.assertEqual(trust, [settings.trust_start + settings.unbacked_trust, settings.trust_start + settings.backed_trust])
+
+
+class ChosenByThePlayerTests(unittest.TestCase):
+    def test_the_player_says_how_they_are_governed_while_they_choose_and_it_is(self) -> None:
+        world = _settled()
+        self.assertFalse(world.apply_command(ChooseGovernmentCommand("commune")).ok, "nobody is choosing yet")
+        self.assertIsNone(world.government.kind)
+        world.politics.leadership.open_choosing(world)
+        self.assertFalse(world.apply_command(ChooseGovernmentCommand("empire")).ok)
+        result = world.apply_command(ChooseGovernmentCommand("military_leadership"))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.detail, "military_leadership")
+        self.assertEqual(world.government.kind, "military_leadership")
+        self.assertIsNone(world.government.choosing_until, "there is nothing left to settle")
+        self.assertIn(world.government.leader, world.residents, "its seats are filled as its own ways say")
+        chosen = next(event for event in world.history if event.event_type == "government_chosen")
+        self.assertTrue(chosen.data["imposed"])
+        world.step(60 * 13)
+        self.assertEqual(world.government.kind, "military_leadership", "the residents do not choose over it")
+
+    def test_what_they_would_have_had_is_how_legitimate_it_starts(self) -> None:
+        def founded(kind: str) -> SimulationWorld:
+            world = _settled()
+            world.politics.leadership.open_choosing(world)
+            world.apply_command(ChooseGovernmentCommand(kind))
+            return world
+
+        asked = _settled()
+        wanted = list(asked.politics.leadership.wanted(asked).values())
+        liked = max(KINDS, key=wanted.count)
+        unwanted = next(kind for kind in KINDS if kind not in wanted)
+        welcome, forced = founded(liked), founded(unwanted)
+        settings = forced.registries.politics
+        self.assertGreater(welcome.government.measures["legitimacy"], forced.government.measures["legitimacy"])
+        self.assertEqual(
+            {profile.trust for profile in forced.political_profiles.values()},
+            {settings.trust_start + settings.unbacked_trust},
+            "nobody wanted it, and nobody trusts it for that",
+        )
+
+    def test_the_player_changes_the_kind_there_is_and_it_shakes_the_place(self) -> None:
+        world = _governed("council")
+        seated = [world.government.leader, *world.government.council]
+        stability = world.government.measures["stability"]
+        self.assertFalse(world.apply_command(ChooseGovernmentCommand("council")).ok, "it is what they have")
+        self.assertTrue(world.apply_command(ChooseGovernmentCommand("personalist_rule")).ok)
+        self.assertEqual(world.government.kind, "personalist_rule")
+        self.assertEqual(world.government.council, [])
+        self.assertIn(world.government.leader, world.residents)
+        self.assertLess(world.government.measures["stability"], stability)
+        changed = next(event for event in world.history if event.event_type == "government_changed")
+        self.assertEqual((changed.data["from"], changed.data["to"]), ("council", "personalist_rule"))
+        self.assertTrue(changed.data["imposed"])
+        councillors = [each for each in seated if each and "councillor" in world.residents[each].roles]
+        self.assertEqual(councillors, [], "whoever sat on the council sits no longer")
+
+    def test_choosing_a_kind_is_the_same_for_the_same_settlement(self) -> None:
+        def chosen(seed: int) -> tuple:
+            world = _settled(seed)
+            world.politics.leadership.open_choosing(world)
+            world.apply_command(ChooseGovernmentCommand("strong_mayor"))
+            return world.government.leader, round(world.government.measures["legitimacy"], 4)
+
+        self.assertEqual(chosen(5), chosen(5))
 
 
 class ProfileTests(unittest.TestCase):
