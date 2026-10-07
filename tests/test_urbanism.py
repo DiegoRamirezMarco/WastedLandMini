@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pygame
 
+from graphics.palette import PALETTE
 from save.save_manager import SaveManager
 from scenes.hud import SAVE_INTENT, URBANISM_INTENT
 from settings import SCALE
@@ -312,6 +313,122 @@ class UrbanismShellTests(unittest.TestCase):
 
         self.assertEqual({key: (placed.x, placed.y) for key, placed in world.interactables.items()}, layout)
         self.assertEqual(set(world.rooms), rooms)
+
+    def _tiles(self, editor) -> list:
+        return [button for button in editor.buttons if button.intent[0] == "catalog"]
+
+    def _point(self, editor, position: tuple[int, int]) -> None:
+        editor.handle_event(
+            pygame.event.Event(pygame.MOUSEMOTION, pos=self._window(position), rel=(0, 0), buttons=(0, 0, 0))
+        )
+
+    def test_the_catalogue_is_a_grid_of_pictures_with_every_tab_in_sight(self) -> None:
+        from scenes.urbanism import CATALOG_BOTTOM, CATALOG_COLUMNS, CATALOG_TILE, CATALOG_TOP, PANEL_WIDTH
+
+        editor = self._editor()
+        kinds = self.game.world.registries.interactables
+        for category in ("buildings", "furniture", "decor"):
+            self._press(editor, ("category", category))
+            tiles = self._tiles(editor)
+            self.assertEqual(len(tiles), len(editor._catalog()), f"{category}: all of it fits without the wheel")
+            self.assertEqual(editor._catalog_scroll(), 0)
+            for tile in tiles:
+                self.assertEqual(tile.rect.size, (CATALOG_TILE, CATALOG_TILE))
+                self.assertTrue(pygame.Rect(0, CATALOG_TOP, PANEL_WIDTH, CATALOG_BOTTOM - CATALOG_TOP).contains(tile.rect))
+            rows = [line for line in editor._catalog_lines() if not isinstance(line, str)]
+            self.assertEqual(len({tile.rect.y for tile in tiles}), len(rows))
+            self.assertTrue(all(len(row) <= CATALOG_COLUMNS for row in rows), "so many to a row")
+            self.assertEqual(len({tile.rect.x for tile in tiles}), min(CATALOG_COLUMNS, max(len(row) for row in rows)))
+            self.assertEqual(len({tuple(tile.rect) for tile in tiles}), len(tiles), "no two on the same place")
+            editor.render()
+        # Each is the picture of what it offers, fitted to its tile whatever its shape.
+        self._press(editor, ("category", "furniture"))
+        for entry in editor._catalog():
+            picture = editor._catalog_picture(entry, 1)
+            self.assertLessEqual(max(picture.get_size()), CATALOG_TILE, entry.entry_id)
+            self.assertGreater(pygame.mask.from_surface(picture).count(), 20, entry.entry_id)
+        self.assertGreater(kinds.get("bed").height, kinds.get("bed").width)
+        bed = editor._catalog_picture(next(entry for entry in editor._catalog() if entry.entry_id == "bed"), 1)
+        self.assertGreater(bed.get_height(), bed.get_width(), "nothing is squashed into a square")
+
+    def test_resting_the_pointer_on_a_picture_names_it_and_says_what_it_takes(self) -> None:
+        editor = self._editor()
+        self._press(editor, ("category", "furniture"))
+        self.assertIsNone(editor.pointed_entry())
+        tiles = {button.intent[1]: button for button in self._tiles(editor)}
+        self._point(editor, tiles["bed"].rect.center)
+        entry = editor.pointed_entry()
+        self.assertEqual((entry.entry_id, entry.name), ("bed", "cama"))
+        self.assertIn("chatarra", editor.entry_note(entry))
+        self.assertIn("min de obra", editor.entry_note(entry))
+        editor.render()
+        # It is said in a box beside the pointer, framed so that it stands out from what is under it.
+        corner = (tiles["bed"].rect.centerx + 10, tiles["bed"].rect.centery + 12)
+        self.assertEqual(self.game.canvas.get_at(corner)[:3], PALETTE["lamp"])
+        self.assertEqual(self.game.canvas.get_at((corner[0] + 2, corner[1] + 2))[:3], PALETTE["ink"])
+        # What is simply put down says so, and off the catalogue nothing is named.
+        self._press(editor, ("category", "decor"))
+        tiles = {button.intent[1]: button for button in self._tiles(editor)}
+        self._point(editor, tiles["tyres"].rect.center)
+        self.assertEqual(editor.entry_note(editor.pointed_entry()), "se pone sin obra")
+        self._point(editor, editor.map_rect.center)
+        self.assertIsNone(editor.pointed_entry())
+        editor.render()
+
+    def test_what_nobody_knows_how_to_make_comes_last_under_its_heading_and_is_not_handed_over(self) -> None:
+        from scenes.urbanism import LOCKED_TITLE
+
+        world = self.game.world
+        world.studies.known.remove("still")
+        editor = self._editor()
+        self._press(editor, ("category", "furniture"))
+        entries = editor._catalog()
+        locked = [entry.entry_id for entry in entries if entry.lock is not None]
+        self.assertIn("bar", locked)
+        self.assertEqual([entry.entry_id for entry in entries][-len(locked):], locked, "they come after the rest")
+        lines = editor._catalog_lines()
+        heading = lines.index(LOCKED_TITLE)
+        self.assertTrue(all(entry.lock is None for line in lines[:heading] for entry in line))
+        self.assertTrue(all(entry.lock is not None for line in lines[heading + 1 :] for entry in line))
+        cells, where = editor._catalog_cells()
+        self.assertIsNotNone(where)
+        tiles = {entry.entry_id: rect for entry, rect in cells}
+        self.assertGreater(tiles["bar"].y, where, "under the heading")
+        self.assertLess(tiles["bed"].y, where)
+        # Its picture is dimmed, it says what has to be found out, and it does not come off the catalogue.
+        bar = next(entry for entry in entries if entry.entry_id == "bar")
+        plain = editor._catalog_picture(next(entry for entry in entries if entry.entry_id == "bed"), 1)
+        self.assertIsNot(editor._catalog_picture(bar, 1), plain)
+        self._point(editor, tiles["bar"].center)
+        self.assertIn("Alambique", editor.entry_note(editor.pointed_entry()))
+        editor.render()
+        self._press(editor, ("catalog", "bar"))
+        self.assertIsNone(editor.catalog_id)
+        self.assertIn("Alambique", editor.message)
+        # A tab with nothing locked in it has no heading.
+        self._press(editor, ("category", "decor"))
+        self.assertNotIn(LOCKED_TITLE, editor._catalog_lines())
+        self.assertIsNone(editor._catalog_cells()[1])
+
+    def test_a_catalogue_longer_than_its_room_rolls_with_the_wheel(self) -> None:
+        import scenes.urbanism as urbanism
+
+        editor = self._editor()
+        self._press(editor, ("category", "furniture"))
+        everything = len(editor._catalog())
+        room = urbanism.CATALOG_BOTTOM
+        self.addCleanup(setattr, urbanism, "CATALOG_BOTTOM", room)
+        urbanism.CATALOG_BOTTOM = urbanism.CATALOG_TOP + urbanism.CATALOG_TILE * 2 + urbanism.CATALOG_GAP
+        self.assertLess(len(self._tiles(editor)), everything)
+        self.assertGreater(editor._catalog_scroll(), 0)
+        first = self._tiles(editor)[0].intent
+        seen = {tile.intent[1] for tile in self._tiles(editor)}
+        for _ in range(editor._catalog_scroll() + 3):
+            editor.catalog_offset = min(editor._catalog_scroll(), editor.catalog_offset + 1)
+            seen |= {tile.intent[1] for tile in self._tiles(editor)}
+        self.assertNotEqual(self._tiles(editor)[0].intent, first)
+        self.assertEqual(len(seen), everything, "all of it can be reached")
+        editor.render()
 
     def test_visible_buttons_save_and_open_urbanism_while_time_stands_still(self) -> None:
         view = self.game.global_view

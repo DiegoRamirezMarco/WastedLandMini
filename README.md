@@ -149,7 +149,9 @@ python -m simulation.headless --days 7 --seed 7
   interior, walls, roof and door. The preview exchanges the roof for the inside; `Guardar` writes
   the four PNGs under `illustrations/buildings/`. `Esc` goes back without saving
 - `Urbanismo` in the menu, or `U`: add buildings, furniture and scenery by dragging them out of
-  the catalogue onto the map, and move anything already placed by dragging it. The outline under
+  the catalogue onto the map, and move anything already placed by dragging it. The catalogue
+  is a grid of pictures: rest the pointer on one for its name and what it takes, and what
+  nobody knows how to make yet is last, dimmed, under `Bloqueados`. The outline under
   the pointer is green where it fits and red where it does not; a click on the map sets down
   another of the last thing taken, and a right click puts it away. Click something placed to
   remove it after confirmation, or press `Arte` to draw it: a building in its four parts, a piece

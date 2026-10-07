@@ -488,7 +488,6 @@ class ResearchScreenTests(unittest.TestCase):
 
     def test_the_catalogue_lists_what_nobody_knows_how_to_make_and_will_not_hand_it_over(self) -> None:
         from scenes.hud import URBANISM_INTENT
-        from scenes.urbanism import NOT_KNOWN_MARK
 
         world = self.game.world
         world.studies.known.remove("still")
@@ -497,10 +496,13 @@ class ResearchScreenTests(unittest.TestCase):
         editor = self.game.active_scene
         furniture = next(button for button in editor.buttons if button.intent == ("category", "furniture"))
         self._click(editor, furniture.rect.center)
-        labels = {button.intent[1]: button.label for button in editor.buttons if button.intent[0] == "catalog"}
-        self.assertIn(NOT_KNOWN_MARK, labels["bar"])
-        self.assertNotIn(NOT_KNOWN_MARK, labels["bed"])
-        self.assertNotIn(NOT_KNOWN_MARK, labels["workbench"])
+        locks = {entry.entry_id: entry.lock for entry in editor._catalog()}
+        self.assertIn("Alambique", locks["bar"])
+        self.assertIsNone(locks["bed"])
+        self.assertIsNone(locks["workbench"])
+        # It is there to be seen, after everything that can be made.
+        offered = [button.intent[1] for button in editor.buttons if button.intent[0] == "catalog"]
+        self.assertGreater(offered.index("bar"), offered.index("workbench"))
 
         bar = next(button for button in editor.buttons if button.intent == ("catalog", "bar"))
         self._click(editor, bar.rect.center)

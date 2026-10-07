@@ -430,6 +430,13 @@ def _gear(p: Pen) -> None:
     p.hole(24, 24, 5.4)
 
 
+def _lock(p: Pen) -> None:
+    p.arc(24, 21, 9.5, 180, 360, 5.5, p.soft)
+    p.box(8, 20, 32, 24, 5)
+    p.circle(24, 29.5, 4, p.cut)
+    p.box(22.2, 30, 3.6, 8.5, 1, p.cut)
+
+
 GLYPHS: dict[str, Glyph] = {
     "people": _people,
     "work": _hammer,
@@ -450,6 +457,7 @@ GLYPHS: dict[str, Glyph] = {
     "energy": _bolt,
     "medicine": _cross,
     "scrap": _gear,
+    "lock": _lock,
 }
 # The colour each icon is, where it stands alone or on a tile of its own.
 HUES: dict[str, Color] = {
@@ -472,6 +480,7 @@ HUES: dict[str, Color] = {
     "energy": (248, 206, 70),
     "medicine": (246, 240, 226),
     "scrap": (188, 172, 150),
+    "lock": (226, 186, 84),
 }
 # What is cut into an icon that stands alone, where it is not simply dark.
 CUTS: dict[str, Color] = {"medicine": (206, 58, 54)}

@@ -14,11 +14,13 @@ from dataclasses import dataclass
 import pygame
 
 from graphics.assets import AssetStore
+from graphics.building_renderer import BuildingRenderer
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.object_art import ObjectArtStore
 from graphics.object_sprites import ObjectSprites
 from graphics.palette import PALETTE
 from graphics.screen_layers import ScreenLayers
+from graphics.ui_skin import WindowSkin
 from scenes.scene import canvas_position
 from simulation.commands import (
     CancelSiteCommand,
@@ -46,6 +48,19 @@ MARGIN = 8
 CATALOG_TOP = 58
 CATALOG_BOTTOM = 326
 ROW_HEIGHT = 14
+# The catalogue is a grid of pictures: so many to a row, each on a tile of this side, with
+# this much between them and this much of the tile for the picture.
+CATALOG_COLUMNS = 5
+CATALOG_TILE = 38
+CATALOG_GAP = 3
+CATALOG_PICTURE = 32
+# What nobody knows how to make yet comes last, under a heading of its own.
+LOCKED_TITLE = "Bloqueados"
+LOCKED_HEADING = LINE_HEIGHT + 4
+LOCK_SIZE = 13
+# How much of its colour a picture keeps while what it shows cannot be made.
+LOCKED_SHADE = (96, 100, 112, 255)
+FREE_TO_PLACE = "se pone sin obra"
 CATEGORY_LABELS = {
     "buildings": "Edificios",
     "furniture": "Muebles",
@@ -66,7 +81,6 @@ TERRAIN_COLORS = {
 GHOST_ALPHA = 150
 DEFAULT_MESSAGE = "Arrastra algo del catálogo al mapa"
 WHO_MESSAGE = "¿A quién se lo propones?"
-NOT_KNOWN_MARK = "(por averiguar)"
 MORE_BELOW = "Rueda del ratón: hay más"
 # Where the message goes, and how many lines of it there is room for above the buttons.
 MESSAGE_TOP = 357
@@ -74,6 +88,17 @@ MESSAGE_LINES = 2
 SITE = "site"
 
 Selection = tuple[str, str]
+
+
+@dataclass(frozen=True)
+class CatalogEntry:
+    """One thing the catalogue offers: a kind of building or of object."""
+
+    entry_id: str
+    name: str
+    site_kind: str
+    # Why it cannot be put up yet, for want of knowing how. None for what can be.
+    lock: str | None = None
 
 
 @dataclass(frozen=True)
@@ -128,6 +153,11 @@ class UrbanismEditor:
         # What somebody has drawn of each kind of object, if there is anywhere to keep drawings.
         self.object_art = object_art if object_art is not None and object_art.available else None
         self._drawn: dict[tuple[str, tuple[int, int]], pygame.Surface] = {}
+        # Buildings as the catalogue shows them, and every picture of it once it has been fitted to its tile.
+        self.buildings = BuildingRenderer(assets, custom)
+        # A picture of the player's own takes the place of the padlock as of any other icon.
+        self.skin = WindowSkin(canvas, layers, object_art.illustrations if object_art is not None else None)
+        self._tiles: dict[tuple[str, str, int, bool], pygame.Surface] = {}
         self.time = 0.0
         self.closed = False
         self.category = "buildings"
@@ -188,35 +218,93 @@ class UrbanismEditor:
         self._judged = None
         # Whatever was drawn while this was out of sight is read again.
         self._drawn = {}
+        self._tiles = {}
 
-    def _catalog(self) -> list[tuple[str, str]]:
+    def _catalog(self) -> list[CatalogEntry]:
+        """What the tab on show offers: what can be put up first, then what nobody knows how to make yet."""
         if self.category == "buildings":
-            return [
-                (blueprint_id, self._catalog_name(BUILDING_SITE, blueprint_id, definition.name))
+            found = [
+                (blueprint_id, definition.name, BUILDING_SITE)
                 for blueprint_id, definition in self.world.registries.buildings.items()
             ]
-        return [
-            (kind, self._catalog_name(OBJECT_SITE, kind, self.world.registries.interactables.get(kind).name))
-            for kind in self.world.registries.interactables.kinds()
-            if self.world.registries.interactables.get(kind).urbanism_category == self.category
+        else:
+            kinds = self.world.registries.interactables
+            found = [
+                (kind, kinds.get(kind).name, OBJECT_SITE)
+                for kind in kinds.kinds()
+                if kinds.get(kind).urbanism_category == self.category
+            ]
+        entries = [
+            CatalogEntry(entry_id, name, site_kind, self.world.construction.not_known(self.world, site_kind, entry_id))
+            for entry_id, name, site_kind in found
         ]
+        # Sorting keeps each half in the order the data gives it.
+        return sorted(entries, key=lambda entry: entry.lock is not None)
 
-    def _catalog_name(self, site_kind: str, catalog_id: str, name: str) -> str:
-        """What nobody knows how to make yet is in the catalogue all the same, and says so."""
-        unknown = self.world.research.lock_on(self.world, site_kind, catalog_id) is not None
-        return f"{name} {NOT_KNOWN_MARK}" if unknown else name
+    def _catalog_lines(self) -> list[list[CatalogEntry] | str]:
+        """The catalogue from the top down: rows of tiles, and the heading over what is locked."""
+        entries = self._catalog()
+        known = [entry for entry in entries if entry.lock is None]
+        locked = [entry for entry in entries if entry.lock is not None]
+        lines: list[list[CatalogEntry] | str] = [
+            known[start : start + CATALOG_COLUMNS] for start in range(0, len(known), CATALOG_COLUMNS)
+        ]
+        if locked:
+            lines.append(LOCKED_TITLE)
+            lines += [locked[start : start + CATALOG_COLUMNS] for start in range(0, len(locked), CATALOG_COLUMNS)]
+        return lines
+
+    @staticmethod
+    def _line_height(line: list[CatalogEntry] | str) -> int:
+        return LOCKED_HEADING if isinstance(line, str) else CATALOG_TILE + CATALOG_GAP
+
+    def _catalog_scroll(self) -> int:
+        """How many lines the catalogue can be rolled down by before its last one is on show."""
+        lines = self._catalog_lines()
+        room, fitting = CATALOG_BOTTOM - CATALOG_TOP + CATALOG_GAP, 0
+        for line in reversed(lines):
+            room -= self._line_height(line)
+            if room < 0:
+                break
+            fitting += 1
+        return len(lines) - fitting
+
+    def _catalog_cells(self) -> tuple[list[tuple[CatalogEntry, pygame.Rect]], int | None]:
+        """Every tile on show with what it offers, and where the heading over the locked ones is, if it is on show."""
+        cells: list[tuple[CatalogEntry, pygame.Rect]] = []
+        heading: int | None = None
+        y = CATALOG_TOP
+        for line in self._catalog_lines()[self.catalog_offset :]:
+            if isinstance(line, str):
+                if y + LOCKED_HEADING > CATALOG_BOTTOM:
+                    break
+                heading = y
+            else:
+                if y + CATALOG_TILE > CATALOG_BOTTOM:
+                    break
+                for column, entry in enumerate(line):
+                    left = MARGIN + column * (CATALOG_TILE + CATALOG_GAP)
+                    cells.append((entry, pygame.Rect(left, y, CATALOG_TILE, CATALOG_TILE)))
+            y += self._line_height(line)
+        return cells, heading
 
     def _catalog_buttons(self) -> list[Button]:
-        visible = (CATALOG_BOTTOM - CATALOG_TOP) // ROW_HEIGHT
-        entries = self._catalog()[self.catalog_offset : self.catalog_offset + visible]
-        return [
-            Button(
-                pygame.Rect(MARGIN, CATALOG_TOP + index * ROW_HEIGHT, PANEL_WIDTH - MARGIN * 2, ROW_HEIGHT - 1),
-                self.font.truncate(name, PANEL_WIDTH - MARGIN * 4),
-                ("catalog", entry_id),
-            )
-            for index, (entry_id, name) in enumerate(entries)
-        ]
+        return [Button(rect, entry.name, ("catalog", entry.entry_id)) for entry, rect in self._catalog_cells()[0]]
+
+    def pointed_entry(self) -> CatalogEntry | None:
+        """What the tile under the pointer offers, while the catalogue is on show and nothing is in the air."""
+        if self.proposal is not None or self.drag is not None:
+            return None
+        return next((entry for entry, rect in self._catalog_cells()[0] if rect.collidepoint(self.pointer)), None)
+
+    def entry_note(self, entry: CatalogEntry) -> str:
+        """What there is to say of a thing under its name: what stands in its way, or what it takes to put up."""
+        if entry.lock is not None:
+            return entry.lock
+        building = self.world.construction
+        if not building.needs_building(self.world, entry.site_kind, entry.entry_id):
+            return FREE_TO_PLACE
+        return self._rule_text(building.rule_for(self.world, entry.site_kind, entry.entry_id)) or FREE_TO_PLACE
 
     def _resident_buttons(self) -> list[Button]:
         """Whoever the thing waiting to be built can be put to, in place of the catalogue."""
@@ -283,8 +371,7 @@ class UrbanismEditor:
         elif event.type == pygame.MOUSEWHEEL:
             position = canvas_position(pygame.mouse.get_pos())
             if position[0] < PANEL_WIDTH:
-                maximum = max(0, len(self._catalog()) - (CATALOG_BOTTOM - CATALOG_TOP) // ROW_HEIGHT)
-                self.catalog_offset = min(maximum, max(0, self.catalog_offset - event.y))
+                self.catalog_offset = min(self._catalog_scroll(), max(0, self.catalog_offset - event.y))
         elif event.type == pygame.MOUSEMOTION:
             self._point(canvas_position(event.pos))
             if self.drag is not None and self.pointer_tile is not None:
@@ -602,11 +689,13 @@ class UrbanismEditor:
         draw_panel(self.canvas, pygame.Rect(0, 0, PANEL_WIDTH, self.canvas.get_height()), border="copper")
         self.font.draw(self.canvas, "URBANISMO", (MARGIN, 8), PALETTE["lamp"])
         self.font.draw(self.canvas, "Añadir y editar el asentamiento", (MARGIN, 19), PALETTE["bone"])
+        if self.proposal is None:
+            self._render_catalog()
         for button in self.buttons:
-            active = (
-                (isinstance(button.intent, tuple) and button.intent[:1] == ("category",) and button.intent[1] == self.category)
-                or (isinstance(button.intent, tuple) and button.intent[:1] == ("catalog",) and button.intent[1] == self.catalog_id)
-            )
+            if isinstance(button.intent, tuple) and button.intent[:1] == ("catalog",):
+                # The catalogue is drawn as pictures, each on its tile.
+                continue
+            active = isinstance(button.intent, tuple) and button.intent[:1] == ("category",) and button.intent[1] == self.category
             button.draw(self.canvas, self.font, active=active)
             if button.intent == ("art",) and owed_object(self.world) is not None and lit(self.time):
                 pygame.draw.rect(self.canvas, PALETTE["glow"], button.rect.inflate(4, 4), 1)
@@ -621,8 +710,7 @@ class UrbanismEditor:
             selected = f"Seleccionado: {selected}"
         # What is selected is said above the message, and gives way to the catalogue where they meet.
         lines = self.font.wrap(selected, width) if selected else []
-        visible = (CATALOG_BOTTOM - CATALOG_TOP) // ROW_HEIGHT
-        if self.proposal is None and len(self._catalog()) > visible and len(lines) < 2:
+        if self.proposal is None and self.catalog_offset < self._catalog_scroll() and len(lines) < 2:
             self.font.draw(self.canvas, MORE_BELOW, (MARGIN, CATALOG_BOTTOM + 1), PALETTE["dust"])
         top = MESSAGE_TOP - LINE_HEIGHT * len(lines)
         for index, line in enumerate(lines):
@@ -635,6 +723,86 @@ class UrbanismEditor:
             (PANEL_WIDTH + MARGIN, self.canvas.get_height() - LINE_HEIGHT - 4),
             PALETTE["dust"],
         )
+        self._render_pointed()
+
+    def _render_catalog(self) -> None:
+        """The catalogue as a grid of pictures, with what cannot be made yet dimmed under its heading."""
+        cells, heading = self._catalog_cells()
+        if heading is not None:
+            self.font.draw(self.canvas, LOCKED_TITLE, (MARGIN, heading + 1), PALETTE["stone"])
+            left = MARGIN + self.font.width(LOCKED_TITLE) + 5
+            pygame.draw.line(
+                self.canvas, PALETTE["iron"], (left, heading + LINE_HEIGHT // 2 + 1), (PANEL_WIDTH - MARGIN, heading + LINE_HEIGHT // 2 + 1)
+            )
+        pointed = self.pointed_entry()
+        scale = self.layers.scale if self.skin.usable and self.layers is not None else 1
+        for entry, rect in cells:
+            locked = entry.lock is not None
+            border = "lamp" if entry.entry_id == self.catalog_id else ("bone" if entry is pointed else "iron")
+            draw_panel(self.canvas, rect, fill="ink" if locked else "shadow", border=border)
+            picture = self._catalog_picture(entry, scale)
+            place = pygame.Rect(0, 0, picture.get_width() // scale, picture.get_height() // scale)
+            place.center = rect.center
+            if not self.skin.picture(self.canvas, picture, place):
+                self.canvas.blit(picture, place)
+            if locked:
+                badge = pygame.Rect(rect.right - LOCK_SIZE - 2, rect.bottom - LOCK_SIZE - 2, LOCK_SIZE, LOCK_SIZE)
+                lock = self.skin.icon("lock", LOCK_SIZE * scale)
+                if not self.skin.picture(self.canvas, lock, badge):
+                    self.canvas.blit(lock, badge)
+
+    def _catalog_picture(self, entry: CatalogEntry, scale: int) -> pygame.Surface:
+        """What a thing looks like, fitted to its tile: `scale` pixels of the picture to one of the canvas."""
+        locked = entry.lock is not None
+        key = (entry.site_kind, entry.entry_id, scale, locked)
+        if key not in self._tiles:
+            source, drawn = self._catalog_source(entry)
+            width, height = source.get_size()
+            fit = min(CATALOG_PICTURE / width, CATALOG_PICTURE / height)
+            size = (max(1, round(width * fit)) * scale, max(1, round(height * fit)) * scale)
+            # A drawing is brought to size smoothly. The game's own art keeps its pixels.
+            resize = pygame.transform.smoothscale if drawn else pygame.transform.scale
+            picture = resize(source.convert_alpha() if pygame.display.get_surface() else source, size)
+            if locked:
+                picture = picture.copy()
+                picture.fill(LOCKED_SHADE, special_flags=pygame.BLEND_RGBA_MULT)
+            self._tiles[key] = picture
+        return self._tiles[key]
+
+    def _catalog_source(self, entry: CatalogEntry) -> tuple[pygame.Surface, bool]:
+        """The picture of a thing as it is kept, and whether somebody drew it."""
+        if entry.site_kind == BUILDING_SITE:
+            definition = self.world.registries.buildings[entry.entry_id]
+            room = Room(
+                f"catalog:{entry.entry_id}", definition.name, width=definition.width, height=definition.height,
+                roofed=True, blueprint_id=entry.entry_id,
+            )
+            return self.buildings.picture(room), False
+        definition = self.world.registries.interactables.get(entry.entry_id)
+        drawing = self.object_art.drawing(definition) if self.object_art is not None else None
+        if drawing is not None:
+            return drawing, True
+        sheet = self.sprites.sheet(definition)
+        frame_width = definition.width * 16
+        return sheet.subsurface((0, 0, min(frame_width, sheet.get_width()), sheet.get_height())), False
+
+    def _render_pointed(self) -> None:
+        """Beside the pointer, the name of what it is on in the catalogue and what there is to say of it."""
+        entry = self.pointed_entry()
+        if entry is None:
+            return
+        name, note = entry.name.capitalize(), self.entry_note(entry)
+        room = self.canvas.get_width() - MARGIN * 4
+        notes = self.font.wrap(note, min(room, 220))
+        width = max(self.font.width(line) for line in [name, *notes]) + 10
+        height = LINE_HEIGHT * (1 + len(notes)) + 7
+        box = pygame.Rect(self.pointer[0] + 10, self.pointer[1] + 12, width, height)
+        box.clamp_ip(self.canvas.get_rect().inflate(-4, -4))
+        draw_panel(self.canvas, box, fill="ink", border="lamp")
+        self.font.draw(self.canvas, name, (box.x + 5, box.y + 3), PALETTE["paper"])
+        for index, line in enumerate(notes):
+            position = (box.x + 5, box.y + 3 + LINE_HEIGHT * (index + 1))
+            self.font.draw(self.canvas, line, position, PALETTE["ember" if entry.lock is not None else "sand"])
 
     def _render_step(self) -> None:
         """Above the map, what the opening of a new settlement asks for next, while it is on a step."""

@@ -2703,6 +2703,34 @@ Still open here, which is the rest of P25:
 - What waits at the gate to be carried in is not seen
 - Nothing shows on the minimap where he is
 
+### P38 — A catalogue of pictures (needs P35) — done
+The user's words: "en urbanismo el menu es bastante poco familiar, es mejor que en el menu se
+vea un grid con los dibujos si pasas por encima se ve el nombre y en bloqueados los no
+aprendidos". Asked first, and answered: what nobody knows how to make yet stays in its own tab,
+last and dimmed, under a heading; and resting the pointer on a picture gives its name and,
+under it, what it takes.
+
+- **The catalogue of Urbanismo is a grid of pictures**, five to a row, where it was a list of
+  names. Every tab fits without the wheel, which still rolls one that does not
+- **Each tile shows the thing itself**, fitted to it whatever its shape: a drawing of the
+  player's where there is one, at the resolution of the window, and the game's own art where
+  there is not. A building is shown with its roof on
+- **Resting the pointer on one names it** in a box beside the pointer, with a line under the
+  name: what it costs and how long it takes to put up, or that it is simply put down
+- **What nobody knows how to make yet comes last**, under `Bloqueados`, dimmed and with a
+  padlock. The line under its name says what has to be found out first, and a click on it
+  still says so and hands nothing over
+- The tile of what is in hand is framed in `lamp`, and the one under the pointer in `bone`
+
+Decided without asking: five to a row, so that the twenty-two kinds of furniture are all in
+sight at once, over fewer and larger.
+
+Still open here:
+- The three kinds of building look much alike in the catalogue: they are the game's own
+  starter picture at three widths. A building's four drawings belong to one that stands, not
+  to its kind
+- Whoever a thing waiting to be built is put to is still a list of names
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

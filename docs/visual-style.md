@@ -255,6 +255,18 @@ gradients and any colour.
 - A picture of your own takes the place of any of it: `illustrations/ui/panel.png` for the
   plates and `illustrations/ui/icons/<name>.png` for an icon. `illustrations/README.md` lists them.
 
+### The catalogue of Urbanismo
+- A grid of tiles 38 across, five to a row, in the panel down the left: one for each kind of
+  building or object of the tab on show.
+- A tile holds the picture of the thing within 32 by 32, keeping its shape: the player's
+  drawing of it brought smoothly to size, at the resolution of the window, or the game's own
+  sprite with its pixels kept. A building is its picture with the roof on.
+- What cannot be made yet follows the rest under the heading `Bloqueados`: its tile is `ink`
+  where the others are `shadow`, its picture is dimmed, and a padlock sits in its corner.
+- The tile in hand is framed in `lamp` and the one under the pointer in `bone`. A box framed
+  in `lamp` beside the pointer says the name in `paper` and, under it, what it takes in
+  `sand`, or what stands in its way in `ember`.
+
 ## Global view
 - Top-down settlement, outdoors and post-apocalyptic: bare ground and dry grass, shacks of salvaged
   planks seen with the roof off up close, a scrap-metal fence, fires in barrels.
