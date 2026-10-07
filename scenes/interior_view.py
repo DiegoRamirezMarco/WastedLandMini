@@ -21,6 +21,7 @@ import pygame
 from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE
 from graphics.doll import draw_doll
 from graphics.font import LINE_HEIGHT
+from graphics.interior_art import PAINTERS, InsidePicture
 from graphics.palette import PALETTE, Color
 from graphics.screen_layers import TRANSPARENT
 from graphics.ui_art import darker, lighter, mix
@@ -218,6 +219,8 @@ class InteriorView:
         self._shells: dict[tuple, pygame.Surface] = {}
         self._pictures: dict[tuple, pygame.Surface] = {}
         self._skeletons: dict[tuple, Skeleton] = {}
+        # What is drawn for this view of its own, by kind and by the size of a cell.
+        self._inside: dict[tuple, InsidePicture] = {}
 
     def stage(self) -> pygame.Rect:
         """The part of the screen the room is laid out in, in pixels of the window, from its own corner."""
@@ -243,7 +246,7 @@ class InteriorView:
         draws: list[tuple[float, object]] = []
         for placed in world.interactables.values():
             if room.contains((placed.x, placed.y)):
-                draws.append(self._object(room, layout, placed))
+                draws.extend(self._object(room, layout, placed))
         labels = []
         for resident in world.residents.values():
             if resident.away or not room.contains(resident.tile):
@@ -290,9 +293,12 @@ class InteriorView:
     # ----- what stands in it -----
 
     def _object(self, room: Room, layout: InteriorLayout, placed: Interactable):
-        """Something that stands in the room: where its foot is, and how to draw it."""
+        """Something that stands in the room: each part of it, by how far down the floor it is drawn at."""
         view = self.view
         definition = view.world.definition_of(placed)
+        own = self._own(layout, definition)
+        if own is not None:
+            return self._own_object(room, layout, placed, own)
         sheet = view.object_sprites.sheet(definition)
         frame_width = definition.width * TILE_SIZE
         frames = view.object_sprites.frames(definition)
@@ -322,7 +328,35 @@ class InteriorView:
                 target.blit(shade, (corner[0] + left, corner[1] + bottom - shade.get_height() * 2 // 3))
             target.blit(picture, (corner[0] + left, corner[1] + bottom - height))
 
-        return (bottom - 0.5, draw)
+        return [(bottom - 0.5, draw)]
+
+    def _own(self, layout: InteriorLayout, definition) -> InsidePicture | None:
+        """The picture a kind of thing has for this view, if one has been made for it."""
+        painter = PAINTERS.get(definition.kind)
+        if painter is None or (definition.width, definition.height) != (1, 2):
+            # What there is so far is drawn for one cell across and two deep.
+            return None
+        key = (definition.kind, layout.cell, layout.depth)
+        if key not in self._inside:
+            self._inside[key] = painter(layout.cell, layout.depth)
+        return self._inside[key]
+
+    def _own_object(self, room: Room, layout: InteriorLayout, placed: Interactable, picture: InsidePicture):
+        """Something drawn for this view: what of it is under whoever is in it, and what is over them."""
+        definition = self.view.world.definition_of(placed)
+        column, row = self.place(room, placed.x, placed.y)
+        left, top = layout.spot(column, row)
+        bottom = layout.spot(column, row + definition.height)[1]
+        corner_of = (left, top - picture.rise)
+
+        def under(target: pygame.Surface, corner: tuple[int, int]) -> None:
+            target.blit(picture.under, (corner[0] + corner_of[0], corner[1] + corner_of[1]))
+
+        def over(target: pygame.Surface, corner: tuple[int, int]) -> None:
+            target.blit(picture.over, (corner[0] + corner_of[0], corner[1] + corner_of[1]))
+
+        # Whoever lies in it is drawn by its foot, between the two.
+        return [(bottom - 0.5, under)] + ([(bottom + 0.5, over)] if picture.over is not None else [])
 
     def _resident(self, room: Room, layout: InteriorLayout, resident: Resident):
         """Somebody in the room: how far down the floor they are, how to draw them, and what goes over their head."""
@@ -411,6 +445,10 @@ class InteriorView:
                 self._pictures[key] = pygame.transform.scale(piece, size)
             shown = self._pictures[key]
             place = (round(left + LYING_HEAD_OFFSET[0] * across), round(top + LYING_HEAD_OFFSET[1] * down))
+        # They are picked by the whole of what they lie in, headboard and all, and named over it.
+        own = self._own(layout, definition)
+        if own is not None:
+            bed = pygame.Rect(bed.x, bed.y - own.rise, bed.width, bed.height + own.rise)
         hitbox = pygame.Rect(self._to_canvas(bed.topleft), (max(4, bed.width // SCALE), max(4, bed.height // SCALE)))
 
         def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:

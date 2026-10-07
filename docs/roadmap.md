@@ -2769,8 +2769,14 @@ What it is not yet, and says so on the screen:
   them, so they cross the room twice as fast as they walk
 - Nothing can be put down, moved or drawn in there
 - The roof still comes off under the pointer out on the map
-- The furniture is the art there was, which is drawn from above: a bed lies flat on the floor
-  where in this view it would be seen from its side. What is drawn from the side is right already
+- The furniture is the art there was, which is drawn from above, and looks flat on the floor.
+  What is drawn from the side is right already. **The bed is drawn for this view**, as a try
+  the user asked for ("prueba hacer la cama con la nueva perspectiva y te digo si me gusta"):
+  its headboard face on against the back wall, the top of its mattress from a little above,
+  and the board at its foot in front, in thick dark lines and flat colour as the dolls are
+  (`graphics/interior_art.py`). Whoever sleeps in it lies between the mattress and the
+  blanket. It is the game's own picture and takes the place, in there, of whatever the player
+  drew of a bed for the map
 - The back wall is bare, and the room is as bright by night as by day
 
 Decided without asking:
@@ -2824,6 +2830,8 @@ Still to settle, to be asked before it is built:
 - All of it data, like everything that can be placed, and each kind drawable (P17)
 
 ### P40 — Furnishing from inside (needs S42) — planned
+- The rest of the furniture drawn for the view from inside as the bed is, if the bed is liked,
+  and a way for the player to draw each kind for that view themselves
 - Putting things down, moving them and taking them away from inside the building, on its grid
   and on its wall, in place of doing it in Urbanismo
 - Each kind of thing drawn for this view: from its front, standing on the floor

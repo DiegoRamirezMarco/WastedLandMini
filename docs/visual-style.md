@@ -365,6 +365,10 @@ illustrations are.
 - What stands taller than its footprint is shown as tall as it is drawn, with a shadow at its
   foot. What lies flat is brought to the depth of its cells. The game's own art keeps its
   hard edges; a drawing of the player's is brought to size smoothly.
+- A kind of thing can have a picture of its own for this view (`graphics/interior_art.py`),
+  drawn by code at the size of the cells: its front, and its top from a little above, in thick
+  dark lines and flat colour. It comes in two parts, what is under whoever is in it and what is
+  over them, and may stand above the back edge of the floor it takes up. So far the bed has one.
 - Residents are their doll or the game's own body at the size of the cells, with their name
   and what is over their head on the canvas, as on the map. Whoever stands further down the
   floor is in front. Whoever lies in a bed shows their own head on the pillow, at the size of

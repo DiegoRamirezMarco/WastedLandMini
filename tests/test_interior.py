@@ -89,6 +89,43 @@ class InteriorLayoutTests(unittest.TestCase):
         )
 
 
+class InsideArtTests(unittest.TestCase):
+    """What is drawn of a thing for the view from inside."""
+
+    def setUp(self) -> None:
+        previous = os.environ.get("SDL_VIDEODRIVER")
+        os.environ["SDL_VIDEODRIVER"] = "dummy"
+        self.addCleanup(InsideABuildingTests._restore_driver, "SDL_VIDEODRIVER", previous)
+        pygame.init()
+        pygame.display.set_mode((16, 16))
+        self.addCleanup(pygame.quit)
+
+    def test_a_bed_is_seen_from_its_front_with_its_head_to_the_back_wall(self) -> None:
+        from graphics.interior_art import PAINTERS, bed
+
+        self.assertIs(PAINTERS["bed"], bed)
+        for cell in (140, 70, 40):
+            depth = round(cell * DEPTH)
+            picture = bed(cell, depth)
+            self.assertEqual(picture.under.get_size(), (cell, picture.rise + depth * 2), "one cell across and two deep")
+            self.assertEqual(picture.over.get_size(), picture.under.get_size())
+            self.assertGreater(picture.rise, cell // 4, "the headboard stands up above the floor it takes")
+            middle = cell // 2
+            # Above the floor it takes up there is the headboard, and nothing of the blanket.
+            self.assertGreater(picture.under.get_at((middle, picture.rise // 2)).a, 240)
+            self.assertEqual(picture.over.get_at((middle, picture.rise // 2)).a, 0)
+            # Over the pillow nothing covers a head; further down the blanket does, in another colour.
+            pillow = (middle, picture.rise + round(cell * 0.2))
+            self.assertEqual(picture.over.get_at(pillow).a, 0)
+            self.assertGreater(min(picture.under.get_at(pillow)[:3]), 200, "the pillow is pale")
+            blanket = picture.over.get_at((middle - cell // 5, picture.rise + depth))
+            self.assertGreater(blanket.a, 240)
+            self.assertGreater(blanket.b, blanket.r + 30, "and the blanket blue")
+            # At its foot, the board that faces whoever looks in.
+            board = picture.over.get_at((middle, picture.under.get_height() - round(cell * 0.14)))
+            self.assertGreater(board.r, board.b + 30)
+
+
 class InsideABuildingTests(unittest.TestCase):
     """Going into a building from the map, through the real game shell without a window."""
 
@@ -212,7 +249,9 @@ class InsideABuildingTests(unittest.TestCase):
         # They are picked by the bed they lie in, which is seen as the floor is: less deep than wide.
         layout = self.view.interior.layout(room)
         box = self.view.hitboxes["ines"]
-        self.assertEqual(box.size, (layout.cell // SCALE, layout.depth * 2 // SCALE))
+        picture = self.view.interior._own(layout, self.world.definition_of(bed))
+        self.assertEqual(box.size, (layout.cell // SCALE, (layout.depth * 2 + picture.rise) // SCALE))
+        self.assertGreater(picture.rise, 0, "the bed is drawn for this view: its headboard stands up at the back")
         # It is their own head that shows on the pillow, as on the map, and not a mark for them.
         head = self.view.bodies.renderer.head("ines")
         shown = [picture for key, picture in self.view.interior._pictures.items() if key[:2] == ("head", "ines")]
@@ -263,6 +302,24 @@ class InsideABuildingTests(unittest.TestCase):
         self.view.roof_tiles.pop("south_house", None)
         self.view.render()
         self.assertIsNone(self.view.inside)
+
+    def test_whoever_lies_in_a_bed_is_drawn_between_the_mattress_and_the_blanket(self) -> None:
+        room = self.world.rooms["south_house"]
+        bed = next(
+            placed for placed in self.world.interactables.values() if placed.kind == "bed" and room.contains((placed.x, placed.y))
+        )
+        layout = self.view.interior.layout(room)
+        parts = self.view.interior._object(room, layout, bed)
+        self.assertEqual(len(parts), 2, "what is under them, and what is over them")
+        ines = self.world.residents["ines"]
+        ines.x, ines.y, ines.trail = bed.x, bed.y, []
+        ines.activity = Activity("sleep", target_id=bed.object_id, minutes_left=300, using=True)
+        sleeper = self.view.interior._resident(room, layout, ines)[0]
+        self.assertLess(parts[0][0], sleeper)
+        self.assertLess(sleeper, parts[1][0])
+        # What has no picture of its own for this view is drawn in one piece, as it was.
+        crate = next(placed for placed in self.world.interactables.values() if placed.kind == "crate" and room.contains((placed.x, placed.y)))
+        self.assertEqual(len(self.view.interior._object(room, layout, crate)), 1)
 
     def test_every_building_there_is_can_be_seen_from_inside(self) -> None:
         for room_id, room in self.world.rooms.items():
