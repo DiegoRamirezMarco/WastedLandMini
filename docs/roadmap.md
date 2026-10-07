@@ -1805,6 +1805,195 @@ Still to settle, to be asked before it is built:
   what they make of being told what to do (S20)
 - Whether a child's bundle can be picked up and handed to somebody the same way (S25)
 
+### S30 — What a thing is for, and what is in it (needs S19 and S20) — planned
+Content comes in four milestones, S30 to S33, and a screen, P28. They are the user's brief: keep
+`ItemDefinition` from becoming everything, and tell apart physical things, cultural content,
+activities and living beings.
+
+What holds for all four:
+- Built-in and custom content go through the same models and registries
+- Nothing behaves by its display name: stable IDs, categories, tags and properties only
+- A pack adds items, media and activities without touching code, and can never run code of its
+  own: data says what can be done with a thing, and the game's code does it
+- An animal is never an item. A song or a written work need not be a physical thing. A physical
+  copy may point at cultural content
+- What a thing is worth is different for each resident, and any thing can come to mean something
+- Tastes come in through tags and `preference_tags`, which a pack may add to (S19, S20). No
+  inner figure is shown to the player
+- Bad content gives a warning and a fallback, and never stops the game. A save that names
+  something a removed pack defined still loads, with a placeholder or the unknown ID kept
+- Classes stay small: neither `ItemDefinition` nor `Resident` grows into a god object
+- All of it runs headless, without pygame
+
+What there is already to build on: items with a `category`, `tags`, `preference_tags` and
+`properties`, and copies with an owner, a condition and who gave them (S6, S23); tastes for
+tags, categories, single items and people, which change with what happens (S19, S20); packs
+under `custom_content/` for items and foods; and a radio that can be listened to (S17).
+
+This one:
+- **A thing says what can be done with it, by ID**: `"uses": ["play_music"]`. Each use is a
+  handler registered in code: `play_music`, `read`, `play_game`, `listen`, `watch`, `repair`,
+  `pet` to begin with. A use nobody has registered is a warning, and the thing is still a thing
+- **Cultural content has a definition of its own** (`MediaDefinition`), apart from any object:
+  an `id`, a `media_type` (`music`, `written_work`, `radio_program` to begin with), a `title`,
+  `tags` and `preference_tags`
+- **A physical thing may hold content or give access to it**: `"contains_media": "song_blue_dust"`
+  on a cassette, a written work on a book. Many copies may hold the same content, a copy can be
+  stolen, and the song is still one song
+- **A book is a copy and what is written in it.** Two residents may each have their own copy of
+  the same work. Reading may entertain, ease nerves, move mood, teach a skill, give knowledge,
+  leave a memory or something to talk about, and which of these goes by the content's tags
+  (`medicine`, `technical`, `romantic`, `fiction`, `survival`, `history`) and never by its title
+- **Music is heard by whoever is there to hear it**, by the usual rules of place, distance and
+  presence, and never by the whole settlement. A radio, an instrument or a cassette may start
+  it. Each hearer's reaction is worked out from the piece's `preference_tags` and their own
+  tastes, and may move mood and nerves, show a taste, leave a memory and something to talk
+  about. Those who hear it together have shared something, and it may tell on what they feel
+  for each other
+- Packs add content under `custom_content/media/<type>/<id>/data.json`, checked as items are:
+  IDs, text, tags, `preference_tags`, references to media that exist, and safe paths
+- Events of low importance for everyday leisure: `media_consumed`, `music_heard`, `book_read`.
+  Nothing that would only be noise is emitted
+- What a copy holds is saved by ID
+
+Done when: a song exists with no object for it, and a cassette that holds it can be played to
+whoever is in the room and to nobody else; two copies of a manual are read by two residents and
+teach each of them the same; one resident is the better for a piece another cannot stand; and
+a pack adds a song and the cassette for it with no change of code.
+
+Tests it is not done without: a physical thing and cultural content kept apart; two physical
+copies pointing at the same book; a cassette pointing at a song; a custom `MediaDefinition`
+loading with no change of code; tastes telling on the reaction to music and to a book; a save
+whose pack is gone, with media it named, still loading; and the simulation importing no pygame.
+
+Still to settle, to be asked before it is built:
+- Items of a kind are kept in stacks (`quantity`). A copy with content of its own, or a
+  history (S32), cannot be one of a stack: which things stop stacking, and when
+- Whether what a book teaches is a skill, which nothing has yet, something worked out as at the
+  study desk (S17), or both
+- Whether content is known to a resident once they have read or heard it, and what a second
+  reading does
+- Where the songs and the works the game comes with are from: written for it, or only named
+- Whether `watch` has anything to be watched yet, or waits for a thing that shows pictures
+
+### S31 — Things to do together (needs S30) — planned
+- **An activity is data** (`ActivityDefinition`): an `id`, the tags an item has to have
+  (`required_item_tags`), the kind of object it takes (`required_object_kind`),
+  `min_participants` and `max_participants`, a `duration`, `tags`, `preference_tags`, and
+  whether it is `social` and `competitive`. `reading`, `play_cards`, `chess`, `music_session`,
+  `dancing` and `storytelling` to begin with
+- **No action is written for one leisure object** where an activity definition will do
+- **Residents choose it for themselves** (Utility AI), by how much they want entertaining and
+  company, their mood, their way of being, their tastes, what there is to do it with, and what
+  they feel for whoever else would be in it
+- **Something done together leaves something behind**: what those in it feel for each other,
+  memories, things to talk about, a winner and a loser where there is one, and a small quarrel
+  now and then
+- An activity and what is used for it go through the same tastes as everything else
+- Packs add activities under `custom_content/activities/<id>/data.json`
+- Events: `activity_started`, `activity_finished`, `game_won`, `game_lost`, of low importance
+- Only what matters is remembered: "Raúl siempre me gana a las cartas", and not every hand played
+
+Done when: two residents with a pack of cards sit down to a game of their own accord, one wins,
+and both remember it differently; somebody who cannot stand games is not found at the table;
+and a pack adds an activity that is played with no change of code.
+
+Tests it is not done without: an activity that requires an object; the Utility AI choosing a
+leisure activity; and tastes telling on the reaction to an activity.
+
+Still to settle:
+- Whether wanting to be entertained is a need of its own or comes out of mood and nerves (S15)
+- What decides who wins: chance through the settlement's own randomness, something about the
+  two of them, or a skill
+- Whether the player can suggest an activity to somebody, as they can a job (S4)
+- Whether leisure has its hours, or is whatever is done with time left over
+
+### S32 — What a thing means to somebody (needs S30) — planned
+- **Any copy of a thing can come to mean something.** There is no category for it
+- **A copy has a history**: entries with the kind of event, who was in it, when and how much it
+  mattered (`ItemHistoryEntry`). A present from somebody dear, a thing left by the dead, a thing
+  used at a moment that mattered, a thing that belonged to somebody who died, a thing tied to
+  what two people are to each other, a thing brought back from a trip that counted
+- **What it means is kept for each resident** (`sentimental_value_by_resident`), and nobody
+  else comes into it by being handed the thing
+- **A copy may be given a name of its own** (`custom_name`)
+- **What a thing is worth to somebody is worked out when it is asked for**, from what it is
+  worth to anybody, how much they need it, how much they like it, how scarce it is and what it
+  means to them. No single figure is kept where it can be worked out again
+- **Some residents come to collect a kind of thing**: books, records, things of the old world,
+  toys, weapons, art, relics that still work. A common thing may be worth a great deal to one
+  of them
+- All of it tells on buying, selling, swapping, giving, stealing and keeping (S6, S23)
+- Events: `item_history_changed`, `sentimental_attachment_changed`
+- Memories where it matters: "Marta me regaló esta guitarra", "Escuchábamos esta canción cuando
+  murió Tomás", "Encontré este libro durante la gran tormenta"
+- A copy's history, what it means to whom, and who collects what are saved
+
+Done when: a guitar given by a friend is worth more to its owner than the same guitar is to
+anybody, and is not sold at the price that would buy another; whoever it is stolen by feels
+nothing for it; and a collector pays over the odds for a thing nobody else wants.
+
+Tests it is not done without: a thing given as a present coming to mean something; a thing
+that means something being worth more to its owner; another resident not coming into that
+meaning with the thing; and collecting changing what a thing is worth to somebody.
+
+Still to settle:
+- Whether a taste for collecting is a taste like any other (S19), a trait, or something that
+  grows from what somebody has happened to keep
+- What losing a thing that meant something does: stolen, broken, sold in need, or given away
+- Whether a thing's meaning passes to the kin of whoever died owning it (S25)
+- How long a history is kept, and what is dropped from it first
+
+### S33 — Animals (needs S14, S15 and S19) — planned
+- **An animal is a living being of its own kind** (`Animal`), never an item. What it shares
+  with a resident it shares by composition, or through a common base, whichever sits better
+  with what there is: an ID, a `species`, a name, an age, health, hunger, nerves, a plain mood,
+  a way of being, a place, what it is doing, and who it is tied to
+- **It need not have what a resident has.** No tastes, no politics, no jobs, no knowledge of
+  facts
+- **What there is between a resident and an animal runs each way by itself**: affection and
+  attachment from the resident, trust, fear and affection from the animal. Marta may dote on a
+  dog that trusts her and is afraid of Raúl
+- **A small part of the Utility AI**: it moves about, sleeps, eats, looks for attention, runs
+  from what frightens it, falls ill, is looked after and takes to people
+- **Nobody owns an animal outright.** It has those who look after it (`caretaker_ids`) and those
+  it is bonded to, and may live with several, change hands, belong to the whole settlement or
+  to nobody
+- Events and memories: `animal_adopted`, `animal_fed`, `animal_missing`, `animal_injured`,
+  `animal_died`, `animal_bond_changed`. Feeding is of low importance, and is not always said
+- **The death of an animal tells hard on whoever was bonded to it**
+- Species are data, as everything else is
+- Animals, what they are like, how they fare and who they are tied to are saved, by stable IDs
+
+Done when: a dog walks into the settlement and is taken in by somebody; it eats, sleeps and
+follows whoever feeds it; it keeps away from whoever struck it; and when it dies whoever loved
+it is the worse for it for days, and somebody who never cared is not.
+
+Tests it is not done without: an animal not being an item; an animal moving and having its
+basic needs; what a resident feels for an animal and what it feels for them kept apart; the
+death of a pet telling on the residents bonded to it; and animals and their bonds surviving a
+save.
+
+Still to settle:
+- Which species to begin with, and whether any of them work: a dog on watch, a cat at the
+  pantry's mice, hens that lay
+- Where animals come from: with a newcomer, in off the wasteland, from a caravan (S23), born here
+- What they eat, and whether it comes out of the pantries the residents eat from
+- Whether an animal can be eaten when there is nothing else, and what that does to whoever
+  loved it
+- Whether a child's first bond is with an animal (S25)
+
+### P28 — Leisure, keepsakes and animals on screen (needs S30 to S33) — planned
+- A book read, a cassette played, an instrument in the hands, a hand of cards at a table
+- What is playing heard where it is playing, and from as far as it carries (P8)
+- A thing's history and what it means, in its entry, as far as the player has seen it happen
+- Animals on the map, and what they are to whom in a resident's panel
+- New things, new media and new activities made in the game's own editors, as items are (P17)
+
+Still to settle:
+- Whether an animal is drawn by the player, as a resident is (P17, P19), or comes drawn
+- How a song a pack adds is heard: a recording the pack brings, or only its name and its mood
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it
