@@ -9,6 +9,7 @@ facing the other way it is the same drawing in a mirror.
 import json
 import logging
 import math
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -424,14 +425,20 @@ class DollTemplate:
 
         return build_guide(self, canvas)
 
-    def example(self, bone: str, color: Color, outline: Color | None = None) -> pygame.Surface:
+    def example(
+        self, bone: str, color: Color, outline: Color | None = None, edge: int | None = None, stout: float = 1.0
+    ) -> pygame.Surface:
         """The slim example of one part on a clear canvas, kept inside its zone.
 
         The trunk's stops at the shoulders, so that the neck shows between it and the head.
+        `edge` is how wide the line round it is, where it has one and it is not the usual,
+        and `stout` how many times as thick as the example the part is made.
         """
         spec = self.parts[bone]
+        if stout != 1.0 and not spec.whole:
+            spec = replace(spec, radius=min(spec.radius * stout, spec.reach or spec.radius * stout))
         surface = pygame.Surface(self.canvases[spec.canvas], pygame.SRCALPHA)
-        edge = max(1, self.unit // 8) if outline is not None else 0
+        edge = (edge if edge is not None else max(1, self.unit // 8)) if outline is not None else 0
         if spec.whole:
             centre, radius = spec.end, round(spec.radius)
             if outline is not None:
@@ -444,11 +451,22 @@ class DollTemplate:
         surface.blit(self.mask(bone), (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
         return surface
 
-    def mannequin(self, colors: dict[str, Color], outline: Color = PALETTE["ink"]) -> dict[str, pygame.Surface]:
-        """A plain figure filling every zone, in the colours given by bone: something to start a drawing from."""
+    def mannequin(
+        self,
+        colors: dict[str, Color],
+        outline: Color = PALETTE["ink"],
+        edge: int | None = None,
+        stout: dict[str, float] | None = None,
+    ) -> dict[str, pygame.Surface]:
+        """A plain figure filling every zone, in the colours given by bone: something to start a drawing from.
+
+        `stout` makes some parts thicker than the slim figure of the guide, by how many times, by
+        the name of the part without its side.
+        """
         drawings = {name: pygame.Surface(size, pygame.SRCALPHA) for name, size in self.canvases.items()}
         for bone, spec in self.parts.items():
-            drawings[spec.canvas].blit(self.example(bone, colors.get(bone, GUIDE_MIDDLE), outline), (0, 0))
+            thick = (stout or {}).get(unsided(bone), 1.0)
+            drawings[spec.canvas].blit(self.example(bone, colors.get(bone, GUIDE_MIDDLE), outline, edge, thick), (0, 0))
             if spec.whole:
                 # An eye, on the side it faces.
                 radius = round(spec.radius)
@@ -756,6 +774,14 @@ class DollStore:
             return {}
         build = self.build(body_id)
         return {canvas: self.template.adopted(canvas, picture, build) for canvas, picture in kept.items()}
+
+    def stand_in(self, body_id: str, draw: Callable[[DollTemplate], dict[str, pygame.Surface]]) -> Doll:
+        """A doll for a body nobody has drawn, from drawings made for it the first time it is asked for."""
+        key = f"stand-in:{body_id}"
+        kept = self._dolls.get(key)
+        if kept is None:
+            kept = self._dolls[key] = self.made(draw(self.template), self.template.starting())
+        return kept
 
     def get(self, body_id: str) -> Doll | None:
         """The doll of a body. None unless its body has been drawn."""

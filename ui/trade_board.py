@@ -12,7 +12,7 @@ from graphics.palette import PALETTE, Color
 from simulation.world import SimulationWorld
 from ui.button import HEIGHT as BUTTON_HEIGHT
 from ui.button import Button
-from ui.panel import draw_panel
+from ui.panel import draw_item, draw_panel
 
 PANEL_WIDTH = 372
 PADDING = 6
@@ -201,7 +201,7 @@ def draw_trade_board(
             more, fewer = buttons.get(step_intent(row.side, row.item_id, 1)), buttons.get(step_intent(row.side, row.item_id, -1))
             if more is None or fewer is None:
                 break
-            target.blit(icons.icon(row.item_id), (column.x, y + (ROW_HEIGHT - ICON_SIZE[1]) // 2))
+            draw_item(target, icons, row.item_id, pygame.Rect(column.x, y + (ROW_HEIGHT - ICON_SIZE[1]) // 2, *ICON_SIZE))
             left = column.x + ICON_SIZE[0] + 3
             room = fewer.rect.left - 3 - left
             font.draw(target, font.truncate(row.name, room), (left, y), PALETTE["paper" if row.chosen else "bone"])

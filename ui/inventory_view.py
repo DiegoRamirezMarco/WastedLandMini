@@ -8,7 +8,7 @@ from graphics.palette import PALETTE
 from simulation.items.inventory import Inventory
 from simulation.world import SimulationWorld
 from ui.labels import condition_of, price_label, selling_use
-from ui.panel import draw_panel
+from ui.panel import draw_item, draw_panel
 
 ROW_HEIGHT = ICON_SIZE[1] + 2
 PADDING = 5
@@ -60,7 +60,7 @@ def draw_item_row(
         if x + needed > position[0] + width:
             font.draw(target, "...", (x, y + 3), PALETTE["stone"])
             return
-        target.blit(icons.icon(item.definition_id), (x, y))
+        draw_item(target, icons, item.definition_id, pygame.Rect(x, y, *ICON_SIZE))
         condition = condition_of(world, item)
         if condition is not None:
             draw_condition(target, (x, y), condition)
@@ -131,7 +131,7 @@ def draw_container_panel(
     scrap = dict((item_id, mark) for mark, item_id in container_scrap_hitboxes(position, world, container_id, width))
     for item in inventory.items:
         definition = world.registries.items.resolve(item.definition_id)
-        target.blit(icons.icon(item.definition_id), (x, y))
+        draw_item(target, icons, item.definition_id, pygame.Rect(x, y, *ICON_SIZE))
         condition = condition_of(world, item)
         if condition is not None:
             draw_condition(target, (x, y), condition)

@@ -498,7 +498,11 @@ class DollEditorTests(unittest.TestCase):
         raul.x, raul.y, raul.trail, raul.activity, raul.facing = 20, 14, [], None, "down"
         view.centre_on((20, 14))
         window = self._show()
-        self.assertEqual([entry[1] for entry in view._doll_draws], [doll])
+        shown = [entry[1] for entry in view._doll_draws]
+        self.assertEqual(shown.count(doll), 1, "he is his own drawing now")
+        # Whoever else is in view has not been drawn, and is the figure the game draws of them.
+        self.assertTrue(all(other is doll or other not in (None, doll) for other in shown))
+        self.assertIsNone(game.dolls.get("marta"))
         self.assertTrue(game.layers.active)
         self.assertEqual(game.canvas.get_at(view.viewport.center)[3], 0, "the map is on the window, under the canvas")
         # He is there, at the size of the window: his trunk is not the colour of the ground.
@@ -556,7 +560,11 @@ class DollEditorTests(unittest.TestCase):
             resident.x, resident.y, resident.trail, resident.activity = 20 + index, 14, [], None
         view.centre_on((21, 14))
         self._show()
-        self.assertEqual(len(view._doll_draws), 2, "Tomás has not been drawn: he is the game's own pixel art")
+        shown = [entry[1] for entry in view._doll_draws]
+        self.assertGreaterEqual(len(shown), 3, "all three are on the window, with whoever else is in view")
+        self.assertIsNone(game.dolls.get("tomas"), "Tomás has not been drawn")
+        self.assertIn(view._doll_of("tomas"), shown, "so he is the figure the game draws of him")
+        self.assertIn(game.dolls.get("raul"), shown)
         world.health.hurt(world, raul, 22, "fracture", "una prueba", tomas)
         lucia.injuries = [Injury("cut", 99)]
         world.health.hurt(world, lucia, 5, "bruise", "una prueba", tomas)
@@ -575,7 +583,7 @@ class DollEditorTests(unittest.TestCase):
         view.centre_on((bed.x, bed.y))
         view.roofs_on = False
         self._show()
-        lying = [entry for entry in view._doll_draws if entry[2] is None]
+        lying = [entry for entry in view._doll_draws if entry[2] is None and entry[1] is game.dolls.get("raul")]
         self.assertEqual(len(lying), 1)
         self.assertIsNotNone(lying[0][3])
 

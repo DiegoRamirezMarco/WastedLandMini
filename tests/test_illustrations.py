@@ -223,11 +223,13 @@ class IllustratedGameTests(unittest.TestCase):
             if game.canvas.get_at((x, y))[3]
         )
         self.assertGreater(painted, 40)
-        # The map has no skin: without a drawn ground it is the game's own, on the canvas.
-        self.assertEqual(game.canvas.get_at(layout.map.center)[3], 255)
+        # The map has no skin: without a drawn ground it is the one the game draws, on the window.
+        centre = layout.map.center
+        self.assertEqual(game.canvas.get_at(centre)[3], 0)
+        self.assertFalse(_is(tuple(window.get_at((centre[0] * SCALE, centre[1] * SCALE))), SKIN))
         # Nor has the foot of it, until the dock opens there for whoever is talking.
         corner = (layout.dock.right - 3, layout.dock.bottom - 3)
-        self.assertEqual(game.canvas.get_at(corner)[3], 255)
+        self.assertFalse(_is(tuple(window.get_at((corner[0] * SCALE, corner[1] * SCALE))), SKIN))
         world = game.world
         view.hud.select_resident("raul")
         world.residents["raul"].activity = Activity("chat", partner_id="tomas", using=True)
@@ -258,13 +260,26 @@ class IllustratedGameTests(unittest.TestCase):
         plate_row = [tuple(window.get_at(((dock.x + x) * SCALE, (dock.bottom - 12) * SCALE)))[:3] for x in range(40, 100)]
         self.assertTrue(any(color != FACE for color in plate_row))
 
-    def test_a_folder_with_nothing_in_it_leaves_the_map_as_it_was_and_dresses_what_is_round_it(self) -> None:
+    def test_with_a_folder_and_nothing_in_it_the_game_draws_everything_on_the_window_itself(self) -> None:
         game = self._game()
+        view = game.global_view
         window = self._shown(game)
-        # The map is the game's own art, on the canvas.
-        on_map = (400, 200)
-        self.assertEqual(game.canvas.get_at(on_map)[3], 255)
-        self.assertEqual(tuple(window.get_at((on_map[0] * SCALE, on_map[1] * SCALE)))[:3], tuple(game.canvas.get_at(on_map))[:3])
+        # The map is the game's own picture of it, at the resolution of the window (P41): the
+        # canvas is left clear over it, and what shows is no flat colour.
+        self.assertTrue(view.windowed)
+        on_map = view.viewport.center
+        self.assertEqual(game.canvas.get_at(on_map)[3], 0)
+        seen = {
+            tuple(window.get_at((x * SCALE, y * SCALE)))[:3]
+            for x in range(view.viewport.x + 10, view.viewport.right - 10, 23)
+            for y in range(view.viewport.y + 10, view.viewport.bottom - 10, 19)
+        }
+        self.assertGreater(len(seen), 12, "ground, grass, roofs and walls, each in colours of its own")
+        self.assertNotIn(PALETTE["ink"], seen)
+        # Everybody is on the window too, as the figure the game draws of whoever nobody has drawn.
+        self.assertTrue(view._doll_draws)
+        self.assertIsNone(game.dolls.get("paco"))
+        self.assertIsNotNone(view._doll_of("paco"))
         # With a window to be seen through the canvas, the frame is drawn on it by the game itself (P35).
         self.assertTrue(game.layers.active)
         layout = game.global_view.hud.layout

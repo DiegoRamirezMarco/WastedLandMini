@@ -348,6 +348,30 @@ gradients and any colour.
 - The settlement should look salvaged. Things that are only there to be looked at are object kinds
   like any other, with no use: wrecks and stacks of tyres block the way, loose junk does not.
 
+## What the game draws for itself
+Wherever there is a window under the canvas, nothing the game shows of the settlement is pixel
+art any more (P41). It draws everything by code, in one hand, at the size it is shown:
+`graphics/cartoon.py` is the pen, with its colours.
+
+- **The hand**: a dark line (`LINE`) round every shape, about three hundredths of a tile
+  wide; flat colour inside, with one lighter stroke where light catches it and one darker
+  where it is in shade; a soft shadow on the ground under what stands. A picture is drawn three
+  times over and brought down, which is what smooths it.
+- **The view**: from the front and a little from above. A box shows its top over its front
+  (`Sheet.block`). The ground a thing takes up is drawn `DEPTH` (0.62) times as deep as it is
+  wide, on the map and inside a building alike, so that one picture does for both.
+- **Objects** (`graphics/object_pictures.py`): a painter for each kind, measured in hundredths
+  of a cell. It gives what is under whoever is in the thing and what is over them, how far it
+  stands above the far edge of its ground, where what it shows off goes, and where a head goes.
+- **Buildings** (`graphics/building_pictures.py`), **the ground** (`graphics/ground_pictures.py`),
+  **items** (`graphics/item_pictures.py`) and **whoever nobody has drawn**
+  (`graphics/stand_ins.py`) are drawn the same way.
+- **Order**: floors first, then everything that stands, people among it, by how far down the
+  map its foot is.
+- **A drawing of the player's own** takes the place of the game's on the map, file by file, as
+  `illustrations/README.md` says. With no window under the canvas the pixel art below is what
+  is shown, and the style contract above is still what it is checked against.
+
 ## Inside a building
 A first try of the look (P39): `scenes/interior_view.py`. It is drawn at the resolution of the
 window, in the part of the screen the map has, and is free of the style contract as the

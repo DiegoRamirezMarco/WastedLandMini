@@ -101,7 +101,7 @@ class InsideArtTests(unittest.TestCase):
         self.addCleanup(pygame.quit)
 
     def test_a_bed_is_seen_from_its_front_with_its_head_to_the_back_wall(self) -> None:
-        from graphics.interior_art import PAINTERS, bed
+        from graphics.object_pictures import PAINTERS, bed
 
         self.assertIs(PAINTERS["bed"], bed)
         for cell in (140, 70, 40):
@@ -253,8 +253,13 @@ class InsideABuildingTests(unittest.TestCase):
         self.assertEqual(box.size, (layout.cell // SCALE, (layout.depth * 2 + picture.rise) // SCALE))
         self.assertGreater(picture.rise, 0, "the bed is drawn for this view: its headboard stands up at the back")
         # It is their own head that shows on the pillow, as on the map, and not a mark for them.
-        head = self.view.bodies.renderer.head("ines")
         shown = [picture for key, picture in self.view.interior._pictures.items() if key[:2] == ("head", "ines")]
+        if self.view.windowed:
+            # On the window she is the figure the game draws of her, and it is that figure's head.
+            self.assertEqual(shown, [])
+            self.assertIsNotNone(self.view._doll_of("ines"))
+            return
+        head = self.view.bodies.renderer.head("ines")
         self.assertEqual(len(shown), 1)
         self.assertEqual(shown[0].get_width(), round(head.get_width() * layout.cell / 16))
         self.assertLess(shown[0].get_height(), shown[0].get_width(), "down to the eyes: the rest is under the blanket")
@@ -320,6 +325,36 @@ class InsideABuildingTests(unittest.TestCase):
         # What has no picture of its own for this view is drawn in one piece, as it was.
         crate = next(placed for placed in self.world.interactables.values() if placed.kind == "crate" and room.contains((placed.x, placed.y)))
         self.assertEqual(len(self.view.interior._object(room, layout, crate)), 1)
+
+    def test_whoever_eats_in_there_is_seen_with_their_meal_in_their_hand(self) -> None:
+        self._indoors("ines", "south_house")
+        ines = self.world.residents["ines"]
+        room = self.world.rooms["south_house"]
+        layout = self.view.interior.layout(room)
+        plan = self.view.bodies.plan
+        self.assertEqual(self.view.interior.in_hand(ines, "right", plan.pose("right", "idle", 0.0), 0.0, None), [])
+        self.world.stock(ines.inventory, "canned_beans", 1, "ines")
+        item = ines.inventory.items[-1]
+        ines.activity = Activity("eat", minutes_left=20, using=True, item_id=item.instance_id)
+        ines.current_action = "eat"
+        self.view.time = 3.6
+        self.assertEqual(self.view._meal_in_hand(ines), "canned_beans")
+        held = self.view.interior.in_hand(ines, "right", plan.pose("right", "idle", 0.0), 3.6, None)
+        self.assertEqual([entry[0] for entry in held], ["canned_beans"])
+        self.assertEqual(self.view._held, [], "what is held on the map is left as it was")
+        hand, mouth = held[0][1], held[0][5]
+        self.assertLess(hand[1], 0, "up off the floor, in their hand: it goes by where their feet are")
+        self.assertLess(mouth[1], hand[1] + 12)
+        # It is drawn with them, and so is whatever they carry for their job.
+        self.view.enter("south_house")
+        self.view.render()
+        self.assertIn("ines", self.view.hitboxes)
+        ines.activity = Activity("wander", minutes_left=600, using=True)
+        self.world.stock(ines.inventory, "scrap", 2, None)
+        carried = self.view.interior.in_hand(ines, "right", plan.pose("right", "idle", 0.0), 0.0, None)
+        self.assertEqual([entry[0] for entry in carried], ["scrap"])
+        self.view.render()
+        self.assertTrue(layout.cell > 0)
 
     def test_every_building_there_is_can_be_seen_from_inside(self) -> None:
         for room_id, room in self.world.rooms.items():

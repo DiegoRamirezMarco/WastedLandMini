@@ -49,7 +49,7 @@ from ui.labels import (
 from ui.layout import Layout, layout_for
 from ui.research_board import PANEL_WIDTH as RESEARCH_WIDTH
 from ui.research_board import draw_research_board, research_board_height, study_buttons
-from ui.panel import draw_panel, set_skin
+from ui.panel import draw_item, draw_panel, set_skin
 from ui.resident_panel import (
     LIFE_TAB,
     TASTES_TAB,
@@ -756,7 +756,7 @@ class Hud:
         for definition_id, quantity in stock:
             if y + ITEM_ICON_SIZE[1] > rect.bottom - 2:
                 break
-            self.canvas.blit(self.icons.icon(definition_id), (x, y))
+            draw_item(self.canvas, self.icons, definition_id, pygame.Rect(x, y, *ITEM_ICON_SIZE))
             name = self.world.registries.items.resolve(definition_id).name
             text = self.font.truncate(f"{name} x{quantity}", rect.width - MARGIN * 2 - ITEM_ICON_SIZE[0] - 4)
             self.font.draw(self.canvas, text, (x + ITEM_ICON_SIZE[0] + 4, y + 3), PALETTE["bone"])

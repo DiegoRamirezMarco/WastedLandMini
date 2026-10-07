@@ -31,7 +31,7 @@ from ui.labels import (
     taste_rows,
     trait_names,
 )
-from ui.panel import draw_bar, draw_panel
+from ui.panel import draw_bar, draw_item, draw_panel
 
 PADDING = 6
 BAR_LEFT = 44
@@ -399,7 +399,7 @@ def _draw_item_grid(
         box = pygame.Rect(left, top, cell - 2, ITEM_CELL_HEIGHT - 2)
         draw_panel(target, box, fill="shadow", border="iron")
         corner = (box.centerx - size[0] // 2, box.y + 1)
-        target.blit(pygame.transform.scale(icons.icon(item.definition_id), size), corner)
+        draw_item(target, icons, item.definition_id, pygame.Rect(corner, size))
         condition = condition_of(world, item)
         if condition is not None:
             draw_condition(target, (box.centerx - ICON_SIZE[0] // 2, corner[1] + size[1] - ICON_SIZE[1] - 1), condition)
@@ -433,5 +433,5 @@ def _draw_affordable(
     for definition_id in goods:
         if left + ICON_SIZE[0] > x + width:
             break
-        target.blit(icons.icon(definition_id), (left, y))
+        draw_item(target, icons, definition_id, pygame.Rect(left, y, *ICON_SIZE))
         left += ICON_SIZE[0] + 2

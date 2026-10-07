@@ -883,12 +883,17 @@ class DrawingLessonsTests(unittest.TestCase):
         view = self.game.global_view
         view.roofs_on = False
         self._frame()
-        beds = [area for area, _ in view._drawn_objects(view.terrain.get_rect())]
+        bed = self.game.world.registries.interactables.get("bed")
+        self.assertIsNone(view._game_picture(bed), "it is the player's bed that the map shows")
+        shown = view._object_pictures(view.terrain.get_rect())
+        drawing = view.object_art.shown(bed, (16 * view._cell // 16, 32 * view._cell // 16))
+        beds = [area for _, area, picture in shown if picture is drawing]
         self.assertEqual(len(beds), 2)
-        self.assertEqual({area.size for area in beds}, {(16, 32)})
-        # Whatever nobody has drawn keeps the art it came with.
+        self.assertEqual({area[2:] for area in beds}, {(16, 32)})
+        # Whatever nobody has drawn is as the game draws it.
         barrel = next(placed for placed in self.game.world.interactables.values() if placed.kind == "barrel")
         self.assertIsNone(view.object_art.drawing(self.game.world.definition_of(barrel)))
+        self.assertIsNotNone(view._game_picture(self.game.world.definition_of(barrel)))
 
     def test_what_is_put_down_outside_the_opening_is_only_drawn_when_asked(self) -> None:
         self._make_someone()

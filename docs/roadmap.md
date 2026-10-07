@@ -2830,12 +2830,70 @@ Still to settle, to be asked before it is built:
 - All of it data, like everything that can be placed, and each kind drawable (P17)
 
 ### P40 — Furnishing from inside (needs S42) — planned
-- The rest of the furniture drawn for the view from inside as the bed is, if the bed is liked,
-  and a way for the player to draw each kind for that view themselves
+- A way for the player to draw each kind of thing for the view from inside themselves. The
+  game's own pictures of them all are done: P41
 - Putting things down, moving them and taking them away from inside the building, on its grid
   and on its wall, in place of doing it in Urbanismo
 - Each kind of thing drawn for this view: from its front, standing on the floor
 - Whose house it is and what it is like, seen from inside, and its lock
+
+### P41 — Everything in one hand (needs P39) — done
+The user liked the bed drawn for the view from inside, and said: "cambia todos los items a este
+estilo, y el esterior igual para que acompañe la perspectiva nueva".
+
+Asked first, and answered: "items" is every kind of furniture and object, and the icons of what
+is carried and kept as well; outside, all four things that were offered change: the objects on
+the map, the buildings, the ground and the fence, and whoever has no doll; on the map a drawing
+of the player's own still shows in place of the game's; and all of it in one go.
+
+- **One hand for everything the game draws for itself** (`graphics/cartoon.py`): thick dark
+  lines and flat colour, drawn by code at whatever size it is shown, as the bed was
+- **Every kind of object, twenty-nine of them** (`graphics/object_pictures.py`): from its
+  front and a little from above. One picture does for the map and for the inside of a
+  building. What burns flickers
+- **The buildings** (`graphics/building_pictures.py`): a roof of ridged metal, patched and
+  rusting, over a front of boards with a door, an awning over it and windows; with the roof
+  off, the floor, the back wall face on, the sides from above and the wall in front cut low.
+  No two are quite alike: the colours and the dents go by which building it is
+- **The ground of the whole map, and the fence round it** (`graphics/ground_pictures.py`):
+  earth, grass in patches that run together, tilled soil in furrows, the fence in sheets of
+  metal between posts, and the way in
+- **Whoever nobody has drawn is a doll all the same** (`graphics/stand_ins.py`): the figure
+  every doll starts from, stouter, in the colours their body wears, with a large head, hair, an
+  eye and a mouth. They walk, sleep, fall and are carried as any doll
+- **The items the game comes with, sixteen of them** (`graphics/item_pictures.py`): in a hand,
+  on a shelf, over a head, and in every panel that lists them
+- **Whatever stands nearer is drawn in front**: objects, buildings and people are put on the
+  window in one order, by how far down the map their foot is. Somebody behind a shelf is
+  behind it, which was not so before for anything drawn on the window (P13)
+- **A drawing of the player's own shows on the map in place of the game's**: an object, a
+  building, the ground, a resident, an item. Inside a building it is the game's picture of a
+  thing that shows, since a drawing made for the map is seen from above. A building somebody
+  has drawn a part of is left to them: what they left out stays out
+- **The catalogue of Urbanismo** shows the new pictures too
+- **With no window under the canvas** (a game with no folder for drawings, and every test of
+  the simulation) everything is the pixel art it was
+
+Decided without asking:
+- On the map a thing is drawn as deep as it is inside: six tenths of a tile. It stands at the
+  near edge of the ground it takes up, so a bed two tiles long leaves a little floor behind its
+  headboard
+- The ground keeps its square tiles. Only what stands on it is seen from the front
+- A sleeper is put in the game's bed by where that picture says a head goes
+- Items in panels are shown at the resolution of the window, the player's own included
+
+Still open here:
+- The faces in the panels, in the dock and on a roof are still the pixel faces, for whoever
+  nobody has drawn
+- What is over a head on the map (bubbles, marks, the bar of a task) and the minimap are
+  still pixel art
+- The fence is part of the ground: whoever stands behind it is drawn over it
+- A kind of object a pack makes in another size than the game's keeps its pixel art
+- Furniture and buildings as the game draws them have no editor of their own for the view from
+  inside: a drawing of the player's is for the map
+- A frame of the map takes about 8 ms to draw on the user's machine at every zoom, against
+  about 3 with the canvas alone: within a sixtieth of a second, with little to spare on a
+  machine half as fast. It has not been tried on one
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

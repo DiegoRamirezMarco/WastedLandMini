@@ -402,16 +402,19 @@ class HeldOnTheMapTests(unittest.TestCase):
         self.assertEqual([(entry[0], entry[4]) for entry in self.view._held], [("canned_beans", [])])
         self.assertGreater(self._count(window, SAUCE), 20)
 
-    def test_with_nothing_on_the_window_the_meal_is_still_in_the_hand_and_larger_than_it_was(self) -> None:
-        # Nobody is drawn, so the map is on the canvas alone, as with no folder for drawings at all.
-        self.assertIsNone(self.view._doll_of("raul"))
+    def test_whoever_nobody_has_drawn_has_their_meal_in_their_hand_on_the_window_too(self) -> None:
+        # Nobody is drawn: he is the figure the game draws of him, on the window like a doll of his own.
+        self.assertIsNone(self.game.dolls.get("raul"))
+        self.assertIsNotNone(self.view._doll_of("raul"))
         self._eat()
-        self._show(phase=0.6)
-        self.assertFalse(self.game.layers.active and self.view._doll_draws)
+        window = self._show(phase=0.6)
+        self.assertTrue(self.game.layers.active and self.view._doll_draws)
         self.assertEqual([entry[0] for entry in self.view._held], ["canned_beans"])
-        canvas = self.game.canvas
-        sauce = pygame.mask.from_threshold(canvas, (*SAUCE, 255), NEAR)
-        self.assertGreater(sauce.count(), 4)
+        self.assertEqual(self.game.canvas.get_at(self.view.viewport.center)[3], 0, "the map is on the window")
+        sauce = pygame.mask.from_threshold(
+            window.subsurface(self.game.layers.on_screen(self.view.viewport)), (*SAUCE, 255), NEAR
+        )
+        self.assertGreater(sauce.count(), 20)
         self.assertGreater(len(sauce.get_bounding_rects()), 1, "and crumbs of it fly there too")
 
 

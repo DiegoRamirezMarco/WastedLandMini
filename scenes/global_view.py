@@ -5,7 +5,8 @@ import pygame
 
 from graphics.assets import AssetStore
 from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE, BodyRenderer
-from graphics.building_art import BuildingArtStore
+from graphics import building_pictures, ground_pictures
+from graphics.building_art import BuildingArtStore, door_columns
 from graphics.building_renderer import FACADE_ROWS, BuildingRenderer, building_area
 from graphics.crumbs import Crumb, CrumbArt, crumbs
 from graphics.doll import DOLL_FACINGS, Doll, DollStore, draw_doll
@@ -13,11 +14,15 @@ from graphics.face_renderer import FaceRenderer
 from graphics.font import CELL_SIZE, BitmapFont
 from graphics.icons import ICON_SIZE, icon_path
 from graphics.illustrations import Illustrations
+from graphics.item_icons import ICON_SIZE as ITEM_ICON_SIZE
 from graphics.item_icons import ItemIcons
 from graphics.lighting import BLOCK, LightMap, daylight, shade
 from graphics.object_sprites import ObjectSprites
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from graphics.object_art import ObjectArtStore
+from graphics.object_pictures import ObjectPicture, ObjectPictures
+from graphics.shelf_display import GOODS_SIZE
+from graphics.stand_ins import stand_in
 from graphics.map_renderer import GROUND_TILES, render_roofs, render_terrain, roof_names
 from graphics.palette import PALETTE
 from graphics.shelf_display import SLOTS, displayed_goods
@@ -94,7 +99,7 @@ from ui.trade_board import DRAW_INTENT as TRADE_DRAW_INTENT
 from ui.bubble import MARK_SIZE, MARK_TAIL, draw_mark
 from ui.labels import away_residents
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
-from ui.panel import draw_panel
+from ui.panel import draw_item, draw_panel
 from ui.task_bar import draw_task_bar, task_bar_rect, task_progress
 from ui.tutorial_panel import (
     ACKNOWLEDGE_INTENT,
@@ -141,6 +146,9 @@ BITES_AT = (0.2, 0.4, 0.6, 0.8)
 # Frames per second of animated objects and bobbing icons.
 ANIMATION_FPS = 5
 ENTER_HINT = "clic: entrar"
+# Something shown on the window: how far down the map its foot is, where it goes in map
+# pixels (left, top, width, height), and its picture.
+Standing = tuple[float, tuple[float, float, float, float], pygame.Surface]
 NOWHERE_TO_ENTER = "No hay ningún edificio ahí en el que entrar"
 BOBBING_ICONS = ("alert", "sleep")
 # What someone is doing is shown in a bubble over their head. These are not: they mark who it is.
@@ -262,6 +270,13 @@ class GlobalView:
         self.object_sprites = ObjectSprites(assets, custom)
         # Furniture and objects somebody has drawn take the place of the game's own, kind by kind.
         self.object_art = ObjectArtStore(self.illustrations, self.object_sprites)
+        # What the game draws for itself at the resolution of the window, wherever nobody has
+        # drawn it (P41): every kind of object, the buildings, and the ground of the map.
+        self.object_pictures = ObjectPictures()
+        self._building_pictures: dict[tuple, pygame.Surface] = {}
+        self._painted_ground: pygame.Surface | None = None
+        # Whether the ground on show is the game's own picture of it, with the fence in it.
+        self._ground_painted = False
         self.faces = faces
         # Everyone's body, and what a blow leaves lying about. Presentation only: nothing of it is saved.
         self.bodies = BodyStage(BodyRenderer(assets, builtin_plan(), faces.looks))
@@ -601,6 +616,9 @@ class GlobalView:
             room.room_id: set(roof_names(tile_map, [room])) for room in rooms.values() if room.roofed
         }
         self._minimap = minimap_base(self.roofed_terrain, (tile_map.width, tile_map.height))
+        # Whatever the game had drawn of the ground and the buildings is of the map as it was.
+        self._painted_ground = None
+        self._building_pictures = {}
 
     def on_events(self, events: Iterable[DomainEvent]) -> None:
         """React to what the simulation just emitted."""
@@ -999,41 +1017,21 @@ class GlobalView:
         self._closed = set(self.roof_tiles) - open_rooms
         # A roof hides what is under it.
         self._hidden = set().union(*(self.roof_tiles[room_id] for room_id in self._closed))
-        drawn_objects = self._drawn_objects(region)
-        closed_pictures = {
-            room_id: self.building_art.closed(self.world.rooms[room_id]) for room_id in self._closed
-        }
-        open_backgrounds = {
-            room_id: self.building_art.opened(self.world.rooms[room_id], foreground=False) for room_id in open_rooms
-        }
-        open_foregrounds = {
-            room_id: self.building_art.opened(self.world.rooms[room_id], foreground=True) for room_id in open_rooms
-        }
-        has_building_pictures = any(
-            (*closed_pictures.values(), *open_backgrounds.values(), *open_foregrounds.values())
-        )
-        self._scene = self._buffer(
-            region.size, clear=ground is not None or has_building_pictures or bool(drawn_objects)
-        )
-        self._scene_origin = region.topleft
-        if ground is None:
-            self._scene.blit(self.terrain, (0, 0), region)
-        else:
-            self._scene.fill(TRANSPARENT)
-            self._scene.blit(self.raised_terrain, (0, 0), region)
-        # Freehand parts go straight on the window: backgrounds below the old map art, foregrounds
-        # after residents, so the front wall and door can hide their feet.
-        pictures: list[tuple[pygame.Rect, pygame.Surface]] = []
-        foreground_pictures: list[tuple[pygame.Rect, pygame.Surface]] = []
+        # What goes on the window itself, at its resolution: floors, which lie under everything,
+        # and whatever stands on the ground, each with how far down the map its foot is, so
+        # that whoever and whatever is nearer is drawn in front.
+        floors: list[tuple[pygame.Rect, pygame.Surface]] = []
+        standing: list[Standing] = self._object_pictures(region)
         # Objects, residents and buildings share one list so that whatever stands lower on screen is in front.
         draws: list[Draw] = []
         for room_id in self._closed:
             room = self.world.rooms[room_id]
-            if not building_area(room).colliderect(region):
+            area = building_area(room)
+            if not area.colliderect(region):
                 continue
-            picture = closed_pictures[room_id]
+            picture = self._building_picture(room, "closed")
             if picture is not None:
-                pictures.append((building_area(room), picture))
+                standing.append((float(area.bottom), tuple(area), picture))
             else:
                 draws.append(self._building_draw(room))
         for room_id in open_rooms:
@@ -1041,15 +1039,23 @@ class GlobalView:
             area = building_area(room)
             if not area.colliderect(region):
                 continue
-            background = open_backgrounds[room_id]
-            foreground = open_foregrounds[room_id]
+            background = self._building_picture(room, "background")
+            foreground = self._building_picture(room, "foreground")
             if background is not None:
-                pictures.append((area, background))
+                floors.append((area, background))
             if foreground is not None:
-                foreground_pictures.append((area, foreground))
-        # Drawn furniture goes over the floor of a drawn building, whatever stands lower in front.
-        pictures.extend(sorted(drawn_objects, key=lambda entry: entry[0].bottom))
-        for area, picture in pictures:
+                # The wall in front, and its door, hide the feet of whoever is inside by it.
+                standing.append((area.bottom + 0.75, tuple(area), foreground))
+        self._scene = self._buffer(region.size, clear=ground is not None or bool(floors) or bool(standing))
+        self._scene_origin = region.topleft
+        if ground is None:
+            self._scene.blit(self.terrain, (0, 0), region)
+        else:
+            self._scene.fill(TRANSPARENT)
+            if not self._ground_painted:
+                # The game's own picture of the ground has the fence in it. Any other has not.
+                self._scene.blit(self.raised_terrain, (0, 0), region)
+        for area, picture in floors:
             # Remove only where a drawing has paint. Clear corners continue to show the ground.
             self._erase_for_picture(area, picture)
         for placed in self._standing():
@@ -1086,8 +1092,8 @@ class GlobalView:
         # Nothing of the map is drawn outside its part of the canvas.
         self.canvas.set_clip(self.viewport)
         size = (self._scaled(region.width), self._scaled(region.height))
-        if ground is not None or self._doll_draws or pictures or foreground_pictures:
-            self._show_illustrated(region, size, ground, pictures, foreground_pictures, stormy, light)
+        if ground is not None or self._doll_draws or floors or standing:
+            self._show_illustrated(region, size, ground, floors, standing, stormy, light)
         else:
             if stormy:
                 self._scene.fill(STORM_TINT, special_flags=pygame.BLEND_RGB_MULT)
@@ -1164,18 +1170,69 @@ class GlobalView:
 
     def _ground(self) -> pygame.Surface | None:
         """The ground of this map as someone has drawn it, at the detail the window shows. None if nobody has."""
+        self._ground_painted = False
         if self.illustrations is None:
             return None
         width, height = self.terrain.get_size()
-        return self.illustrations.fitted(f"map/{self.world.map_id}.png", (width * GROUND_DETAIL, height * GROUND_DETAIL))
+        own = self.illustrations.fitted(f"map/{self.world.map_id}.png", (width * GROUND_DETAIL, height * GROUND_DETAIL))
+        if own is not None or not self.windowed:
+            return own
+        # Nobody has: the game draws it, fence and all, the first time it is asked for.
+        if self._painted_ground is None:
+            seed = sum(map(ord, self.world.map_id))
+            self._painted_ground = ground_pictures.ground(self.world.tile_map, TILE_SIZE * GROUND_DETAIL, seed)
+        self._ground_painted = True
+        return self._painted_ground
+
+    @property
+    def windowed(self) -> bool:
+        """Whether there is a window under the canvas, to draw on at its resolution."""
+        return self.layers is not None and bool(self.canvas.get_flags() & pygame.SRCALPHA)
+
+    @property
+    def _cell(self) -> int:
+        """Pixels of the window a tile of the map takes at the zoom it is seen at."""
+        return self.tile_px * (self.layers.scale if self.layers is not None else 1)
+
+    def _building_picture(self, room: Room, part: str) -> pygame.Surface | None:
+        """A building with its roof on, or with it off its floor or the wall in front of it: as
+        somebody drew it, or else as the game does. None where there is no window to show either on."""
+        if part == "closed":
+            own = self.building_art.closed(room)
+        else:
+            own = self.building_art.opened(room, foreground=part == "foreground")
+        if own is not None or not self.windowed:
+            return own
+        if self.building_art.has_parts(room):
+            # Somebody has drawn some of it: what they left out stays out.
+            return None
+        doors = door_columns(self.world.tile_map, room)
+        key = (room.room_id, part, self._cell, room.width, room.height, doors)
+        if key not in self._building_pictures:
+            if part == "closed":
+                made = building_pictures.closed(room, self._cell, doors)
+            else:
+                floor = self.world.tile_map.terrain_at((room.x, room.y))
+                made = building_pictures.opened(room, self._cell, doors, floor, part == "foreground")
+            self._building_pictures[key] = made
+        return self._building_pictures[key]
+
+    def _game_picture(self, definition) -> ObjectPicture | None:
+        """The game's own picture of a kind of object, where it is that and not somebody's drawing that is shown."""
+        if not self.windowed or self.object_art.drawing(definition) is not None:
+            return None
+        if not self.object_pictures.has(definition.kind, definition.width, definition.height):
+            return None
+        frame = int(self.time * ANIMATION_FPS) % self.object_pictures.frames(definition.kind)
+        return self.object_pictures.at(definition.kind, self._cell, frame)
 
     def _show_illustrated(
         self,
         region: pygame.Rect,
         size: tuple[int, int],
         ground: pygame.Surface | None,
-        pictures: list[tuple[pygame.Rect, pygame.Surface]],
-        foreground_pictures: list[tuple[pygame.Rect, pygame.Surface]],
+        floors: list[tuple[pygame.Rect, pygame.Surface]],
+        standing: list[Standing],
         stormy: bool,
         light: pygame.Surface | None,
     ) -> None:
@@ -1186,8 +1243,10 @@ class GlobalView:
         """
         layers, scene = self.layers, self._scene
         plan = self.bodies.plan
-        # Whoever stands lower on the map is in front.
-        dolls = sorted(self._doll_draws, key=lambda entry: entry[0])
+        # Whoever and whatever stands lower on the map is in front: pictures and dolls in one order.
+        ordered: list[tuple[float, int, object]] = [(entry[0], 0, entry) for entry in standing]
+        ordered += [(float(entry[0]), 1, entry) for entry in self._doll_draws]
+        ordered.sort(key=lambda entry: entry[:2])
         corner = self._canvas_point(*region.topleft)
         place = layers.on_screen(pygame.Rect(corner, size))
         clip = layers.on_screen(self.viewport)
@@ -1203,23 +1262,28 @@ class GlobalView:
             if ground is not None:
                 piece = ground.subsurface(source)
                 screen.blit(piece if piece.get_size() == place.size else pygame.transform.smoothscale(piece, place.size), place)
-            for area, picture in pictures:
+            origin = (place.x - region.x * detail, place.y - region.y * detail)
+
+            def show(area: tuple[float, float, float, float], picture: pygame.Surface) -> None:
                 spot = pygame.Rect(
-                    place.x + round((area.x - region.x) * detail),
-                    place.y + round((area.y - region.y) * detail),
-                    round(area.width * detail),
-                    round(area.height * detail),
+                    round(origin[0] + area[0] * detail),
+                    round(origin[1] + area[1] * detail),
+                    round(area[2] * detail),
+                    round(area[3] * detail),
                 )
-                fitted = (
-                    picture
-                    if picture.get_size() == spot.size
-                    else pygame.transform.smoothscale(picture, spot.size)
-                )
-                screen.blit(fitted, spot)
+                # What the game draws is made at the size it is shown. A drawing may not be.
+                near = abs(picture.get_width() - spot.width) <= 1 and abs(picture.get_height() - spot.height) <= 1
+                screen.blit(picture if near else pygame.transform.smoothscale(picture, spot.size), spot)
+
+            for area, picture in floors:
+                show(tuple(area), picture)
             # The pixel art keeps its hard edges however large it is shown.
             screen.blit(scene if scene.get_size() == place.size else pygame.transform.scale(scene, place.size), place)
-            origin = (place.x - region.x * detail, place.y - region.y * detail)
-            for _, doll, skeleton, neck in dolls:
+            for _, kind, entry in ordered:
+                if kind == 0:
+                    show(entry[1], entry[2])
+                    continue
+                _, doll, skeleton, neck = entry
                 if skeleton is not None:
                     draw_doll(screen, doll, plan, skeleton, origin, detail)
                     continue
@@ -1228,21 +1292,8 @@ class GlobalView:
                 if head is not None:
                     image, joint = head
                     screen.blit(image, (round(origin[0] + neck[0] * detail - joint[0]), round(origin[1] + neck[1] * detail - joint[1])))
-            # What they hold is in front of them, and under the walls and the dark like everything else.
+            # What they hold is in front of them, and under the dark like everything else.
             self._draw_held(screen, origin, detail)
-            for area, picture in foreground_pictures:
-                spot = pygame.Rect(
-                    place.x + round((area.x - region.x) * detail),
-                    place.y + round((area.y - region.y) * detail),
-                    round(area.width * detail),
-                    round(area.height * detail),
-                )
-                fitted = (
-                    picture
-                    if picture.get_size() == spot.size
-                    else pygame.transform.smoothscale(picture, spot.size)
-                )
-                screen.blit(fitted, spot)
             if stormy:
                 screen.fill(STORM_TINT, place, special_flags=pygame.BLEND_RGB_MULT)
             if light is not None:
@@ -1388,23 +1439,50 @@ class GlobalView:
         bottom = (placed.y + self.world.definition_of(placed).height) * TILE_SIZE
         return pygame.Rect(placed.x * TILE_SIZE, bottom - height, width, height)
 
-    def _drawn_objects(self, region: pygame.Rect) -> list[tuple[pygame.Rect, pygame.Surface]]:
-        """The objects in view that somebody has drawn, each with its picture at the size the window shows it."""
-        if not self.object_art.available or self.layers is None:
+    def _object_pictures(self, region: pygame.Rect) -> list[Standing]:
+        """The objects in view that are shown on the window: as somebody drew them, or as the game
+        does. Each part comes with how far down the map its foot is, where it goes in map
+        pixels, and its picture at the size the window shows it."""
+        if self.layers is None or not (self.object_art.available or self.windowed):
             return []
-        drawn: list[tuple[pygame.Rect, pygame.Surface]] = []
+        shown: list[Standing] = []
         scale = self.layers.scale
         for placed in self._standing():
             if (placed.x, placed.y) in self._hidden:
+                continue
+            definition = self.world.definition_of(placed)
+            goods = displayed_goods(self.world, placed) if definition.display_of is not None else []
+            foot = float((placed.y + definition.height) * TILE_SIZE)
+            game = self._game_picture(definition)
+            if game is not None:
+                # A map pixel is this many of the picture's.
+                detail = self._cell / TILE_SIZE
+                width, height = game.under.get_width() / detail, game.under.get_height() / detail
+                area = (float(placed.x * TILE_SIZE), foot - height, width, height)
+                if not pygame.Rect(area).inflate(2, 2).colliderect(region):
+                    continue
+                shown.append((foot - 0.5, area, game.under))
+                if game.over is not None:
+                    # Whoever lies in it is drawn by its foot, between the two.
+                    shown.append((foot + 0.5, area, game.over))
+                side = game.slot_size / detail
+                for item_id, (x, y) in zip(goods, game.slots):
+                    spot = (area[0] + x / detail, area[1] + y / detail, side, side)
+                    shown.append((foot - 0.4, spot, self.icons.shown(item_id, game.slot_size)))
                 continue
             area = self._object_area(placed)
             if not area.colliderect(region):
                 continue
             size = (self._scaled(area.width) * scale, self._scaled(area.height) * scale)
-            picture = self.object_art.shown(self.world.definition_of(placed), size)
-            if picture is not None:
-                drawn.append((area, picture))
-        return drawn
+            picture = self.object_art.shown(definition, size)
+            if picture is None:
+                continue
+            shown.append((foot - 0.5, tuple(area), picture))
+            side = self._scaled(GOODS_SIZE[0]) * scale
+            for item_id, (x, y) in zip(goods, SLOTS):
+                spot = (float(area.left + x), float(area.top + y), float(GOODS_SIZE[0]), float(GOODS_SIZE[1]))
+                shown.append((foot - 0.4, spot, self.icons.shown(item_id, side)))
+        return shown
 
     def visitor(self) -> Resident | None:
         """Whoever has stopped by the gate to trade, as somebody to draw and to click on. None with nobody there."""
@@ -1433,8 +1511,11 @@ class GlobalView:
     def _object_draw(self, placed: Interactable) -> Draw:
         definition = self.world.definition_of(placed)
         sheet = self.object_sprites.sheet(definition)
-        # Somebody's drawing of it goes on the window by itself: here only what sits on it is drawn.
-        drawn = self.layers is not None and self.object_art.drawing(definition) is not None
+        # A picture of it on the window, somebody's or the game's, goes there by itself with
+        # whatever it shows off: here there is only where it is, to be picked by.
+        drawn = self.layers is not None and (
+            self.object_art.drawing(definition) is not None or self._game_picture(definition) is not None
+        )
         # A sheet wider than the object holds animation frames side by side.
         width = definition.width * TILE_SIZE
         frame = int(self.time * ANIMATION_FPS) % self.object_sprites.frames(definition)
@@ -1447,8 +1528,8 @@ class GlobalView:
         def draw() -> None:
             if not drawn:
                 self._blit(image, area.topleft)
-            for definition_id, (dx, dy) in zip(goods, SLOTS):
-                self._blit(self.icons.small(definition_id), (area.left + dx, area.top + dy))
+                for definition_id, (dx, dy) in zip(goods, SLOTS):
+                    self._blit(self.icons.small(definition_id), (area.left + dx, area.top + dy))
             if placed.object_id in self.world.containers:
                 self.container_hitboxes[placed.object_id] = self._canvas_rect(area)
 
@@ -1558,7 +1639,14 @@ class GlobalView:
 
     def _doll_of(self, body_id: str) -> Doll | None:
         """The paper doll of a body, if its body has been drawn and there is a window to show it on."""
-        return self.dolls.get(body_id) if self.dolls is not None else None
+        if self.dolls is None:
+            return None
+        doll = self.dolls.get(body_id)
+        if doll is None and self.windowed:
+            # Nobody has drawn them: on the window they are a plain figure in their own colours.
+            skin = self.bodies.renderer.skin(body_id)
+            doll = self.dolls.stand_in(body_id, lambda template: stand_in(template, skin))
+        return doll
 
     def _side_facing(self, resident_id: str, facing: str) -> str:
         """Which way a doll faces: it is drawn from the side, so walking up or down it keeps the side it last had."""
@@ -1756,10 +1844,16 @@ class GlobalView:
         head = face.subsurface((0, 0, face.get_width(), LYING_HEAD_ROWS))
 
         doll = self._doll_of(resident.resident_id)
+        neck = (bed.left + LYING_NECK[0], bed.top + LYING_NECK[1])
+        game = self._game_picture(definition)
+        if game is not None and game.neck is not None:
+            # The game's own picture of a bed says where a head goes on it.
+            detail = self._cell / TILE_SIZE
+            neck = (bed.left + game.neck[0] / detail, bed.bottom - (game.under.get_height() - game.neck[1]) / detail)
 
         def draw() -> None:
             if doll is not None:
-                self._doll_draws.append((bed.bottom, doll, None, (bed.left + LYING_NECK[0], bed.top + LYING_NECK[1])))
+                self._doll_draws.append((bed.bottom, doll, None, neck))
             else:
                 self._blit(head, (bed.left + LYING_HEAD_OFFSET[0], bed.top + LYING_HEAD_OFFSET[1]))
             hitbox = self._canvas_rect(bed)
@@ -1853,9 +1947,8 @@ class GlobalView:
         # Meals are visible in the hand itself; the overhead item remains for other item uses.
         in_hand = None if self.overview or self._meal_in_hand(resident) is not None else self._item_in_hand(resident)
         if in_hand is not None:
-            image = self.icons.icon(in_hand)
-            y -= image.get_height() + 1
-            self.canvas.blit(image, (x - image.get_width() // 2, y))
+            y -= ITEM_ICON_SIZE[1] + 1
+            draw_item(self.canvas, self.icons, in_hand, pygame.Rect(x - ITEM_ICON_SIZE[0] // 2, y, *ITEM_ICON_SIZE))
         bob = int(self.time * ANIMATION_FPS) % 2
         for icon in icons:
             if icon is None:

@@ -133,6 +133,13 @@ class WindowSkin:
         self._show(target, self._bars[key], rect)
         return True
 
+    def item(self, target: pygame.Surface, rect: pygame.Rect, icons, item_id: str) -> bool:
+        if not self._reaches(target, rect):
+            return False
+        size = self.layers.on_screen(rect).size
+        self._show(target, icons.shown(item_id, min(size)), rect)
+        return True
+
     # ----- icons -----
 
     def tile(self, name: str, size: int, lit: bool = False) -> pygame.Surface:

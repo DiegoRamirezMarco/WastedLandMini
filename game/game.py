@@ -110,6 +110,8 @@ class Game:
         self.custom = AssetStore(self.custom_content_dir)
         self.font = BitmapFont(self.assets.image(FONT_SHEET, size=SHEET_SIZE))
         self.icons = ItemIcons(self.assets, self.custom)
+        # With a window under the canvas, the game's own items are shown as it draws them for it.
+        self.icons.painted = bool(flags)
         # Until somebody draws them, whoever has no art of their own borrows one of the game's looks.
         self.faces = FaceRenderer(self.assets, self.custom, self.illustrations, Looks(self.assets))
         # Residents whose body has been drawn, cut into parts that move.

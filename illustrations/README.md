@@ -19,6 +19,11 @@ shown at, so keep its proportions close to the ones given.
 | `ui/panel.png` | The skin of the bar, the menu, the panel and the dock: a border all round, an eighth of each side wide, and a plain dark middle that text can be read on. Without it they are the game's own plates | Stretched to each of them, border kept | Square |
 | `ui/icons/<name>.png` | An icon of the interface, in place of the one the game draws. In the menu, tile and all: `people`, `work`, `study`, `stores`, `government`, `events`, `map`, `save`, `urbanism`, `draw`, `buildings`, `voice`. In the bar on top: `sun`, `moon`, `people`, `food`, `water`, `energy`, `medicine`, `scrap`. In the catalogue of Urbanismo, over what cannot be made yet: `lock` | 36×36 in the menu, 22×22 in the bar, 26×26 for the padlock | Square, with a clear background, and bold enough to read small |
 
+Whatever is missing here the game draws itself, at the resolution of the window: the ground, the
+buildings, every kind of object, the items, and a plain figure for whoever has no doll. A picture
+of yours takes its place on the map. Inside a building it is the game's picture of an object that
+is shown, since yours is drawn for the map, from above.
+
 Furniture and loose objects nobody has drawn are the game's own art. A four-part building may be made one
 piece at a time: any missing part falls back safely, and a building with no drawings looks exactly
 as it did before.

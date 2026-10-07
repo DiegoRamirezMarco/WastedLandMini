@@ -21,9 +21,10 @@ import pygame
 from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE
 from graphics.doll import draw_doll
 from graphics.font import LINE_HEIGHT
-from graphics.interior_art import PAINTERS, InsidePicture
+from graphics.object_pictures import DEPTH, ObjectPicture
 from graphics.palette import PALETTE, Color
 from graphics.screen_layers import TRANSPARENT
+from graphics.shelf_display import displayed_goods
 from graphics.ui_art import darker, lighter, mix
 from scenes.body_stage import HEAD_BONE, LYING_HEAD_OFFSET, LYING_HEAD_ROWS, LYING_NECK
 from settings import SCALE, TILE_SIZE
@@ -42,10 +43,9 @@ LEAVE_LABEL = "Salir"
 TRIAL_NOTE = "Prueba de la vista: lo que hay dentro es lo que tiene en el mapa."
 # How many cells of the inside go to a tile of the building as it stands on the map, each way.
 GROWTH = 2
-# What each part takes, in widths of a cell: how deep a cell looks, seen from a little above;
-# how tall the back wall is; how wide the walls at the sides are; and how tall what is left of
-# the front wall is, with the way out in it.
-DEPTH = 0.62
+# What each part takes, in widths of a cell: how tall the back wall is; how wide the walls at
+# the sides are; and how tall what is left of the front wall is, with the way out in it. How
+# deep a cell looks is `DEPTH`, which the pictures of what stands in it are drawn to.
 WALL = 2.3
 SIDE = 0.3
 FRONT = 0.28
@@ -219,8 +219,6 @@ class InteriorView:
         self._shells: dict[tuple, pygame.Surface] = {}
         self._pictures: dict[tuple, pygame.Surface] = {}
         self._skeletons: dict[tuple, Skeleton] = {}
-        # What is drawn for this view of its own, by kind and by the size of a cell.
-        self._inside: dict[tuple, InsidePicture] = {}
 
     def stage(self) -> pygame.Rect:
         """The part of the screen the room is laid out in, in pixels of the window, from its own corner."""
@@ -299,6 +297,7 @@ class InteriorView:
         own = self._own(layout, definition)
         if own is not None:
             return self._own_object(room, layout, placed, own)
+        # A kind the game has no picture of, such as a pack brings: its art as it is.
         sheet = view.object_sprites.sheet(definition)
         frame_width = definition.width * TILE_SIZE
         frames = view.object_sprites.frames(definition)
@@ -330,27 +329,35 @@ class InteriorView:
 
         return [(bottom - 0.5, draw)]
 
-    def _own(self, layout: InteriorLayout, definition) -> InsidePicture | None:
-        """The picture a kind of thing has for this view, if one has been made for it."""
-        painter = PAINTERS.get(definition.kind)
-        if painter is None or (definition.width, definition.height) != (1, 2):
-            # What there is so far is drawn for one cell across and two deep.
-            return None
-        key = (definition.kind, layout.cell, layout.depth)
-        if key not in self._inside:
-            self._inside[key] = painter(layout.cell, layout.depth)
-        return self._inside[key]
+    def _own(self, layout: InteriorLayout, definition) -> ObjectPicture | None:
+        """The game's picture of a kind of thing, which is what is shown of it in here. None if it has none.
 
-    def _own_object(self, room: Room, layout: InteriorLayout, placed: Interactable, picture: InsidePicture):
-        """Something drawn for this view: what of it is under whoever is in it, and what is over them."""
-        definition = self.view.world.definition_of(placed)
+        A drawing of the player's is made for the map, from above, and is not shown in here.
+        """
+        view = self.view
+        if not view.object_pictures.has(definition.kind, definition.width, definition.height):
+            return None
+        frame = int(view.time * ANIMATION_FPS) % view.object_pictures.frames(definition.kind)
+        return view.object_pictures.picture(definition.kind, layout.cell, layout.depth, frame)
+
+    def _own_object(self, room: Room, layout: InteriorLayout, placed: Interactable, picture: ObjectPicture):
+        """Something the game has drawn: what of it is under whoever is in it, what is over them, and what it shows off."""
+        view = self.view
+        definition = view.world.definition_of(placed)
         column, row = self.place(room, placed.x, placed.y)
-        left, top = layout.spot(column, row)
+        left = layout.spot(column, row)[0]
         bottom = layout.spot(column, row + definition.height)[1]
-        corner_of = (left, top - picture.rise)
+        corner_of = (left, bottom - picture.under.get_height())
+        goods = displayed_goods(view.world, placed) if definition.display_of is not None else []
+        shown = [
+            (view.icons.shown(item_id, picture.slot_size), (corner_of[0] + x, corner_of[1] + y))
+            for item_id, (x, y) in zip(goods, picture.slots)
+        ]
 
         def under(target: pygame.Surface, corner: tuple[int, int]) -> None:
             target.blit(picture.under, (corner[0] + corner_of[0], corner[1] + corner_of[1]))
+            for item, spot in shown:
+                target.blit(item, (corner[0] + spot[0], corner[1] + spot[1]))
 
         def over(target: pygame.Surface, corner: tuple[int, int]) -> None:
             target.blit(picture.over, (corner[0] + corner_of[0], corner[1] + corner_of[1]))
@@ -372,6 +379,8 @@ class InteriorView:
         clip, rate = view._way_of(resident, WALK) if stride is not None else view._clip_of(resident)
         turn = (stride if stride is not None else view.time) * rate
         renderer = view.bodies.renderer
+        # Whoever carries something for their job holds their arms out for it, as on the map.
+        overlay = self._carrying() if view._load_of(resident) is not None else None
         if doll is not None:
             facing = view._side_facing(resident.resident_id, view._lean(resident) or facing)
             plan = doll.plan if doll.plan is not None else view.bodies.plan
@@ -379,7 +388,9 @@ class InteriorView:
             if key not in self._skeletons:
                 self._skeletons[key] = Skeleton(plan, facing)
             skeleton = self._skeletons[key]
-            skeleton.set_pose(plan.pose(facing, clip, turn % 1.0))
+            pose = plan.pose(facing, clip, turn % 1.0, overlay)
+            skeleton.set_pose(pose)
+            held = self.in_hand(resident, facing, pose, turn, stride)
             reach = doll.standing(plan)
             box = pygame.Rect(
                 foot[0] + math.floor(reach[0] * detail),
@@ -391,10 +402,13 @@ class InteriorView:
             def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
                 self._shadow(target, corner, foot, layout)
                 draw_doll(target, doll, plan, skeleton, (corner[0] + foot[0], corner[1] + foot[1]), detail)
+                self._show_held(target, held, (corner[0] + foot[0], corner[1] + foot[1]), detail)
 
         else:
             frames = renderer.frames(clip, facing)
-            picture, origin = renderer.frame(resident.resident_id, facing, clip, int(turn * frames) % frames)
+            index = int(turn * frames) % frames
+            picture, origin = renderer.frame(resident.resident_id, facing, clip, index, (), overlay)
+            held = self.in_hand(resident, facing, view.bodies.plan.pose(facing, clip, index / frames, overlay), turn, stride)
             size = (round(picture.get_width() * detail), round(picture.get_height() * detail))
             key = (id(picture), size)
             if key not in self._pictures:
@@ -411,6 +425,7 @@ class InteriorView:
             def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
                 self._shadow(target, corner, foot, layout)
                 target.blit(shown, (corner[0] + corner_of[0], corner[1] + corner_of[1]))
+                self._show_held(target, held, (corner[0] + foot[0], corner[1] + foot[1]), detail)
 
         hitbox = pygame.Rect(self._to_canvas(box.topleft), (max(4, box.width // SCALE), max(4, box.height // SCALE)))
 
@@ -419,6 +434,39 @@ class InteriorView:
             view._draw_overhead(resident, hitbox.midtop, with_name=True)
 
         return (foot[1], draw, label)
+
+    @staticmethod
+    def _carrying() -> str:
+        from scenes.global_view import CARRY_CLIP
+
+        return CARRY_CLIP
+
+    def in_hand(self, resident: Resident, facing: str, pose: dict, turn: float, stride: float | None) -> list:
+        """What somebody has in their hand, as the map would show it, from where their feet are:
+        the meal they are at with the bites gone from it and the crumbs that fly, what they
+        fight with, or what they carry for their job. Empty for empty hands."""
+        view = self.view
+        kept, view._held = view._held, []
+        meal = view._meal_in_hand(resident)
+        weapon = view._weapon_in_hand(resident) if stride is None else None
+        load = view._load_of(resident)
+        if meal is not None:
+            view._hold(meal, facing, pose, 0.0, turn, view._bites_taken(resident))
+        elif weapon is not None:
+            view._hold(weapon, facing, pose, 0.0)
+        elif load is not None:
+            view._hold(load, facing, pose, 0.0)
+        held, view._held = view._held, kept
+        return held
+
+    def _show_held(self, target: pygame.Surface, held: list, feet: tuple[int, int], detail: float) -> None:
+        """Draw what somebody holds, with them standing at `feet`, as the map draws it."""
+        if not held:
+            return
+        view = self.view
+        kept, view._held = view._held, held
+        view._draw_held(target, feet, detail)
+        view._held = kept
 
     def _asleep(self, room: Room, layout: InteriorLayout, resident: Resident, lying_in: Interactable):
         """Somebody lying in something, as the map shows them: their own head on the pillow, the rest under the blanket."""
@@ -431,10 +479,15 @@ class InteriorView:
         bed = pygame.Rect(left, top, definition.width * layout.cell, definition.height * layout.depth)
         doll = view._doll_of(resident.resident_id)
         head = doll.placed(HEAD_BONE, False, across, math.pi) if doll is not None else None
+        own = self._own(layout, definition)
         if head is not None:
             # A doll's head, upright, by where its neck is on the pillow.
             shown, joint = head
-            place = (round(left + LYING_NECK[0] * across - joint[0]), round(top + LYING_NECK[1] * down - joint[1]))
+            neck = (left + LYING_NECK[0] * across, top + LYING_NECK[1] * down)
+            if own is not None and own.neck is not None:
+                # The game's own picture of a bed says where a head goes on it.
+                neck = (left + own.neck[0], bed.bottom - own.under.get_height() + own.neck[1])
+            place = (round(neck[0] - joint[0]), round(neck[1] - joint[1]))
         else:
             # The head of the game's own body, down to the eyes.
             whole = view.bodies.renderer.head(resident.resident_id)
@@ -446,9 +499,8 @@ class InteriorView:
             shown = self._pictures[key]
             place = (round(left + LYING_HEAD_OFFSET[0] * across), round(top + LYING_HEAD_OFFSET[1] * down))
         # They are picked by the whole of what they lie in, headboard and all, and named over it.
-        own = self._own(layout, definition)
         if own is not None:
-            bed = pygame.Rect(bed.x, bed.y - own.rise, bed.width, bed.height + own.rise)
+            bed = pygame.Rect(bed.x, bed.bottom - own.under.get_height(), bed.width, own.under.get_height())
         hitbox = pygame.Rect(self._to_canvas(bed.topleft), (max(4, bed.width // SCALE), max(4, bed.height // SCALE)))
 
         def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:

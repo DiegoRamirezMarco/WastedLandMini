@@ -22,6 +22,8 @@ class Skin(Protocol):
 
     def bar(self, target: pygame.Surface, rect: pygame.Rect, share: float, color: str) -> bool: ...
 
+    def item(self, target: pygame.Surface, rect: pygame.Rect, icons, item_id: str) -> bool: ...
+
 
 _skin: Skin | None = None
 
@@ -53,6 +55,14 @@ def draw_button(target: pygame.Surface, rect: pygame.Rect, active: bool = False)
         return
     pygame.draw.rect(target, PALETTE["lamp" if active else "shadow"], rect)
     pygame.draw.rect(target, PALETTE["iron"], rect, 1)
+
+
+def draw_item(target: pygame.Surface, icons, item_id: str, rect: pygame.Rect) -> None:
+    """The picture of an item in a square of the interface: as fine as the window shows it, or else its small icon."""
+    if _skin is not None and _skin.item(target, rect, icons, item_id):
+        return
+    icon = icons.icon(item_id)
+    target.blit(icon if icon.get_size() == rect.size else pygame.transform.scale(icon, rect.size), rect)
 
 
 def draw_bar(target: pygame.Surface, rect: pygame.Rect, share: float, color: str) -> None:

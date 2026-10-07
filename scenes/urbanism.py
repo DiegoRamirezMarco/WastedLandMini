@@ -14,9 +14,11 @@ from dataclasses import dataclass
 import pygame
 
 from graphics.assets import AssetStore
+from graphics import building_pictures
 from graphics.building_renderer import BuildingRenderer
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.object_art import ObjectArtStore
+from graphics.object_pictures import ObjectPictures
 from graphics.object_sprites import ObjectSprites
 from graphics.palette import PALETTE
 from graphics.screen_layers import ScreenLayers
@@ -54,6 +56,8 @@ CATALOG_COLUMNS = 5
 CATALOG_TILE = 38
 CATALOG_GAP = 3
 CATALOG_PICTURE = 32
+# How large a cell is in the picture the game draws of a thing for the catalogue, before it is fitted to its tile.
+CATALOG_DRAWN_CELL = 64
 # What nobody knows how to make yet comes last, under a heading of its own.
 LOCKED_TITLE = "Bloqueados"
 LOCKED_HEADING = LINE_HEIGHT + 4
@@ -158,6 +162,8 @@ class UrbanismEditor:
         # A picture of the player's own takes the place of the padlock as of any other icon.
         self.skin = WindowSkin(canvas, layers, object_art.illustrations if object_art is not None else None)
         self._tiles: dict[tuple[str, str, int, bool], pygame.Surface] = {}
+        # What the game draws of each kind of object, for the tiles of the catalogue (P41).
+        self.pictures = ObjectPictures()
         self.time = 0.0
         self.closed = False
         self.category = "buildings"
@@ -777,11 +783,16 @@ class UrbanismEditor:
                 f"catalog:{entry.entry_id}", definition.name, width=definition.width, height=definition.height,
                 roofed=True, blueprint_id=entry.entry_id,
             )
+            if self.skin.usable:
+                # As the game draws it on the map, with a door in the middle of its front.
+                return building_pictures.closed(room, CATALOG_DRAWN_CELL, (definition.width // 2 + 1,)), True
             return self.buildings.picture(room), False
         definition = self.world.registries.interactables.get(entry.entry_id)
         drawing = self.object_art.drawing(definition) if self.object_art is not None else None
         if drawing is not None:
             return drawing, True
+        if self.skin.usable and self.pictures.has(definition.kind, definition.width, definition.height):
+            return self.pictures.whole(definition.kind, CATALOG_DRAWN_CELL), True
         sheet = self.sprites.sheet(definition)
         frame_width = definition.width * 16
         return sheet.subsurface((0, 0, min(frame_width, sheet.get_width()), sheet.get_height())), False

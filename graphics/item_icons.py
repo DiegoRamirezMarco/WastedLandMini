@@ -4,6 +4,7 @@ import math
 
 import pygame
 
+from graphics import item_pictures
 from graphics.assets import AssetStore, make_placeholder
 
 ICON_SIZE = (16, 16)
@@ -38,6 +39,10 @@ class ItemIcons:
         self._eaten: dict[tuple[str, int], pygame.Surface] = {}
         self._held: dict[tuple[str, int, int, bool], pygame.Surface] = {}
         self._colors: dict[str, list[tuple[int, int, int]]] = {}
+        self._shown: dict[tuple[str, int], pygame.Surface] = {}
+        # Whether the game's own items are shown as it draws them for the window (P41), in place of
+        # their small icons, wherever a picture as large as it was made is asked for.
+        self.painted = False
 
     def icon(self, item_id: str) -> pygame.Surface:
         """Return the 16×16 icon of an item, or the placeholder if it has none."""
@@ -60,6 +65,18 @@ class ItemIcons:
             picture.blit(found, (0, 0))
             self._pictures[item_id] = picture
         return self._pictures[item_id]
+
+    def shown(self, item_id: str, size: int) -> pygame.Surface:
+        """The picture of an item brought to `size` pixels a side, for where it is shown on the window."""
+        key = (item_id, size)
+        if key not in self._shown:
+            picture = self.picture(item_id)
+            fits = picture.get_size() == (size, size)
+            small = max(picture.get_size()) < size
+            # A small picture made larger keeps its hard edges; a large one is brought down smoothly.
+            resize = pygame.transform.scale if small else pygame.transform.smoothscale
+            self._shown[key] = picture if fits else resize(picture, (size, size))
+        return self._shown[key]
 
     def held(self, item_id: str, size: int, bites: int = 0, mirrored: bool = False) -> pygame.Surface:
         """An item as it is seen in someone's hand: what was drawn of it and none of the empty
@@ -151,7 +168,7 @@ class ItemIcons:
         self._small.pop(item_id, None)
         self._pictures.pop(item_id, None)
         self._colors.pop(item_id, None)
-        for kept in (self._eaten, self._held):
+        for kept in (self._eaten, self._held, self._shown):
             for key in [key for key in kept if key[0] == item_id]:
                 del kept[key]
         if self._custom is not None:
@@ -163,6 +180,8 @@ class ItemIcons:
             for folder in PACK_FOLDERS:
                 if "icon.png" in self._custom.files(f"{folder}/{item_id}"):
                     return self._custom.image(f"{folder}/{item_id}/icon.png")
+        if self.painted and item_pictures.painted(item_id):
+            return item_pictures.picture(item_id)
         return self.icon(item_id)
 
     def _find(self, item_id: str) -> pygame.Surface:
