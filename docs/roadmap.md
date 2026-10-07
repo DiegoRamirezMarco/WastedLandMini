@@ -2784,41 +2784,67 @@ Decided without asking:
 - Twice the size each way, which is also what a finer grid of four cells to a tile would give
 - Every building with a roof can be gone into, not only the houses
 
-### S40 — A place of its own inside (needs P39) — planned
-Not to be started until the look of P39 has been seen and settled.
+### S40 — A place of its own inside (needs P39) — under way
+The view of P39 was seen and liked ("me gusta"), and so was the art (P41). Then: "pasamos a la
+decoracion y propiedad". Asked first, in two batches, and answered, for S40 to S42 and P40:
 
-- **Every building with a roof has an inside that is a map of its own**, larger than the ground
-  it stands on, with its own floor, its own walls and its own grid
+- **How much larger the inside is goes by the kind of building**, in its data. Not the
+  recommendation, which was twice each way for all of them
+- **What is inside is placed and moved from inside**, in a mode of the view for it. Urbanismo is
+  for what is out of doors
+- **Furniture is built and ornaments are not**: a bed, a table or a shelf is put to a resident
+  and made of scrap, as it is outside; a picture, a rug, a plant or a curtain, and the floor and
+  the walls, are put there at once and for nothing
+- **From the map a building is always shut**, with the faces of whoever is in it, and, in the
+  user's words, "se ve si estan hablando comiendo durmiendo etc mediante a los iconos que le
+  salen arriba": over each face, what they are doing
+- **The player says whose a house is**, from inside it
+- **Whoever has no house sleeps in the open.** Not the recommendation, which was a bed in a
+  house that is everybody's
+- **A lock and visits, all four that were offered**: only those who live there and whoever they
+  would have in go into a house that is somebody's; going in unasked is ill seen; a door can be
+  locked, with a lock that is built; and what is kept inside is theirs
+- **Any building can be somebody's**, and in the user's words one that is nobody's is "del
+  estado, pueblo o lo que sea": the settlement's
+
+What follows from those, said to the user before it was built:
+- In the ready-made settlement, and in a save from before, everybody starts as one of the owners
+  of the house they were sleeping in, so that nobody is put out by the rule
+- While a new settlement is in its opening nothing is anybody's, and when it ends whoever
+  founded it has the shack they made
+
+This one:
+- **Every building with a roof has an inside that is a place of its own**, larger than the
+  ground it stands on by what its kind says, with its own floor and its own grid
 - **The door is the way between the two**: whoever goes through it out on the map is inside, and
   whoever goes through it inside is out on the map
 - **Residents find their way across both**: to a bed, a pot or a post that is inside from
   anywhere outside, and back
 - **What is inside is inside**: what was in a building on the map moves to its inside, and the
   ground it stood on is the building, shut
+- **Nobody outside sees what happens inside, or the other way round**: what is known of it is
+  what was seen there, or told (S3)
 - Who is where, and what is where, is saved. A save from before has every building's things and
   people moved inside it
 
-Still to settle, to be asked before it is built:
-- How much larger: a fixed number of times, or by the kind of building
-- Whether somebody inside sees or hears what happens outside, and the other way round: a fight
-  in the square, a theft in a house (S3)
-- What a building is from outside once its roof never comes off: who is in it, if anything
-- Whether Urbanismo still places furniture, or everything indoors is placed from inside
-- Light, cold and storms indoors (S13, S15)
-
 ### S41 — Whose house it is, and what it is like (needs S40) — planned
-- **Owners, and who lives in it**: a person, a couple or a family (S25). They sleep there and
-  keep what is theirs there
+- **Owners**: any building can be given to one or more residents by the player. One with no
+  owners is the settlement's
+- **A bed in a building that is somebody's is theirs to sleep in**, and nobody else's. Whoever
+  has no house sleeps on the ground, wherever they are (S25)
+- **Only those who live there and whoever they would have in go in**: their partner, their kin,
+  whoever they think well of. Anybody goes into what is the settlement's
+- **Going in unasked is ill seen**, as a small theft is: whoever lives there and sees it holds
+  it against them, and it is talked of (S5, S9)
+- **A lock is a thing that is built on a door.** With it shut nobody without a key goes in
+- **What is kept inside is theirs**, and taking it is stealing
 - **Qualities that come of how it is furnished**: comfort, warmth, light and how good it is to
   look at, which tell on the rest and the mood of whoever lives there (S20)
-- **A lock, and who may come in**: who has a key, who is let in, and what is made of somebody
-  who is in a house that is not theirs (S5, S9)
 - **A name and a use of its own**, which is what its sign says
 
-Still to settle, to be asked before it is built:
-- Who decides whose a house is: the player, the residents, or whoever governs (S26, S38)
-- What somebody with no house does, and whether houses are fought over, bought or inherited
-- Whether premises (the cantina, the workshop, the shop) are somebody's too
+Still to settle, when it is reached:
+- Who has a key: only the owners, or whoever they give one to
+- What a couple or a family does when only one of them is given a house (S25)
 
 ### S42 — More to furnish with (needs S40) — planned
 - **Things on the wall**: pictures, shelves, windows, lamps, clocks, each taking a place on the
@@ -2826,16 +2852,16 @@ Still to settle, to be asked before it is built:
 - **More kinds of furniture and ornament**: rugs, plants, chairs, curtains, bedside tables
 - **A finer grid inside**: four cells to a cell for what is small, while what is large still
   goes by whole ones
-- **A floor and walls to choose** for each house
-- All of it data, like everything that can be placed, and each kind drawable (P17)
+- **A floor and walls to choose** for each building
+- All of it data, like everything that can be placed, and each kind drawn by the game (P41)
 
 ### P40 — Furnishing from inside (needs S42) — planned
-- A way for the player to draw each kind of thing for the view from inside themselves. The
-  game's own pictures of them all are done: P41
-- Putting things down, moving them and taking them away from inside the building, on its grid
-  and on its wall, in place of doing it in Urbanismo
-- Each kind of thing drawn for this view: from its front, standing on the floor
-- Whose house it is and what it is like, seen from inside, and its lock
+- A mode of the view from inside for putting things down, moving them and taking them away, on
+  the floor and on the wall, with the catalogue of pictures (P38)
+- Furniture put to a resident to be built, as outside; ornaments, floor and walls at once
+- Whose house it is, said from inside, and what it is like, seen there; its lock
+- From the map, over each face on a roof, what they are doing: talking, eating, sleeping
+- A way for the player to draw each kind of thing for the view from inside themselves
 
 ### P41 — Everything in one hand (needs P39) — done
 The user liked the bed drawn for the view from inside, and said: "cambia todos los items a este
