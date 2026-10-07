@@ -80,6 +80,7 @@ from ui.bubble import MARK_SIZE, MARK_TAIL, draw_mark
 from ui.labels import away_residents
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
 from ui.panel import draw_panel
+from ui.task_bar import draw_task_bar, task_bar_rect, task_progress
 from ui.tutorial_panel import (
     ACKNOWLEDGE_INTENT,
     BUILDING_ART_FOCUS,
@@ -295,6 +296,9 @@ class GlobalView:
         # player moves the view by hand. `_selection_seen` is what tells a new selection from an old one.
         self.following: str | None = None
         self._selection_seen: str | None = None
+        # Where the bar that says how far along a resident is with their task was last drawn,
+        # by resident ID.
+        self.task_bars: dict[str, pygame.Rect] = {}
         # What sounds the player's own clicks, if anything does: given the name of what was done.
         self.sound: Callable[[str], object] | None = None
         # Whoever the player has stopped to tell something, while they are choosing what.
@@ -890,6 +894,7 @@ class GlobalView:
                 draws.append(self._remains_draw(remains))
         self.hitboxes = {}
         self.container_hitboxes = {}
+        self.task_bars = {}
         self._overlays = []
         self._doll_draws = []
         self._held = []
@@ -1613,8 +1618,15 @@ class GlobalView:
     def _draw_overhead(
         self, resident: Resident, top_centre: tuple[int, int], with_name: bool, resting: bool = False
     ) -> None:
-        """Stack name, status icon and selection arrow above a resident."""
+        """Stack how far along they are with a task, their name, a status icon and the
+        selection arrow above a resident."""
         x, y = top_centre
+        done = task_progress(self.world, resident)
+        if done is not None:
+            bar = task_bar_rect((x, y), small=self.overview)
+            draw_task_bar(self.canvas, bar, done)
+            self.task_bars[resident.resident_id] = bar
+            y = bar.top - 1
         if with_name:
             y -= CELL_SIZE[1]
             name = self.font.render(resident.name, PALETTE["paper"])

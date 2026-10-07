@@ -2491,6 +2491,27 @@ Still open here:
 - Steps, doors and the day's small noises have no sound
 - Music is still waiting for music worth playing (P8)
 
+### P32 — How far along (needs S36) — done
+The user's words: "pon una barra de tiempo encima de los pj cuando están en una tarea".
+
+- **A small bar over the head of whoever is at a task**, under their name, that fills as they
+  get on with it. From afar it is smaller
+- **A site and something being taken apart say how far along they are themselves**: the bar
+  over whoever works on them is the site's own, or the thing's
+- **A shift at a post is as far along as the hours of it that have gone by**, so that leaving
+  the post on an errand and coming back does not start it again, and a longer day by law is a
+  longer bar
+- **The use of a thing is as far along as the time it takes**: a meal, a drink, something mended
+- **Nobody at no task has one**: on their way somewhere, strolling, talking, asleep, stopped to
+  be told something, or sitting waiting for material
+
+Decided without asking: a task is a shift, a site, taking something apart or using a thing.
+Sleeping and talking are not, so that the night is not a row of bars.
+
+Still open here:
+- The bar is one colour whatever the task, and says nothing of how long is left in hours
+- Whoever is out of the settlement has none, nor does anybody in the roster on the right
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it
