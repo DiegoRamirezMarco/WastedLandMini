@@ -90,10 +90,13 @@ class GameShellTests(unittest.TestCase):
         self.assertEqual(pygame.display.get_window_size(), pygame.display.get_desktop_sizes()[0])
 
     def _look_into(self, room_id: str) -> None:
-        """Rest the mouse on a building, which takes its roof off, and draw the result."""
+        """Rest the mouse on a building, which takes its roof off, and draw the result.
+
+        Towards its back: its sign hangs over its front, and resting on that leaves the roof on (P39).
+        """
         view = self.game.global_view
         room = self.game.world.rooms[room_id]
-        x, y = view._tile_pixel(room.x + room.width / 2, room.y + room.height / 2)
+        x, y = view._tile_pixel(room.x + room.width / 2, room.y + 0.5)
         moved = pygame.event.Event(
             pygame.MOUSEMOTION, pos=(x * SCALE + 1, y * SCALE + 1), rel=(0, 0), buttons=(0, 0, 0)
         )

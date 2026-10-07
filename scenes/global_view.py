@@ -51,6 +51,7 @@ from scenes.hud import (
     URBANISM_INTENT,
     Hud,
 )
+from scenes.interior_view import LEAVE_INTENT, InteriorView
 from scenes.scene import canvas_position
 from settings import SCALE, TILE_SIZE
 from simulation.commands import (
@@ -135,6 +136,8 @@ LYING_HEAD_ROWS = 10
 LYING_HEAD_OFFSET = (1, -2)
 # Frames per second of animated objects and bobbing icons.
 ANIMATION_FPS = 5
+ENTER_HINT = "clic: entrar"
+NOWHERE_TO_ENTER = "No hay ningún edificio ahí en el que entrar"
 BOBBING_ICONS = ("alert", "sleep")
 # What someone is doing is shown in a bubble over their head. These are not: they mark who it is.
 BARE_ICONS = ("selected", "heart", "friend")
@@ -310,6 +313,13 @@ class GlobalView:
         self.sound: Callable[[str], object] | None = None
         # Whoever the player has stopped to tell something, while they are choosing what.
         self._affected: str | None = None
+        # The building being looked at from inside, by room ID, and what draws it. None out on the map.
+        self.inside: str | None = None
+        self.interior = InteriorView(self)
+        # Where the sign of each building that can be gone into was last drawn, by room ID.
+        self.sign_boxes: dict[str, pygame.Rect] = {}
+        # Whether the minimap was on show when a building was gone into, to put it back on coming out.
+        self._minimap_kept = False
         # Whoever has come to trade, as a body to draw. They are no resident: the settlement keeps
         # no more of them than where they stand.
         self._visitor_body: Resident | None = None
@@ -335,6 +345,11 @@ class GlobalView:
             self.centre_on((entry[0] + 0.5, entry[1] + 0.5))
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_i:
+            self.toggle_inside()
+            return
+        if self.inside is not None and self._inside_event(event):
+            return
         if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
             self._apply(LOG_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_j:
@@ -394,6 +409,87 @@ class GlobalView:
             elif event.buttons[RIGHT_MOUSE_BUTTON]:
                 # So does the right button, which clicks on nothing.
                 self.pan(-event.rel[0] / SCALE, -event.rel[1] / SCALE)
+
+    # ----- inside a building -----
+
+    def enterable(self, room_id: str | None) -> bool:
+        """Whether a room is a building that can be gone into: one with a roof over it."""
+        room = self.world.rooms.get(room_id or "")
+        return room is not None and room.roofed
+
+    def enter(self, room_id: str) -> bool:
+        """Look at a building from inside, in place of the map. Says whether there was such a building."""
+        if not self.enterable(room_id):
+            return False
+        if self.inside is None:
+            self._minimap_kept = self.hud.minimap_rect is not None
+        self.inside = room_id
+        # There is no map to find one's way on in there.
+        self.hud.minimap_rect = None
+        self._press, self._drag_last, self._dragging = None, None, False
+        return True
+
+    def leave(self) -> None:
+        """Go back out to the map."""
+        if self.inside is None:
+            return
+        self.inside = None
+        self.hud.minimap_rect = self._minimap_rect if self._minimap_kept else None
+
+    def toggle_inside(self) -> None:
+        """Go into the building under the pointer, or the one whoever is selected is in. From inside, come out."""
+        if self.inside is not None:
+            self.leave()
+            return
+        tiles: list[Tile] = []
+        if self.pointer is not None and self.viewport.collidepoint(self.pointer) and not self.hud.covers(self.pointer):
+            x, y = self._map_point(self.pointer)
+            tiles.append((int(x // TILE_SIZE), int(y // TILE_SIZE)))
+        selected = self.world.residents.get(self.hud.selected_id or "")
+        if selected is not None and not selected.away:
+            tiles.append(selected.tile)
+        for tile in tiles:
+            room_id = next((room_id for room_id in self.roof_tiles if self._is_at(room_id, tile)), None)
+            if room_id is not None and self.enter(room_id):
+                self._sound("open")
+                return
+        self.hud.notify(NOWHERE_TO_ENTER)
+
+    def _inside_event(self, event: pygame.event.Event) -> bool:
+        """Take what the mouse does while a building is being looked at from inside. Says whether it did."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self.pointer = canvas_position(event.pos)
+            self.click(self.pointer)
+            return True
+        if event.type == pygame.MOUSEMOTION:
+            self.pointer = canvas_position(event.pos)
+            return True
+        # There is nothing in there to drag about or to see from nearer.
+        return event.type in (pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN, pygame.MOUSEWHEEL) or (
+            event.type == pygame.KEYDOWN and event.key in ZOOM_KEYS
+        )
+
+    def _click_inside(self, position: tuple[int, int]) -> None:
+        if self.interior.leave_button.contains(position):
+            self._sound("click")
+            self.leave()
+        elif not self.hud.covers(position) and self.viewport.collidepoint(position):
+            picked = [rid for rid, rect in self.hitboxes.items() if rect.collidepoint(position)]
+            if picked:
+                self._sound("select")
+            self.hud.select_resident(picked[-1] if picked else None)
+            decision = self._decision_of(self.hud.selected_id)
+            if decision is not None:
+                self.requested_decision = decision
+
+    def _render_inside(self, room: Room) -> None:
+        """The frame while a building is looked at from inside: the room where the map was, and everything round it."""
+        self.hitboxes = {}
+        self.container_hitboxes = {}
+        self.task_bars = {}
+        self.sign_boxes = {}
+        self.interior.render(room)
+        self.hud.render()
 
     def update(self, dt: float) -> None:
         if not self.world.clock.paused:
@@ -575,8 +671,14 @@ class GlobalView:
             return set(self.roof_tiles)
         looked_at: list[Tile] = []
         if self.pointer is not None and self.viewport.collidepoint(self.pointer) and not self.hud.covers(self.pointer):
-            x, y = self._map_point(self.pointer)
-            looked_at.append((int(x // TILE_SIZE), int(y // TILE_SIZE)))
+            # The sign of a building that stands closed is the way into it, and stays where it
+            # is under the pointer: resting on it does not take the roof off.
+            on_sign = any(
+                box.collidepoint(self.pointer) for room_id, box in self.sign_boxes.items() if room_id in self._closed
+            )
+            if not on_sign:
+                x, y = self._map_point(self.pointer)
+                looked_at.append((int(x // TILE_SIZE), int(y // TILE_SIZE)))
         selected = self.world.residents.get(self.hud.selected_id or "")
         if selected is not None:
             looked_at.append(selected.tile)
@@ -606,6 +708,8 @@ class GlobalView:
         if intent is not None:
             self._sound("click")
             self._apply(intent)
+        elif self.inside is not None:
+            self._click_inside(position)
         elif minimap is not None and minimap.collidepoint(position):
             self.following = None
             self.centre_on(tile_at(minimap, position))
@@ -613,6 +717,11 @@ class GlobalView:
             # The resident drawn last is in front, so it is the one picked.
             picked = [rid for rid, rect in self.hitboxes.items() if rect.collidepoint(position)]
             visitor = self.visitor()
+            sign = next((room_id for room_id, box in self.sign_boxes.items() if box.collidepoint(position)), None)
+            if sign is not None and self.enter(sign):
+                # A click on the sign of a building is to go into it.
+                self._sound("open")
+                return
             if picked and visitor is not None and picked[-1] == visitor.resident_id:
                 # Whoever has come to trade is nobody to select: a click on them is to deal with them.
                 self._sound("open")
@@ -873,6 +982,13 @@ class GlobalView:
         if self.layers is not None:
             self.layers.clear()
         self.canvas.fill(PALETTE["ink"])
+        if self.inside is not None:
+            room = self.world.rooms.get(self.inside)
+            if room is not None and room.roofed:
+                self._render_inside(room)
+                return
+            # It is no longer there to be inside of.
+            self.leave()
         self._seat_minimap()
         region = self._visible_region()
         ground = self._ground()
@@ -996,6 +1112,7 @@ class GlobalView:
 
     def _draw_zone_names(self) -> None:
         """A sign over each named place, on the wall at its back, so that the map can be read."""
+        self.sign_boxes = {}
         for room in self.world.rooms.values():
             name = room.name.upper()
             width = self.font.width(name) + 6
@@ -1010,8 +1127,16 @@ class GlobalView:
             sign = pygame.Rect(centre_x - width // 2, top + 1, width, height)
             if not self.viewport.colliderect(sign):
                 continue
-            draw_panel(self.canvas, sign, fill="ink", border="copper")
-            self.font.draw(self.canvas, name, (sign.x + 3, sign.y + 1), PALETTE["sand"])
+            pointed = False
+            if room.roofed and not self.overview:
+                # The sign of a building is the way into it: it lights up under the pointer.
+                self.sign_boxes[room.room_id] = sign
+                pointed = self.pointer is not None and sign.collidepoint(self.pointer) and not self.hud.covers(self.pointer)
+            draw_panel(self.canvas, sign, fill="shadow" if pointed else "ink", border="lamp" if pointed else "copper")
+            self.font.draw(self.canvas, name, (sign.x + 3, sign.y + 1), PALETTE["glow" if pointed else "sand"])
+            if pointed:
+                hint = self.font.render(ENTER_HINT, PALETTE["glow"])
+                self.canvas.blit(hint, (sign.centerx - hint.get_width() // 2, sign.bottom + 1))
 
     def _draw_away(self) -> None:
         """Whoever is outside the settlement is nowhere on the map: their faces go in a corner, to be picked there."""

@@ -348,6 +348,27 @@ gradients and any colour.
 - The settlement should look salvaged. Things that are only there to be looked at are object kinds
   like any other, with no use: wrecks and stacks of tyres block the way, loose junk does not.
 
+## Inside a building
+A first try of the look (P39): `scenes/interior_view.py`. It is drawn at the resolution of the
+window, in the part of the screen the map has, and is free of the style contract as the
+illustrations are.
+
+- The inside is `GROWTH` (2) cells to a tile of the building, each way.
+- The back wall is seen face on, `WALL` (2.3) cells tall: boards standing side by side, a beam
+  along the top and a skirting along the foot.
+- The floor is seen from a little above: a cell is `DEPTH` (0.62) times as deep as it is wide.
+  It is the building's own floor, wood or poured, with a line round every cell and every
+  other cell a shade darker, so that the grid is what is read.
+- The walls at the sides are seen edge on, `SIDE` of a cell wide, and what is left of the
+  front one is a strip `FRONT` of a cell tall, with the way out where the door is on the map
+  and a mat before it.
+- What stands taller than its footprint is shown as tall as it is drawn, with a shadow at its
+  foot. What lies flat is brought to the depth of its cells. The game's own art keeps its
+  hard edges; a drawing of the player's is brought to size smoothly.
+- Residents are their doll or the game's own body at the size of the cells, with their name
+  and what is over their head on the canvas, as on the map. Whoever stands further down the
+  floor is in front.
+
 ## Interaction view
 - A resident asking for advice takes over the dock, framed in `lamp`, and time stops. The rest
   of the screen stays as it was, and the panel shows whoever is asking.

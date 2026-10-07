@@ -112,6 +112,10 @@ python -m simulation.headless --days 7 --seed 7
 - A building keeps its roof on until you rest the mouse on it or select someone or something
   inside. Whoever is under a roof shows as a face on it. `T` takes every roof off, or puts them
   back
+- Click the sign of a building, or press `I` with the pointer on it, to go inside: the room is
+  seen with its back wall face on and its floor from a little above, as a grid, with whoever
+  is in it. `Salir` or `I` goes back out. It is a first try of the look: nothing can be
+  placed in there yet
 - `Space`: pause / resume
 - `1` `2` `3`: game speed x1, x4, x16
 - `L`: open or close the event log

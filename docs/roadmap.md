@@ -2731,6 +2731,101 @@ Still open here:
   to its kind
 - Whoever a thing waiting to be built is put to is still a list of names
 
+### P39 — A look inside, as a try (needs P15) — done, to be looked at
+The user's words: "las casas molaria que en vez de ver el tejado y que se abra poder entrar en el
+interior, y poder decorarla mas detalladamente, y las casas que puedan tener propiedades, el
+interior no se si lo haria vista frontal con un toque cenital 2d ligero cenital probamos? pero
+cuadricula en el suelo".
+
+Asked first, and answered, for all of what follows (P39, S40 to S42 and P40):
+- **The inside is a place of its own, larger than the building is from outside**, and the door
+  is the way between the two. Not the recommendation, which was the same tiles seen from inside
+- **A house has every property that was offered**: owners, and who lives in it; qualities that
+  come of how it is furnished; a lock, and who may come in; and a name and a use of its own
+- **Decorating in more detail is every way that was offered**: things on the wall, more kinds of
+  furniture and ornament, a finer grid inside, and a floor and walls to choose
+- **The view first, and then stop for it to be seen**
+
+This one is only the view, to see whether the angle is right before anything is built on it:
+- **A click on the sign of a building goes into it**, and so does `I` with the pointer on it or
+  with somebody selected who is in it. The sign lights up under the pointer and says so, and
+  resting on it does not take the roof off, so that it stays where it is to be clicked
+- **The room takes the place of the map**, with everything round it as it was: time goes on,
+  and the menu, the bar and the panel work as they do
+- **The back wall is seen face on and the floor from a little above**: a cell of the floor is
+  about six tenths as deep as it is wide. Every cell has a line round it
+- **What stands up is as tall as it is drawn, and what lies flat is seen as the floor is**
+- **Whoever is in the building is seen in the room**, as their doll or the game's own body, to
+  be selected with a click. Whoever lies in a bed is their face on it
+- **`Salir`, or `I`, goes back out** to the map as it was left
+- **`scenes/interior_view.py`** lays the room out and draws it, at the resolution of the window
+
+What it is not yet, and says so on the screen:
+- The inside is what the building holds on the map, spread over a floor twice as wide and twice
+  as deep. It is no place of its own yet: where somebody is in there goes by where the map has
+  them, so they cross the room twice as fast as they walk
+- Nothing can be put down, moved or drawn in there
+- The roof still comes off under the pointer out on the map
+- The furniture is the art there was, which is drawn from above: a bed lies flat on the floor
+  where in this view it would be seen from its side. What is drawn from the side is right already
+- The back wall is bare, and the room is as bright by night as by day
+
+Decided without asking:
+- The sign of a building as the way in, and `I` as the key
+- Twice the size each way, which is also what a finer grid of four cells to a tile would give
+- Every building with a roof can be gone into, not only the houses
+
+### S40 — A place of its own inside (needs P39) — planned
+Not to be started until the look of P39 has been seen and settled.
+
+- **Every building with a roof has an inside that is a map of its own**, larger than the ground
+  it stands on, with its own floor, its own walls and its own grid
+- **The door is the way between the two**: whoever goes through it out on the map is inside, and
+  whoever goes through it inside is out on the map
+- **Residents find their way across both**: to a bed, a pot or a post that is inside from
+  anywhere outside, and back
+- **What is inside is inside**: what was in a building on the map moves to its inside, and the
+  ground it stood on is the building, shut
+- Who is where, and what is where, is saved. A save from before has every building's things and
+  people moved inside it
+
+Still to settle, to be asked before it is built:
+- How much larger: a fixed number of times, or by the kind of building
+- Whether somebody inside sees or hears what happens outside, and the other way round: a fight
+  in the square, a theft in a house (S3)
+- What a building is from outside once its roof never comes off: who is in it, if anything
+- Whether Urbanismo still places furniture, or everything indoors is placed from inside
+- Light, cold and storms indoors (S13, S15)
+
+### S41 — Whose house it is, and what it is like (needs S40) — planned
+- **Owners, and who lives in it**: a person, a couple or a family (S25). They sleep there and
+  keep what is theirs there
+- **Qualities that come of how it is furnished**: comfort, warmth, light and how good it is to
+  look at, which tell on the rest and the mood of whoever lives there (S20)
+- **A lock, and who may come in**: who has a key, who is let in, and what is made of somebody
+  who is in a house that is not theirs (S5, S9)
+- **A name and a use of its own**, which is what its sign says
+
+Still to settle, to be asked before it is built:
+- Who decides whose a house is: the player, the residents, or whoever governs (S26, S38)
+- What somebody with no house does, and whether houses are fought over, bought or inherited
+- Whether premises (the cantina, the workshop, the shop) are somebody's too
+
+### S42 — More to furnish with (needs S40) — planned
+- **Things on the wall**: pictures, shelves, windows, lamps, clocks, each taking a place on the
+  back wall
+- **More kinds of furniture and ornament**: rugs, plants, chairs, curtains, bedside tables
+- **A finer grid inside**: four cells to a cell for what is small, while what is large still
+  goes by whole ones
+- **A floor and walls to choose** for each house
+- All of it data, like everything that can be placed, and each kind drawable (P17)
+
+### P40 — Furnishing from inside (needs S42) — planned
+- Putting things down, moving them and taking them away from inside the building, on its grid
+  and on its wall, in place of doing it in Urbanismo
+- Each kind of thing drawn for this view: from its front, standing on the floor
+- Whose house it is and what it is like, seen from inside, and its lock
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.
