@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 31 (current)
+## Version 32 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `31` |
+| `version` | `32` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -29,6 +29,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `urbanism` | Stable placement counters and the terrain kept below constructed buildings, so they can be moved or removed later |
 | `interactables` | Placed objects: `id`, `kind`, tile `x` and `y` |
 | `sites`, `site_count` | What is being built: `id`, `kind` (`object` or `building`), `what` (the object kind or blueprint ID), tile `x` and `y`, `in_charge` (the resident who agreed to it), `delivered` (units brought so far, per item definition), `progress` (minutes of work done) and `started_at`; and the counter behind site IDs |
+| `salvage` | What somebody has been told to take apart: `object_id`, `resident_id` and `progress` (minutes of work done) |
 | `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them) |
 | `containers` | Per container object ID, the items inside |
 | `item_count` | Counter behind item IDs |
@@ -54,7 +55,7 @@ ID, when talking or walking over to talk), `intent` (the exchange they are set o
 remaining `path` as tiles, `minutes_left`, `using` and `held_up` (minutes running that somebody
 in the way has kept them from a step along that path).
 
-A resident's `expedition` is `null` or `returns_at`, `finds`, `danger` and `find_at`.
+A resident's `expedition` is `null` or `returns_at`, `finds`, `danger`, `find_at` and `fetch`.
 
 An item is saved as `id`, `definition_id`, `owner_id`, `condition`, `quantity` and `given_by` (the
 resident who made a present of it, or `null`), inside whichever
@@ -72,6 +73,9 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 32** added `salvage`, and `fetch` in a resident's `expedition` (the one item a trip
+  is for, or `null`). In an older save nobody has been told to take anything apart. An entry
+  for something that is no longer there, or for somebody who is, is dropped.
 - **Version 31** added, inside `government`, `laws`, `meals`, `proposals`, `decided`,
   `proposal_count`, `refused`, `raised_on`, `elections`, `recall`, `rigged_by`, `rig_asked` and
   `backing`; and `player_standing`, `leaving` and `exiled`. In an older save there are no laws,

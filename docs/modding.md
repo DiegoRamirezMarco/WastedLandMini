@@ -550,6 +550,19 @@ settlement is created, in `SimulationWorld.demo_world`.
 - The game opens `rig_election` by ID. Its scores may weigh `losing` and `scruples`. The
   decisions at the gate may weigh `law`: 1 when a law says nobody comes in and whoever answers keeps it.
 
+## Taking things apart
+
+- An object in `data/interactables.json`, or in a pack, may have `"salvage": {"item": "scrap",
+  "units": 8, "minutes": 180}`: what taking it apart gives, how much and how long it takes one
+  pair of hands. Without it nobody can be told to.
+- An item may have `"scrap": 2` among its `properties`: how many units of scrap one of it
+  comes to when the player has it broken up. Without it, it cannot be.
+- `data/construction.json` holds `score.task` (how much a site in somebody's charge comes
+  first), `await_minutes`, `scrap_item` (what breaking things up gives) and `fetch` (`minutes`,
+  `units` and `danger` of a trip outside for what a site waits for).
+- The game opens `scrap_proposal` by ID. Its scores may weigh `bargain`: how little the thing
+  is worth to its owner.
+
 ## Laws
 
 `data/laws.json` holds every law there is to pass, and how laws are kept.

@@ -11,7 +11,8 @@ from simulation.tastes.taste import ITEM, KINDS, key_of, parts_of
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.work.job import JobDefinition
 from simulation.events.world_event_system import BED_USE_ACTION
-from simulation.work.construction import BUILD_ACTION, CARRY_ACTION
+from simulation.work.construction import AWAIT_ACTION, BUILD_ACTION, CARRY_ACTION
+from simulation.work.salvage import SALVAGE_ACTION
 from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
 from simulation.world import SimulationWorld
 
@@ -244,6 +245,12 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
         return f"trabaja en una obra{what}" if activity.using else f"va a una obra{what}"
     if activity.action == CARRY_ACTION:
         return "carga y descarga" if activity.using else "acarrea para una obra"
+    if activity.action == AWAIT_ACTION:
+        return "pide material junto a la obra" if activity.using else "va a su obra"
+    if activity.action == SALVAGE_ACTION:
+        placed = world.interactables.get(activity.target_id or "")
+        what = f" {world.definition_of(placed).article} {world.definition_of(placed).name}" if placed is not None else ""
+        return f"desguaza{what}" if activity.using else f"va a desguazar{what}"
     if activity.action == STEAL_ACTION:
         return "se lleva algo que no es suyo" if activity.using else "trama algo"
     if activity.action == USE_ITEM_ACTION:

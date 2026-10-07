@@ -34,7 +34,8 @@
       "stress": -8
     },
     "properties": {
-      "wear": 5
+      "wear": 5,
+      "scrap": 2
     }
   },
   {
@@ -124,7 +125,8 @@
     ],
     "properties": {
       "damage": 1.4,
-      "wear": 8
+      "wear": 8,
+      "scrap": 1
     }
   },
   {
@@ -142,7 +144,8 @@
     ],
     "properties": {
       "damage": 1.8,
-      "wear": 10
+      "wear": 10,
+      "scrap": 1
     }
   },
   {
@@ -159,7 +162,8 @@
       "practical"
     ],
     "properties": {
-      "wear": 2
+      "wear": 2,
+      "scrap": 1
     }
   },
   {

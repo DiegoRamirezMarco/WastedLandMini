@@ -1294,7 +1294,7 @@ class SaveTests(unittest.TestCase):
         world.government.meals["raul"] = [world.clock.day, 2]
         world.government.backing["raul"] = ["vera", 3.5]
         saved = SaveManager().to_data(world)
-        self.assertEqual(saved["version"], 31)
+        self.assertEqual(saved["version"], SaveManager.CURRENT_VERSION)
         loaded = SaveManager().from_data(json.loads(json.dumps(saved)))
         self.assertEqual(loaded.government, world.government)
         self.assertEqual(loaded.player_standing, world.player_standing)

@@ -49,6 +49,7 @@ from simulation.work.expedition import Expedition
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.tutorial.tutorial import TutorialState
 from simulation.work.research import ResearchState
+from simulation.work.salvage import Salvage
 from simulation.world import SimulationWorld
 from world.build import BuildSite
 from world.interactable import Interactable
@@ -118,6 +119,9 @@ FIRST_FAMILY_VERSION = 29
 # is to each resident, and whoever has been thrown out. In a save from before there are no
 # laws, nothing is waiting, nobody has been thrown out, and the player is in the middle for
 # trust with everybody.
+# Version 32 added what somebody has been told to take apart, and the one thing a trip outside
+# is for when it is for one thing. In a save from before nobody has been told to take anything
+# apart, and every trip is for whatever turns up.
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 28
@@ -136,7 +140,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 31
+    CURRENT_VERSION = 32
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -241,6 +245,7 @@ class SaveManager:
                 for site in world.sites.values()
             ],
             "site_count": world.site_count,
+            "salvage": [vars(job) for job in world.salvage.values()],
             "research": {
                 "subject": world.studies.subject_id,
                 "known": list(world.studies.known),
@@ -486,6 +491,7 @@ class SaveManager:
                     finds=int(trip.get("finds", 0)),
                     danger=float(trip.get("danger", 0.0)),
                     find_at=int(trip["find_at"]) if trip.get("find_at") is not None else None,
+                    fetch=_text_or_none(trip.get("fetch")),
                 )
                 if trip is not None
                 else None,
@@ -549,6 +555,13 @@ class SaveManager:
 
         self._restore_kin(world, data, version)
         self._restore_politics(world, data)
+        # Only what is still there can be taken apart, and only by somebody who still lives here.
+        for saved in _list_or_empty(data.get("salvage")):
+            if not isinstance(saved, dict):
+                continue
+            object_id, resident_id = str(saved.get("object_id", "")), str(saved.get("resident_id", ""))
+            if object_id in world.interactables and resident_id in world.residents:
+                world.salvage[object_id] = Salvage(object_id, resident_id, max(0.0, float(saved.get("progress", 0.0))))
         self._restore_items(world, data, version)
         deaths = data.get("deaths", [])
         world.deaths = [

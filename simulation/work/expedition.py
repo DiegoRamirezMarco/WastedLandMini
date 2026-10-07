@@ -69,6 +69,8 @@ class Expedition:
     danger: float
     # Game minute at which they come on something worth a risk, if they are going to.
     find_at: int | None = None
+    # The one item they went out for, when it is not whatever turns up: all they find is that.
+    fetch: str | None = None
 
 
 def expedition_rule_from_data(job_id: str, data: dict[str, Any]) -> ExpeditionRule:

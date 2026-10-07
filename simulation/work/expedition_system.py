@@ -129,6 +129,9 @@ class ExpeditionSystem:
         resident.x, resident.y = free_tile(world, resident.tile, resident)
         loot = [entry for entry in settings.loot if world.registries.items.find(entry.item) is not None]
         found: dict[str, int] = {}
+        if trip.fetch is not None and world.registries.items.find(trip.fetch) is not None:
+            # They went out for one thing, and it is what they bring.
+            found, loot = ({trip.fetch: trip.finds} if trip.finds > 0 else {}), []
         for _ in range(trip.finds if loot else 0):
             # A weighted draw: the heavier a thing is in the table, the oftener it turns up.
             mark = world.rng.random() * sum(entry.weight for entry in loot)
@@ -138,7 +141,7 @@ class ExpeditionSystem:
                     break
             found[entry.item] = found.get(entry.item, 0) + 1
         haul = ", ".join(f"{world.registries.items.resolve(item_id).name} ({units})" for item_id, units in found.items())
-        kept = self._keeps(world, resident, found)
+        kept = self._keeps(world, resident, found) if trip.fetch is None else None
         if kept is not None:
             found[kept] -= 1
             world.stock(resident.inventory, kept, 1, resident.resident_id)

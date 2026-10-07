@@ -53,6 +53,15 @@ class UseDefinition:
 
 
 @dataclass(frozen=True)
+class SalvageRule:
+    """What taking an object apart gives, and how long it takes one pair of hands."""
+
+    item: str
+    units: int
+    minutes: int
+
+
+@dataclass(frozen=True)
 class InteractableDefinition:
     kind: str
     name: str
@@ -72,6 +81,8 @@ class InteractableDefinition:
     urbanism_category: str = "furniture"
     # What putting one up takes. None for something that is simply put down.
     build: BuildRule | None = None
+    # What taking one apart gives. None for something nobody takes apart.
+    salvage: SalvageRule | None = None
 
 
 @dataclass
@@ -106,6 +117,7 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         light=int(data.get("light", 0)),
         urbanism_category=str(data.get("category", "furniture")),
         build=build_rule_from_data(f"interactable {kind}", data.get("build")),
+        salvage=_salvage_from_data(kind, data.get("salvage")),
     )
     if definition.light < 0:
         raise ValueError(f"Interactable {kind} gives a negative amount of light")
@@ -116,6 +128,17 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
     if definition.use is not None and definition.use.sells and not definition.container:
         raise ValueError(f"Interactable {kind} sells things, so it must be a container")
     return definition
+
+
+def _salvage_from_data(kind: str, data: Any) -> SalvageRule | None:
+    if data is None:
+        return None
+    if not isinstance(data, dict) or "item" not in data:
+        raise ValueError(f"'salvage' of interactable {kind} must say what item it gives")
+    rule = SalvageRule(str(data["item"]), int(data.get("units", 1)), int(data.get("minutes", 60)))
+    if rule.units < 1 or rule.minutes < 1:
+        raise ValueError(f"'salvage' of interactable {kind} must give a unit or more and take a minute or more")
+    return rule
 
 
 def _use_from_data(kind: str, data: dict[str, Any]) -> UseDefinition:

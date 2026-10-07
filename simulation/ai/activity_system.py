@@ -16,7 +16,8 @@ from simulation.residents.activity import MOVE_TILES_PER_MINUTE, SHELTER_ACTION,
 from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
 from simulation.residents.resident import Resident
 from simulation.social.social_system import SocialSystem
-from simulation.work.construction import BUILD_ACTION, CARRY_ACTION
+from simulation.work.construction import AWAIT_ACTION, BUILD_ACTION, CARRY_ACTION
+from simulation.work.salvage import SALVAGE_ACTION
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.work.work_system import FETCH_ACTION, HAUL_ACTION, WORK_ACTION
 from world.interactable import UseDefinition
@@ -154,6 +155,12 @@ class ActivitySystem:
             return
         if activity.action == CARRY_ACTION:
             world.construction.carry_tick(world, resident, activity)
+            return
+        if activity.action == AWAIT_ACTION:
+            world.construction.await_tick(world, resident, activity)
+            return
+        if activity.action == SALVAGE_ACTION:
+            world.salvaging.tick(world, resident, activity)
             return
         use = self._use_of(world, activity)
         if not activity.using:

@@ -49,6 +49,7 @@ from simulation.tutorial.tutorial_system import TutorialSystem
 from simulation.work.construction import ConstructionSystem
 from simulation.work.expedition_system import ExpeditionSystem
 from simulation.work.research import ResearchResult, ResearchState, ResearchSystem
+from simulation.work.salvage import Salvage, SalvageSystem
 from simulation.work.staffing import StaffingSystem
 from simulation.work.work_system import WORK_ACTION, WorkSystem
 from world.build import BUILDING_SITE, OBJECT_SITE, BuildSite
@@ -160,6 +161,9 @@ class SimulationWorld:
     # Ground marked out for what somebody has agreed to put up, by site ID.
     sites: dict[str, BuildSite] = field(default_factory=dict)
     site_count: int = 0
+    salvaging: SalvageSystem = field(default_factory=SalvageSystem)
+    # What somebody has been told to take apart, by the ID of the object.
+    salvage: dict[str, Salvage] = field(default_factory=dict)
     research: ResearchSystem = field(default_factory=ResearchSystem)
     # What the settlement knows, and what it is working out.
     studies: ResearchState = field(default_factory=ResearchState)
@@ -243,6 +247,14 @@ class SimulationWorld:
 
     def cancel_site(self, site_id: str) -> UrbanismResult:
         return self.construction.cancel(self, site_id)
+
+    def order_salvage(self, resident_id: str, object_id: str) -> UrbanismResult:
+        """Tell a resident to take something apart for what it is made of. It is their task until it is done."""
+        return self.salvaging.order(self, resident_id, object_id)
+
+    def scrap_item(self, item_id: str, option_id: str) -> UrbanismResult:
+        """Have an item broken up for scrap: at once if it is nobody's, and if its owner agrees otherwise."""
+        return self.salvaging.scrap_item(self, item_id, option_id)
 
     def set_research(self, subject_id: str | None) -> ResearchResult:
         """Say what is to be worked out next. Whoever holds the post for it works on that."""

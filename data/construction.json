@@ -3,7 +3,8 @@
   "stint_minutes": 90,
   "score": {
     "in_charge": 0.45,
-    "helping": 0.25
+    "helping": 0.25,
+    "task": 0.7
   },
   "per_minute": {
     "tiredness": 0.03
@@ -14,5 +15,18 @@
   "hands": {
     "object": 2,
     "building": 4
+  },
+  "await_minutes": 30,
+  "scrap_item": "scrap",
+  "fetch": {
+    "minutes": [
+      90,
+      150
+    ],
+    "units": [
+      3,
+      6
+    ],
+    "danger": 0.05
   }
 }

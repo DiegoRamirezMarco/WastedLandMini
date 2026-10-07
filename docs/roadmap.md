@@ -544,6 +544,7 @@ Still open here:
   gives nothing back
 - Nobody builds anything unasked: every site is the player's proposal
 - Nobody is sent for scrap when a site waits for it: it is whatever a trip happens to bring
+  (S36 has whoever sees to it go)
 - A site has no picture of its own, only its outline, and whoever works on it does as at a post
 - What each thing takes is a first guess, and tools do not come into it
 - Everybody knows of every site there is, without having seen it or been told
@@ -2314,6 +2315,61 @@ Still to settle:
 - Whether the player may hear everything said in the settlement, or only what is near where
   they are looking
 - Whether a language model is ever wired in, and if so where it runs
+
+### S36 — Building is a task, and scrap from what lies about (needs S16) — done
+The user's correction: "la construcción debe ser una tarea y no algo de ratos libres", and with
+it a way never to be left stuck for want of scrap. Asked first, and answered: whoever agrees to
+a site sees to it as their work, in place of their post, until it stands; a builder with
+nothing to build with sits down and asks for it, and clicked on can be told what they may take
+apart; what lies about is used up, and with none left the builder goes out for scrap
+themselves; and of items, what is common is broken up at once and what is somebody's is put to
+them, and they decide.
+
+- **A site in somebody's charge is their work.** By day, fit and with no need that presses,
+  they are at it ahead of their own post: they carry to it and work on it until it stands, and
+  are paid for it as for a post. Their post waits. Whoever only lends a hand still does it in
+  spare time, and goes back to their shift when it begins
+- **With nothing to build with they sit by the site and ask** (`material_wanted`, once a day),
+  for as long as there is something about that could be taken apart for it
+- **What lies about can be taken apart**: a rusted car, a heap of tyres, a pile of junk. What
+  each gives and how long it takes is data (`salvage`, in `data/interactables.json`). The
+  player tells a resident which (`SalvageCommand`): it is an order, and their task until it is
+  done. The thing is gone, and what came of it goes to the site they see to, if it waits for
+  it, and otherwise to where such things are kept
+- **With nothing left to take apart they go out for it themselves**: a short trip, once a day
+  and not into a storm, that brings back that one thing and nothing else
+- **The player breaks up an item for scrap** (`ScrapItemCommand`): what is nobody's and kept
+  in a container, there and then; what is somebody's is put to them, who agree the readier
+  the less it is worth to them, and remember having given it. What an item comes to is data
+  (`scrap`, among its `properties`)
+- What somebody has been told to take apart, and the one thing a trip is for, are saved
+
+Done when: somebody with a post and a site in their charge builds in place of their shift, and
+it stands before the shift is out; a builder with no scrap sits by the site until told what to
+take apart, takes it apart, and builds; with nothing left to take apart they go out, come back
+with scrap and build; a settlement with no scrap at all still gets a house built; and something
+half taken apart is saved and goes on from where it was.
+
+As it was built, where the lines above leave it open:
+- **A task counts for 0.7**, over a post's 0.6 and under a need that really presses. Nothing is
+  built or taken apart in the dark
+- **Told to somebody else, a thing is theirs to take apart**, and what was done on it is kept
+- **A wreck gives eight of scrap in three hours**, tyres three in one, junk two in forty minutes
+- **A trip for scrap takes an hour and a half to two and a half**, brings three to six, and is
+  a twentieth as likely to go badly as a real one. They leave from where they stand
+- **Of the items the game comes with**, a radio gives two of scrap and a baton, a knife and a
+  hoe one each. Nothing else gives any
+- **Whoever is told to take something apart is not asked**: it is one of the orders the player
+  gives (S37). Being asked for a thing of their own is not one
+- Save version 32
+
+Still open here:
+- On screen only what a resident is doing is said: telling them what to take apart, and
+  breaking up an item, come with P30
+- Whoever has a site in their charge leaves their post to nobody: a cook who builds does not cook
+- Things the settlement built and pulls down still give nothing back
+- Nobody takes anything apart unasked, however long a site waits
+- A site that asks for a job is still worked on only by whoever holds it
 
 ## Later
 - SQLite persistence

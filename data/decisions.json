@@ -1172,5 +1172,48 @@
         }
       }
     ]
+  },
+  "scrap_proposal": {
+    "event_type": "scrap_proposed",
+    "window_minutes": 0,
+    "cooldown_minutes": 120,
+    "anger_threshold": 0,
+    "importance": 30,
+    "text": "Se le pide a {name} desguazar {thing}",
+    "prompt": "¿Que desguace {thing}?",
+    "outcomes": {
+      "agree": {
+        "score": {
+          "bias": -0.9,
+          "bargain": 1.6,
+          "empathy": 0.3,
+          "greed": -0.4
+        },
+        "agrees": true,
+        "text": "{name} da {thing} para chatarra"
+      },
+      "refuse": {
+        "score": {
+          "bias": 0.1,
+          "greed": 0.2
+        },
+        "text": "{name} no da {thing} para chatarra"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Hace más falta la chatarra",
+        "influence": {
+          "agree": 0.3,
+          "refuse": -0.1
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú verás",
+        "influence": {}
+      }
+    ]
   }
 }

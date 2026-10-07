@@ -1,5 +1,5 @@
-"""Building: the player proposes, somebody agrees or does not, and what was agreed goes up as
-there are hands free to carry what it takes to the site and to work on it."""
+"""Building: the player proposes, somebody agrees or does not, and whoever agreed sees to it
+as their work until it stands. Others lend a hand when they have one free."""
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -14,7 +14,10 @@ from simulation.items.item import ItemInstance
 from simulation.memory.memory import Memory
 from simulation.residents.activity import Activity
 from simulation.residents.resident import Resident
+from simulation.work.expedition import Expedition
+from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.work.research import BUILD_PACE, NOT_KNOWN
+from simulation.work.salvage import SALVAGE_ACTION
 from simulation.work.work_system import HAUL_MINUTES, PRESSING_NEED
 from world.build import BUILDING_SITE, OBJECT_SITE, SITE_KINDS, BuildRule, BuildSite
 from world.map import Tile
@@ -27,7 +30,10 @@ if TYPE_CHECKING:
 # Working on a site, and carrying to one what it takes or fetching that from where it lies.
 BUILD_ACTION = "build"
 CARRY_ACTION = "carry"
-BUILD_ACTIONS = (BUILD_ACTION, CARRY_ACTION)
+# Sitting by a site that has nothing to go on with, asking for it, and going out for it.
+AWAIT_ACTION = "await_material"
+FETCH_OUT_ACTION = "fetch_out"
+BUILD_ACTIONS = (BUILD_ACTION, CARRY_ACTION, AWAIT_ACTION, FETCH_OUT_ACTION, SALVAGE_ACTION)
 # The advice a piece of building is put to somebody with, unless another is given.
 ADVICE = "encourage"
 NEEDS_BUILDING = "Eso hay que construirlo: propónselo a alguien"
@@ -36,7 +42,9 @@ UNAVAILABLE = {OBJECT_SITE: "Ese tipo de objeto no está disponible", BUILDING_S
 SITE_EVENT_IMPORTANCE = 20
 CARRY_EVENT_IMPORTANCE = 5
 WAITING_IMPORTANCE = 30
+WANTED_IMPORTANCE = 45
 FINISHED_IMPORTANCE = 35
+WANTED_NOTICE = "wanted:"
 SITE_NOTICE = "site:"
 FINISHED_EVENT = "site_finished"
 # Nobody lends a hand on something that is in the charge of someone they resent this much.
@@ -54,6 +62,17 @@ class ConstructionSettings:
     # How much whoever agreed to a site wants to get on with it, and how much anybody else does.
     in_charge_score: float = 0.45
     helping_score: float = 0.25
+    # How much a site in somebody's charge, or a thing they were told to take apart, comes
+    # before anything else that can wait: it is their work, ahead of their own post.
+    task_score: float = 0.7
+    # Minutes somebody sits by a site that has nothing to go on with before looking up again.
+    await_minutes: int = 30
+    # The item that breaking a thing up gives, and going out for what a site waits for when
+    # there is nothing left to take apart: how long the trip is, how much it brings and its danger.
+    scrap_item: str = "scrap"
+    fetch_minutes: tuple[int, int] = (90, 150)
+    fetch_units: tuple[int, int] = (3, 6)
+    fetch_danger: float = 0.05
     # What a minute of building does to whoever is doing it.
     per_minute: dict[str, float] = field(default_factory=dict)
     # Sites in somebody's charge at which they will hear of no more, and the minutes of work at
@@ -68,11 +87,21 @@ class ConstructionSettings:
 
 def construction_settings_from_data(data: dict[str, Any]) -> ConstructionSettings:
     score = data.get("score", {})
+    fetch = data.get("fetch", {})
+    defaults = ConstructionSettings()
+    shortest, longest = (int(value) for value in fetch.get("minutes", defaults.fetch_minutes))
+    fewest, most = (int(value) for value in fetch.get("units", defaults.fetch_units))
     settings = ConstructionSettings(
         carry=int(data.get("carry", 6)),
         stint_minutes=int(data.get("stint_minutes", 90)),
         in_charge_score=float(score.get("in_charge", 0.45)),
         helping_score=float(score.get("helping", 0.25)),
+        task_score=float(score.get("task", defaults.task_score)),
+        await_minutes=int(data.get("await_minutes", defaults.await_minutes)),
+        scrap_item=str(data.get("scrap_item", defaults.scrap_item)),
+        fetch_minutes=(shortest, longest),
+        fetch_units=(fewest, most),
+        fetch_danger=float(fetch.get("danger", defaults.fetch_danger)),
         per_minute={str(need): float(delta) for need, delta in data.get("per_minute", {}).items()},
         burden_sites=int(data.get("burden_sites", 3)),
         long_minutes=int(data.get("long_minutes", 480)),
@@ -86,8 +115,12 @@ def construction_settings_from_data(data: dict[str, Any]) -> ConstructionSetting
         raise ValueError("Construction needs room for at least one pair of hands at a site")
     if settings.carry < 1 or settings.stint_minutes < 1 or settings.burden_sites < 1 or settings.long_minutes < 1:
         raise ValueError("Construction needs a load, a stint, a burden and a long job of at least 1")
-    if settings.in_charge_score < 0 or settings.helping_score < 0:
+    if settings.in_charge_score < 0 or settings.helping_score < 0 or settings.task_score < 0:
         raise ValueError("Construction scores must not be negative")
+    if not (1 <= shortest <= longest and 0 <= fewest <= most and 0.0 <= settings.fetch_danger <= 1.0):
+        raise ValueError("Going out for what a site waits for has impossible minutes, units or danger")
+    if settings.await_minutes < 1:
+        raise ValueError("Waiting by a site takes a minute or more")
     return settings
 
 
@@ -315,15 +348,87 @@ class ConstructionSystem:
 
     # ----- what a resident does about them -----
 
-    def candidate(self, world: "SimulationWorld", resident: Resident, busy: bool) -> ScoredAction | None:
-        """The next thing a resident would do for a site, if they have the time and the will.
+    def task(self, world: "SimulationWorld", resident: Resident) -> ScoredAction | None:
+        """What a resident does next about what is theirs to see to: a thing they were told to
+        take apart, or a site in their charge. It is their work, ahead of their own post.
 
-        Building is for spare time: nobody with work of their own to do right now (`busy`), a
-        need that presses or no light to see by gives it a thought.
+        A site that waits for what there is none of has them sit by it and ask, while there is
+        something about that could be taken apart for it: the player says what. With nothing
+        left to take apart they go out for it themselves.
         """
+        if not self.free_to_build(world, resident):
+            return None
+        settings = world.registries.construction
+        apart = world.salvaging.task(world, resident, settings.task_score)
+        if apart is not None:
+            return apart
+        mine = [site for site in world.sites.values() if site.in_charge == resident.resident_id]
+        # The nearest of their sites that can be got on with. However far it is, it is their
+        # work: the walk to it takes nothing from how much it comes first.
+        for site in sorted(mine, key=lambda site: (manhattan(resident.tile, (site.x, site.y)), site.site_id)):
+            step = self._step(world, resident, site)
+            if step is not None:
+                return ScoredAction(step[0], settings.task_score, step[1])
+        for site in mine:
+            wanted = self.wanted(world, site)
+            if not wanted or self._rained_off(world, site):
+                continue
+            if any(world.salvaging.available(world, tag) for tag in wanted):
+                return ScoredAction(AWAIT_ACTION, settings.task_score, site.site_id)
+            if self._can_go_out(world, resident, wanted):
+                return ScoredAction(FETCH_OUT_ACTION, settings.task_score, site.site_id)
+        return None
+
+    def wanted(self, world: "SimulationWorld", site: BuildSite) -> list[str]:
+        """The tags of item a site is waiting for that there is none of anywhere: not in store,
+        and not in anybody's hands."""
+        missing = []
+        for tag in self.lacking(world, site):
+            in_hand = sum(self._carried(world, resident, tag) for resident in world.residents.values())
+            stored = sum(
+                item.quantity
+                for object_id in self._stores(world)
+                for item in world.containers[object_id].items
+                if self._fits(world, item, tag)
+            )
+            if in_hand + stored <= 0:
+                missing.append(tag)
+        return missing
+
+    def waiting_for_material(self, world: "SimulationWorld", resident: Resident) -> BuildSite | None:
+        """The site a resident is sitting by, asking for what it takes. None if they are not."""
+        activity = resident.activity
+        if activity is None or activity.action != AWAIT_ACTION:
+            return None
+        return world.sites.get(activity.target_id or "")
+
+    def _fetched(self, world: "SimulationWorld", tags: list[str]) -> str | None:
+        """The item somebody goes out for when a site waits for one of these tags: what breaking things up gives."""
+        item = world.registries.items.find(world.registries.construction.scrap_item)
+        return item.item_id if item is not None and any(tag in item.tags for tag in tags) else None
+
+    def _can_go_out(self, world: "SimulationWorld", resident: Resident, tags: list[str]) -> bool:
+        return (
+            self._fetched(world, tags) is not None
+            and resident.expedition is None
+            and resident.last_expedition_day != world.clock.day
+            and not world.happenings.is_stormy(world)
+        )
+
+    def candidate(self, world: "SimulationWorld", resident: Resident, busy: bool) -> ScoredAction | None:
+        """The next thing a resident would do for a site.
+
+        A site in their charge is their work, and comes before their own post. Lending a hand
+        on somebody else's is for spare time: nobody with work of their own to do right now
+        (`busy`), a need that presses or no light to see by gives it a thought.
+        """
+        if world.sites or world.salvage:
+            task = self.task(world, resident)
+            if task is not None:
+                return task
         if busy or (not world.sites and not resident.inventory.items):
             return None
-        if world.sites and self._free_to_build(world, resident):
+        if world.sites and self.free_to_build(world, resident):
             best: ScoredAction | None = None
             for site in world.sites.values():
                 step = self._step(world, resident, site)
@@ -340,11 +445,17 @@ class ConstructionSystem:
 
     def plan(self, world: "SimulationWorld", resident: Resident, candidate: ScoredAction) -> Activity | None:
         """The walk to a site, or to the container a load is fetched from or left in."""
+        if candidate.name == SALVAGE_ACTION:
+            return world.salvaging.plan(world, resident, candidate)
         site = world.sites.get(candidate.target_id or "")
+        if candidate.name == FETCH_OUT_ACTION:
+            return self._go_out(world, resident, site) if site is not None else None
         if site is not None:
             path = self.path_to(world, resident, site)
             if path is None:
                 return None
+            if candidate.name == AWAIT_ACTION:
+                return Activity(AWAIT_ACTION, site.site_id, path, world.registries.construction.await_minutes)
             stint = world.registries.construction.stint_minutes
             return Activity(candidate.name, site.site_id, path, stint if candidate.name == BUILD_ACTION else HAUL_MINUTES)
         placed = world.interactables.get(candidate.target_id or "")
@@ -375,12 +486,74 @@ class ConstructionSystem:
                 return path
         return None
 
+    def _go_out(self, world: "SimulationWorld", resident: Resident, site: BuildSite) -> Activity | None:
+        """Have whoever sees to a site go outside for what it waits for: a short trip, for that and nothing else."""
+        wanted = self.wanted(world, site)
+        item_id = self._fetched(world, wanted)
+        if item_id is None:
+            return None
+        settings = world.registries.construction
+        now = world.clock.total_minutes
+        minutes = world.rng.randint(*settings.fetch_minutes)
+        resident.expedition = Expedition(
+            returns_at=now + minutes,
+            finds=world.rng.randint(*settings.fetch_units),
+            danger=settings.fetch_danger,
+            fetch=item_id,
+        )
+        resident.last_expedition_day = world.clock.day
+        resident.current_action = EXPEDITION_ACTION
+        item = world.registries.items.resolve(item_id)
+        world.emit_event(
+            DomainEvent(
+                "expedition_left",
+                SITE_EVENT_IMPORTANCE,
+                f"{resident.name} sale a por {item.name} para la obra: {self.thing(world, site.kind, site.what)}",
+                [resident.resident_id],
+                data={"site_id": site.site_id, "fetch": item_id},
+            ),
+            at=resident.tile,
+        )
+        return Activity(EXPEDITION_ACTION, None, minutes_left=minutes, using=True)
+
+    def await_tick(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> None:
+        """Spend one minute sitting by a site that has nothing to go on with, asking for it."""
+        site = world.sites.get(activity.target_id or "")
+        wanted = self.wanted(world, site) if site is not None else []
+        if site is None or not wanted or not self.free_to_build(world, resident):
+            self._leave(resident)
+            return
+        if not activity.using:
+            activity.using = True
+            resident.current_action = AWAIT_ACTION
+            self._face(resident, site)
+            key = f"{WANTED_NOTICE}{site.site_id}"
+            if world.notices.get(key) != world.clock.day:
+                world.notices[key] = world.clock.day
+                thing = self.thing(world, site.kind, site.what)
+                material = ", ".join(self._material_name(world, tag) for tag in wanted)
+                about = [placed.object_id for tag in wanted for placed in world.salvaging.available(world, tag)]
+                world.emit_event(
+                    DomainEvent(
+                        "material_wanted",
+                        WANTED_IMPORTANCE,
+                        f"{resident.name} se sienta junto a la obra y pide {material}: {thing}",
+                        [resident.resident_id],
+                        data={"site_id": site.site_id, "wanted": wanted, "salvageable": about},
+                    ),
+                    at=resident.tile,
+                )
+        activity.minutes_left -= 1
+        if activity.minutes_left <= 0:
+            self._leave(resident)
+
     def build_tick(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> None:
         """Spend one minute working on a site."""
         site = world.sites.get(activity.target_id or "")
-        if site is None or not self._can_work_on(world, resident, site) or not self._free_to_build(world, resident):
+        if site is None or not self._can_work_on(world, resident, site) or not self.free_to_build(world, resident):
             self._leave(resident)
             return
+        mine = site.in_charge == resident.resident_id
         rule = self.rule_of(world, site)
         if not activity.using:
             activity.using = True
@@ -398,14 +571,18 @@ class ConstructionSystem:
                 )
             )
         resident.needs.apply(world.registries.construction.per_minute)
-        # Putting something up is work for the settlement like any other.
+        # Putting something up is work for the settlement like any other, and for whoever has
+        # it in their charge it is their work: it is paid as a post is.
         resident.last_worked = world.clock.total_minutes
+        if mine:
+            world.trade.pay_wage(world, resident, world.work.job_of(world, resident))
         pace = world.health.work_pace(world, resident) * world.work.mood_pace(resident)
         site.progress += pace * world.research.factor(world, BUILD_PACE)
         activity.minutes_left -= 1
         if site.progress >= rule.minutes and self._finish(world, site, resident):
             return
-        if activity.minutes_left <= 0 or self._called_to_work(world, resident):
+        # Whoever only lends a hand goes back to their post when their shift begins.
+        if activity.minutes_left <= 0 or (not mine and self._called_to_work(world, resident)):
             self._leave(resident)
 
     def carry_tick(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> None:
@@ -436,7 +613,9 @@ class ConstructionSystem:
 
     # ----- deciding what to do -----
 
-    def _free_to_build(self, world: "SimulationWorld", resident: Resident) -> bool:
+    def free_to_build(self, world: "SimulationWorld", resident: Resident) -> bool:
+        """Whether a resident can be at work on something right now: there is light, they are
+        fit for it, and no need of theirs presses."""
         return (
             not world.is_dark()
             and world.health.is_fit_for_work(resident)
@@ -673,6 +852,7 @@ class ConstructionSystem:
         """Take a site off the map, and everybody off it."""
         world.sites.pop(site.site_id, None)
         world.notices.pop(f"{SITE_NOTICE}{site.site_id}", None)
+        world.notices.pop(f"{WANTED_NOTICE}{site.site_id}", None)
         for resident in world.residents.values():
             if resident.activity is not None and resident.activity.target_id == site.site_id:
                 self._leave(resident)

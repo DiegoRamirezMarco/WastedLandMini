@@ -290,6 +290,17 @@ room. An argument's importance rises with the resentment between the two.
 - **Charisma and leadership** are two more sides of a way of being: how readily others are won
   over by somebody, and how well others do under them.
 
+### Tasks, and taking things apart
+
+- **A site in somebody's charge is their work**, ahead of their own post: by day they carry to
+  it and work on it until it stands, and are paid as for a post. Others lend a hand in spare time.
+- **With nothing to build with they sit by it and ask**, while there is something about that
+  could be taken apart. The player tells them what: it is an order, and their task until done.
+  What comes of it goes to the site, or to where such things are kept.
+- **With nothing left to take apart they go out for it**, a short trip for that one thing.
+- **The player breaks up an item for scrap**: what is nobody's at once, what is somebody's only
+  if they agree.
+
 ### Proposals and votes
 
 - **The player proposes and the settlement decides.** A proposal is a law, doing away with one,

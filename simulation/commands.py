@@ -52,6 +52,12 @@ class CommandTarget(Protocol):
     def cancel_site(self, site_id: str) -> UrbanismResult:
         ...
 
+    def order_salvage(self, resident_id: str, object_id: str) -> UrbanismResult:
+        ...
+
+    def scrap_item(self, item_id: str, option_id: str) -> UrbanismResult:
+        ...
+
     def set_research(self, subject_id: str | None) -> ResearchResult:
         ...
 
@@ -263,6 +269,36 @@ class CancelSiteCommand:
 
     def apply(self, world: CommandTarget) -> UrbanismResult:
         return world.cancel_site(self.site_id)
+
+
+@dataclass(frozen=True)
+class SalvageCommand:
+    """The player tells a resident to take apart something that is lying about: a rusted car, a
+    heap of tyres. It is that resident's task until it is done, and what comes out of it goes
+    to the site they see to, if it waits for it, or to where such things are kept."""
+
+    resident_id: str
+    object_id: str
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.order_salvage(self.resident_id, self.object_id)
+
+
+@dataclass(frozen=True)
+class ScrapItemCommand:
+    """The player has an item broken up for scrap.
+
+    What is nobody's and kept in a container is broken up there and then: it is one of the
+    things the player does with their own hands. What is somebody's is put to them, with the
+    advice given, and it is theirs to say.
+    """
+
+    # The item, by its instance ID.
+    item_id: str
+    option_id: str = "encourage"
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.scrap_item(self.item_id, self.option_id)
 
 
 @dataclass(frozen=True)

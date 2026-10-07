@@ -59,15 +59,16 @@ SHORT_BY = 1e-9
 class TradeSystem:
     # ----- earning -----
 
-    def pay_wage(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> None:
+    def pay_wage(self, world: "SimulationWorld", resident: Resident, job: JobDefinition | None) -> None:
         """Count one minute of a resident's work, and pay them for it out of the common fund as far as it goes.
 
-        Under barter there is no wage: whoever works is kept instead.
+        Under barter there is no wage: whoever works is kept instead. Work that is no post, such
+        as a site in somebody's charge, is paid the settlement's usual wage.
         """
         resident.last_worked = world.clock.total_minutes
         if world.fund.currency(world) is None:
             return
-        wage = job.wage if job.wage is not None else world.registries.economy.wage_per_hour
+        wage = job.wage if job is not None and job.wage is not None else world.registries.economy.wage_per_hour
         # What the law has it come to: more or less by the hour, less what the fund keeps of it.
         due = world.politics.laws.wage(world, wage / MINUTES_PER_HOUR)
         paid = world.fund.pay_out(world, due)

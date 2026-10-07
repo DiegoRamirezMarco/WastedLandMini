@@ -342,18 +342,33 @@
     "article": "un",
     "width": 3,
     "height": 2,
-    "category": "decor"
+    "category": "decor",
+    "salvage": {
+      "item": "scrap",
+      "units": 8,
+      "minutes": 180
+    }
   },
   "tyres": {
     "name": "pila de neumáticos",
     "article": "una",
-    "category": "decor"
+    "category": "decor",
+    "salvage": {
+      "item": "scrap",
+      "units": 3,
+      "minutes": 60
+    }
   },
   "junk": {
     "name": "trastos",
     "article": "unos",
     "blocks": false,
-    "category": "decor"
+    "category": "decor",
+    "salvage": {
+      "item": "scrap",
+      "units": 2,
+      "minutes": 40
+    }
   },
   "handcart": {
     "name": "carro",

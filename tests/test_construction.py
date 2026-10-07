@@ -302,24 +302,28 @@ class BuildingTests(unittest.TestCase):
                 self.assertTrue(world.passable()(spot))
                 self.assertEqual(_scrap(world) + _in_hand(world), 12 - 6)
 
-    def test_building_is_for_spare_time_and_never_for_the_shift(self) -> None:
+    def test_whoever_agreed_builds_in_place_of_their_shift_and_a_helper_never_does(self) -> None:
         world = _settled()
-        _only(world, "raul")
+        _only(world, "raul", "ines")
         site_id = world.apply_command(ProposeObjectCommand("bed", _object_spot(world, "bed"), "raul")).entity_id
-        site = world.sites[site_id]
-        # Raúl works the garden from eight to one. The bed waits for him all morning.
-        _run(world, 4 * 60 + 30)
-        self.assertTrue(world.work.on_duty(world, world.residents["raul"]))
-        self.assertEqual((site.delivered, site.progress), ({}, 0.0))
-        self.assertTrue(_run(world, 150, lambda: site_id not in world.sites), "it was not built at midday")
+        raul, ines = world.residents["raul"], world.residents["ines"]
+        raul.day_off = ines.day_off = None
+        # Raúl works the garden from eight to one. With a bed in his charge he is at that
+        # instead, and it stands long before midday. Inés, who has none, keeps to the garden.
+        self.assertTrue(_run(world, 4 * 60, lambda: site_id not in world.sites), "it was not built in the morning")
+        self.assertFalse(any("| work_started | Raúl" in line for line in world.event_log))
+        self.assertTrue(any("| work_started | Inés" in line for line in world.event_log))
+        self.assertFalse(any("| build_started | Inés" in line for line in world.event_log))
 
     def test_nobody_builds_in_the_dark_or_with_a_need_that_presses(self) -> None:
         world = _settled()
-        _only(world, "lucia")
+        _only(world, "lucia", "paco")
         site_id = world.apply_command(ProposeObjectCommand("stool", _object_spot(world, "stool"), "lucia")).entity_id
-        lucia = world.residents["lucia"]
+        lucia, paco = world.residents["lucia"], world.residents["paco"]
         self.assertIsNotNone(world.construction.candidate(world, lucia, busy=False))
-        self.assertIsNone(world.construction.candidate(world, lucia, busy=True))
+        self.assertIsNotNone(world.construction.candidate(world, lucia, busy=True), "it is her work now")
+        self.assertIsNotNone(world.construction.candidate(world, paco, busy=False))
+        self.assertIsNone(world.construction.candidate(world, paco, busy=True), "and for him something for spare time")
         lucia.needs.hunger = 90
         self.assertIsNone(world.construction.candidate(world, lucia, busy=False))
         lucia.needs.hunger = 0
