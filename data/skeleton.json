@@ -611,6 +611,13 @@
   "doll": {
     "unit": 16,
     "canvases": {"body": [24, 24], "head": [12, 12]},
+    "hoses": [
+      ["upper_arm_left", "forearm_left"],
+      ["upper_arm_right", "forearm_right"],
+      ["thigh_left", "shin_left"],
+      ["thigh_right", "shin_right"]
+    ],
+    "hose": {"round": 1.4, "volume": 0.5},
     "former": {
       "canvases": {"body": [20, 24]},
       "from": {"neck": [10, 3], "spine": [10, 7], "hips": [10, 7], "upper_arm_right": [17.4, 3], "forearm_right": [17.4, 6], "hand_right": [17.4, 9], "thigh_left": [6, 13.6], "shin_left": [6, 16.6], "foot_left": [6, 19.6], "thigh_right": [13.6, 13.6], "shin_right": [13.6, 16.6], "foot_right": [13.6, 19.6]}

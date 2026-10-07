@@ -5,5 +5,9 @@ description = "Post-apocalyptic social simulation starter"
 requires-python = ">=3.11"
 dependencies = ["pygame>=2.6,<3"]
 
+[project.optional-dependencies]
+# Bends the arms and legs of the dolls as one piece, and gives the residents their voices.
+full = ["numpy>=2"]
+
 [tool.ruff]
 line-length = 100

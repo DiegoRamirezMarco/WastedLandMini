@@ -1243,6 +1243,8 @@ class GlobalView:
         """
         layers, scene = self.layers, self._scene
         plan = self.bodies.plan
+        # With many bodies in sight, only so many limbs are bent to a new shape in one frame.
+        allowance = self.dolls.allowance if self.dolls is not None else None
         # Whoever and whatever stands lower on the map is in front: pictures and dolls in one order.
         ordered: list[tuple[float, int, object]] = [(entry[0], 0, entry) for entry in standing]
         ordered += [(float(entry[0]), 1, entry) for entry in self._doll_draws]
@@ -1285,7 +1287,7 @@ class GlobalView:
                     continue
                 _, doll, skeleton, neck = entry
                 if skeleton is not None:
-                    draw_doll(screen, doll, plan, skeleton, origin, detail)
+                    draw_doll(screen, doll, plan, skeleton, origin, detail, allowance)
                     continue
                 # Lying under a blanket: only the head, upright on the pillow.
                 head = doll.placed(HEAD_BONE, False, detail, math.pi)

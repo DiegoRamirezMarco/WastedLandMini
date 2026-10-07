@@ -401,7 +401,9 @@ class InteriorView:
 
             def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
                 self._shadow(target, corner, foot, layout)
-                draw_doll(target, doll, plan, skeleton, (corner[0] + foot[0], corner[1] + foot[1]), detail)
+                draw_doll(
+                    target, doll, plan, skeleton, (corner[0] + foot[0], corner[1] + foot[1]), detail, view.dolls.allowance
+                )
                 self._show_held(target, held, (corner[0] + foot[0], corner[1] + foot[1]), detail)
 
         else:

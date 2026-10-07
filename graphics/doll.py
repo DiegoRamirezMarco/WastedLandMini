@@ -4,22 +4,27 @@ A resident's body and head are drawn on two canvases of a fixed size, over a gui
 each part goes and where it is jointed. The drawing is cut into those parts, and each part is laid
 along its bone, turned as the bone turns. One drawing, seen from the side, does for every pose:
 facing the other way it is the same drawing in a mirror.
+
+An arm or a leg is not shown as parts pinned together, though. It is a limb of rubber: its parts
+are kept in one piece, and that piece is bent along the bones (`graphics/hose.py`).
 """
 
+import itertools
 import json
 import logging
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
 import pygame
 
+from graphics import hose as rubber
 from graphics.illustrations import Illustrations
 from graphics.palette import PALETTE
 from skeleton.plan import PLAN_PATH, SIDES, SkeletonPlan, wrapped
-from skeleton.rig import Skeleton
+from skeleton.rig import Bone, Skeleton
 
 Point = tuple[float, float]
 Color = tuple[int, int, int]
@@ -51,6 +56,38 @@ GUIDE_JOINT = PALETTE["ember"]
 JOINT_BAND = 2
 # Pixels to one of the skeleton's at which a doll is laid out to see how much room it takes.
 BOX_DETAIL = 4.0
+# A limb of rubber is turned as a whole in steps, as many to a full turn as leave its far end
+# within half a pixel of where it should be: this many for each pixel to one of the skeleton's,
+# in twelves, and never fewer or more than these.
+TURN_STEPS_PER_PIXEL = 40
+FEWEST_LIMB_TURNS, MOST_LIMB_TURNS = 60, 360
+# From there each of its parts is bent in this many steps of a full turn, and drawn out in steps
+# of this many hundredths of the length it was drawn at. These are coarse: bending is what
+# costs, and the coarser they are the fewer shapes a limb has to be bent into.
+BEND_STEPS = 72
+STRETCH_STEP = 4
+# A limb is bent out of a drawing twice as fine as it is shown, which smooths it. Shown at this
+# many pixels to one of the skeleton's or more, it is large enough to be bent out of one as fine.
+FINER = 2
+LARGE = 8.0
+# Limbs are kept to be shown again, every doll's together, up to this many bytes of them: bent,
+# which is costly to make and of which there are few, and bent and turned, of which there are many.
+BENT = rubber.Kept(24 * 1024 * 1024)
+KEPT = rubber.Kept(32 * 1024 * 1024)
+_TOKENS = itertools.count()
+
+
+def limb_turns(detail: float) -> int:
+    """How many steps to a full turn a limb of rubber is kept turned in, at a size."""
+    return min(MOST_LIMB_TURNS, max(FEWEST_LIMB_TURNS, round(detail * TURN_STEPS_PER_PIXEL / 12) * 12))
+
+
+def _apart(shape: Sequence[tuple[int, int]], other: Sequence[tuple[int, int]]) -> float:
+    """How unlike two shapes of a limb are, in steps of how its parts are drawn out and bent."""
+    return sum(
+        abs(a[0] - b[0]) / STRETCH_STEP + min((a[1] - b[1]) % BEND_STEPS, (b[1] - a[1]) % BEND_STEPS)
+        for a, b in zip(shape, other)
+    )
 
 
 def doll_path(body_id: str, canvas: str) -> str:
@@ -185,6 +222,12 @@ class DollTemplate:
     # The template as it was before its paper was last laid out anew, if it ever was: drawings
     # kept from then are of that size, with their parts where it had them.
     former: "DollTemplate | None" = None
+    # The limbs of rubber: for each, its parts from the trunk outwards, which are drawn in one line.
+    hoses: tuple[tuple[str, ...], ...] = ()
+    # How much of such a limb each bend takes up, from a corner at 0 to the whole limb in one curve
+    # at 2, and how much wider it gets for being shorter than drawn, from not at all at 0.
+    rounding: float = 1.0
+    volume: float = 0.0
 
     def adopted(self, canvas: str, drawing: pygame.Surface, build: DollBuild) -> pygame.Surface:
         """A drawing as this template lays its paper out, whichever way it was laid out when drawn.
@@ -267,7 +310,7 @@ class DollTemplate:
             bone: replace(spec, start=at(spec.canvas, spec.start), end=at(spec.canvas, spec.end))
             for bone, spec in self.parts.items()
         }
-        return DollTemplate(self.unit, self.canvases, parts, self.start, self.former)
+        return replace(self, parts=parts)
 
     def handles(self, built: "DollTemplate") -> list[JointHandle]:
         """The joints of a doll's guide that can be taken hold of, where its own measures have them."""
@@ -426,19 +469,45 @@ class DollTemplate:
         return build_guide(self, canvas)
 
     def example(
-        self, bone: str, color: Color, outline: Color | None = None, edge: int | None = None, stout: float = 1.0
+        self,
+        bone: str,
+        color: Color,
+        outline: Color | None = None,
+        edge: int | None = None,
+        stout: float = 1.0,
+        inside: bool = False,
     ) -> pygame.Surface:
         """The slim example of one part on a clear canvas, kept inside its zone.
 
         The trunk's stops at the shoulders, so that the neck shows between it and the head.
         `edge` is how wide the line round it is, where it has one and it is not the usual,
-        and `stout` how many times as thick as the example the part is made.
+        and `stout` how many times as thick as the example the part is made. With `inside`
+        it is only what is within that line, the line itself being left for another to draw.
         """
-        spec = self.parts[bone]
+        own = spec = self.parts[bone]
         if stout != 1.0 and not spec.whole:
             spec = replace(spec, radius=min(spec.radius * stout, spec.reach or spec.radius * stout))
+        if not spec.whole:
+            way, keep = _direction(own), self._kept(own, True)
+            if keep is not None and abs(keep[0] * way[0] + keep[1] * way[1]) < 0.5:
+                # It is cut along its length and not across it, as a foot is under the ankle: only
+                # one side of that cut is the part's own. Its example is the half that lies there,
+                # made round, and not a whole of which the other half would be cut away.
+                half = spec.radius / 2
+                spec = replace(
+                    spec,
+                    radius=half,
+                    start=(spec.start[0] + keep[0] * half, spec.start[1] + keep[1] * half),
+                    end=(spec.end[0] + keep[0] * half, spec.end[1] + keep[1] * half),
+                )
+            beyond = spec.radius - spec.ends[1]
+            if beyond > 0 and not any(other.start == own.end for other in self.sharing(own, own.end)):
+                # Nothing goes on from its far end: that end is drawn as far back as lets it stay
+                # round inside its zone, where it would be cut off flat.
+                back = min(beyond, math.dist(spec.start, spec.end) * 0.9)
+                spec = replace(spec, end=(spec.end[0] - way[0] * back, spec.end[1] - way[1] * back))
         surface = pygame.Surface(self.canvases[spec.canvas], pygame.SRCALPHA)
-        edge = (edge if edge is not None else max(1, self.unit // 8)) if outline is not None else 0
+        edge = (edge if edge is not None else max(1, self.unit // 8)) if outline is not None or inside else 0
         if spec.whole:
             centre, radius = spec.end, round(spec.radius)
             if outline is not None:
@@ -464,9 +533,25 @@ class DollTemplate:
         the name of the part without its side.
         """
         drawings = {name: pygame.Surface(size, pygame.SRCALPHA) for name, size in self.canvases.items()}
+        limbs = {bone: limb for limb in self.hoses for bone in limb}
+        thick = {bone: (stout or {}).get(unsided(bone), 1.0) for bone in self.parts}
+        drawn: set[str] = set()
         for bone, spec in self.parts.items():
-            thick = (stout or {}).get(unsided(bone), 1.0)
-            drawings[spec.canvas].blit(self.example(bone, colors.get(bone, GUIDE_MIDDLE), outline, edge, thick), (0, 0))
+            if bone in drawn:
+                continue
+            limb = limbs.get(bone, (bone,))
+            drawn.update(limb)
+            sheet = drawings[spec.canvas]
+            if len(limb) > 1:
+                # A limb of rubber is one piece: the line goes round all of it, and not across
+                # it where one of its parts ends and the next begins.
+                for part in limb:
+                    sheet.blit(self.example(part, outline, stout=thick[part]), (0, 0))
+                for part in limb:
+                    color = colors.get(part, GUIDE_MIDDLE)
+                    sheet.blit(self.example(part, color, None, edge, thick[part], inside=True), (0, 0))
+                continue
+            sheet.blit(self.example(bone, colors.get(bone, GUIDE_MIDDLE), outline, edge, thick[bone]), (0, 0))
             if spec.whole:
                 # An eye, on the side it faces.
                 radius = round(spec.radius)
@@ -540,7 +625,31 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
             str(values.get("wears", "")),
         )
     start = build_from_data(data.get("build"))
-    return DollTemplate(unit, canvases, parts, start, _former(unit, canvases, parts, start, data.get("former")))
+    hoses = tuple(tuple(str(bone) for bone in limb) for limb in data.get("hoses", ()))
+    _check_hoses(hoses, parts)
+    bends = data.get("hose") or {}
+    return DollTemplate(
+        unit, canvases, parts, start, _former(unit, canvases, parts, start, data.get("former")),
+        hoses, float(bends.get("round", 1.0)), float(bends.get("volume", 0.0)),
+    )
+
+
+def _check_hoses(hoses: tuple[tuple[str, ...], ...], parts: dict[str, PartSpec]) -> None:
+    """Refuse a limb of rubber that could not be bent as one piece: its parts have to be drawn
+    one after the other in one line, on one canvas."""
+    taken: set[str] = set()
+    for limb in hoses:
+        if len(limb) < 2 or not set(limb) <= parts.keys():
+            raise ValueError(f"A limb of rubber needs two parts or more that the doll has: {limb}")
+        if taken & set(limb):
+            raise ValueError(f"A part is in two limbs of rubber: {sorted(taken & set(limb))}")
+        taken.update(limb)
+        for before, after in zip(limb, limb[1:]):
+            first, second = parts[before], parts[after]
+            way, onward = _direction(first), _direction(second)
+            in_line = way[0] * onward[0] + way[1] * onward[1] > 0.999
+            if first.whole or second.whole or first.canvas != second.canvas or first.end != second.start or not in_line:
+                raise ValueError(f"The parts of a limb of rubber must be drawn in one line: {before}, {after}")
 
 
 def _former(
@@ -581,6 +690,28 @@ class DollPart:
     end: Point
 
 
+@dataclass(frozen=True)
+class DollLimb:
+    """A limb of rubber cut out of a drawing in one piece: its picture, and where on it each of
+    its joints is, from the one nearest the trunk outwards."""
+
+    bones: tuple[str, ...]
+    image: pygame.Surface
+    joints: tuple[Point, ...]
+
+
+def _turn_about(image: pygame.Surface, joint: Point, turn: float, scale: float = 1.0) -> tuple[pygame.Surface, Point]:
+    """A picture turned anticlockwise and resized, and where on it a point of the first one went."""
+    turned = pygame.transform.rotozoom(image, math.degrees(turn), scale) if turn or scale != 1.0 else image
+    # It turned about the middle of the picture, and the picture grew to fit.
+    from_middle = (joint[0] - image.get_width() / 2, joint[1] - image.get_height() / 2)
+    sine, cosine = math.sin(turn), math.cos(turn)
+    return turned, (
+        turned.get_width() / 2 + (from_middle[0] * cosine + from_middle[1] * sine) * scale,
+        turned.get_height() / 2 + (from_middle[1] * cosine - from_middle[0] * sine) * scale,
+    )
+
+
 class Doll:
     """A drawing cut into its parts, ready to be laid over a skeleton."""
 
@@ -593,20 +724,20 @@ class Doll:
         # every part is as long on the doll as it was drawn. None for a doll laid over the game's own.
         self.plan = plan
         self.parts: dict[str, DollPart] = {}
+        sheets: dict[str, pygame.Surface] = {}
+        masks: dict[str, pygame.Surface] = {}
         for bone, spec in template.parts.items():
             drawing = drawings.get(spec.canvas)
             if drawing is None:
                 continue
             if drawing.get_size() != template.canvases[spec.canvas]:
                 drawing = pygame.transform.smoothscale(drawing, template.canvases[spec.canvas])
-            cut = drawing.convert_alpha() if pygame.display.get_surface() is not None else drawing.copy()
-            # Whatever of the drawing falls outside the part's zone belongs to another part. It is made
-            # clear and keeps its colour, so that no dark edge shows along a cut when the part is resized.
-            keep = pygame.Surface(cut.get_size(), pygame.SRCALPHA)
-            keep.fill((255, 255, 255, 0))
-            keep.blit(template.cut_mask(bone, drawing), (0, 0), special_flags=pygame.BLEND_RGBA_MAX)
-            cut.blit(keep, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-            box = cut.get_bounding_rect()
+            sheets[spec.canvas] = drawing
+            masks[bone] = template.cut_mask(bone, drawing)
+        self._share_out(template, masks)
+        for bone, mask in masks.items():
+            spec = template.parts[bone]
+            cut, box = self._cut(sheets[spec.canvas], [mask])
             if box.width == 0:
                 continue
             self.parts[bone] = DollPart(
@@ -614,11 +745,63 @@ class Doll:
                 (spec.start[0] - box.x, spec.start[1] - box.y),
                 (spec.end[0] - box.x, spec.end[1] - box.y),
             )
+        # The limbs of rubber, by each of their parts. One of which a part was left undrawn is
+        # not one piece, and stays in its parts.
+        self.limbs: dict[str, DollLimb] = {}
+        for bones in template.hoses if rubber.AVAILABLE else ():
+            if not all(bone in self.parts for bone in bones):
+                continue
+            specs = [template.parts[bone] for bone in bones]
+            # Together the parts have no cut between them, and keep the round ends they had at either end.
+            cut, box = self._cut(sheets[specs[0].canvas], [masks[bone] for bone in bones])
+            joints = [specs[0].start, *(spec.end for spec in specs)]
+            limb = DollLimb(bones, cut.subsurface(box).copy(), tuple((x - box.x, y - box.y) for x, y in joints))
+            self.limbs.update({bone: limb for bone in bones})
         # How long each part is drawn, in the skeleton's own measure.
         self.drawn = {bone: math.dist(spec.start, spec.end) / template.unit for bone, spec in template.parts.items()}
         self._sized: dict[tuple, DollPart] = {}
         self._turned: dict[tuple, tuple[pygame.Surface, Point]] = {}
+        self._strips: dict[tuple, rubber.Strip] = {}
+        # What tells this doll's bent limbs from any other's, where they are all kept together.
+        self._token = next(_TOKENS)
         self._standing: tuple[float, float, float, float] | None = None
+
+    @staticmethod
+    def _share_out(template: DollTemplate, masks: dict[str, pygame.Surface]) -> None:
+        """Have nothing of a drawing go with two parts that do not meet.
+
+        Measures can bring the zone of one part over the edge of another's, as the hips over the
+        top of a leg. What is drawn there would stay behind with the one while the other moved
+        away. It goes with the part that comes later, which is the one further out on the body.
+        """
+        bones = list(masks)
+        for index, bone in enumerate(bones):
+            spec = template.parts[bone]
+            own = None
+            for later in bones[index + 1 :]:
+                other = template.parts[later]
+                if other.canvas != spec.canvas or spec.whole or other.whole:
+                    continue
+                if {spec.start, spec.end} & {other.start, other.end}:
+                    continue
+                own = own or pygame.mask.from_surface(masks[bone])
+                theirs = pygame.mask.from_surface(masks[later])
+                if own.overlap_area(theirs, (0, 0)):
+                    own.erase(theirs, (0, 0))
+                    masks[bone] = own.to_surface(setcolor=(255, 255, 255, 255), unsetcolor=(0, 0, 0, 0))
+
+    @staticmethod
+    def _cut(drawing: pygame.Surface, masks: Sequence[pygame.Surface]) -> tuple[pygame.Surface, pygame.Rect]:
+        """What of a drawing is under any of some masks, and the box that holds it."""
+        cut = drawing.convert_alpha() if pygame.display.get_surface() is not None else drawing.copy()
+        # Whatever of the drawing falls outside the part's zone belongs to another part. It is made
+        # clear and keeps its colour, so that no dark edge shows along a cut when the part is resized.
+        keep = pygame.Surface(cut.get_size(), pygame.SRCALPHA)
+        keep.fill((255, 255, 255, 0))
+        for mask in masks:
+            keep.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MAX)
+        cut.blit(keep, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        return cut, cut.get_bounding_rect()
 
     def standing(self, plan: SkeletonPlan) -> tuple[float, float, float, float]:
         """How far the doll reaches standing at rest, from the spot between its feet.
@@ -709,17 +892,94 @@ class Doll:
         steps = round(wrapped(angle - drawn) / math.tau * TURN_STEPS) % TURN_STEPS
         key = (bone, mirrored, round(detail * 1000), stretch, steps)
         if key not in self._turned:
-            turn = steps * math.tau / TURN_STEPS
-            image = pygame.transform.rotozoom(part.image, math.degrees(turn), 1.0) if steps else part.image
-            # Where the joint went: it turned about the middle of the picture, and the picture grew to fit.
-            from_middle = (part.start[0] - part.image.get_width() / 2, part.start[1] - part.image.get_height() / 2)
-            sine, cosine = math.sin(turn), math.cos(turn)
-            joint = (
-                image.get_width() / 2 + from_middle[0] * cosine + from_middle[1] * sine,
-                image.get_height() / 2 - from_middle[0] * sine + from_middle[1] * cosine,
-            )
-            self._turned[key] = (image, joint)
+            self._turned[key] = _turn_about(part.image, part.start, steps * math.tau / TURN_STEPS)
         return self._turned[key]
+
+    def _strip(self, limb: DollLimb, mirrored: bool, detail: float) -> rubber.Strip:
+        """A limb of rubber at the size it is bent at, and in a mirror if the body faces the other way."""
+        key = (limb.bones, mirrored, round(detail * 1000))
+        if key not in self._strips:
+            factor = detail / self.unit
+            size = (max(1, round(limb.image.get_width() * factor)), max(1, round(limb.image.get_height() * factor)))
+            image = pygame.transform.smoothscale(limb.image, size)
+            joints = [(x * factor, y * factor) for x, y in limb.joints]
+            if mirrored:
+                image = pygame.transform.flip(image, True, False)
+                joints = [(size[0] - x, y) for x, y in joints]
+            self._strips[key] = rubber.read_strip(image, joints)
+        return self._strips[key]
+
+    def hosed(
+        self,
+        bone: str,
+        mirrored: bool,
+        detail: float,
+        bones: Sequence[Bone],
+        allowance: rubber.Allowance | None = None,
+    ) -> tuple[pygame.Surface, Point] | None:
+        """The limb of rubber a part belongs to, laid along its bones, and where on that picture
+        its first joint is.
+
+        `bones` are the bones of the skeleton it is laid on, one to each of its parts from the
+        trunk outwards, wherever their joints are now. `allowance` is how much bending the frame
+        may still be given, where many dolls are shown at once and none may keep it waiting.
+        None if that part is of no such limb, if the limb cannot be laid along them, or if it
+        has no shape yet and the frame has no bending left for it.
+        """
+        limb = self.limbs.get(bone)
+        if limb is None or len(bones) != len(limb.bones):
+            return None
+        steps = limb_turns(detail)
+        # The whole limb is turned in steps, as a part is, and bent in steps from there: bending
+        # is the costly half, and a limb takes few shapes, however many ways it is turned.
+        turn = round(wrapped(bones[0].angle) / math.tau * steps) % steps
+        turned = turn * math.tau / steps
+        parts = []
+        for name, laid in zip(limb.bones, bones):
+            long = math.dist((laid.a.x, laid.a.y), (laid.b.x, laid.b.y))
+            stretch = round(100 * long / self.drawn[name] / STRETCH_STEP) * STRETCH_STEP if self.drawn[name] else 0
+            if stretch <= 0:
+                return None
+            parts.append((stretch, round(wrapped(laid.angle - turned) / math.tau * BEND_STEPS) % BEND_STEPS))
+        shape = tuple(parts)
+        limb_key = (self._token, limb.bones, mirrored, round(detail * 1000))
+        shapes: dict[tuple, tuple[pygame.Surface, Point]] = BENT.get(limb_key) or {}
+        if shape not in shapes:
+            if allowance is not None and not allowance.spend(detail):
+                # No more bending in this frame: the nearest shape it has had does for now, and
+                # if it has had none yet, its parts do.
+                if not shapes:
+                    return None
+                wanted = shape
+                shape = min(shapes, key=lambda other: _apart(other, wanted))
+            else:
+                bent = self._bent(limb, mirrored, detail, shape)
+                if bent is None:
+                    return None
+                shapes[shape] = bent
+                BENT.keep(limb_key, shapes, sum(each.get_width() * each.get_height() * 4 for each, _ in shapes.values()))
+        key = (*limb_key, shape, turn)
+        placed = KEPT.get(key)
+        if placed is None:
+            placed = _turn_about(*shapes[shape], turned)
+            KEPT.keep(key, placed, placed[0].get_width() * placed[0].get_height() * 4)
+        return placed
+
+    def _bent(
+        self, limb: DollLimb, mirrored: bool, detail: float, shape: Sequence[tuple[int, int]]
+    ) -> tuple[pygame.Surface, Point] | None:
+        """A limb of rubber bent to a shape, its first part pointing straight down or nearly.
+
+        `shape` is, for each of its parts, how long it is in hundredths of the length it was drawn
+        at, and how far it is turned from straight down in steps of a bend.
+        """
+        fine = FINER if detail < LARGE else 1
+        points = [(0.0, 0.0)]
+        for name, (stretch, bend) in zip(limb.bones, shape):
+            long, angle = self.drawn[name] * stretch / 100 * detail, bend * math.tau / BEND_STEPS
+            points.append((points[-1][0] + math.sin(angle) * long, points[-1][1] + math.cos(angle) * long))
+        strip = self._strip(limb, mirrored, detail * fine)
+        return rubber.bent(strip, points, self.template.rounding, self.template.volume, fine)
 
 
 class DollStore:
@@ -733,6 +993,12 @@ class DollStore:
         # The game's body plan, which each doll gets with its own measures.
         self.plan = plan
         self._dolls: dict[str, Doll | None] = {}
+        # How much bending of limbs a frame may be given, for whoever shows many dolls at once.
+        self.allowance = rubber.Allowance()
+
+    def new_frame(self) -> None:
+        """Say that a frame has been shown: the next has its whole allowance of bending."""
+        self.allowance.new_frame()
 
     def build(self, body_id: str) -> DollBuild:
         """The measures of a body: its own if it has any that can be used.
@@ -780,7 +1046,9 @@ class DollStore:
         key = f"stand-in:{body_id}"
         kept = self._dolls.get(key)
         if kept is None:
-            kept = self._dolls[key] = self.made(draw(self.template), self.template.starting())
+            # Drawn over the guide as the measures every doll starts from have it: it is cut by those.
+            build = self.template.starting()
+            kept = self._dolls[key] = self.made(draw(self.template.built(build)), build)
         return kept
 
     def get(self, body_id: str) -> Doll | None:
@@ -798,19 +1066,46 @@ class DollStore:
                 self._illustrations.forget(doll_path(body_id, canvas))
 
 
+def _laid(
+    doll: Doll, plan: SkeletonPlan, skeleton: Skeleton, detail: float, allowance: rubber.Allowance | None = None
+) -> Iterator[tuple[pygame.Surface, float, float]]:
+    """Every picture a doll is made of over a skeleton, the furthest first, and where its corner
+    goes from the skeleton's own (0, 0), in pixels of the target.
+
+    A limb of rubber is one picture, shown where the first of its parts comes in the order. With
+    any of its bones gone from the skeleton it is the parts that are left.
+    """
+    shown: set[str] = set()
+    for name in plan.orders[DOLL_VIEW]:
+        if name in shown:
+            continue
+        bone = skeleton.bones.get(skeleton.as_posed(name))
+        placed = None
+        limb = doll.limbs.get(name)
+        if limb is not None:
+            bones = [skeleton.bones.get(skeleton.as_posed(part)) for part in limb.bones]
+            if all(each is not None for each in bones):
+                placed = doll.hosed(name, skeleton.mirrored, detail, bones, allowance)
+                if placed is not None:
+                    bone = bones[0]
+                    shown.update(limb.bones)
+        if placed is None and bone is not None:
+            # A limb may be longer on the skeleton than it was drawn: it is drawn out to fit.
+            placed = doll.placed(name, skeleton.mirrored, detail, bone.angle, bone.length)
+        if placed is None:
+            continue
+        image, joint = placed
+        # A whole number of the skeleton's is the middle of one of its pixels.
+        yield image, (bone.a.x + 0.5) * detail - joint[0], (bone.a.y + 0.5) * detail - joint[1]
+
+
 def doll_box(doll: Doll, plan: SkeletonPlan, skeleton: Skeleton) -> tuple[float, float, float, float]:
     """How far a doll laid over a skeleton reaches: left, top, right and bottom, in the skeleton's own measure."""
     left = top = math.inf
     right = bottom = -math.inf
-    for name in plan.orders[DOLL_VIEW]:
-        bone = skeleton.bones.get(skeleton.as_posed(name))
-        placed = doll.placed(name, skeleton.mirrored, BOX_DETAIL, bone.angle, bone.length) if bone is not None else None
-        if placed is None:
-            continue
-        image, joint = placed
+    for image, x, y in _laid(doll, plan, skeleton, BOX_DETAIL):
         painted = image.get_bounding_rect()
-        x = bone.a.x + 0.5 + (painted.x - joint[0]) / BOX_DETAIL
-        y = bone.a.y + 0.5 + (painted.y - joint[1]) / BOX_DETAIL
+        x, y = (x + painted.x) / BOX_DETAIL, (y + painted.y) / BOX_DETAIL
         left, top = min(left, x), min(top, y)
         right, bottom = max(right, x + painted.width / BOX_DETAIL), max(bottom, y + painted.height / BOX_DETAIL)
     return (left, top, right, bottom) if left < right else (0.0, 0.0, 0.0, 0.0)
@@ -823,22 +1118,13 @@ def draw_doll(
     skeleton: Skeleton,
     origin: Point,
     detail: float,
+    allowance: rubber.Allowance | None = None,
 ) -> None:
     """Lay a doll's parts over a skeleton, the furthest first.
 
     `origin` is where on the target the skeleton's own (0, 0) falls, and `detail` how many pixels
-    of the target go to one of the skeleton's.
+    of the target go to one of the skeleton's. Whoever shows many dolls in a frame gives an
+    `allowance`: past it, a limb keeps for that frame the nearest shape it has had.
     """
-    for name in plan.orders[DOLL_VIEW]:
-        bone = skeleton.bones.get(skeleton.as_posed(name))
-        if bone is None:
-            continue
-        # A limb may be longer on the skeleton than it was drawn: it is drawn out to fit.
-        placed = doll.placed(name, skeleton.mirrored, detail, bone.angle, bone.length)
-        if placed is None:
-            continue
-        image, joint = placed
-        # A whole number of the skeleton's is the middle of one of its pixels.
-        x = origin[0] + (bone.a.x + 0.5) * detail - joint[0]
-        y = origin[1] + (bone.a.y + 0.5) * detail - joint[1]
-        target.blit(image, (round(x), round(y)))
+    for image, x, y in _laid(doll, plan, skeleton, detail, allowance):
+        target.blit(image, (round(origin[0] + x), round(origin[1] + y)))

@@ -160,6 +160,15 @@ cut apart where the body bends, each part laid along its bone and turned as the 
   and no corner of either sticks out, however squarely the limb was drawn. The far end of a hand
   or a foot is left as drawn, and so are the shoulders of the trunk. What is painted outside
   every zone is left out. Everything on the head's canvas is the head, hair and all.
+- **Limbs of rubber.** An arm from the shoulder to the wrist, and a leg from the hip to the
+  ankle, are not two parts pinned at a joint. Each is kept in one piece and bent along its
+  bones as one curve: the line down its middle rounds the elbow or the knee off, and the
+  drawing follows it, drawn out on the outside of the bend and gathered on the inside, with
+  its outline unbroken. Both ends stay where the skeleton has them. Shorter than it was drawn
+  a limb is a little wider, and longer a little thinner. Hands and feet are still parts of
+  their own at the end of it, as a glove and a shoe are, and so are the trunk, the hips and
+  the neck. A limb that has lost a part is shown in the parts it has left. Nothing has to be
+  drawn again for it: a limb drawn in one line bends as it is.
 - **Put together.** The doll has a build of its own, apart from the pixel bodies. The arm of the
   near side hangs from a little behind the middle of the trunk and the far one from a little in
   front, so that both show, and the legs leave the hips the same way. The legs start low in the hips, so that the top of a thigh comes to

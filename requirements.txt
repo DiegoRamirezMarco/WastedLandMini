@@ -1,1 +1,4 @@
 pygame>=2.6,<3
+# Bends the arms and legs of the dolls as one piece. Without it the game runs, and they are
+# the jointed parts they used to be.
+numpy>=2

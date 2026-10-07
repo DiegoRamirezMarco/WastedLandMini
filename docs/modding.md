@@ -342,6 +342,16 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   says: of that view the game keeps where the bones between are, the ones that join a limb to
   the trunk, and how high the feet stand. Every part must have its turn in the `doll` order, and
   zones may only overlap where two parts share a joint.
+- `doll.hoses` lists the limbs of rubber: for each, its parts from the trunk outwards, such as
+  an upper arm and its forearm. They are kept in one piece and bent along their bones as one
+  curve, where other parts are pinned at a joint. The parts of one must be drawn one after the
+  other in one line on the same canvas, each starting where the one before ends, and no part
+  may be in two. It is shown where the first of its parts comes in the `doll` order. `doll.hose`
+  says how they bend: `round` is how much of the limb each bend takes up, from 0, where a joint
+  is a corner, to 2, where a limb of two parts is one curve from end to end; `volume` is how
+  much wider a limb gets for being shorter than it was drawn, and thinner for being longer,
+  from 0, not at all, to 1, enough to take up the same room. Leave `hoses` out and every part
+  is pinned as before. Bending needs numpy; without it the game shows the parts.
 - A doll's own measures are kept in `illustrations/dolls/<id>/build.json`, written by the
   editor: `joints` says how far each joint of the guide was moved along its part, in the
   skeleton's own measure, by part and end (`shin.end` is the ankle, `upper_arm.start` the

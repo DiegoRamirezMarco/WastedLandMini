@@ -582,6 +582,7 @@ class Game:
     def present(self, screen: pygame.Surface | None = None) -> None:
         """Put the frame the active scene has just drawn on the window, or on another surface of its size."""
         self.layers.compose(screen if screen is not None else self.screen, self.canvas)
+        self.dolls.new_frame()
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Give one input event to the shell, and then to the scene on show."""

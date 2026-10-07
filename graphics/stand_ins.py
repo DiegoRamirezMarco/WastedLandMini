@@ -22,7 +22,9 @@ DETAIL = 3
 EDGE = 0.34
 # How many times as thick as the slim figure of the guide its limbs are, and how many times
 # as large its head: whoever has been drawn has a large head and a body with some weight to it.
-STOUT = {"upper_arm": 1.22, "forearm": 1.22, "hand": 1.22, "thigh": 1.25, "shin": 1.25, "foot": 1.15, "neck": 1.2}
+# A shoe is all under the ankle, and so is the half of its example that is its own: thick enough
+# to stand on the ground.
+STOUT = {"upper_arm": 1.22, "forearm": 1.22, "hand": 1.22, "thigh": 1.25, "shin": 1.25, "foot": 1.6, "neck": 1.2}
 HEAD = 1.3
 # How pale a colour has to be to be skin and not hair, when the hair is looked for on a head.
 SKULL = "skull"

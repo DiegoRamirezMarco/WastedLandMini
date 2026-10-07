@@ -2921,6 +2921,97 @@ Still open here:
   about 3 with the canvas alone: within a sixtieth of a second, with little to spare on a
   machine half as fast. It has not been tried on one
 
+### P42 — Limbs of rubber (needs P41) — done
+The user said: "Vamos a intentar trabajar en como mejorar la experiencia visual de los pj skeleto
+movimiento etc, evitar que las articulaciones parezcan unidas con chinchetas, movimiento mas
+organico y natural".
+
+Asked first, and answered, for all of what follows (P42 to P44):
+- **How a joint bends: "Goma".** The whole limb curves, with no elbow or knee marked. Chosen
+  over a skin that folds at the joint, which was what was recommended, and over parts with
+  the join better hidden
+- **What the movement is like: "Muy cartoon".** Squash and stretch, marked anticipation, wide
+  bounces. Chosen over natural with some bounce, which was recommended, and over sober
+- **Standing still: "Además, gestos sueltos".** They breathe and shift their weight, and now
+  and then look about, scratch or stretch
+- **Turning round: "Espejo al instante"**, as it is. Not narrowing to an edge and opening the
+  other way, which was recommended
+- **On a branch of its own**: "Crea una rama distinta, feature/SkeletonCartoon y aplicalo ahi".
+  None of it is on `main` until it is asked for
+
+Built:
+- **An arm and a leg are each one piece that bends** (`graphics/hose.py`). The upper arm and
+  the forearm, and the thigh and the shin, are kept together as they were drawn, and laid
+  along their bones as one curve. The line down the middle rounds the joint off, and the
+  drawing follows it: drawn out on the outside of the bend, gathered on the inside, its outline
+  unbroken. Both ends are where the skeleton has them
+- **Nothing is drawn again.** A limb drawn in one line, as all of them were, bends as it is
+- **Which parts make a limb is data** (`doll.hoses` in `data/skeleton.json`), and so is how
+  much of the limb a bend takes up and how much wider it gets for being shorter (`doll.hose`)
+- Hands and feet are still parts of their own at the end of a limb, and the trunk, the hips
+  and the neck are parts as they were
+- A limb that has lost a part, as when a forearm is cut off, is shown in the parts it has
+  left. So is every limb where numpy is not installed: the game runs without it
+- **Bent limbs are kept**, each shape once and each way it is turned once, up to 56 MB of them
+  for all the dolls together. Only about four milliseconds of bending are done in a frame: a
+  limb that would go over that keeps, for that frame, the nearest shape it has had
+- **The figure of whoever nobody has drawn was put right**, having been looked at closely for
+  the first time:
+  - It was drawn over the bare guide and then cut by the measures every doll starts from, so
+    its trunk came out short, its legs hung loose under it and its hands were slivers. It is
+    drawn by those measures now
+  - The line goes round a whole limb, and not across it at the elbow and the knee
+  - A hand ends round where it was cut off flat, and so does the bottom of the trunk
+  - A shoe is whole and under the ankle. It was drawn half above it, where the foot is cut,
+    and that half was lost. The guide shows the same shoe
+  - Two specks beside the hips are gone: the top of each leg, which the zone of the hips
+    reached. What two parts that do not meet both reach goes with the one further out
+
+Decided without asking:
+- numpy, which only the voices needed, is now in `requirements.txt`. It stays optional
+- The curve is the kind that cuts the corner: bent double, a limb is a loop shorter than its
+  bones, and its elbow is not where the skeleton has it. Only its ends are
+- A limb is bent in steps of five degrees and drawn out in steps of four hundredths, and
+  turned as a whole in finer steps, so that its far end is within a pixel of the hand or the
+  foot that hangs from it
+
+What it costs, on the user's machine, for twelve dolls all moving: about 1 ms a frame at the
+size the map opens at and 2.4 ms at the nearest, against 0.8 and 1 in parts. In the first
+second after they all take up something new at once, 4 to 8 ms a frame, and no frame over 12.
+
+Still open here:
+- The wrist and the ankle are still pins, and so are the shoulder and the hip, under the trunk
+- Each part and each limb is put on a whole pixel by itself: where a hand hangs from an arm
+  the two can be a pixel apart
+- A drawing whose limb is not drawn in one line would have to be laid out again to bend
+- The cost has not been measured in the game itself, with the map under it, nor on a slower
+  machine
+
+### P43 — Movement with weight and bounce (needs P42) — planned
+Answered with P42: "Muy cartoon".
+
+- Clips go from one key to the next in a curve, where they went in straight lines
+- A key can say when in the clip it comes (`at`), to hold an anticipation and let the blow go
+  fast, and a clip can be one that is done once and does not come round again (`once`)
+- **Springs** (`skeleton/motion.py`): every bone is drawn towards where its clip has it, loosely
+  enough to arrive late and go past. Hands, forearms and the head are the loosest. Going from
+  one clip to another is no longer a jump, and gives the body a squash and a bounce
+- One way of posing a doll for the map, the inside of a building, the editor and the pick of
+  a manner, which each do it by themselves today
+- The trunk and the head are squashed and stretched, wider for being shorter
+- Walking, working, arguing, eating, carrying and every manner of fighting written again from
+  the side: the body sinks and rises, the trunk leans and turns against the legs, shoulders
+  and hips move, a foot rolls, a leg stretches as it pushes off
+
+### P44 — Life at rest (needs P43) — planned
+Answered with P42: "Además, gestos sueltos".
+
+- Breathing, over whatever else the body is doing, each to a beat of their own
+- Standing with nothing to do, the weight goes slowly from one leg to the other
+- Now and then one of a few gestures, by the stage's own chance and never the simulation's:
+  a look to each side, a scratch, a stretch, a shrug. Only for whoever has nothing in hand
+- Which clips these are, and how often, is data (`life` in `data/skeleton.json`)
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.
