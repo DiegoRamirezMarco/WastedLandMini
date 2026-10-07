@@ -9,6 +9,8 @@ from simulation.events.decision import DecisionDefinition, decision_definition_f
 from simulation.events.world_event import RAID, STRANGER, WorldEventSettings, world_event_settings_from_data
 from simulation.family.settings import FamilySettings, family_settings_from_data
 from simulation.politics.government import LEANINGS, PoliticsSettings, politics_settings_from_data
+from simulation.politics.law import LawSettings, law_settings_from_data
+from simulation.politics.proposal import ENACT_LAW, REPEAL_LAW, ProposalSettings, proposal_settings_from_data
 from simulation.health.injury import (
     InjuryDefinition,
     LimbDefinition,
@@ -165,6 +167,9 @@ class BuiltInRegistries:
     # How time tells on people, and how families come about.
     family: FamilySettings = field(default_factory=FamilySettings)
     politics: PoliticsSettings = field(default_factory=PoliticsSettings)
+    # The laws there are to pass, and how a settlement decides what is put to it.
+    laws: LawSettings = field(default_factory=LawSettings)
+    proposals: ProposalSettings = field(default_factory=ProposalSettings)
     # How substances work in general. What each one does is in its own item.
     substances: SubstanceSettings = field(default_factory=SubstanceSettings)
     # The ways there are of walking, eating and fighting, for each resident to have their own.
@@ -264,6 +269,12 @@ class BuiltInRegistries:
         governments_path = root / "governments.json"
         if governments_path.is_file():
             registries.politics = politics_settings_from_data(_read_object(governments_path))
+        laws_path = root / "laws.json"
+        if laws_path.is_file():
+            registries.laws = law_settings_from_data(_read_object(laws_path))
+        proposals_path = root / "proposals.json"
+        if proposals_path.is_file():
+            registries.proposals = proposal_settings_from_data(_read_object(proposals_path))
         substances_path = root / "substances.json"
         if substances_path.is_file():
             registries.substances = substance_settings_from_data(_read_object(substances_path))
@@ -358,6 +369,17 @@ class BuiltInRegistries:
             for outcome in decision.outcomes.values():
                 if outcome.interaction is not None and outcome.interaction not in self.interactions:
                     raise ValueError(f"Decision {kind} uses unknown interaction: {outcome.interaction}")
+        for law_id, law in self.laws.laws.items():
+            named = [law.needs_kind] if law.needs_kind is not None else []
+            for degree in law.degrees:
+                named += [*degree.effects.get("closes", ()), *degree.effects.get("dark", ())]
+                if "requires" in degree.effects:
+                    named.append(degree.effects["requires"]["kind"])
+            unknown = sorted({kind for kind in named if self.interactables.find(kind) is None})
+            if unknown:
+                raise ValueError(f"Law {law_id} names kinds of object that are not defined: {unknown}")
+        if self.laws.laws and not {ENACT_LAW, REPEAL_LAW} <= self.proposals.kinds.keys():
+            raise ValueError("There are laws and no way of proposing one, or of doing away with one")
         if self.substances.overdose_kind not in self.injuries and self.injuries:
             raise ValueError(f"Too much of a substance leaves an unknown kind of injury: {self.substances.overdose_kind}")
         for job_id, job in self.jobs.items():

@@ -7,6 +7,11 @@ MOVE_TILES_PER_MINUTE = 2
 WANDER_ACTION = "wander"
 # Waiting under a roof for bad weather to pass.
 SHELTER_ACTION = "shelter"
+# Getting indoors because a law says so, being where a law says everybody is to be, and
+# walking out of the settlement for good.
+RETIRE_ACTION = "retire"
+ATTEND_ACTION = "attend"
+LEAVE_ACTION = "leave"
 
 
 @dataclass

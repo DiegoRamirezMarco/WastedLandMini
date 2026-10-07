@@ -36,6 +36,7 @@ WORK_EVENT_IMPORTANCE = 5
 # Time spent loading or unloading at the end of a haul.
 HAUL_MINUTES = 2
 MINUTES_PER_DAY = 24 * 60
+SHORTEST_SHIFT = 60
 # How far ahead someone who keeps watch stays up for what they know is coming, and how long after.
 WATCH_AHEAD_MINUTES = 8 * 60
 WATCH_AFTER_MINUTES = 60
@@ -43,16 +44,24 @@ WATCH_NOTICE = "watch:"
 LOW_MOOD_WORK_FLOOR = 0.75
 
 
-def minutes_left_in_shift(job: JobDefinition, hour: int, minute: int) -> int:
-    """Minutes until the current shift ends, or 0 outside every shift. Shifts may wrap past midnight."""
+def minutes_left_in_shift(job: JobDefinition, hour: int, minute: int, longer: int = 0) -> int:
+    """Minutes until the current shift ends, or 0 outside every shift. Shifts may wrap past midnight.
+
+    `longer` is how many minutes the working day goes on beyond its hours, or stops short of
+    them if it is less than none: it is the last shift of the day that is longer or shorter
+    for it, and never shorter than an hour.
+    """
     now = hour * 60 + minute
-    for start, end in job.shifts:
-        begins, ends = start * 60, end * 60
-        if begins <= ends:
-            if begins <= now < ends:
-                return ends - now
-        elif now >= begins or now < ends:
-            return (ends - now) % MINUTES_PER_DAY
+    last = len(job.shifts) - 1
+    for index, (start, end) in enumerate(job.shifts):
+        length = (end - start) % 24 * 60
+        if length <= 0:
+            continue
+        if longer and index == last:
+            length = max(SHORTEST_SHIFT, min(MINUTES_PER_DAY, length + longer))
+        since = (now - start * 60) % MINUTES_PER_DAY
+        if since < length:
+            return length - since
     return 0
 
 
@@ -87,7 +96,10 @@ class WorkSystem:
         return job.sight_bonus if job is not None and self.on_duty(world, resident) else 0
 
     def is_day_off(self, world: "SimulationWorld", resident: Resident) -> bool:
-        """Whether today is the day of the week this resident does not work."""
+        """Whether today is a day this resident does not work: their own day of the week, or
+        one the law gives everybody."""
+        if world.politics.laws.day_off(world, resident):
+            return True
         if resident.day_off is None:
             return False
         return (world.clock.day - 1) % world.registries.economy.week_days == resident.day_off
@@ -98,7 +110,12 @@ class WorkSystem:
         Someone whose job is to keep watch, and who knows what they watch for is on its way, is on
         duty until it has come and gone, shift or no shift.
         """
-        shift = 0 if self.is_day_off(world, resident) else minutes_left_in_shift(job, world.clock.hour, world.clock.minute)
+        longer = world.politics.laws.shift_minutes(world)
+        shift = (
+            0
+            if self.is_day_off(world, resident)
+            else minutes_left_in_shift(job, world.clock.hour, world.clock.minute, longer)
+        )
         if job.watch_for is None:
             return shift
         coming = world.happenings.expected(world, resident, job.watch_for, within=WATCH_AHEAD_MINUTES)
@@ -128,6 +145,10 @@ class WorkSystem:
         if world.activities.urgent_needs(world, resident, pressing):
             return None
         if not world.health.is_fit_for_work(resident):
+            return None
+        if world.politics.laws.excused(world, resident):
+            # The law has them rest, and nobody is held to have stopped working for it.
+            resident.last_worked = world.clock.total_minutes
             return None
         if job.outdoors and world.happenings.is_stormy(world):
             # Work in the open waits for the weather, and so does whoever does it.

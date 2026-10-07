@@ -216,6 +216,9 @@ class WorldEventSystem:
             if each in world.kinship or each in world.registries.family.people
         )
         inputs = {"kin": 1.0 if kin else 0.0, "room": 1.0 if self._free_beds(world) >= len(world.gate_party) else 0.0}
+        if world.politics.laws.gate_shut(world, keeper):
+            # A law says nobody comes in, and whoever answers keeps it.
+            inputs["law"] = 1.0
         kind = PAIR_DECISION if together else STRANGER_DECISION
         if world.interventions.ask(world, keeper, kind, inputs=inputs) is None:
             world.at_the_gate, world.gate_party = None, []
@@ -330,6 +333,8 @@ class WorldEventSystem:
             resident = self._settle_one(world, newcomer, admit=newcomer in wanted and room)
             if resident is not None:
                 admitted.append(resident)
+        if admitted and keeper is not None and keeper.resident_id in world.residents:
+            world.politics.laws.gate_opened(world, keeper)
         for newcomer in waiting:
             if len(admitted) == 1 and newcomer.newcomer_id != admitted[0].resident_id:
                 world.family.parted_at_gate(world, admitted[0], newcomer.newcomer_id, newcomer.name, keeper)

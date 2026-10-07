@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 30 (current)
+## Version 31 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `30` |
+| `version` | `31` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -20,6 +20,10 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `merchant` | Whoever has stopped by to trade, or `null`: `event_id`, `leaves_at`, `goods` (units per item ID), `purse` and `fact_id` (the fact of their being there) |
 | `debts` | What residents have lent one another and not had back: `debtor_id`, `creditor_id`, `amount`, `since` (the day) and `overdue` |
 | `at_gate` | Units of what was bought for the settlement that wait at the gate to be carried in, per item ID |
+| `government` | The government the settlement has: `kind`, `leader`, `council`, the seven `measures`, `chosen_on`, `term_began`, `choosing_until`, `proposed`, `election_at`, `vacant_since`, `heir`, `resigned`; `laws` (per law ID: `degree`, `params`, `since`, `by`, `pushed`); `meals` (per resident ID, `[day, times]` eaten out of the commons); `proposals` waiting, per ID, and those `decided`, oldest first (each with `kind`, `by`, `sponsor`, `law`, `degree`, `target`, `government`, `params`, `text`, `raised_at`, `decides_at`, `lobbied`, `pushed`, `status`, `decided_at`, `passed_degree`, `ballots` and `open_ballot`); `proposal_count`, `refused` (per matter, the day from which it may be put again) and `raised_on` (day per resident); `elections` (each with `day`, `at`, `seat`, `way`, `candidates`, the `tally` given out, `winner`, who each voter `backed`, `open_ballot`, `rigged_by` and `claimed_by`); `recall`, `rigged_by`, `rig_asked` and `backing` for the vote that has been called |
+| `political_profiles` | Per resident ID, the seven leanings and `loyalty`, `trust`, `fear` and `resentment` |
+| `player_standing` | Per resident ID, what the player is to them: `trust` and `resistance` |
+| `leaving`, `exiled` | Per resident ID, the game minute by which somebody thrown out is gone; and everyone thrown out, oldest first: `resident_id`, `name`, `at` and `why` |
 | `map_id` | ID of the map in `data/maps/` |
 | `terrain`, `rooms` | The live terrain grid and stable room records after changes made in Urbanismo |
 | `urbanism` | Stable placement counters and the terrain kept below constructed buildings, so they can be moved or removed later |
@@ -68,6 +72,12 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 31** added, inside `government`, `laws`, `meals`, `proposals`, `decided`,
+  `proposal_count`, `refused`, `raised_on`, `elections`, `recall`, `rigged_by`, `rig_asked` and
+  `backing`; and `player_standing`, `leaving` and `exiled`. In an older save there are no laws,
+  nothing waits to be decided, no vote is on record, nobody has been thrown out, and the
+  player is in the middle for trust with everybody. A law or a kind of proposal that is no
+  longer defined is dropped, and so is somebody on their way out who is no longer there.
 - **Version 30** added `charisma` and `leadership` among the sides of a personality; a resident's
   `roles`; `government` (its `kind`, `leader`, `council`, the seven `measures`, `chosen_on`,
   `term_began`, `choosing_until` and what was `proposed` while a kind is being chosen,

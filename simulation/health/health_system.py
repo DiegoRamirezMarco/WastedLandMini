@@ -269,33 +269,45 @@ class HealthSystem:
         resident.lost_limbs.append(limb.limb_id)
         return limb
 
-    def die(self, world: "SimulationWorld", resident: Resident, cause: str, killer: Resident | None = None) -> None:
-        """Remove a resident from the living and deal with everything they leave behind."""
-        dead_id, tile, away = resident.resident_id, resident.tile, resident.away
-        room = world.room_at(tile)
-        del world.residents[dead_id]
+    def leave_behind(self, world: "SimulationWorld", resident: Resident, takes_own: bool = False) -> None:
+        """Take a resident out of the settlement for good, and deal with everything they leave
+        behind: whoever was with them, what was theirs to decide, and what they owned.
+
+        With `takes_own` what they carry of their own goes with them, as with somebody who
+        walks out. Otherwise it is put away nearby, as with somebody who has died.
+        """
+        gone_id, tile = resident.resident_id, resident.tile
+        del world.residents[gone_id]
         resident.activity = None
 
         for other in world.residents.values():
-            if other.activity is not None and other.activity.partner_id == dead_id:
+            if other.activity is not None and other.activity.partner_id == gone_id:
                 other.activity = None
                 other.current_action = "idle"
-            if other.couple_with == dead_id:
+            if other.couple_with == gone_id:
                 other.couple_with = None
         for decision in list(world.decisions.values()):
-            if decision.resident_id == dead_id or (decision.crisis and decision.crisis.target_id == dead_id):
+            if decision.resident_id == gone_id or (decision.crisis and decision.crisis.target_id == gone_id):
                 del world.decisions[decision.decision_id]
         # What they owned now belongs to everyone; what they carried is put away nearby.
         for inventory in [*world.containers.values(), *(other.inventory for other in world.residents.values())]:
             for item in inventory.items:
-                if item.owner_id == dead_id:
+                if item.owner_id == gone_id:
                     item.owner_id = None
         nearest = world.nearest_container(tile)
         for item in resident.inventory.items:
-            item.owner_id = None if item.owner_id == dead_id else item.owner_id
+            if takes_own and item.owner_id == gone_id and item.meant_for is None:
+                continue
+            item.owner_id = None if item.owner_id == gone_id else item.owner_id
             if nearest is not None:
                 world.containers[nearest].add(item)
         resident.inventory.items.clear()
+
+    def die(self, world: "SimulationWorld", resident: Resident, cause: str, killer: Resident | None = None) -> None:
+        """Remove a resident from the living and deal with everything they leave behind."""
+        dead_id, tile, away = resident.resident_id, resident.tile, resident.away
+        room = world.room_at(tile)
+        self.leave_behind(world, resident)
 
         grave_id = self._dig_grave(world, dead_id)
         world.deaths.append(

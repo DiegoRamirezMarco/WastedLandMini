@@ -1,4 +1,5 @@
 import json
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,19 @@ from simulation.residents.needs import Needs
 from simulation.politics.government import MEASURES
 from simulation.politics.political_event import PoliticalEvent
 from simulation.politics.profile import PoliticalProfile
+from simulation.politics.records import (
+    LEADER_SEAT,
+    PENDING,
+    PLAYER,
+    STATUSES,
+    VOTES,
+    Ballot,
+    ElectionRecord,
+    Exile,
+    LawInForce,
+    PlayerStanding,
+    Proposal,
+)
 from simulation.residents.personality import Personality
 from simulation.residents.resident import FACINGS, Resident
 from simulation.rng import SimulationRNG
@@ -99,6 +113,11 @@ FIRST_FAMILY_VERSION = 29
 # Version 30 added charisma and leadership, the roles a resident holds, the government the
 # settlement has and what each resident holds about it. In a save from before everyone is in
 # the middle for both, nobody holds a role and there is no government yet: one is chosen.
+# Version 31 added the laws in force, how many times each resident has eaten out of the commons
+# today, proposals waiting and decided, the votes for a seat there have been, what the player
+# is to each resident, and whoever has been thrown out. In a save from before there are no
+# laws, nothing is waiting, nobody has been thrown out, and the player is in the middle for
+# trust with everybody.
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 28
@@ -117,7 +136,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 30
+    CURRENT_VERSION = 31
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -163,10 +182,15 @@ class SaveManager:
             "newcomers_seen": list(world.newcomers_seen),
             "gate_party": list(world.gate_party),
             "kinship": {person_id: vars(kin) for person_id, kin in world.kinship.items()},
-            "government": {**vars(world.government), "measures": dict(world.government.measures)},
+            "government": asdict(world.government),
             "political_profiles": {
                 resident_id: vars(profile) for resident_id, profile in world.political_profiles.items()
             },
+            "player_standing": {
+                resident_id: vars(standing) for resident_id, standing in world.player_standing.items()
+            },
+            "leaving": dict(world.leaving),
+            "exiled": [vars(exile) for exile in world.exiled],
             "bundles": [
                 {**{key: value for key, value in vars(bundle).items() if key != "personality"}, "personality": vars(bundle.personality)}
                 for bundle in world.bundles.values()
@@ -575,6 +599,76 @@ class SaveManager:
                 world.political_profiles[str(resident_id)] = PoliticalProfile(
                     **{name: float(values.get(name, default)) for name, default in held.items()}
                 )
+        # A law that is no longer defined is no longer in force.
+        state.laws = {
+            str(law_id): LawInForce(
+                law_id=str(law_id),
+                degree=max(0, int(law.get("degree", 0))),
+                params={str(key): str(value) for key, value in _object_or_empty(law.get("params")).items()},
+                since=int(law.get("since", 0)),
+                by=_text_or_none(law.get("by")),
+                pushed=bool(law.get("pushed", False)),
+            )
+            for law_id, law in _object_or_empty(saved.get("laws")).items()
+            if isinstance(law, dict) and law_id in world.registries.laws.laws
+        }
+        state.meals = {
+            str(resident_id): [int(eaten[0]), int(eaten[1])]
+            for resident_id, eaten in _object_or_empty(saved.get("meals")).items()
+            if isinstance(eaten, list) and len(eaten) == 2
+        }
+        kinds = world.registries.proposals.kinds
+        # A proposal of a kind that is no longer defined cannot be decided, and is forgotten.
+        waiting = [
+            _proposal_from_data(proposal)
+            for proposal in _object_or_empty(saved.get("proposals")).values()
+            if isinstance(proposal, dict) and proposal.get("kind") in kinds
+        ]
+        state.proposals = {proposal.proposal_id: proposal for proposal in waiting if proposal.status == PENDING}
+        state.decided = [
+            _proposal_from_data(proposal)
+            for proposal in _list_or_empty(saved.get("decided"))
+            if isinstance(proposal, dict) and proposal.get("kind") in kinds
+        ]
+        state.proposal_count = max(0, int(saved.get("proposal_count", 0)))
+        state.refused = {str(matter): int(day) for matter, day in _object_or_empty(saved.get("refused")).items()}
+        state.raised_on = {
+            str(resident_id): int(day) for resident_id, day in _object_or_empty(saved.get("raised_on")).items()
+        }
+        state.elections = [
+            _election_from_data(election)
+            for election in _list_or_empty(saved.get("elections"))
+            if isinstance(election, dict)
+        ]
+        state.recall = bool(saved.get("recall", False))
+        state.rigged_by = _text_or_none(saved.get("rigged_by"))
+        state.rig_asked = bool(saved.get("rig_asked", False))
+        state.backing = {
+            str(resident_id): [str(spoken[0]), float(spoken[1])]
+            for resident_id, spoken in _object_or_empty(saved.get("backing")).items()
+            if isinstance(spoken, list) and len(spoken) == 2
+        }
+        for resident_id, values in _object_or_empty(data.get("player_standing")).items():
+            if isinstance(values, dict):
+                world.player_standing[str(resident_id)] = PlayerStanding(
+                    trust=float(values.get("trust", 50.0)), resistance=float(values.get("resistance", 0.0))
+                )
+        # Only somebody who is still here can be on their way out.
+        world.leaving = {
+            str(resident_id): int(by)
+            for resident_id, by in _object_or_empty(data.get("leaving")).items()
+            if resident_id in world.residents
+        }
+        world.exiled = [
+            Exile(
+                resident_id=str(exile.get("resident_id", "")),
+                name=str(exile.get("name", "")),
+                at=int(exile.get("at", 0)),
+                why=str(exile.get("why", "")),
+            )
+            for exile in _list_or_empty(data.get("exiled"))
+            if isinstance(exile, dict)
+        ]
 
     def _restore_kin(self, world: SimulationWorld, data: dict[str, Any], version: int) -> None:
         """Put back who is kin to whom. In a save from before, nobody is, and everyone is who
@@ -1240,6 +1334,58 @@ def _event_from_data(data: dict[str, Any]) -> DomainEvent:
         # A political event says under which government it happened, and stays one.
         return PoliticalEvent(**vars(event), government=_text_or_none(data.get("government")))
     return event
+
+
+def _proposal_from_data(data: dict[str, Any]) -> Proposal:
+    status = str(data.get("status", PENDING))
+    passed = data.get("passed_degree")
+    decided = data.get("decided_at")
+    return Proposal(
+        proposal_id=str(data.get("proposal_id", "")),
+        kind=str(data["kind"]),
+        by=str(data.get("by", PLAYER)),
+        sponsor=_text_or_none(data.get("sponsor")),
+        law=_text_or_none(data.get("law")),
+        degree=max(0, int(data.get("degree", 0))),
+        target=_text_or_none(data.get("target")),
+        government=_text_or_none(data.get("government")),
+        params={str(key): str(value) for key, value in _object_or_empty(data.get("params")).items()},
+        text=str(data.get("text", "")),
+        raised_at=int(data.get("raised_at", 0)),
+        decides_at=int(data.get("decides_at", 0)),
+        lobbied={str(key): float(value) for key, value in _object_or_empty(data.get("lobbied")).items()},
+        pushed=bool(data.get("pushed", False)),
+        status=status if status in STATUSES else PENDING,
+        decided_at=int(decided) if decided is not None else None,
+        passed_degree=int(passed) if passed is not None else None,
+        ballots=[
+            Ballot(
+                voter=str(ballot.get("voter", "")),
+                vote=str(ballot.get("vote", "")),
+                score=float(ballot.get("score", 0.0)),
+                reasons=[str(reason) for reason in _list_or_empty(ballot.get("reasons"))],
+            )
+            for ballot in _list_or_empty(data.get("ballots"))
+            if isinstance(ballot, dict) and ballot.get("vote") in VOTES
+        ],
+        open_ballot=bool(data.get("open_ballot", True)),
+    )
+
+
+def _election_from_data(data: dict[str, Any]) -> ElectionRecord:
+    return ElectionRecord(
+        day=int(data.get("day", 0)),
+        at=int(data.get("at", 0)),
+        seat=str(data.get("seat", LEADER_SEAT)),
+        way=str(data.get("way", "election")),
+        candidates=[str(candidate) for candidate in _list_or_empty(data.get("candidates"))],
+        tally={str(candidate): int(votes) for candidate, votes in _object_or_empty(data.get("tally")).items()},
+        winner=_text_or_none(data.get("winner")),
+        backed={str(voter): str(candidate) for voter, candidate in _object_or_empty(data.get("backed")).items()},
+        open_ballot=bool(data.get("open_ballot", True)),
+        rigged_by=_text_or_none(data.get("rigged_by")),
+        claimed_by=[str(loser) for loser in _list_or_empty(data.get("claimed_by"))],
+    )
 
 
 def _memory_from_data(data: dict[str, Any]) -> Memory:

@@ -87,6 +87,23 @@ class CommandTarget(Protocol):
     def propose_government(self, government_id: str) -> PoliticsResult:
         ...
 
+    def propose(
+        self,
+        kind: str,
+        law: str | None = None,
+        degree: int | None = None,
+        target: str | None = None,
+        government: str | None = None,
+        params: Mapping[str, str] | None = None,
+    ) -> PoliticsResult:
+        ...
+
+    def lobby(self, proposal_id: str, resident_id: str, stance: str) -> PoliticsResult:
+        ...
+
+    def back_candidate(self, resident_id: str, candidate_id: str) -> PoliticsResult:
+        ...
+
     def set_manner(self, resident_id: str, kind_id: str, manner_id: str) -> bool:
         ...
 
@@ -268,6 +285,8 @@ class ProposeCurrencyCommand:
 
     It is the residents who settle it, each for themselves, with the advice it is put with. If
     more are for it than against, prices, wages and the fund are counted in it from then on.
+    Where there is a government it is decided as anything is: it becomes a proposal, and the
+    result says whether one was laid before those who decide.
     """
 
     name: str
@@ -299,6 +318,62 @@ class ProposeGovernmentCommand:
 
     def apply(self, world: CommandTarget) -> PoliticsResult:
         return world.propose_government(self.government_id)
+
+
+@dataclass(frozen=True)
+class ProposeCommand:
+    """Something the player puts to the settlement: a law, doing away with one, a vote for who
+    leads, another kind of government, throwing somebody out, or another way of trading.
+
+    Somebody who may propose under the government in force has to make it theirs, and then
+    those who decide, decide. Nothing of it is done unless it passes. The result says whether
+    it was laid before them, and its `detail` is the ID of the proposal.
+    """
+
+    # One of the kinds in `data/proposals.json`.
+    kind: str
+    # The law it is about and how far it goes, counted from 0 for the mildest. Left out, a law
+    # is proposed at the middle of how far it can go.
+    law: str | None = None
+    degree: int | None = None
+    # The resident it is about, and the kind of government.
+    target: str | None = None
+    government: str | None = None
+    # What else it names: the `item` a law is to ban, the `name` and `singular` of a currency.
+    params: Mapping[str, str] = field(default_factory=dict)
+
+    def apply(self, world: CommandTarget) -> PoliticsResult:
+        return world.propose(self.kind, self.law, self.degree, self.target, self.government, self.params)
+
+
+@dataclass(frozen=True)
+class LobbyCommand:
+    """The player speaks to one of those who will decide a proposal, for it or against it.
+
+    Once for each resident and proposal. They vote as they see fit: the result's `detail` says
+    whether they went along (`taken`), came half way (`softened`), took no notice (`ignored`)
+    or did the opposite (`contrary`).
+    """
+
+    proposal_id: str
+    resident_id: str
+    # `for` or `against`.
+    stance: str = "for"
+
+    def apply(self, world: CommandTarget) -> PoliticsResult:
+        return world.lobby(self.proposal_id, self.resident_id, self.stance)
+
+
+@dataclass(frozen=True)
+class BackCandidateCommand:
+    """The player speaks to a resident for one of those who stand in the vote that has been
+    called. Once for each resident and vote, and they vote as they see fit."""
+
+    resident_id: str
+    candidate_id: str
+
+    def apply(self, world: CommandTarget) -> PoliticsResult:
+        return world.back_candidate(self.resident_id, self.candidate_id)
 
 
 @dataclass(frozen=True)

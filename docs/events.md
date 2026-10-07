@@ -88,13 +88,27 @@ Event types emitted so far:
 | `government_proposed` | The player puts one kind to everyone, with `government` in `data` | 40 |
 | `government_chosen` | The residents settle on a kind, with `government` and how many `wanted` each in `data` | 75 |
 | `government_changed` | A settlement that had one kind of government takes another, with `from` and `to` in `data` | 75 |
-| `leader_chosen` | Somebody comes to lead, with their `role`, the `way` and their `backers` in `data` | 65 |
+| `leader_chosen` | Somebody comes to lead, with their `role`, the `way` and, after a show of hands, their `backers` in `data` | 65 |
 | `council_seated` | Seats on the council are filled, with the `role` and the whole `council` in `data` | 55 |
 | `leader_lost` | Whoever led is dead or gone, with `resident_id`, `role` and `died` in `data` | 75 |
 | `resign_stirring` | A leader wonders whether to step down, and waits for advice | 60 |
 | `leader_resigned`, `council_seat_left` | Somebody steps down from leading, or from the council, with the `role` in `data` | 65 |
 | `leader_seat_empty` | Nobody can be found for the leader's seat | 60 |
-| `election_called`, `election_held` | A vote for a seat is called, with when it is held (`at`), and held, with the `winner`, their `backers` and whether they `kept` the seat | 50, 60 |
+| `election_called`, `election_held` | A vote for a seat is called, with when it is held (`at`), and held, with the `winner`, whether they `kept` the seat, the `tally` as given out, whether it was `open`, and their `backers` after a show of hands | 50, 60 |
+| `proposal_raised` | Something is laid before those who decide, with `proposal`, `kind`, `by` (a resident, or `@player`), the `sponsor` who made it theirs, what it is about, `decides_at` and the `deciders` in `data` | 55 |
+| `proposal_dropped` | Nobody who may propose makes it theirs, or it no longer makes sense when its time comes | 40 |
+| `proposal_lobbied` | The player speaks to one of those who decide, with the `stance` and how they `took` it in `data` | 30 |
+| `vote_held` | More than one decide a proposal, with how many said `yes`, `no` and neither (`abstain`), whether it was `open`, and after a show of hands each one's vote (`ballots`) in `data` | 55 |
+| `proposal_accepted`, `proposal_changed`, `proposal_rejected`, `proposal_vetoed` | How it came out, with `proposal`, `kind`, `status`, `by`, the `degree` it passed at and what it was about in `data` | 65 |
+| `law_enacted`, `law_repealed` | A law comes into force, with `law`, `degree`, `params` and `by` in `data`, or stops being one | 60, 50 |
+| `law_broken` | A resident is seen to break a law, with `law` and `resident_id` in `data`. At most once a day for each resident and law | 35 |
+| `saluted` | A resident greets whoever leads, as a law has it | 8 |
+| `resident_expelled` | A resident is thrown out, with `resident_id` and `by` in `data`, and sets off for the gate | 80 |
+| `resident_left` | They go through it for good, with `resident_id` and the `tile` in `data` | 70 |
+| `rigging_stirring` | A leader about to lose a secret vote wonders whether to see to the count, and waits for advice | 65 |
+| `election_rigged` | They do. Only whoever sees them knows | 70 |
+| `fraud_claimed` | A loser says there was cheating, with the `winner` and whether the vote was `rigged` in `data` | 60 |
+| `candidate_backed` | The player speaks to a resident for a candidate, with `candidate` and how they `took` it in `data` | 30 |
 | `kin_together` | Two close kin are a couple, or go off alone together: once for the two of them, with nobody knowing of it but whoever sees them | 60 |
 | `family_parted` | One of two who came to the gate together is let in and the other is not, with `left` in `data` | 60 |
 | `friendship_changed` | What one resident feels for another grows into a friendship, or out of it | 25 |

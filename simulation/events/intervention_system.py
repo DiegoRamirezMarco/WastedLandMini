@@ -13,6 +13,7 @@ from simulation.events.crisis import Crisis
 from simulation.events.decision import Decision, DecisionDefinition, DecisionOption, OutcomeDefinition
 from simulation.events.event import DomainEvent
 from simulation.family.children import TAKE_IN
+from simulation.politics.election import RIG
 from simulation.politics.leadership import RESIGN
 from simulation.memory.memory import Memory
 from simulation.residents.activity import Activity
@@ -100,6 +101,9 @@ def score_inputs(world: "SimulationWorld", resident: Resident, target: Resident 
         "kin": 0.0,
         "room": 0.0,
         "support": 0.5,
+        "law": 0.0,
+        "scruples": 0.5,
+        "losing": 0.0,
     }
     if target is not None:
         feelings = world.relationship(resident.resident_id, target.resident_id)
@@ -431,8 +435,10 @@ class InterventionSystem:
         inputs.update(decision.inputs)
         heed = advice_influence(resident, ADVICE_STRENGTH)
         if option is not None:
-            # Some cannot stand being told what to do, and some would rather be.
-            heed *= world.tastes.heed(world, resident)
+            # Some cannot stand being told what to do, and some would rather be. And what the
+            # player is to them counts: whoever trusts them heeds them more, whoever has been
+            # pushed too much, less.
+            heed *= world.tastes.heed(world, resident) * world.politics.influence.factor(world, resident)
         scores: dict[str, float] = {}
         for outcome_id, outcome in definition.outcomes.items():
             score = sum(weight * inputs[name] for name, weight in outcome.score.items())
@@ -535,6 +541,8 @@ class InterventionSystem:
             world.children.decided(world, resident, chosen.agrees)
         if decision.kind == RESIGN and chosen.agrees:
             world.politics.leadership.resign(world, resident)
+        if decision.kind == RIG and chosen.agrees:
+            world.politics.elections.rig(world, resident)
         return chosen.outcome_id
 
     def _grievance_target(self, world: "SimulationWorld", resident: Resident) -> Resident | None:

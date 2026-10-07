@@ -43,8 +43,12 @@ class StaffingSystem:
         return max(job.needed, math.ceil(len(world.residents) / job.per_residents))
 
     def is_short(self, world: "SimulationWorld", job: JobDefinition) -> bool:
-        """Whether a job has fewer people than it takes and a post standing free for another."""
-        return len(self.workers(world, job.job_id)) < self.needed(world, job) and self.free_post(world, job) is not None
+        """Whether a job has fewer people than it takes and a post standing free for another.
+        Whoever a law has resting does not count: somebody has to see to what they did."""
+        at_it = [
+            resident for resident in self.workers(world, job.job_id) if not world.politics.laws.excused(world, resident)
+        ]
+        return len(at_it) < self.needed(world, job) and self.free_post(world, job) is not None
 
     def assign(self, world: "SimulationWorld", resident: Resident, job_id: str) -> bool:
         """Give a resident a job and a free post for it, in place of any they had. False if there is none."""

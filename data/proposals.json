@@ -1,0 +1,144 @@
+{
+  "debate_hours": 12,
+  "leader_hours": 6,
+  "pending_limit": 3,
+  "again_days": 7,
+  "undo_days": 2,
+  "rest_days": 5,
+  "sore_days": 28,
+  "raise_from": 0.3,
+  "repeal_from": -0.5,
+  "margin": 0.12,
+  "history": 40,
+  "weights": {
+    "proposer": 0.4,
+    "player": 0.5,
+    "loyalty": 0.5,
+    "grudge": 0.5,
+    "fear": 0.7,
+    "memory": 0.4,
+    "evidence": 0.5,
+    "softened": 0.5
+  },
+  "target": {
+    "affection": -1.0,
+    "trust": -0.4,
+    "resentment": 1.2,
+    "fear": 0.4,
+    "kin": -1.5,
+    "couple": -2.0,
+    "self": -5.0
+  },
+  "misdeeds": [
+    "theft_committed",
+    "fight_started",
+    "death",
+    "election_rigged"
+  ],
+  "influence": {
+    "lobby": 0.4,
+    "against": 12,
+    "defiance": 60,
+    "contrary": 0.3,
+    "resistance_fade": 0.05,
+    "outcome": 12,
+    "backing": 14
+  },
+  "aftermath": {
+    "voted_out_resentment": 20,
+    "voted_out_trust": -15,
+    "close_resentment": 10,
+    "refused_resentment": 4,
+    "ignored_legitimacy": -3,
+    "veto_legitimacy": -5,
+    "veto_authoritarianism": 4,
+    "heard_legitimacy": 1,
+    "unheard_resentment": 2
+  },
+  "kinds": {
+    "enact_law": {
+      "name": "una ley nueva",
+      "text": "{described}"
+    },
+    "repeal_law": {
+      "name": "quitar una ley",
+      "text": "que deje de regir la ley «{law}»"
+    },
+    "call_election": {
+      "name": "una elección",
+      "text": "votar ya quién manda",
+      "opinion": {
+        "loyalty": -0.9,
+        "trust": -0.4,
+        "resentment": 0.6,
+        "political_interest": 0.3,
+        "leads": -1.5,
+        "governs": -0.3
+      },
+      "bias": -0.15,
+      "motive": {
+        "loyalty_below": 20,
+        "trust_below": 40,
+        "days_since_vote": 14
+      }
+    },
+    "change_government": {
+      "name": "otra manera de gobernarse",
+      "text": "gobernarse de otra manera: {government}",
+      "opinion": {
+        "appeal": 1.0,
+        "trust": -0.4,
+        "resentment": 0.4,
+        "governs": -0.6
+      },
+      "bias": -0.2,
+      "motive": {
+        "appeal_above": 0.5,
+        "trust_below": 30,
+        "days_since_chosen": 28
+      }
+    },
+    "expel": {
+      "name": "una expulsión",
+      "text": "echar a {target} del asentamiento",
+      "opinion": {
+        "revengefulness": 0.4,
+        "empathy": -0.4,
+        "authoritarian_tolerance": 0.2
+      },
+      "bias": -0.9,
+      "debate_hours": 24,
+      "motive": {
+        "resentment_above": 70,
+        "misdeeds": 3,
+        "days": 14
+      }
+    },
+    "adopt_currency": {
+      "name": "una moneda",
+      "text": "comerciar con {currency}",
+      "opinion": {
+        "greed": 0.3,
+        "works": 0.4,
+        "goods": -0.4,
+        "collectivism": -0.3,
+        "individualism": 0.3,
+        "idle": -0.3
+      },
+      "bias": 0.15
+    },
+    "return_to_barter": {
+      "name": "volver al trueque",
+      "text": "volver al trueque",
+      "opinion": {
+        "savings": -0.8,
+        "works": -0.3,
+        "goods": 0.4,
+        "collectivism": 0.4,
+        "poor": 0.3,
+        "greed": -0.2
+      },
+      "bias": -0.1
+    }
+  }
+}

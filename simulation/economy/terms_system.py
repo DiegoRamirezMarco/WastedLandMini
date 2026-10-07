@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from simulation.economy.terms import Currency, TradeResult, TradingState, singular_of, tidy_currency_name
 from simulation.events.event import DomainEvent
+from simulation.politics.proposal import ADOPT_CURRENCY, RETURN_TO_BARTER
 from simulation.residents.resident import Resident
 
 if TYPE_CHECKING:
@@ -66,6 +67,9 @@ class TermsSystem:
         If they take it up, prices, wages and the fund are counted in it from then on. The first
         currency a settlement takes up puts something in every pocket and in the fund. One that
         comes after another takes over what was held in the one before.
+
+        A settlement that has a government decides it as it decides anything: it becomes a
+        proposal, and the result says whether one was laid before those who decide.
         """
         trading = world.trading
         name = tidy_currency_name(name)
@@ -73,6 +77,11 @@ class TermsSystem:
             return TradeResult(False, "Una moneda tiene que llamarse de alguna manera")
         if trading.in_use and trading.currency is not None:
             return TradeResult(False, f"Ya se comercia con {trading.currency.name}")
+        if world.government.kind is not None:
+            raised = world.politics.voting.propose(
+                world, ADOPT_CURRENCY, params={"name": name, "singular": tidy_currency_name(singular or "")}
+            )
+            return TradeResult(raised.ok, raised.message)
         error = self.obstacle(world)
         if error is not None:
             return TradeResult(False, OBSTACLES[error])
@@ -82,6 +91,15 @@ class TermsSystem:
         yes, no = said
         if yes <= no:
             return self._kept(world, f"El asentamiento sigue con el trueque: {yes} por comerciar con {name}, {no} en contra")
+        return self.adopt(world, name, singular, f": {yes} a favor, {no} en contra")
+
+    def adopt(self, world: "SimulationWorld", name: str, singular: str | None = None, how: str = "") -> TradeResult:
+        """Have the settlement trade with a currency of this name from now on. `how` is what
+        there is to add about how it was settled."""
+        trading = world.trading
+        name = tidy_currency_name(name)
+        if not name:
+            return TradeResult(False, "Una moneda tiene que llamarse de alguna manera")
         first = trading.currency is None
         if first or trading.currency.name != name:
             trading.currency_count += 1
@@ -91,7 +109,12 @@ class TermsSystem:
         trading.in_use = True
         if first:
             self._issue(world)
-        return self._changed(world, f"El asentamiento empieza a comerciar con {name}: {yes} a favor, {no} en contra")
+        return self._changed(world, f"El asentamiento empieza a comerciar con {name}{how}")
+
+    def revert(self, world: "SimulationWorld", how: str = "") -> TradeResult:
+        """Have the settlement go back to barter from now on."""
+        world.trading.in_use = False
+        return self._changed(world, f"El asentamiento vuelve al trueque{how}")
 
     def propose_barter(self, world: "SimulationWorld", option_id: str | None = ADVICE) -> TradeResult:
         """Put it to the residents that they go back to barter. What anybody holds in coin counts
@@ -99,6 +122,9 @@ class TermsSystem:
         trading = world.trading
         if not trading.in_use or trading.currency is None:
             return TradeResult(False, "Ya se comercia por trueque")
+        if world.government.kind is not None:
+            raised = world.politics.voting.propose(world, RETURN_TO_BARTER)
+            return TradeResult(raised.ok, raised.message)
         error = self.obstacle(world)
         if error is not None:
             return TradeResult(False, OBSTACLES[error])
@@ -109,8 +135,7 @@ class TermsSystem:
         yes, no = said
         if yes <= no:
             return self._kept(world, f"El asentamiento sigue con {name}: {yes} por volver al trueque, {no} en contra")
-        trading.in_use = False
-        return self._changed(world, f"El asentamiento vuelve al trueque: {yes} a favor, {no} en contra")
+        return self.revert(world, f": {yes} a favor, {no} en contra")
 
     def maybe_raise(self, world: "SimulationWorld", resident: Resident) -> bool:
         """Have a resident who has had enough of how things are traded think of saying so.
@@ -131,15 +156,27 @@ class TermsSystem:
         """A resident puts it to everyone that they trade another way. Nobody is advised: each answers alone.
 
         A currency nobody has named yet goes by the plain name such a thing has, until the
-        player gives it one.
+        player gives it one. Where there is a government it is a proposal of theirs, if the
+        government lets them make one: if not, they have nobody to put it to, and hold that
+        against it.
         """
-        if what == "barter":
-            return self.propose_barter(world, None)
         economy = world.registries.economy
         made = world.trading.currency
-        if made is not None:
-            return self.propose_currency(world, made.name, made.singular, None)
-        return self.propose_currency(world, economy.credits_name, economy.credits_singular, None)
+        name = made.name if made is not None else economy.credits_name
+        singular = made.singular if made is not None else economy.credits_singular
+        if world.government.kind is not None:
+            voting = world.politics.voting
+            if what == "barter":
+                raised = voting.raise_as(world, resident, RETURN_TO_BARTER)
+            else:
+                raised = voting.raise_as(world, resident, ADOPT_CURRENCY, params={"name": name, "singular": singular})
+            if not raised.ok and not voting.may_propose(world, resident):
+                unheard = world.registries.proposals.aftermath["unheard_resentment"]
+                world.politics.legitimacy.profile(world, resident).adjust("resentment", unheard)
+            return TradeResult(raised.ok, raised.message)
+        if what == "barter":
+            return self.propose_barter(world, None)
+        return self.propose_currency(world, name, singular, None)
 
     def rename(self, world: "SimulationWorld", name: str, singular: str | None = None) -> TradeResult:
         """Give the currency the settlement has the name the player wants for it. What is held of it is the same."""

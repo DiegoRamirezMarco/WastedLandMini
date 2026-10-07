@@ -11,17 +11,20 @@ from typing import TYPE_CHECKING
 
 from simulation.ai.decision_system import advice_influence
 from simulation.memory.memory import Memory
+from simulation.politics.election import RIG
 from simulation.politics.government import (
     COUNCIL,
     ELECTION,
     FOLLOWING,
     HEIR,
+    OPEN,
     STRONGEST,
     VOTED_WAYS,
     GovernmentDefinition,
     PoliticsResult,
 )
 from simulation.politics.political_event import PoliticalEvent
+from simulation.politics.records import COUNCIL_SEAT, LEADER_SEAT
 from simulation.residents.resident import Resident
 
 if TYPE_CHECKING:
@@ -41,6 +44,8 @@ HELD_IMPORTANCE = 60
 EMPTY_IMPORTANCE = 60
 CHANGED_IMPORTANCE = 75
 OFFICE_MEMORY = 70.0
+# What somebody who has put themselves forward adds to their own name, over anybody else's.
+OWN_VOTE = 1000.0
 # Minutes a choice or a vote is put off when there is nobody about to make it.
 PUT_OFF_MINUTES = 60
 # How a leader came to the seat, for whoever tells it.
@@ -103,6 +108,11 @@ class Leadership:
         if state.election_at is not None:
             if now >= state.election_at:
                 self._hold(world, definition)
+            elif not state.rig_asked and now >= state.election_at - self._rig_minutes(world):
+                # Whoever leads has had time to see how the vote is going to go.
+                state.rig_asked = True
+                if self._term_over(world, definition) or state.recall:
+                    world.politics.elections.consider_rigging(world, definition)
         elif self._term_over(world, definition):
             self._call(world, definition, "se ha cumplido el plazo")
 
@@ -304,6 +314,12 @@ class Leadership:
                 )
             )
 
+    def standing(
+        self, world: "SimulationWorld", exclude: tuple[str, ...] | list[str] = (), at_least: int = 2
+    ) -> list[Resident]:
+        """Whoever stands in a vote for a seat: those who put themselves forward."""
+        return world.politics.elections.candidates(world, exclude, at_least)
+
     def _by_way(self, world: "SimulationWorld", way: str) -> tuple[Resident | None, set[str]]:
         """Whoever a way of succession names, and who was behind them. Nobody, if it names nobody."""
         state = world.government
@@ -311,10 +327,10 @@ class Leadership:
         if not standing:
             return None, set()
         if way == ELECTION:
-            return self.elect(world, self.present(world), standing)
+            return self.elect(world, self.present(world), self.standing(world), way=ELECTION)
         if way == COUNCIL:
             sitting = [resident for resident in self.present(world) if resident.resident_id in state.council]
-            return self.elect(world, sitting, standing)
+            return self.elect(world, sitting, self.standing(world), way=COUNCIL)
         if way == HEIR:
             heir = next((resident for resident in standing if resident.resident_id == state.heir), None)
             return heir, set()
@@ -326,10 +342,21 @@ class Leadership:
         return None, set()
 
     def elect(
-        self, world: "SimulationWorld", voters: list[Resident], standing: list[Resident]
+        self,
+        world: "SimulationWorld",
+        voters: list[Resident],
+        standing: list[Resident],
+        seat: str = LEADER_SEAT,
+        way: str = ELECTION,
+        record: bool = True,
     ) -> tuple[Resident | None, set[str]]:
         """Have each voter back whoever they would rather have, and return whoever most of
-        them back, with the IDs of those who did. Nobody without voters or anyone standing."""
+        them back, with the IDs of those who did. Nobody without voters or anyone standing.
+
+        With `record` the result is given out and kept: where whoever leads has seen to the
+        count, it is given out their way. Without it nothing is kept: it is only how a vote
+        would go.
+        """
         if not voters or not standing:
             return None, set()
         weights = world.registries.politics.ways.get(ELECTION, {})
@@ -340,6 +367,8 @@ class Leadership:
         count = Counter(backed.values())
         # Between two with as many behind them, whoever would lead better on the face of it.
         winner = max(standing, key=lambda candidate: (count[candidate.resident_id], self._merit(candidate, weights)))
+        if record:
+            winner = world.politics.elections.settle(world, seat, way, standing, backed, winner)
         return winner, {voter_id for voter_id, candidate_id in backed.items() if candidate_id == winner.resident_id}
 
     def vote_score(
@@ -348,11 +377,18 @@ class Leadership:
         """How much a voter would have a candidate lead: what they feel for them, how readily
         the candidate wins people over and how well they lead, and for whoever leads already,
         the loyalty they have earned or lost. Someone votes for themselves only if politics
-        matter enough to them."""
+        matter enough to them. What the player said to them for a candidate counts for that one."""
         if weights is None:
             weights = world.registries.politics.ways.get(ELECTION, {})
         score = self._merit(candidate, weights)
+        spoken_for = world.government.backing.get(voter.resident_id)
+        if spoken_for is not None and spoken_for[0] == candidate.resident_id:
+            score += float(spoken_for[1])
         if voter is candidate:
+            mark = weights.get("stand_from")
+            if mark is not None and world.politics.elections.will(world, voter) >= mark:
+                # Whoever wants the seat enough to put themselves forward is for themselves.
+                return score + OWN_VOTE
             interest = world.politics.legitimacy.profile(world, voter).political_interest
             return score + weights.get("self", 1.0) * (interest - weights.get("self_from", 70.0))
         feelings = world.relationships.get((voter.resident_id, candidate.resident_id))
@@ -370,7 +406,7 @@ class Leadership:
         sides = candidate.personality
         return weights.get("charisma", 0.4) * sides.charisma + weights.get("leadership", 0.3) * sides.leadership
 
-    def _felt_for(self, world: "SimulationWorld", resident: Resident, feeling: str) -> float:
+    def felt_for(self, world: "SimulationWorld", resident: Resident, feeling: str) -> float:
         """What the others who are here feel for a resident, on average."""
         others = [other for other in self.present(world) if other is not resident]
         felt = [world.relationships.get((other.resident_id, resident.resident_id)) for other in others]
@@ -383,16 +419,16 @@ class Leadership:
             + weights.get("aggression", 0.5) * sides.aggression
             + weights.get("leadership", 0.5) * sides.leadership
             + weights.get("health", 0.3) * resident.health
-            + weights.get("feared", 1.0) * self._felt_for(world, resident, "fear")
+            + weights.get("feared", 1.0) * self.felt_for(world, resident, "fear")
         )
 
     def _following(self, world: "SimulationWorld", resident: Resident, weights: dict[str, float]) -> float:
         sides = resident.personality
-        liked = self._felt_for(world, resident, "affection") + self._felt_for(world, resident, "trust")
+        liked = self.felt_for(world, resident, "affection") + self.felt_for(world, resident, "trust")
         return (
             weights.get("charisma", 1.0) * sides.charisma
             + weights.get("leadership", 0.3) * sides.leadership
-            + weights.get("liked", 0.5) * (liked - self._felt_for(world, resident, "resentment"))
+            + weights.get("liked", 0.5) * (liked - self.felt_for(world, resident, "resentment"))
         )
 
     def _name_heir(self, world: "SimulationWorld", leader: Resident) -> str | None:
@@ -435,13 +471,15 @@ class Leadership:
             resident.resident_id,
             Memory(f"Me toca mandar: soy {called}.", OFFICE_MEMORY, 0.4, [], ["politics"], world.clock.total_minutes),
         )
+        # Who was behind them is known after a show of hands, and not after a vote cast in secret.
+        shown = sorted(backers) if definition.ballot == OPEN else []
         world.emit_event(
             PoliticalEvent(
                 "leader_chosen",
                 SEATED_IMPORTANCE,
                 f"{resident.name} es {called}, {HOW.get(way, 'porque así ha salido')}",
                 [resident.resident_id],
-                data={"role": role, "way": way, "backers": sorted(backers)},
+                data={"role": role, "way": way, "backers": shown},
                 government=state.kind,
             ),
             at=resident.tile,
@@ -452,8 +490,9 @@ class Leadership:
         state = world.government
         seated: list[str] = []
         while len(state.council) < definition.council_seats:
-            standing = [resident for resident in self.present(world) if resident.resident_id not in state.council]
-            chosen, _backers = self.elect(world, self.present(world), standing)
+            left = definition.council_seats - len(state.council)
+            standing = self.standing(world, exclude=state.council, at_least=left + 1)
+            chosen, _backers = self.elect(world, self.present(world), standing, seat=COUNCIL_SEAT)
             if chosen is None:
                 break
             state.council.append(chosen.resident_id)
@@ -543,8 +582,25 @@ class Leadership:
         voted_leader = state.leader is not None and any(way in VOTED_WAYS for way in definition.succession)
         return voted_leader or bool(state.council)
 
+    def recall(self, world: "SimulationWorld") -> bool:
+        """Call a vote that whoever leads has to win to go on leading, term or no term, and
+        that seats the council anew. Returns whether one was called: not where one is already."""
+        state = world.government
+        definition = self.definition(world)
+        if definition is None or state.election_at is not None:
+            return False
+        state.recall = True
+        self._call(world, definition, "así se ha decidido")
+        return True
+
+    def _rig_minutes(self, world: "SimulationWorld") -> int:
+        """How long before a vote whoever leads thinks of seeing to the count: never more than half the wait for it."""
+        settings = world.registries.politics
+        return min(settings.rig_hours * 60, settings.election_hours * 30)
+
     def _call(self, world: "SimulationWorld", definition: GovernmentDefinition, why: str) -> None:
         state = world.government
+        state.rigged_by, state.rig_asked, state.backing = None, False, {}
         state.election_at = world.clock.total_minutes + world.registries.politics.election_hours * 60
         world.emit_event(
             PoliticalEvent(
@@ -563,8 +619,13 @@ class Leadership:
         if not self.present(world):
             state.election_at = world.clock.total_minutes + PUT_OFF_MINUTES
             return
+        waiting = world.interventions.pending_for(world, state.leader or "")
+        if waiting is not None and waiting.kind == RIG:
+            # The hour has come: whoever was still making up their mind about the count does it now.
+            world.interventions.resolve(world, waiting.decision_id, None)
         state.election_at = None
-        over = self._term_over(world, definition)
+        over = self._term_over(world, definition) or state.recall
+        state.recall = False
         if over and state.council:
             for member in state.council:
                 self._unseat(world, member, definition.council_role)
@@ -579,9 +640,16 @@ class Leadership:
         if incumbent is not None and not over:
             return
         winner, backers = self._by_way(world, way)
+        state.rigged_by, state.backing = None, {}
         if winner is None:
             # Nobody to vote, or nobody to vote for: the seat is tried again another day.
             return
+        held = state.elections[-1] if state.elections else None
+        if held is not None and (held.at != world.clock.total_minutes or held.winner != winner.resident_id):
+            held = None
+        incumbent_id = incumbent.resident_id if incumbent is not None else None
+        if held is not None:
+            world.politics.elections.took_part(world, held, incumbent_id)
         if winner is incumbent:
             state.term_began = world.clock.day
             world.politics.legitimacy.shock(world, world.registries.politics.seated.get(way, {}))
@@ -600,13 +668,23 @@ class Leadership:
             state.leader = None
             self._seat(world, definition, winner, way, backers)
             text = f"{winner.name} gana la votación"
+        # After a show of hands everybody knows who was behind whom. Otherwise only how many.
+        shown = held is None or held.open_ballot
         world.emit_event(
             PoliticalEvent(
                 "election_held",
                 HELD_IMPORTANCE,
                 text,
                 [winner.resident_id],
-                data={"winner": winner.resident_id, "backers": sorted(backers), "kept": winner is incumbent},
+                data={
+                    "winner": winner.resident_id,
+                    "backers": sorted(backers) if shown else [],
+                    "kept": winner is incumbent,
+                    "tally": dict(held.tally) if held is not None else {},
+                    "open": shown,
+                },
                 government=state.kind,
             )
         )
+        if held is not None:
+            world.politics.elections.contested(world, held, incumbent_id)

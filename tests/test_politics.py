@@ -334,11 +334,20 @@ class SeatTests(unittest.TestCase):
                 feelings.affection, feelings.trust = 80.0, 70.0
         winner, backers = leadership.elect(world, leadership.present(world), leadership.present(world))
         self.assertEqual(winner.resident_id, "paco")
-        self.assertEqual(len(backers), 8)
-        world.relationship("raul", "paco").resentment = 100.0
-        world.relationship("raul", "paco").affection = -50.0
-        winner, backers = leadership.elect(world, leadership.present(world), leadership.present(world))
-        self.assertNotIn("raul", backers, "one may vote against who would do the rest good")
+        # Whoever wants the seat enough to put themselves forward is for themselves (S27).
+        keen = {
+            resident_id
+            for resident_id, resident in world.residents.items()
+            if world.politics.elections.will(world, resident) >= 0
+        }
+        self.assertIn("paco", keen, "thought so much of, even he fancies it")
+        self.assertEqual(backers, set(world.residents) - (keen - {"paco"}))
+        self.assertIn("nuria", backers)
+        world.relationship("nuria", "paco").resentment = 100.0
+        world.relationship("nuria", "paco").affection = -50.0
+        nuria = world.residents["nuria"]
+        hers = max(leadership.present(world), key=lambda each: leadership.vote_score(world, nuria, each))
+        self.assertNotEqual(hers.resident_id, "paco", "one may vote against who would do the rest good")
 
     def test_the_strongest_is_whoever_nobody_stands_up_to(self) -> None:
         world = _governed("military_leadership")
@@ -506,12 +515,17 @@ class SuccessionTests(unittest.TestCase):
         world.step(61)
         new = world.residents[world.government.leader]
         seated = [event for event in world.history if event.event_type == "leader_chosen"][-1]
+        self.assertEqual(seated.data["backers"], [], "a mayor is voted for in secret: nobody is told who was behind them")
+        # Who was behind them is in what the world keeps of the vote, and nowhere else (S27).
+        behind = {
+            voter for voter, candidate in world.government.elections[-1].backed.items() if candidate == new.resident_id
+        }
         backed = world.registries.politics.backed_loyalty
         for resident in world.residents.values():
             if resident is new:
                 continue
             profile = _held(world, resident.resident_id)
-            extra = backed if resident.resident_id in seated.data["backers"] else 0.0
+            extra = backed if resident.resident_id in behind else 0.0
             self.assertAlmostEqual(profile.loyalty, min(100.0, legitimacy.ground(world, resident, new) + extra))
             self.assertLess(profile.loyalty, 95.0)
             if resident.resident_id != "marta":
@@ -771,7 +785,7 @@ class PoliticsSaveTests(unittest.TestCase):
         self.assertEqual(old.political_profiles, {})
         old.step(62)
         self.assertIn(old.government.kind, KINDS)
-        self.assertEqual(manager.to_data(old)["version"], 30)
+        self.assertEqual(manager.to_data(old)["version"], manager.CURRENT_VERSION)
 
 
 if __name__ == "__main__":

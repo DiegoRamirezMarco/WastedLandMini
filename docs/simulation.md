@@ -290,6 +290,76 @@ room. An argument's importance rises with the resentment between the two.
 - **Charisma and leadership** are two more sides of a way of being: how readily others are won
   over by somebody, and how well others do under them.
 
+### Proposals and votes
+
+- **The player proposes and the settlement decides.** A proposal is a law, doing away with one,
+  a vote for who leads, another kind of government, throwing somebody out, or another way of
+  trading. Somebody who may propose under the government in force has to make it theirs:
+  whoever of them is most for it, if any is. Otherwise it goes no further.
+- **It is talked over, and then decided** by whoever the government says approves: whoever
+  leads, the council, or every adult who is there. With nobody in the seat it names, the say
+  falls to the council, and failing that to everybody. Nothing of it is done unless it passes.
+- **Each of them votes by their own mind**: yes, no, or neither if it is too near the middle
+  for somebody of their interest in politics. Their mind is made of what they hold and stand
+  to gain or lose, what they feel for whoever it is about and know them to have done, what
+  they feel for whoever put it, how far they trust the player if the player did, loyalty to
+  whoever leads and what they hold against the government, fear where hands are shown, what
+  they remember of politics, and what the player said to them. A ballot keeps the three that
+  weighed most. Nothing is rolled.
+- **A law that does not carry as put is tried milder**, a degree at a time, and passes at the
+  first that carries. Where whoever leads may refuse what others approved and is against it,
+  it is refused. What was turned down is left alone for a week, and a law just passed or
+  done away with for two days.
+- **A show of hands or a secret vote**, by the government. After a show of hands everybody
+  knows who voted how, and whoever was voted against remembers who did it. After a secret
+  vote only how many is known.
+- **Residents propose things of their own**, once a day at most, where the government lets them:
+  a law they hold with and have a reason for, doing away with one they cannot abide, a vote
+  on a leader nobody is behind, another kind of government, or throwing out somebody they
+  resent and know to have done wrong. Nobody proposes that for what they never came to know.
+- **The player may speak to those who decide**, once each for each proposal, for it or against.
+  It weighs by how much they lean on the player. They may go along, come half way, take no
+  notice, or do the opposite.
+- **What the player is to each resident** is a layer of its own: trust, which moves only with
+  how what the player was behind turned out for them, and resistance, which comes of being
+  pushed against their own mind and wears off. Both tell on any advice the player gives them.
+- **Whoever is thrown out** walks to the gate and is gone for good: their post, their bed and
+  what they kept are let go of as on a death, with no grave, and what they carried goes with
+  them. They are still in the memories of those they left.
+
+### Elections
+
+- **Not everybody stands**: those who want the seat enough do, by their interest in politics,
+  charisma, leadership and how they are thought of, and whoever leads already. Whoever puts
+  themselves forward votes for themselves.
+- **A result is kept**, and remembered: who each backed and how it went, whoever backed a loser
+  trusts the government a little less, and a loser holds it against whoever won.
+- **A count can be seen to.** A leader who stands to lose a vote cast in secret makes up their
+  mind about it some hours before, with the player given a say. If they do, enough votes
+  change hands in the count for them to win. Whoever sees them at it knows, and nobody else.
+- **A sore loser says there was cheating**, whether there was or not, and whoever hears it makes
+  of it what they make of them and of the government.
+- **The player may speak for a candidate** to each resident once before a vote.
+
+### Laws
+
+- **A law is never only words.** Each is data: what it does at each degree, from mild to harsh,
+  what weighs for or against it with each resident, and what brings somebody to propose it.
+- **Keeping one is each resident's own affair**: how far they do as the government says, how
+  legitimate the government is and what they make of the law, against how hard it is to keep.
+  Whoever keeps it lives by it; whoever does not goes on as before.
+- **Being seen to break one** is all that comes of it until there are trials: it is known,
+  talked about, and held against them by whoever keeps that law. Two who break it together
+  think none the worse of each other. Nothing comes of what nobody saw.
+- **Want undoes what plenty passed.** How short the settlement is of food weighs on what
+  anybody makes of a law that has people work less: a day of rest or short hours passed with
+  the larder full is done away with when it runs low, and long hours and rationing find takers.
+- **A day under a law** somebody is against is held against the government, and one they are
+  for adds to their trust in it. A harsh law makes the place more authoritarian, and a
+  nonsense costs legitimacy.
+- **Whims.** Whoever leads an authoritarian enough settlement passes what takes their fancy:
+  bans the food they cannot stand, has everybody greet them.
+
 ## Substances
 
 - **Taking one.** A substance is an item: owned and used like any other, or had over a bar that

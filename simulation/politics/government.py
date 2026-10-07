@@ -8,6 +8,7 @@ power is put up with. No kind has code of its own.
 from dataclasses import dataclass, field
 from typing import Any
 
+from simulation.politics.records import ElectionRecord, LawInForce, Proposal
 from simulation.residents.personality import Personality
 
 # What is measured of a settlement that has a government, each from 0 to 100 and by itself.
@@ -32,6 +33,10 @@ WAYS = (ELECTION, COUNCIL, STRONGEST, HEIR, FOLLOWING)
 VOTED_WAYS = (ELECTION, COUNCIL)
 LEADER, EVERYONE, NOBODY = "leader", "everyone", "nobody"
 WHO = (LEADER, COUNCIL, EVERYONE, NOBODY)
+# How a vote is taken: by a show of hands, where everybody sees who voted how, or in secret,
+# where only how it came out is known.
+OPEN, SECRET = "open", "secret"
+BALLOTS = (OPEN, SECRET)
 
 
 @dataclass(frozen=True)
@@ -40,6 +45,9 @@ class PoliticsResult:
 
     ok: bool
     message: str
+    # What else there is to say of it, as an ID or a short code: the proposal that was raised,
+    # or what a resident did with what was said to them.
+    detail: str = ""
 
 
 @dataclass(frozen=True)
@@ -62,6 +70,8 @@ class GovernmentDefinition:
     approval: float = 0.5
     leader_weight: float = 1.0
     veto: bool = False
+    # How its votes are taken: `open` or `secret`.
+    ballot: str = OPEN
     # Days a term lasts. 0 where nobody is ever put to a vote again.
     term_days: int = 0
     # The ways the next leader comes to be, tried in this order.
@@ -168,6 +178,15 @@ class PoliticsSettings:
     # How worn a leader has to be, or how little support there has to be, to think of resigning.
     resign_stress: float = 85.0
     resign_support: float = 25.0
+    # Votes for a seat: how many hours before one whoever leads and stands to lose it thinks of
+    # having the count come out their way, what doing so adds to corruption, how sore a loser
+    # has to be to say there was cheating, what losing leaves them holding against whoever
+    # won, and what backing a loser does to trust in the government.
+    rig_hours: int = 6
+    rig_corruption: float = 15.0
+    claim_from: float = 1.1
+    lost_resentment: float = 8.0
+    let_down_trust: float = -2.0
 
 
 @dataclass
@@ -192,6 +211,28 @@ class GovernmentState:
     # Whoever the leader would have follow them, and whoever has just stepped down.
     heir: str | None = None
     resigned: str | None = None
+    # The laws in force, by law ID.
+    laws: dict[str, LawInForce] = field(default_factory=dict)
+    # How many times each resident has eaten out of the commons, as `[day, times]`, by resident ID.
+    meals: dict[str, list[int]] = field(default_factory=dict)
+    # What waits to be decided, by proposal ID, and what has been, oldest first.
+    proposals: dict[str, Proposal] = field(default_factory=dict)
+    decided: list[Proposal] = field(default_factory=list)
+    proposal_count: int = 0
+    # The day from which each matter that was settled may be put again, and the day each resident last raised one.
+    refused: dict[str, int] = field(default_factory=dict)
+    raised_on: dict[str, int] = field(default_factory=dict)
+    # The votes for a seat there have been, oldest first.
+    elections: list[ElectionRecord] = field(default_factory=list)
+    # Whether the vote that has been called is one whoever leads has to win to go on leading,
+    # term or no term. Whoever has seen to it that the count comes out their way, and whether
+    # whoever leads has been through making up their mind about that for this vote.
+    recall: bool = False
+    rigged_by: str | None = None
+    rig_asked: bool = False
+    # What the player's word for a candidate adds with each resident they spoke to before the
+    # vote that has been called: `[candidate ID, how much]`, by resident ID.
+    backing: dict[str, list] = field(default_factory=dict)
 
 
 def _numbers(data: Any, where: str) -> dict[str, float]:
@@ -215,6 +256,7 @@ def _government(government_id: str, data: Any, roles: dict[str, RoleDefinition])
         approval=float(data.get("approval", 0.5)),
         leader_weight=float(data.get("leader_weight", 1.0)),
         veto=bool(data.get("veto", False)),
+        ballot=str(data.get("ballot", OPEN)),
         term_days=int(data.get("term_days", 0)),
         succession=tuple(str(way) for way in data.get("succession", [])),
         abuse_tolerance=float(data.get("abuse_tolerance", 50.0)),
@@ -224,6 +266,8 @@ def _government(government_id: str, data: Any, roles: dict[str, RoleDefinition])
     for who in (definition.proposes, definition.approves, definition.votes):
         if who not in WHO:
             raise ValueError(f"Government {government_id} leaves something to {who}: it must be one of {WHO}")
+    if definition.ballot not in BALLOTS:
+        raise ValueError(f"Government {government_id} votes in a way there is not: one of {BALLOTS}")
     if any(way not in WAYS for way in definition.succession):
         raise ValueError(f"Government {government_id} has an unknown way of succession: one of {WAYS}")
     if (definition.leader_role is None) != (not definition.succession):
@@ -257,6 +301,7 @@ def politics_settings_from_data(data: dict[str, Any]) -> PoliticsSettings:
     profile = data.get("profile", {})
     loyalty = data.get("loyalty", {})
     measures = data.get("measures", {})
+    elections = data.get("elections", {})
     sides = set(vars(Personality()))
     leanings = {
         str(leaning): _numbers(weights, f"Where {leaning} comes from")
@@ -319,7 +364,14 @@ def politics_settings_from_data(data: dict[str, Any]) -> PoliticsSettings:
         leadership_pace=float(data.get("leadership_pace", defaults.leadership_pace)),
         resign_stress=float(data.get("resign_stress", defaults.resign_stress)),
         resign_support=float(data.get("resign_support", defaults.resign_support)),
+        rig_hours=int(elections.get("rig_hours", defaults.rig_hours)),
+        rig_corruption=float(elections.get("rig_corruption", defaults.rig_corruption)),
+        claim_from=float(elections.get("claim_from", defaults.claim_from)),
+        lost_resentment=float(elections.get("lost_resentment", defaults.lost_resentment)),
+        let_down_trust=float(elections.get("let_down_trust", defaults.let_down_trust)),
     )
+    if settings.rig_hours < 0:
+        raise ValueError("Nobody thinks of rigging a vote less than no time before it")
     if settings.founding_residents < 1 or settings.choosing_hours < 0 or settings.election_hours < 0:
         raise ValueError("A government takes one resident or more, and no less than no time to choose or to vote")
     if any(held not in HOLDS or leaning not in LEANINGS for held, leaning in settings.sways.items()):

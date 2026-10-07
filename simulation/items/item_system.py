@@ -118,6 +118,7 @@ class ItemSystem:
             world.substances.taken(world, resident, definition)
             if resident.resident_id not in world.residents:
                 return
+        world.politics.laws.taken(world, resident, definition)
         chance = definition.properties.get(SICKENS, 0.0)
         if chance <= 0.0 or definition.category not in (FOOD_CATEGORY, WATER_CATEGORY):
             return
@@ -176,6 +177,7 @@ class ItemSystem:
             for item in container.items
             if item.owner_id in (None, resident.resident_id)
             and world.registries.items.resolve(item.definition_id).category == category
+            and world.politics.laws.may_have(world, resident, world.registries.items.resolve(item.definition_id))
         ]
         if not choices:
             return None
@@ -253,6 +255,8 @@ class ItemSystem:
                     # What is being kept for somebody is not theirs to use.
                     continue
                 definition = world.registries.items.resolve(item.definition_id)
+                if not world.politics.laws.may_have(world, resident, definition):
+                    continue
                 relief = self._relief(resident, self.use_effects(world, resident, definition))
                 # What they depend on is wanted beside what it does for them, and what they
                 # have made up their mind against is not wanted at all.

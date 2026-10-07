@@ -2,7 +2,7 @@
 
 from simulation.items.item import ItemInstance
 from simulation.items.item_system import FOOD_CATEGORY, WATER_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
-from simulation.residents.activity import SHELTER_ACTION
+from simulation.residents.activity import ATTEND_ACTION, LEAVE_ACTION, RETIRE_ACTION, SHELTER_ACTION
 from simulation.residents.resident import Resident
 from simulation.tastes.knowledge import PLAYER
 from simulation.tastes.reaction import reaction_to
@@ -256,6 +256,12 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
     placed = world.interactables.get(activity.target_id) if activity.target_id else None
     if activity.action == SHELTER_ACTION:
         return "se resguarda del mal tiempo" if not activity.path else "corre a resguardarse"
+    if activity.action == RETIRE_ACTION:
+        return "se recoge, como manda la ley"
+    if activity.action == ATTEND_ACTION:
+        return "está donde manda la ley" if not activity.path else "acude adonde manda la ley"
+    if activity.action == LEAVE_ACTION:
+        return "se marcha del asentamiento"
     if placed is None:
         if any(decision.resident_id == resident.resident_id for decision in world.decisions.values()):
             return "le da vueltas a algo"

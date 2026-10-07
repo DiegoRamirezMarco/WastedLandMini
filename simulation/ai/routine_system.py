@@ -1,6 +1,6 @@
 """Chooses what a resident does next by scoring the things they could do."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
 from simulation.ai.crowd import spots_taken
@@ -9,7 +9,7 @@ from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency, 
 from simulation.economy.merchant import VISIT_ACTION
 from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item_system import ITEM_ACTIONS, ItemSystem
-from simulation.residents.activity import SHELTER_ACTION, WANDER_ACTION, Activity
+from simulation.residents.activity import ATTEND_ACTION, RETIRE_ACTION, SHELTER_ACTION, WANDER_ACTION, Activity
 from simulation.residents.needs import NEED_NAMES
 from simulation.residents.resident import Resident
 from simulation.social.bonds import TRYST, TRYST_ACTION
@@ -41,6 +41,9 @@ SUPPER_RANGE = 30.0
 # Getting under a roof in bad weather comes before anything that is not work or a real need.
 SHELTER_SCORE = 0.5
 SHELTER_MINUTES = 90
+# Getting indoors when a law they keep says so comes before anything that can wait.
+RETIRE_SCORE = 0.45
+RETIRE_MINUTES = 30
 
 
 def in_hours(hour: int, window: tuple[int, int]) -> bool:
@@ -58,6 +61,11 @@ class RoutineSystem:
         """Score everything the resident could do next: use an object, talk, handle an item, or wander."""
         scored: list[ScoredAction] = []
         bed_to_be_had = False
+        # What the laws they keep ask of them right now: to be indoors, to keep quiet.
+        laws = world.politics.laws
+        governed = bool(world.government.laws)
+        indoors = governed and laws.indoors(world, resident)
+        hushed = governed and laws.hushed(world, resident)
         for placed in world.interactables.values():
             use = world.definition_of(placed).use
             if use is None or world.users_of(placed.object_id) >= use.capacity:
@@ -65,12 +73,17 @@ class RoutineSystem:
             if not world.work.open_to(world, resident, use):
                 continue
             bed_to_be_had = bed_to_be_had or (use.unaware and use.per_minute.get("tiredness", 0.0) < 0)
+            if governed and laws.bars(world, resident, placed, use, indoors):
+                continue
             score = self._score_use(world, resident, placed, use)
             if score is not None:
-                scored.append(ScoredAction(use.action, score + self._noise(world), placed.object_id))
-        for talk in self.social.candidates(world, resident):
+                pull = laws.pull(world, resident, placed) if governed else 0.0
+                scored.append(ScoredAction(use.action, score + pull + self._noise(world), placed.object_id))
+        for talk in () if hushed else self.social.candidates(world, resident):
+            if indoors and not laws.under_same_roof(world, resident, world.residents[talk.partner_id].tile):
+                continue
             scored.append(ScoredAction(talk.name, talk.score + self._noise(world), partner_id=talk.partner_id))
-        for tryst in world.bonds.candidates(world, resident):
+        for tryst in () if hushed or indoors else world.bonds.candidates(world, resident):
             scored.append(ScoredAction(tryst.name, tryst.score + self._noise(world), partner_id=tryst.partner_id))
         for handle in self.items.candidates(world, resident):
             scored.append(
@@ -85,9 +98,14 @@ class RoutineSystem:
         visit = world.merchants.candidate(world, resident)
         if visit is not None:
             scored.append(ScoredAction(visit.name, visit.score + self._noise(world)))
-        build = world.construction.candidate(world, resident, busy=work is not None)
+        build = None if indoors else world.construction.candidate(world, resident, busy=work is not None)
         if build is not None:
             scored.append(ScoredAction(build.name, build.score + self._noise(world), build.target_id))
+        if indoors and not world.under_roof(resident.tile):
+            scored.append(ScoredAction(RETIRE_ACTION, RETIRE_SCORE + self._noise(world)))
+        attend = laws.attendance(world, resident) if governed else None
+        if attend is not None:
+            scored.append(ScoredAction(attend.name, attend.score + self._noise(world), attend.target_id))
         if world.happenings.is_stormy(world) and not world.under_roof(resident.tile):
             # The worse their nerves, the sooner they get out of it.
             wish = SHELTER_SCORE + 0.5 * need_urgency(resident, "stress")
@@ -143,6 +161,11 @@ class RoutineSystem:
                 activity = world.construction.plan(world, resident, candidate)
             elif candidate.name == SHELTER_ACTION:
                 activity = self._shelter(world, resident)
+            elif candidate.name == RETIRE_ACTION:
+                roof = self._shelter(world, resident)
+                activity = replace(roof, action=RETIRE_ACTION, minutes_left=RETIRE_MINUTES) if roof is not None else None
+            elif candidate.name == ATTEND_ACTION:
+                activity = world.politics.laws.plan_attend(world, resident, candidate)
             elif candidate.name == VISIT_ACTION:
                 activity = world.merchants.plan(world, resident)
             elif candidate.name == SLEEP_ROUGH_ACTION:
@@ -262,14 +285,19 @@ class RoutineSystem:
         minutes = world.rng.randint(*WANDER_MINUTES)
         passable = world.passable()
         taken = spots_taken(world, resident)
-        # Nobody who is in the dry strolls out into a storm.
-        indoors_only = world.happenings.is_stormy(world) and world.under_roof(resident.tile)
+        # Nobody who is in the dry strolls out into a storm, nor out of doors against a law they
+        # keep: whoever keeps a curfew stays under the roof they are under.
+        curfew = bool(world.government.laws) and world.politics.laws.indoors(world, resident)
+        indoors_only = (curfew or world.happenings.is_stormy(world)) and world.under_roof(resident.tile)
+        same_roof = curfew and indoors_only
         for _ in range(WANDER_ATTEMPTS):
             target = (
                 resident.x + world.rng.randint(-WANDER_RANGE, WANDER_RANGE),
                 resident.y + world.rng.randint(-WANDER_RANGE, WANDER_RANGE),
             )
             if not passable(target) or target in taken or (indoors_only and not world.under_roof(target)):
+                continue
+            if same_roof and not world.politics.laws.under_same_roof(world, resident, target):
                 continue
             path = find_path(resident.tile, target, passable)
             if path is not None:

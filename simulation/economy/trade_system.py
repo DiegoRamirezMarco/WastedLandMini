@@ -68,7 +68,8 @@ class TradeSystem:
         if world.fund.currency(world) is None:
             return
         wage = job.wage if job.wage is not None else world.registries.economy.wage_per_hour
-        due = wage / MINUTES_PER_HOUR
+        # What the law has it come to: more or less by the hour, less what the fund keeps of it.
+        due = world.politics.laws.wage(world, wage / MINUTES_PER_HOUR)
         paid = world.fund.pay_out(world, due)
         resident.credits += paid
         if paid + SHORT_BY >= due:
@@ -149,10 +150,11 @@ class TradeSystem:
         price of one. Water is for nothing to whoever the settlement keeps."""
         economy = world.registries.economy
         price = float(use.price)
+        meal = economy.meal_price * world.politics.laws.meal_price(world)
         if use.consumes in economy.kept_categories:
-            price += economy.meal_price
+            price += meal
         elif use.consumes is not None and not self.supplied(world, resident):
-            price += economy.meal_price
+            price += meal
         return price
 
     def owes_keep(self, world: "SimulationWorld", resident: Resident, use: UseDefinition) -> bool:

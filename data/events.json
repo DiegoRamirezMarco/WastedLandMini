@@ -119,6 +119,17 @@
       "needs": {
         "stress": 5.0
       }
+    },
+    "election_rigged": {
+      "blame_target": "actor",
+      "blame": {
+        "resentment": 12.0,
+        "trust": -20.0
+      },
+      "needs": {
+        "stress": 4.0
+      },
+      "secret": true
     }
   }
 }

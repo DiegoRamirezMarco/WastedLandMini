@@ -327,6 +327,7 @@ class ActivitySystem:
         if use.radio:
             world.happenings.hear_radio(world, resident)
         placed = world.interactables[activity.target_id]
+        world.politics.laws.used(world, resident, placed, use)
         resident.current_action = activity.action
         resident.facing = facing_towards(resident.tile, (placed.x, placed.y)) or "down"
         if use.sells:

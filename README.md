@@ -14,7 +14,9 @@ watches, advises and intervenes, but does not control them.
 - Politics: no government until there are three; six kinds of government as data, chosen by
   the residents with the player's one proposal; leaders who are residents with a role, and who
   are followed when they die, resign or lose a vote; what each resident holds about it; and
-  seven measures of the settlement.
+  seven measures of the settlement. The player proposes and the settlement decides: laws,
+  elections, another government, throwing somebody out. Each resident votes by their own
+  mind, keeps a law or does not, and proposes things of their own.
 - Families: a calendar, birthdays and old age; sex, gender and who each is drawn to; couples
   that marry; children carried, born, seen to and grown; kin by blood and by adoption; and
   families that come to the gate together.

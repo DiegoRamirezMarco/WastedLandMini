@@ -3,6 +3,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from save.save_manager import SaveManager
@@ -391,6 +392,10 @@ class BarterTests(unittest.TestCase):
     def test_a_week_under_barter_feeds_everyone_and_the_shop_changes_hands_with_no_coin(self) -> None:
         # A seed with which somebody has a swap taken that week: most days they are turned down.
         world = _bartering(SimulationWorld.demo_world(seed=4))
+        # With nobody governing, how they trade stays as it is unless everybody is asked: a
+        # government may take up a currency of its own accord within the week (S27).
+        politics = replace(world.registries.politics, founding_residents=99)
+        world.registries = replace(world.registries, politics=politics)
         for resident_id in ("lucia", "paco", "vera", "sergio"):
             for item_id in ("hoe", "rusty_knife"):
                 world.stock(world.residents[resident_id].inventory, item_id, 1, resident_id)
@@ -412,6 +417,10 @@ class BarterTests(unittest.TestCase):
 class TermsTests(unittest.TestCase):
     def setUp(self) -> None:
         self.world = _bartering(_settled())
+        # Everybody answers for themselves only while there is no government. Once there is
+        # one, how the settlement trades is decided as any proposal is (S27, test_proposals).
+        politics = replace(self.world.registries.politics, founding_residents=99)
+        self.world.registries = replace(self.world.registries, politics=politics)
         self.economy = self.world.registries.economy
 
     def _all(self, **traits: float) -> None:

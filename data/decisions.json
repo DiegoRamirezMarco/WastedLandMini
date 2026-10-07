@@ -407,7 +407,8 @@
           "bias": 0.25,
           "aggression": 0.3,
           "greed": 0.3,
-          "stress": 0.2
+          "stress": 0.2,
+          "law": 1.2
         },
         "gate": "turn_away",
         "text": "{name} le dice a {visitor} que siga su camino"
@@ -953,7 +954,8 @@
           "bias": 0.25,
           "aggression": 0.3,
           "greed": 0.3,
-          "stress": 0.2
+          "stress": 0.2,
+          "law": 1.2
         },
         "gate": "turn_away",
         "text": "{name} les dice a {first} y a {second} que sigan su camino"
@@ -1107,6 +1109,66 @@
         "influence": {
           "stay": 0.5,
           "resign": -0.3
+        }
+      }
+    ]
+  },
+  "rig_election": {
+    "event_type": "rigging_stirring",
+    "window_minutes": 60,
+    "cooldown_minutes": 1440,
+    "anger_threshold": 0,
+    "importance": 65,
+    "text": "{name} ve que va a perder la votación, y le da vueltas a quién cuenta los votos",
+    "prompt": "Voy a perder. Y los votos los cuento yo. ¿Los cuento a mi manera?",
+    "outcomes": {
+      "rig": {
+        "score": {
+          "bias": -0.3,
+          "greed": 0.5,
+          "losing": 0.4,
+          "scruples": -0.9,
+          "courage": 0.2
+        },
+        "agrees": true,
+        "needs": {
+          "stress": 8
+        },
+        "memory": "Amañé el recuento para seguir mandando.",
+        "text": "{name} decide que el recuento salga a su favor"
+      },
+      "accept": {
+        "score": {
+          "bias": 0.1,
+          "scruples": 0.5,
+          "empathy": 0.3
+        },
+        "needs": {
+          "stress": 4
+        },
+        "text": "{name} deja que los votos digan lo que digan"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Nadie tiene por qué enterarse",
+        "influence": {
+          "rig": 0.5,
+          "accept": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "discourage",
+        "text": "Si pierdes, pierdes",
+        "influence": {
+          "accept": 0.5,
+          "rig": -0.3
         }
       }
     ]

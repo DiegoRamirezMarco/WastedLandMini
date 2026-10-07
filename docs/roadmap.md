@@ -1638,48 +1638,192 @@ Still open here:
   council four, a ruler four, a mayor three and a commander once
 - None of it is on screen: P26. Until then a government is proposed by command
 
-### S27 — Proposals and votes (needs S26) — planned
+### S27 — Proposals, votes and laws (needs S26) — done
+Asked first, in two batches, and answered: residents propose things of their own too, those the
+government lets, when they have a reason; what can be proposed is all that was offered (an
+election and another government, throwing somebody out, how the settlement trades, rationing
+and common property) and, in the user's words, laws that change what people do: curfews, days
+off, working hours, wages, rationing, punishments, taxes, "una buena lista de leyes tanto serias
+como absurdas"; whether hands are shown or the vote is secret depends on the government; the
+player may speak to whoever they like before a vote, once each, and whoever is pushed against
+their own mind resists the more for it; trust in the player moves only with how what they were
+behind turned out for each resident; a count can really be seen to; until there are trials each
+resident keeps a law by how far they obey, and whoever is seen breaking one is marked; and
+absurd laws are a list in the data and also whims of whoever leads.
+
+So laws came here from S28, which keeps trials, punishments and their places.
+
 - **The player proposes and the settlement decides.** A proposal goes into the process of the
   government in force, to the leader, the council or a vote as its kind says, and comes out
   accepted, changed or rejected. Only then does anything follow. Nothing the player proposes is
-  simply done, unless the government in force allows it
-- **What can be proposed**, as data: rationing food, changing a law, punishing a resident (S28),
-  calling an election, throwing somebody out, declaring property common, changing how the
-  settlement trades (S23). Building something, such as an infirmary, is proposed this way once
-  there is building (S16), and not before
+  simply done
+- **What can be proposed**, as data (`data/proposals.json`): a law, doing away with one, a vote
+  for who leads, another kind of government, throwing somebody out, a currency, going back to
+  barter
 - **A vote is yes, no or an abstention, and is worked out for each voter**: what they think of
   the proposal and of the people in it, what they hold, their fear, their trust in the
   government, what they stand to gain or lose, and what they remember. Somebody may vote down
-  what would do them good because they hate the leader, because it helps an enemy, because it
-  goes against what they hold, or for fear of what follows
+  what would do them good because they hate the leader, or for fear of what follows
 - **The player may work on residents before a vote**, and cannot cast it for them
-- **The player's influence is a layer of its own**: for each resident, trust in the player,
-  resistance to the player, and how much they lean on the player's advice. A proposal weighs
-  differently with each of them, and a resident may take the advice, change it, ignore it or do
-  the opposite. It builds on advice (S4) and on the taste for being told what to do (S20)
-- **Elections**, under the governments that have them. Who stands goes by reputation,
-  relationships, leadership, charisma, how many are behind them, and factions (S29). A result
-  leaves memories and consequences: a loser who resents it, a winner with legitimacy, talk of
-  fraud, followers let down
-- **What politics does is remembered**: "El alcalde encarceló a mi hermano", "Marta votó contra
-  mi expulsión", "El jugador impulsó una elección", "El consejo ignoró la escasez". Such
-  memories weigh on later votes, on relationships and on support
-- Proposals still pending, the history of elections and political memories are saved
+- **The player's influence is a layer of its own**: for each resident, trust in the player and
+  resistance to the player, and from them how much they lean on the player's advice. A resident
+  may take the advice, change it, ignore it or do the opposite. It builds on advice (S4) and on
+  the taste for being told what to do (S20)
+- **Residents propose things of their own**, where the government lets them
+- **Elections**, under the governments that have them. Who stands goes by interest, charisma,
+  leadership and how they are thought of. A result leaves memories and consequences: a loser
+  who resents it, a winner with legitimacy, talk of fraud, followers let down
+- **A count can be seen to**, by a leader about to lose a secret vote, with the player given a say
+- **Laws as data** (`data/laws.json`): each says what it does at each degree, what weighs for or
+  against it with each resident and what brings somebody to propose it. A law changes what
+  residents do and what follows from what they do. It is never only words
+- **Each resident keeps a law or does not**, and whoever is seen breaking one is known to have
+- **Absurd laws**, from the list and from the whims of whoever leads
+- **What politics does is remembered**, and weighs on later votes, on relationships and on support
+- Laws in force, proposals pending and decided, the history of elections, what the player is to
+  each resident and whoever was thrown out are saved
 
 Done when: the same proposal is voted for by one resident and against by another, each for
 reasons that can be read back from who they are; a proposal the player makes is turned down, and
 nothing of it happens; an election is held, its winner leads, and the result is still there after
-saving and loading; and those who took part remember it.
+saving and loading; those who took part remember it; and a law in force changes what residents
+are seen to do over a week.
 
 Tests it is not done without: a vote that follows the voter's own opinion; a proposal of the
-player's rejected; an election whose result is kept; and political memories.
+player's rejected; an election whose result is kept; and political memories. They are in
+`tests/test_proposals.py` and `tests/test_laws.py`.
 
-### S28 — Laws and punishment (needs S27, and S23 to S25) — planned
-- **Laws as data** (`data/laws.json`): `rationing`, `private_property`, `communal_property`,
-  `weapon_restrictions`, `drug_rules`, `curfew`, `theft_penalties`, `election_rules`. A law
-  changes what residents do and what follows from what they do. It is never only words.
-  `drug_rules` says which substances (S24) may be had and taken, and where. `pregnancy_work`
-  says whether whoever is carrying a child keeps their post (S25)
+As it was built, where the lines above leave it open:
+- **Of the module, S27 has** `records.py` (what is kept), `opinion.py` (what a resident makes
+  of a matter), `proposal.py` and `voting.py`, `law.py` and `law_system.py`, `election.py`,
+  `influence.py` and `exile.py`
+- **Somebody has to make the player's proposal theirs**: whoever may propose under the
+  government and is most for it, counting what they make of the player. If none of them is
+  for it, it goes no further, and is left alone for a week like anything turned down
+- **A proposal waits twelve hours** to be decided, six when one person decides alone, and a
+  day when it is to throw somebody out, whoever decides it: there is that long to speak to
+  them. Three wait at once at most
+- **Who decides is who the government says approves.** With nobody in the seat it names, the
+  say falls to the council, and failing that to everybody. Whoever is away has no say. `votes`
+  in a government's data is not acted on yet
+- **It carries with the share the government asks for**, of those who said yes or no, and more
+  for than against. Whoever leads refuses what others approved if they have a veto and are
+  against it, which costs legitimacy
+- **Changed means milder.** A law that does not carry as put is tried a degree at a time and
+  passes at the first that carries. Nothing else is changed: it passes or it does not
+- **A mind on a proposal has ten parts**, and a ballot keeps the three that weighed most:
+  `conviction` (what they hold and stand to gain or lose), `target` and `evidence` (what they
+  feel for whoever it is about, and know them to have done), `proposer`, `player`, `loyalty`
+  and `grudge` (for or against where whoever leads stands), `fear`, `memory` and `lobby`.
+  Somebody votes one way or the other only if their mind is far enough from the middle for
+  their interest in politics. Nothing is rolled
+- **Fear bends a show of hands only.** A mayor and a council vote in secret. An assembly, a
+  commune, a command and a caudillaje show hands
+- **After a show of hands** whoever was voted out, and those close to them, know who did it
+  and hold it against them. After a secret vote, and in what the game tells of a vote for a
+  seat, only how many is known
+- **Residents raise one thing a day at most**, whoever of those who may wants something most,
+  and nobody twice in five days: a law they hold with and have the reason for that its data
+  gives, the end of one they cannot abide, a vote on a leader they neither follow nor trust,
+  another government, or throwing out somebody they resent a great deal and know to have done
+  wrong three times in a fortnight. Once was too little: the ready-made settlement threw Raúl
+  out in its second week every time
+- **What was turned down is left alone for a week**, and a law just passed is not put to be
+  done away with for two days, nor one just done away with put again. Whoever had something
+  of theirs turned down remembers it, and leaves that very thing be for four weeks
+- **Nobody thinks unasked of resting whoever is expecting**: it is there for the player to put.
+  Raised by residents it took a farmer off the land for months, and the settlement went
+  hungry or, with her post covered, dark: whoever a law rests does not count among those who
+  hold a job, so that somebody else is asked to see to it, and that somebody left the workshop
+- **Speaking to somebody before a vote** adds up to 0.4 to their mind, by how much they lean on
+  the player. Past sixty of resistance they do the opposite
+- **Trust in the player** moves by up to twelve when something they put, or spoke up for, passes,
+  by what each resident makes of it, and a little each day a law of theirs stays in force.
+  Nothing that is turned down moves it. It also tells on any advice the player gives (S4)
+- **Whoever is thrown out has four hours to be gone**, walks to the gate, and takes what they
+  carry of their own. What they kept is nobody's. A leader thrown out is followed as one who dies
+- **How the settlement trades** is a proposal where there is a government, and whoever governs
+  decides it. With no government everybody still answers for themselves (S23). A resident who
+  has had enough of how things are traded and may not propose has nobody to put it to, and
+  holds that against the government
+- **Whoever wants a seat enough stands**, and whoever leads does. With fewer than two, the two
+  who mind least. Whoever puts themselves forward votes for themselves, which is not how S26
+  had it: there everybody stood, and nobody voted for themselves unless politics was a great
+  deal to them
+- **A count is seen to only where votes are secret**: nobody miscounts a show of hands. Whoever
+  leads and stands to lose makes up their mind six hours before, or half the wait if that is
+  less. Enough votes change hands for them to win, and none is made up. Only whoever sees
+  them at it knows
+- **A loser says there was cheating** by how vengeful and how distrustful they are, more so
+  after a near result or with the votes taken from them. Nothing follows but what is made of it
+- **Twenty-two laws**, of the eighteen things a law can do. Fourteen serious: curfew, a day of
+  rest, long or short hours, low or high wages, taxes, rationing, common property, a dry law,
+  substances banned, the gate closed, meals for nothing, and rest for whoever is expecting.
+  Eight absurd: silence at siesta, the hour of the radio, greeting whoever leads, a food
+  nobody is to eat, the round at the bar, a holiday on the leader's birthday, nobody at the
+  fire, and lamps out at night
+- **Two of the laws put to the user came out otherwise.** Silence at the table is silence from
+  two to four, because nobody could be spoken to while eating as it was. And nobody sitting
+  down is nobody at the fire, because a stool is not something anybody uses
+- **Keeping a law** goes by how far a resident does as the government says (S26), a fifth of
+  the government's legitimacy, and thirty times what they make of the law, against a bar that
+  a burdensome law raises and that moves a little from day to day. Legitimacy was not in what
+  was asked: without it hardly anybody kept a law under a government with no leader, where
+  there is no loyalty to count. Whoever leads counts as half loyal to themselves
+- **A curfew** keeps whoever keeps it under the roof they are under, across open ground only
+  to bed or for what cannot wait. Whoever is out and not at work is seen by whoever is about,
+  looked into every quarter of an hour
+- **Rationing** counts meals out of the commons. Nobody keeps it starving
+- **How short the settlement is of food weighs on its laws**: with less than six units a head
+  in the commons, a day of rest and short hours lose their appeal and long hours and rationing
+  gain it, so that what was passed in plenty is done away with in want. Without it the small
+  settlement of the opening voted itself a day of rest and short hours and starved to the last
+  of them. Long or short hours are the end of the working day, not of every shift, and
+  nobody bans the only thing there is to eat
+- **Where a law gathers everybody**, whoever keeps it leaves their stroll or their post on the
+  hour and stands within four tiles. At the end of it whoever is awake and not there is seen
+  not to be, by those who are
+- **Hours, wages, taxes, days off, common property and lamps** are the same for everybody:
+  there is no breaking them
+- **Whims** come to whoever leads a settlement half authoritarian or more, up to one chance in
+  four a day for each law they fancy
+- **Being seen to break a law** costs trust with whoever keeps it, and a leader seen to loses
+  legitimacy by it. Two who break one together think the better of each other
+- Save version 31
+
+Still open here:
+- None of it is on screen: P26. Until then all of it is done by command
+- Nothing comes of breaking a law but being seen to, and nobody enforces one: S28
+- Laws put to the user and not built: couples that marry or part, weapons for the guard alone,
+  and children put to work or kept from it. The last two were S28's already
+- Punishing a resident is not a proposal yet (S28), and nothing is built by proposing it: a
+  building is still put to one resident (S16)
+- Residents do not work on each other before a vote, and nobody campaigns: it waits for
+  conversations (S34, S35). Factions weigh on nothing (S29)
+- Everybody is taken to know what the law is. Only who broke it is known locally. And
+  whoever proposes rationing or a tax is taken to know how much is in the larder and the fund
+- Whoever keeps a curfew gets under the nearest roof, which may not be where they sleep: nobody
+  has a home, only a bed
+- Somebody who says there was cheating is believed or not, and nothing follows: no recount, no
+  second vote
+- A vote for a seat on the council leaves no memories, and nobody says it was rigged
+- The player cannot take a proposal back
+- Whoever is thrown out is never heard of again. Whether they are is S28's to settle
+- Every weight is a first guess. Under a mayor nobody doubts, almost everybody keeps every law,
+  and under an assembly about half do
+- A settlement has no slack: two on the land feed nine, and five days with one of them off it
+  empty the larder. Any law that takes hands from work is a risk for it, and what holds that
+  off is only that want weighs on votes. In the ready-made settlement, where Raúl starts
+  fights from the first day, a council or a leader may still throw him out within two weeks
+- With a law resting whoever is expecting, the post left is covered by taking somebody from a
+  post that matters less, and nobody goes back when she does
+
+### S28 — Trials and punishment (needs S27, and S23 to S25) — planned
+- **Laws came with S27.** Left for here are the ones that need a punishment or a trial to mean
+  anything: `weapon_restrictions`, `theft_penalties`, `election_rules`, children put to work,
+  and couples that marry or part
+- **Breaking a law leads somewhere**: being seen to (S27) is what an accusation starts from
+- **Punishing a resident is a proposal** (S27), decided as the government decides anything
 - **A scale of punishments, as data** (`data/punishments.json`): `warning`, `fine`,
   `confiscation`, `community_service`, `prison`, `public_stocks`, `exile`, `corporal_punishment`
   and `execution`
@@ -1688,8 +1832,8 @@ player's rejected; an election whose result is kept; and political memories.
   Without a jail nobody is locked up, without stocks nobody is put in them, and without a
   gallows or a guillotine nobody is put to death
 - **A fine goes into the common fund** (S23), in coin or, under barter, in things
-- **Exile is walking out for good**: whoever is exiled goes to the gate and through it, and does
-  not come back. What depended on them is let go of as on a death (S7), with no grave
+- **Exile is walking out for good**, as whoever is thrown out by a proposal already does (S27):
+  to the gate and through it, with what depended on them let go of as on a death, and no grave
 - **A punishment moves fear, legitimacy, unrest, support, resentment and relationships, by how
   things stand.** Putting to death a killer whom most hate may raise support. Putting to death
   someone held to be innocent sinks legitimacy and sends unrest up
@@ -1710,8 +1854,8 @@ player's rejected; an election whose result is kept; and political memories.
   So does a law or a post that puts children to work
 - Laws in force and the history of punishments are saved
 
-Done when: a law in force changes what residents are seen to do over a week; a theft that was
-witnessed goes to trial and one that nobody saw cannot; nobody is sentenced to what the
+Done when: a theft that was witnessed goes to trial and one that nobody saw cannot; a law
+that was seen broken can be answered for; nobody is sentenced to what the
 settlement has no place for; someone exiled is gone from the map, the posts and the beds, and
 is still in the memories of those they left; the same punishment raises legitimacy when those
 watching hold the condemned guilty and sinks it when they hold them innocent; and after a harsh
@@ -1763,7 +1907,11 @@ Still to settle:
 - Who holds which role seen on the map and in their panel, and a seat that stands empty
 - The jail, the stocks, the gallows and the guillotine, in Urbanismo and in their editors
 - Where a proposal is made, and where it is seen to go: who has it, how each vote went, what
-  came of it
+  came of it. Until then proposals, speaking to whoever decides and backing a candidate are
+  commands (S27)
+- The laws there are to propose and the ones in force, at what degree, and who is seen to break one
+- Somebody thrown out seen to walk to the gate and through it
+- A leader making up their mind about the count of a vote, and what is advised
 - An election, a trial and a public punishment seen as they happen, with nothing gory
 - Trouble on the map: who has stopped work, who is out protesting
 
@@ -1771,6 +1919,8 @@ Still to settle:
 - How much of the settlement's measures the player is shown, and whether as figures or as the
   mood of the place. What each resident holds is found out, as their tastes are, and not read
   off a panel
+- Whether the player is shown how a vote is going to go before it is held, and what each
+  resident makes of the player, or has to find both out
 
 ### P27 — Picked up and put down (needs P10) — planned
 The user's idea: residents can be dragged and dropped, and where one is dropped is what they do.

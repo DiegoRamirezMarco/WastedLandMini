@@ -517,8 +517,9 @@ settlement is created, in `SimulationWorld.demo_world`.
 
 - `governments` lists the kinds by ID, each with a `name`; a `leader_role` if somebody leads; a
   `council_role` and `council_seats` if there is a council; who `proposes`, who `approves` and
-  who `votes` (`leader`, `council`, `everyone` or `nobody`); the share it takes to approve
-  (`approval`), the `leader_weight` and whether there is a `veto`; `term_days` (0 for no
+  who `votes` (`leader`, `council`, `everyone` or `nobody`); how votes are taken (`ballot`:
+  `open` for a show of hands, `secret` for one in which only the count is known); the share it
+  takes to approve (`approval`), the `leader_weight` and whether there is a `veto`; `term_days` (0 for no
   terms); `succession`, the ways the next leader comes to be in the order they are tried
   (`election`, `council`, `strongest`, `heir`, `following`); `abuse_tolerance` from 0 to 100;
   the measures it `starts` with; and its `appeal`, how much each leaning of a resident counts
@@ -540,6 +541,83 @@ settlement is created, in `SimulationWorld.demo_world`.
   done to).
 - `leadership_pace`, `resign_stress` and `resign_support` say how much a leader tells on work,
   and when one thinks of stepping down.
+- `ways.election` also says who stands: `stand_from` is how much somebody has to want a seat
+  (left out, everybody stands), and `interest` and `liked` how much their interest in politics
+  and what others feel for them count towards it, beside `charisma` and `leadership`.
+- `elections` holds `rig_hours` (how long before a secret vote a leader about to lose it thinks
+  of seeing to the count), `rig_corruption`, `claim_from` (how sore a loser has to be to say
+  there was cheating), `lost_resentment` and `let_down_trust`.
+- The game opens `rig_election` by ID. Its scores may weigh `losing` and `scruples`. The
+  decisions at the gate may weigh `law`: 1 when a law says nobody comes in and whoever answers keeps it.
+
+## Laws
+
+`data/laws.json` holds every law there is to pass, and how laws are kept.
+
+- `laws` lists them by ID, each with a `name`, a `text` (what it says, with `{item}` for what it
+  names) and its `degrees` from mildest to harshest. A degree has a `name`, a `weight` (how
+  much more or less it weighs with people than the law as written, 1 by default) and its
+  `effects`:
+
+| Effect | What it does |
+|---|---|
+| `curfew` | `[from, to]` hours in which nobody is out of doors |
+| `closes` | Kinds of object nobody uses |
+| `bans_tags` | Tags of item nobody takes |
+| `bans_item` | Nobody takes the item the law names. The law needs `"param": "hated_food"` |
+| `day_off` | A day of the week, from 0, on which nobody works |
+| `leader_birthday` | Nobody works on the birthday of whoever leads |
+| `shift_hours` | Hours the working day is longer by, or shorter if less than none: its last shift gives |
+| `wage_factor`, `tax` | How many times the usual wage is paid, and the share of it the fund keeps |
+| `meals` | How many times a day anybody eats out of what is common |
+| `meal_price` | How many times the usual price a meal out of the commons costs |
+| `common` | What is kept in a container is nobody's |
+| `gate` | `closed`: nobody from outside is let in |
+| `excused` | Who does not work and is kept all the same: `expecting` |
+| `requires` | A `kind` of object everybody gathers at, at an `hour` |
+| `quiet` | `[from, to]` hours in which nobody talks to anybody |
+| `salute` | Whoever leads is greeted by whoever comes across them |
+| `dark` | Kinds of object that give no light at night |
+
+- `opinion` says what weighs for or against it with each resident, and `bias` what it starts
+  from. A key is a leaning, a side of a personality, something held (`loyalty`, `trust`,
+  `resentment`, `dread`), a stake (`works`, `idle`, `savings`, `poor`, `goods`, `drinks`,
+  `uses`, `hungry`, `tired`, `stressed`, `guards`, `expecting`, `governs`, `leads`,
+  `partnered`, `shortage` for how short the settlement is of food, `item` for how much they
+  like the item it names, `appeal`), or `taste:` and a taste tag.
+- `harsh` is what it adds to how authoritarian the settlement is, and `burden`, from 0 to 1,
+  how hard it is to keep. `absurd` marks a nonsense, which costs legitimacy to pass; `whim`
+  one that whoever leads may pass because they fancy it, by `whim_opinion`.
+- `excludes` names laws it cannot stand beside. `needs_currency`, `needs_leader` and
+  `needs_kind` say what there has to be for it to make sense.
+- `motive` is what brings a resident to propose it, one of: `need_above` (`need`, `level`),
+  `stock_below` (`category`, `per_resident`), `fund_below`, `fund_above` (coin per resident),
+  `known_facts` (`types`, `days`, `count`, and `night` for what happened in the dark),
+  `conviction` (how much they have to hold with it) and `stake` (a stake they must have).
+- `keeping` says how laws are kept (`base`, `burden`, `regard`, `legitimacy`, `jitter`), `grind`
+  what a day under one does, `breach` what being seen to break one does, `whim_from`,
+  `whim_chance` and `absurd_legitimacy` how whims go, and `plenty_per_resident` how much food
+  a head there has to be for nobody to think the settlement short of it.
+- A new effect needs code that asks about it. A new law made of the effects there are needs none.
+
+## Proposals
+
+`data/proposals.json` holds what can be put to a settlement, and how deciding goes.
+
+- `kinds` lists them by ID: `enact_law`, `repeal_law`, `call_election`, `change_government`,
+  `expel`, `adopt_currency` and `return_to_barter`. Each has a `name`, a `text` (with
+  `{described}`, `{law}`, `{text}`, `{degree}`, `{target}`, `{government}` and `{currency}`), an
+  `opinion` and `bias` as a law has, `debate_hours` if it is talked over longer than usual,
+  and a `motive` that brings a resident to raise it unasked. What a kind does when it passes
+  is code: a new kind needs some.
+- `debate_hours`, `leader_hours`, `pending_limit`, `again_days`, `undo_days`, `rest_days` and `sore_days`
+  say how long a proposal waits, how many wait at once, and how soon the same thing, the same
+  resident, or the same resident with the same thing comes back. `raise_from` and `repeal_from` are what somebody has to make of a matter to
+  raise it, and `margin` how far from the middle a mind has to be to vote.
+- `weights` holds how much each part of a mind on a proposal counts, `target` what is felt for
+  whoever it is about, and `misdeeds` the facts that count against them.
+- `influence` holds the player's word: `lobby`, `against`, `defiance`, `contrary`,
+  `resistance_fade`, `outcome` and `backing`. `aftermath` holds what comes of a decision.
 - A trait in `data/traits.json` may give `"politics": {"justice_sensitivity": -25}`: so much
   more or less of a leaning.
 - `charisma` and `leadership` are sides of a personality like any other, from 0 to 100.

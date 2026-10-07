@@ -335,8 +335,12 @@ class AfterTheOpeningTests(unittest.TestCase):
         self.assertFalse(kinds & {"shop_counter", "scrap_pile", "generator"})
         self.world.step(MINUTES_PER_DAY * 42)
         # With two there are no hands to spare for it. One of those who come takes it up unasked.
-        scavengers = [resident for resident in self.world.residents.values() if resident.job_id == "scavenger"]
-        self.assertEqual(len(scavengers), 1)
+        # Whoever it was may have been thrown out since, for what they took that was not theirs
+        # (S27), so it is asked of what happened and not of who is still there.
+        took_it_up = [line for line in self.world.event_log if " | job_changed | " in line and "Rebusca" in line]
+        self.assertEqual(len(took_it_up), 1)
+        still_at_it = [resident for resident in self.world.residents.values() if resident.job_id == "scavenger"]
+        self.assertEqual(len(still_at_it) + len(self.world.exiled), 1)
         self.assertGreaterEqual(self._kinds().count("expedition_left"), 10, "and goes out day after day, hands free")
         self.assertGreaterEqual(self._kinds().count("expedition_returned"), 10)
         self.assertFalse(self.world.deaths)

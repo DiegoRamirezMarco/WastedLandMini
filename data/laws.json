@@ -1,0 +1,776 @@
+{
+  "keeping": {
+    "base": 20,
+    "burden": 30,
+    "regard": 30,
+    "legitimacy": 0.2,
+    "jitter": 10
+  },
+  "grind": {
+    "resentment": 0.6,
+    "trust": 0.3,
+    "player_trust": 0.4
+  },
+  "breach": {
+    "importance": 35,
+    "trust": -4,
+    "resentment": 3,
+    "fellow": 2
+  },
+  "attend_reach": 4,
+  "salute_reach": 2,
+  "desperate_hunger": 85,
+  "whim_from": 50,
+  "whim_chance": 0.25,
+  "absurd_legitimacy": -4,
+  "laws": {
+    "curfew": {
+      "name": "Toque de queda",
+      "text": "de noche cada uno en su casa",
+      "degrees": [
+        {
+          "name": "de doce a cinco",
+          "effects": {
+            "curfew": [
+              0,
+              5
+            ]
+          },
+          "weight": 0.6
+        },
+        {
+          "name": "de diez a seis",
+          "effects": {
+            "curfew": [
+              22,
+              6
+            ]
+          },
+          "weight": 1.0
+        },
+        {
+          "name": "de ocho a siete",
+          "effects": {
+            "curfew": [
+              20,
+              7
+            ]
+          },
+          "weight": 1.5
+        }
+      ],
+      "opinion": {
+        "authoritarian_tolerance": 0.5,
+        "fearfulness": 0.5,
+        "individualism": -0.4,
+        "sociability": -0.3,
+        "drinks": -0.4
+      },
+      "bias": -0.1,
+      "harsh": 8,
+      "burden": 0.5,
+      "motive": {
+        "known_facts": {
+          "types": [
+            "theft_committed",
+            "raid",
+            "fight_started"
+          ],
+          "days": 5,
+          "count": 1,
+          "night": true
+        }
+      }
+    },
+    "rest_day": {
+      "name": "Día de descanso",
+      "text": "el séptimo día no trabaja nadie",
+      "degrees": [
+        {
+          "name": "el séptimo día",
+          "effects": {
+            "day_off": 6
+          }
+        }
+      ],
+      "opinion": {
+        "works": 0.5,
+        "tired": 0.6,
+        "collectivism": 0.2,
+        "greed": -0.3,
+        "governs": -0.2,
+        "shortage": -2.5
+      },
+      "bias": 0.05,
+      "harsh": -3,
+      "motive": {
+        "need_above": {
+          "need": "tiredness",
+          "level": 70
+        }
+      }
+    },
+    "long_hours": {
+      "name": "Jornada larga",
+      "text": "se trabaja más horas cada día",
+      "degrees": [
+        {
+          "name": "una hora más",
+          "effects": {
+            "shift_hours": 1
+          },
+          "weight": 0.6
+        },
+        {
+          "name": "dos horas más",
+          "effects": {
+            "shift_hours": 2
+          },
+          "weight": 1.0
+        },
+        {
+          "name": "tres horas más",
+          "effects": {
+            "shift_hours": 3
+          },
+          "weight": 1.5
+        }
+      ],
+      "opinion": {
+        "works": -0.6,
+        "tired": -0.5,
+        "idle": 0.3,
+        "governs": 0.3,
+        "authoritarian_tolerance": 0.3,
+        "hungry": 0.3,
+        "shortage": 0.9
+      },
+      "bias": -0.1,
+      "harsh": 6,
+      "excludes": [
+        "short_hours"
+      ],
+      "motive": {
+        "stock_below": {
+          "category": "food",
+          "per_resident": 2
+        }
+      }
+    },
+    "short_hours": {
+      "name": "Jornada corta",
+      "text": "se trabaja menos horas cada día",
+      "degrees": [
+        {
+          "name": "una hora menos",
+          "effects": {
+            "shift_hours": -1
+          },
+          "weight": 0.6
+        },
+        {
+          "name": "dos horas menos",
+          "effects": {
+            "shift_hours": -2
+          },
+          "weight": 1.0
+        }
+      ],
+      "opinion": {
+        "works": 0.5,
+        "tired": 0.5,
+        "idle": -0.2,
+        "governs": -0.3,
+        "hungry": -0.4,
+        "shortage": -3.0
+      },
+      "bias": 0.0,
+      "harsh": -3,
+      "excludes": [
+        "long_hours"
+      ],
+      "motive": {
+        "need_above": {
+          "need": "tiredness",
+          "level": 75
+        }
+      }
+    },
+    "low_wages": {
+      "name": "Sueldos bajos",
+      "text": "se paga menos por hora",
+      "degrees": [
+        {
+          "name": "tres cuartos del sueldo",
+          "effects": {
+            "wage_factor": 0.75
+          },
+          "weight": 0.7
+        },
+        {
+          "name": "medio sueldo",
+          "effects": {
+            "wage_factor": 0.5
+          },
+          "weight": 1.3
+        }
+      ],
+      "opinion": {
+        "works": -0.8,
+        "poor": -0.4,
+        "idle": 0.2,
+        "governs": 0.3,
+        "collectivism": 0.1
+      },
+      "bias": -0.05,
+      "harsh": 3,
+      "needs_currency": true,
+      "excludes": [
+        "high_wages"
+      ],
+      "motive": {
+        "fund_below": 5
+      }
+    },
+    "high_wages": {
+      "name": "Sueldos altos",
+      "text": "se paga más por hora",
+      "degrees": [
+        {
+          "name": "un cuarto más",
+          "effects": {
+            "wage_factor": 1.25
+          },
+          "weight": 0.7
+        },
+        {
+          "name": "sueldo y medio",
+          "effects": {
+            "wage_factor": 1.5
+          },
+          "weight": 1.3
+        }
+      ],
+      "opinion": {
+        "works": 0.8,
+        "poor": 0.3,
+        "idle": -0.3,
+        "governs": -0.3,
+        "greed": 0.2
+      },
+      "bias": 0.0,
+      "harsh": -2,
+      "needs_currency": true,
+      "excludes": [
+        "low_wages"
+      ],
+      "motive": {
+        "fund_above": 60
+      }
+    },
+    "tax": {
+      "name": "Impuestos",
+      "text": "una parte de cada sueldo se queda en el fondo",
+      "degrees": [
+        {
+          "name": "la décima parte",
+          "effects": {
+            "tax": 0.1
+          },
+          "weight": 0.5
+        },
+        {
+          "name": "la quinta parte",
+          "effects": {
+            "tax": 0.2
+          },
+          "weight": 1.0
+        },
+        {
+          "name": "la tercera parte",
+          "effects": {
+            "tax": 0.34
+          },
+          "weight": 1.6
+        }
+      ],
+      "opinion": {
+        "works": -0.5,
+        "greed": -0.4,
+        "individualism": -0.4,
+        "collectivism": 0.5,
+        "idle": 0.3,
+        "governs": 0.3
+      },
+      "bias": -0.05,
+      "harsh": 3,
+      "needs_currency": true,
+      "motive": {
+        "fund_below": 8
+      }
+    },
+    "rationing": {
+      "name": "Racionamiento",
+      "text": "se come de lo común las veces que se diga y ni una más",
+      "degrees": [
+        {
+          "name": "tres comidas al día",
+          "effects": {
+            "meals": 3
+          },
+          "weight": 0.5
+        },
+        {
+          "name": "dos comidas al día",
+          "effects": {
+            "meals": 2
+          },
+          "weight": 1.0
+        },
+        {
+          "name": "una comida al día",
+          "effects": {
+            "meals": 1
+          },
+          "weight": 1.7
+        }
+      ],
+      "opinion": {
+        "hungry": -0.8,
+        "greed": -0.4,
+        "collectivism": 0.4,
+        "justice_sensitivity": 0.3,
+        "governs": 0.2,
+        "individualism": -0.2,
+        "shortage": 0.8
+      },
+      "bias": -0.1,
+      "harsh": 5,
+      "burden": 0.6,
+      "motive": {
+        "stock_below": {
+          "category": "food",
+          "per_resident": 3
+        }
+      }
+    },
+    "common_property": {
+      "name": "Propiedad común",
+      "text": "lo que se guarda es de todos",
+      "degrees": [
+        {
+          "name": "todo lo guardado",
+          "effects": {
+            "common": true
+          }
+        }
+      ],
+      "opinion": {
+        "collectivism": 0.9,
+        "individualism": -0.8,
+        "goods": -0.8,
+        "greed": -0.5,
+        "poor": 0.3
+      },
+      "bias": -0.1,
+      "harsh": 4,
+      "motive": {
+        "conviction": 0.6
+      }
+    },
+    "dry_law": {
+      "name": "Ley seca",
+      "text": "el bar no sirve a nadie",
+      "degrees": [
+        {
+          "name": "el bar cerrado",
+          "effects": {
+            "closes": [
+              "bar"
+            ]
+          }
+        }
+      ],
+      "opinion": {
+        "drinks": -1.0,
+        "sociability": -0.3,
+        "authoritarian_tolerance": 0.3,
+        "justice_sensitivity": 0.2,
+        "empathy": 0.1
+      },
+      "bias": -0.15,
+      "harsh": 5,
+      "burden": 0.5,
+      "excludes": [
+        "daily_round"
+      ],
+      "motive": {
+        "known_facts": {
+          "types": [
+            "fight_started",
+            "substance_taken"
+          ],
+          "days": 5,
+          "count": 2
+        }
+      }
+    },
+    "substance_ban": {
+      "name": "Sustancias prohibidas",
+      "text": "nada de humo, pastillas ni polvos",
+      "degrees": [
+        {
+          "name": "todo vicio",
+          "effects": {
+            "bans_tags": [
+              "vice"
+            ]
+          }
+        }
+      ],
+      "opinion": {
+        "uses": -1.0,
+        "authoritarian_tolerance": 0.3,
+        "justice_sensitivity": 0.2,
+        "individualism": -0.3,
+        "empathy": 0.2
+      },
+      "bias": 0.0,
+      "harsh": 5,
+      "burden": 0.5,
+      "motive": {
+        "known_facts": {
+          "types": [
+            "substance_taken"
+          ],
+          "days": 7,
+          "count": 2
+        }
+      }
+    },
+    "closed_gate": {
+      "name": "Puerta cerrada",
+      "text": "no entra nadie de fuera",
+      "degrees": [
+        {
+          "name": "a todo forastero",
+          "effects": {
+            "gate": "closed"
+          }
+        }
+      ],
+      "opinion": {
+        "fearfulness": 0.5,
+        "empathy": -0.5,
+        "sociability": -0.3,
+        "hungry": 0.4,
+        "authoritarian_tolerance": 0.2,
+        "shortage": 0.5
+      },
+      "bias": -0.1,
+      "harsh": 4,
+      "burden": 0.3,
+      "motive": {
+        "stock_below": {
+          "category": "food",
+          "per_resident": 2
+        }
+      }
+    },
+    "free_meals": {
+      "name": "Comida gratis",
+      "text": "el plato de la olla no se cobra",
+      "degrees": [
+        {
+          "name": "sin cobrar",
+          "effects": {
+            "meal_price": 0.0
+          }
+        }
+      ],
+      "opinion": {
+        "poor": 0.7,
+        "collectivism": 0.5,
+        "empathy": 0.3,
+        "greed": -0.2,
+        "individualism": -0.3,
+        "governs": -0.2
+      },
+      "bias": 0.05,
+      "harsh": -3,
+      "needs_currency": true,
+      "motive": {
+        "fund_above": 50
+      }
+    },
+    "pregnancy_rest": {
+      "name": "Descanso de las embarazadas",
+      "text": "quien espera un hijo no trabaja, y se le mantiene igual",
+      "degrees": [
+        {
+          "name": "hasta que nazca",
+          "effects": {
+            "excused": [
+              "expecting"
+            ]
+          }
+        }
+      ],
+      "opinion": {
+        "expecting": 1.0,
+        "empathy": 0.5,
+        "collectivism": 0.3,
+        "greed": -0.3,
+        "partnered": 0.2,
+        "shortage": -2.0
+      },
+      "bias": 0.1,
+      "harsh": -2
+    },
+    "silent_siesta": {
+      "name": "Silencio de siesta",
+      "text": "de dos a cuatro no habla nadie con nadie",
+      "degrees": [
+        {
+          "name": "de dos a cuatro",
+          "effects": {
+            "quiet": [
+              14,
+              16
+            ]
+          }
+        }
+      ],
+      "opinion": {
+        "sociability": -0.7,
+        "tired": 0.4,
+        "authoritarian_tolerance": 0.2,
+        "individualism": -0.2
+      },
+      "bias": -0.25,
+      "harsh": 4,
+      "absurd": true,
+      "whim": true,
+      "burden": 0.4,
+      "whim_opinion": {
+        "sociability": -0.8,
+        "aggression": 0.3
+      }
+    },
+    "radio_hour": {
+      "name": "La hora de la radio",
+      "text": "a las ocho, todos junto a la radio",
+      "degrees": [
+        {
+          "name": "a las ocho",
+          "effects": {
+            "requires": {
+              "kind": "radio_set",
+              "hour": 20
+            }
+          }
+        }
+      ],
+      "opinion": {
+        "taste:music": 0.6,
+        "sociability": 0.3,
+        "individualism": -0.5,
+        "tired": -0.3,
+        "authoritarian_tolerance": 0.2,
+        "shortage": -0.4
+      },
+      "bias": -0.25,
+      "harsh": 4,
+      "absurd": true,
+      "whim": true,
+      "burden": 0.4,
+      "needs_kind": "radio_set",
+      "whim_opinion": {
+        "taste:music": 1.0,
+        "sociability": 0.3
+      }
+    },
+    "salute": {
+      "name": "Saludo obligatorio",
+      "text": "a quien manda se le saluda al cruzárselo",
+      "degrees": [
+        {
+          "name": "siempre",
+          "effects": {
+            "salute": true
+          }
+        }
+      ],
+      "opinion": {
+        "authoritarian_tolerance": 0.6,
+        "loyalty": 0.5,
+        "individualism": -0.5,
+        "justice_sensitivity": -0.2,
+        "resentment": -0.6
+      },
+      "bias": -0.3,
+      "harsh": 7,
+      "absurd": true,
+      "whim": true,
+      "burden": 0.3,
+      "needs_leader": true,
+      "whim_opinion": {
+        "political_interest": 0.5,
+        "aggression": 0.4,
+        "empathy": -0.4
+      }
+    },
+    "banned_food": {
+      "name": "Comida vetada",
+      "text": "nadie come {item}",
+      "degrees": [
+        {
+          "name": "ni probarla",
+          "effects": {
+            "bans_item": true
+          }
+        }
+      ],
+      "opinion": {
+        "item": -1.2,
+        "individualism": -0.3,
+        "authoritarian_tolerance": 0.2,
+        "shortage": -0.8
+      },
+      "bias": -0.25,
+      "harsh": 5,
+      "absurd": true,
+      "whim": true,
+      "burden": 0.5,
+      "param": "hated_food",
+      "whim_opinion": {
+        "item": -1.0,
+        "shortage": -1.0
+      }
+    },
+    "daily_round": {
+      "name": "La ronda obligatoria",
+      "text": "a las siete, todos al bar",
+      "degrees": [
+        {
+          "name": "a las siete",
+          "effects": {
+            "requires": {
+              "kind": "bar",
+              "hour": 19
+            }
+          }
+        }
+      ],
+      "opinion": {
+        "drinks": 0.7,
+        "sociability": 0.5,
+        "individualism": -0.4,
+        "tired": -0.3,
+        "uses": 0.2,
+        "shortage": -0.4
+      },
+      "bias": -0.25,
+      "harsh": 3,
+      "absurd": true,
+      "whim": true,
+      "burden": 0.4,
+      "needs_kind": "bar",
+      "excludes": [
+        "dry_law"
+      ],
+      "whim_opinion": {
+        "drinks": 1.0,
+        "sociability": 0.4
+      }
+    },
+    "leader_birthday": {
+      "name": "Fiesta del cumpleaños de quien manda",
+      "text": "el día que cumple años quien manda no trabaja nadie",
+      "degrees": [
+        {
+          "name": "todo el día",
+          "effects": {
+            "leader_birthday": true
+          }
+        }
+      ],
+      "opinion": {
+        "loyalty": 0.5,
+        "works": 0.3,
+        "justice_sensitivity": -0.3,
+        "resentment": -0.5,
+        "shortage": -0.3
+      },
+      "bias": -0.15,
+      "harsh": 3,
+      "absurd": true,
+      "whim": true,
+      "needs_leader": true,
+      "whim_opinion": {
+        "political_interest": 0.4,
+        "sociability": 0.4,
+        "empathy": -0.2
+      }
+    },
+    "no_fire": {
+      "name": "Prohibido sentarse a la hoguera",
+      "text": "nadie se sienta a la hoguera",
+      "degrees": [
+        {
+          "name": "nunca",
+          "effects": {
+            "closes": [
+              "campfire"
+            ]
+          }
+        }
+      ],
+      "opinion": {
+        "sociability": -0.7,
+        "stressed": -0.5,
+        "authoritarian_tolerance": 0.2
+      },
+      "bias": -0.3,
+      "harsh": 4,
+      "absurd": true,
+      "whim": true,
+      "burden": 0.4,
+      "needs_kind": "campfire",
+      "whim_opinion": {
+        "sociability": -0.6,
+        "greed": 0.3,
+        "aggression": 0.3
+      }
+    },
+    "lights_out": {
+      "name": "Luces fuera",
+      "text": "de noche no se enciende un farol",
+      "degrees": [
+        {
+          "name": "toda la noche",
+          "effects": {
+            "dark": [
+              "lamp"
+            ]
+          }
+        }
+      ],
+      "opinion": {
+        "fearfulness": -0.7,
+        "greed": 0.3,
+        "individualism": -0.2
+      },
+      "bias": -0.25,
+      "harsh": 3,
+      "absurd": true,
+      "whim": true,
+      "needs_kind": "lamp",
+      "whim_opinion": {
+        "greed": 0.7,
+        "courage": 0.3
+      }
+    }
+  },
+  "plenty_per_resident": 6
+}

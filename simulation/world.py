@@ -31,6 +31,7 @@ from simulation.memory.memory_system import MemorySystem
 from simulation.politics.government import GovernmentState, PoliticsResult
 from simulation.politics.politics_system import PoliticsSystem
 from simulation.politics.profile import PoliticalProfile
+from simulation.politics.records import Exile, PlayerStanding
 from simulation.registries import DEFAULT_MAP_ID, BuiltInRegistries, builtin_registries
 from simulation.residents.founding import found_resident
 from simulation.residents.manner import MannerDefinition
@@ -109,6 +110,13 @@ class SimulationWorld:
     government: GovernmentState = field(default_factory=GovernmentState)
     # What each resident holds about how the settlement is run, by resident ID. Kept apart from the resident.
     political_profiles: dict[str, PoliticalProfile] = field(default_factory=dict)
+    # What the player is to each resident, by resident ID: how far they trust them, and how
+    # much they resist being pushed.
+    player_standing: dict[str, PlayerStanding] = field(default_factory=dict)
+    # Whoever has been thrown out and is on their way to the gate: the game minute by which
+    # they are gone, by resident ID. And everyone who has been thrown out, oldest first.
+    leaving: dict[str, int] = field(default_factory=dict)
+    exiled: list[Exile] = field(default_factory=list)
     # Children under ten, by ID: carried and seen to by somebody until they walk.
     bundles: dict[str, Bundle] = field(default_factory=dict)
     # What residents have lent one another and not had back yet.
@@ -283,6 +291,27 @@ class SimulationWorld:
         """Put a kind of government to everyone, while the settlement is choosing one. They settle it."""
         return self.politics.propose_government(self, government_id)
 
+    def propose(
+        self,
+        kind: str,
+        law: str | None = None,
+        degree: int | None = None,
+        target: str | None = None,
+        government: str | None = None,
+        params: Mapping[str, str] | None = None,
+    ) -> PoliticsResult:
+        """Put something to the settlement. Whoever may propose has to make it theirs, and
+        those who decide, decide: nothing of it is done unless it passes."""
+        return self.politics.propose(self, kind, law, degree, target, government, params)
+
+    def lobby(self, proposal_id: str, resident_id: str, stance: str) -> PoliticsResult:
+        """Speak to one of those who will decide a proposal, for it or against it. They vote as they see fit."""
+        return self.politics.lobby(self, proposal_id, resident_id, stance)
+
+    def back_candidate(self, resident_id: str, candidate_id: str) -> PoliticsResult:
+        """Speak to a resident for one of those who stand in the vote that has been called."""
+        return self.politics.back_candidate(self, resident_id, candidate_id)
+
     def set_identity(self, resident_id: str, sex: str, gender: str, drawn_to: str) -> bool:
         """Say what a resident's sex and gender are and who they are drawn to."""
         return self.family.set_identity(self, resident_id, sex, gender, drawn_to)
@@ -452,8 +481,11 @@ class SimulationWorld:
         return False
 
     def light_of(self, placed: Interactable, powered: bool | None = None) -> int:
-        """How many tiles round it an object lights right now. A lamp gives none while the power is out."""
+        """How many tiles round it an object lights right now. A lamp gives none while the
+        power is out, and nothing does that a law has put out for the night."""
         if placed.kind in POWERED_LIGHTS and not (self.has_power() if powered is None else powered):
+            return 0
+        if self.government.laws and self.politics.laws.dark(self, placed):
             return 0
         return self.definition_of(placed).light
 
