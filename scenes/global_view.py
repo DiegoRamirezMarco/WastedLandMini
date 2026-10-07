@@ -57,8 +57,13 @@ from simulation.commands import (
     SetPausedCommand,
     SetResearchCommand,
     SetSpeedCommand,
+    AffectCommand,
+    HoldResidentCommand,
+    ReleaseResidentCommand,
+    ScrapItemCommand,
     SuggestJobCommand,
 )
+from simulation.ai.affect import SALVAGE, TASK
 from simulation.events.event import DomainEvent
 from simulation.items.item_system import USE_ITEM_ACTION
 from simulation.residents.manner import EAT, FIGHT, WALK
@@ -70,6 +75,7 @@ from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
 from skeleton.plan import IDLE_CLIP, builtin_plan
 from skeleton.rig import Skeleton
+from ui.affect_board import AFFECT_INTENT, BACK_INTENT, CLOSE_INTENT
 from ui.bubble import MARK_SIZE, MARK_TAIL, draw_mark
 from ui.labels import away_residents
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
@@ -289,6 +295,8 @@ class GlobalView:
         # player moves the view by hand. `_selection_seen` is what tells a new selection from an old one.
         self.following: str | None = None
         self._selection_seen: str | None = None
+        # Whoever the player has stopped to tell something, while they are choosing what.
+        self._affected: str | None = None
         # Where on the canvas the left button went down on the map and where the mouse last was
         # with it held, and whether it has moved far enough since to be dragging.
         self._press: tuple[int, int] | None = None
@@ -374,6 +382,8 @@ class GlobalView:
             self.time += dt
             self.bodies.update(dt, self.world)
         self.hud.update(dt)
+        self.hud.pointer = self.pointer
+        self._keep_listening()
         pressed = pygame.key.get_pressed()
         for (dx, dy), keys in SCROLL_KEYS.items():
             if any(pressed[key] for key in keys):
@@ -624,6 +634,19 @@ class GlobalView:
             self.requested_manners = self.hud.selected_id or next(iter(self.world.residents), None)
         elif intent == PANEL_TAB_INTENT:
             self.hud.toggle_panel_tab()
+        elif intent == AFFECT_INTENT:
+            self._toggle_affect()
+        elif intent in (CLOSE_INTENT, BACK_INTENT):
+            self._affect_back(intent == CLOSE_INTENT)
+        elif isinstance(intent, tuple) and intent[0] == "affect_group":
+            self.hud.affect_group, self.hud.affect_kind = intent[1], None
+        elif isinstance(intent, tuple) and intent[0] == "affect":
+            self._affect(intent[1], None)
+        elif isinstance(intent, tuple) and intent[0] == "affect_target":
+            self._affect(intent[1], intent[2])
+        elif isinstance(intent, tuple) and intent[0] == "scrap":
+            # What is nobody's is broken up there and then. What is somebody's is theirs to say.
+            self.hud.notify(self.world.apply_command(ScrapItemCommand(intent[1])).message)
         elif intent == TASTE_DEBUG_INTENT:
             self.hud.taste_debug = not self.hud.taste_debug
         elif intent == ROSTER_INTENT:
@@ -677,6 +700,69 @@ class GlobalView:
                 if self._is_at(room.room_id, tile):
                     return room.room_id
         return roofed[0].room_id if roofed else None
+
+    def _toggle_affect(self) -> None:
+        """Stop whoever is selected so that they can be told something, or let them go."""
+        resident_id = self.hud.selected_id
+        if resident_id is None:
+            return
+        if self.hud.affect_open:
+            self._affect_back(close=True)
+            return
+        waiting = self.world.construction.waiting_for_material(self.world, self.world.residents[resident_id])
+        result = self.world.apply_command(HoldResidentCommand(resident_id))
+        if not result.ok:
+            self.hud.notify(result.message)
+            return
+        self._affected = resident_id
+        salvage = f"{TASK}:{SALVAGE}"
+        if waiting is not None and any(option.kind == salvage for option in self.world.affect_options(resident_id)):
+            # Somebody waiting for material is asked first what they may take apart for it.
+            self.hud.open_affect(TASK, salvage)
+        else:
+            self.hud.open_affect()
+
+    def _affect_back(self, close: bool) -> None:
+        """Go a step back in what is being said, or with nothing chosen yet let them go."""
+        if not close and self.hud.affect_kind is not None:
+            self.hud.affect_kind = None
+        elif not close and self.hud.affect_group is not None:
+            self.hud.affect_group = None
+        else:
+            if self._affected is not None:
+                self.world.apply_command(ReleaseResidentCommand(self._affected))
+            self._affected = None
+            self.hud.close_affect()
+
+    def _affect(self, kind: str, target_id: str | None) -> None:
+        """Tell whoever is selected what was chosen, or go on to who or what it is about."""
+        resident_id = self.hud.selected_id
+        if resident_id is None:
+            return
+        option = next((each for each in self.world.affect_options(resident_id) if each.kind == kind), None)
+        if option is not None and option.targets and target_id is None:
+            self.hud.affect_kind = kind
+            return
+        result = self.world.apply_command(AffectCommand(resident_id, kind, target_id))
+        self.hud.notify(result.message)
+        if result.ok:
+            self._affected = None
+            self.hud.close_affect()
+
+    def _keep_listening(self) -> None:
+        """While the player is choosing what to say, whoever was stopped goes on standing there.
+        With somebody else selected, or them gone, they are let go."""
+        if not self.hud.affect_open:
+            if self._affected is not None:
+                self.world.apply_command(ReleaseResidentCommand(self._affected))
+                self._affected = None
+            return
+        resident_id = self.hud.selected_id
+        if resident_id != self._affected or resident_id not in self.world.residents:
+            self._affect_back(close=True)
+        elif not self.world.affect.is_held(self.world, resident_id):
+            if not self.world.apply_command(HoldResidentCommand(resident_id)).ok:
+                self._affect_back(close=True)
 
     def _suggest_job(self, job_id: str) -> None:
         """Put a job to the selected resident and say what came of it. The choice is theirs."""

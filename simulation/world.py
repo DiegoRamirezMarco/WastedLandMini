@@ -2,6 +2,7 @@ from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 
 from simulation.ai.activity_system import ActivitySystem
+from simulation.ai.affect import AffectOption, AffectResult, AffectSystem
 from simulation.clock import SimulationClock
 from simulation.commands import SimulationCommand
 from simulation.events.decision import Decision
@@ -84,6 +85,7 @@ class SimulationWorld:
     interactables: dict[str, Interactable] = field(default_factory=dict)
     activities: ActivitySystem = field(default_factory=ActivitySystem)
     interventions: InterventionSystem = field(default_factory=InterventionSystem)
+    affect: AffectSystem = field(default_factory=AffectSystem)
     # Open chances for the player to advise a resident, by decision ID.
     decisions: dict[str, Decision] = field(default_factory=dict)
     decision_count: int = 0
@@ -247,6 +249,22 @@ class SimulationWorld:
 
     def cancel_site(self, site_id: str) -> UrbanismResult:
         return self.construction.cancel(self, site_id)
+
+    def hold_resident(self, resident_id: str) -> AffectResult:
+        """Stop a resident, who stands and listens for what the player has to say."""
+        return self.affect.hold(self, resident_id)
+
+    def release_resident(self, resident_id: str) -> bool:
+        """Let a resident who was stopped go about their day with nothing said."""
+        return self.affect.release(self, resident_id)
+
+    def affect_options(self, resident_id: str) -> list[AffectOption]:
+        """What a resident can be told right now."""
+        return self.affect.options(self, resident_id)
+
+    def affect_resident(self, resident_id: str, kind: str, target_id: str | None) -> AffectResult:
+        """Tell a resident to do something. It is an order: they do it, as far as it can be done."""
+        return self.affect.order(self, resident_id, kind, target_id)
 
     def order_salvage(self, resident_id: str, object_id: str) -> UrbanismResult:
         """Tell a resident to take something apart for what it is made of. It is their task until it is done."""

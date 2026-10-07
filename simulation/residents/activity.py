@@ -12,6 +12,8 @@ SHELTER_ACTION = "shelter"
 RETIRE_ACTION = "retire"
 ATTEND_ACTION = "attend"
 LEAVE_ACTION = "leave"
+# Standing where they were stopped, listening for what the player has to say.
+HEED_ACTION = "heed"
 
 
 @dataclass

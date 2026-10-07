@@ -20,7 +20,14 @@ from simulation.world import SimulationWorld
 from ui.button import Button
 from ui.dock import draw_scene
 from ui.event_log import EventFeed
-from ui.inventory_view import container_item_hitboxes, container_panel_height, draw_container_panel
+from ui.affect_board import AFFECT_INTENT, affect_board_height, affect_rows, draw_affect_board
+from ui.affect_board import PANEL_WIDTH as AFFECT_WIDTH
+from ui.inventory_view import (
+    container_item_hitboxes,
+    container_panel_height,
+    container_scrap_hitboxes,
+    draw_container_panel,
+)
 from ui.job_board import PANEL_WIDTH as BOARD_WIDTH
 from ui.job_board import draw_job_board, job_board_height, suggest_buttons
 from ui.labels import (
@@ -45,6 +52,7 @@ from ui.resident_panel import (
     inventory_hitboxes,
     relationship_hitboxes,
     debug_hitbox,
+    affect_hitbox,
     manners_hitbox,
     roster_rows,
     tab_hitbox,
@@ -110,6 +118,10 @@ def edit_item_intent(definition_id: str) -> tuple[str, str]:
     return ("edit_item", definition_id)
 
 
+def scrap_intent(instance_id: str) -> tuple[str, str]:
+    return ("scrap", instance_id)
+
+
 @dataclass
 class MenuButton:
     """An entry of the menu on the left: an icon over a word."""
@@ -166,6 +178,13 @@ class Hud:
         self.jobs_open = False
         self.stores_open = False
         self.research_open = False
+        # What the player can tell whoever is selected, while they stand stopped to be told: the
+        # kind of thing chosen so far, and the thing, on the way to who or what it is about.
+        self.affect_open = False
+        self.affect_group: str | None = None
+        self.affect_kind: str | None = None
+        # Where the pointer is, for what lights up under it.
+        self.pointer: tuple[int, int] | None = None
         # At most one of these is set: the resident or the container whose panel is showing.
         self.selected_id: str | None = None
         self.selected_container: str | None = None
@@ -255,14 +274,19 @@ class Hud:
             fixed.append(step_button)
         if self.research_open:
             return fixed + study_buttons(self.font, self.research_rect(), self.world)
+        if self.affect_open and self.selected_id in self.world.residents:
+            return fixed + affect_rows(
+                self.affect_rect(), self.world, self.selected_id or "", self.affect_group, self.affect_kind
+            )
         if not self.jobs_open:
             return fixed
         return fixed + suggest_buttons(self.font, self.jobs_rect(), self.world, self.selected_id)
 
     def _open_only(self, panel: str) -> None:
         """Open one of the panels that share a corner, or shut it if it is the one open, and shut the rest."""
-        for name in ("log_open", "jobs_open", "stores_open", "research_open"):
+        for name in ("log_open", "jobs_open", "stores_open", "research_open", "affect_open"):
             setattr(self, name, name == panel and not getattr(self, name))
+        self.affect_group = self.affect_kind = None
 
     def toggle_log(self) -> None:
         self._open_only("log_open")
@@ -275,6 +299,15 @@ class Hud:
 
     def toggle_research(self) -> None:
         self._open_only("research_open")
+
+    def open_affect(self, group: str | None = None, kind: str | None = None) -> None:
+        """Show what whoever is selected can be told, in place of whatever else was open there."""
+        self.affect_open = False
+        self._open_only("affect_open")
+        self.affect_group, self.affect_kind = group, kind
+
+    def close_affect(self) -> None:
+        self.affect_open, self.affect_group, self.affect_kind = False, None, None
 
     def on_events(self, events: Iterable[DomainEvent]) -> None:
         self.feed.add(events)
@@ -318,6 +351,15 @@ class Hud:
         for button in self.buttons:
             if button.contains(position):
                 return button.intent
+        if self.selected_id in self.world.residents and affect_hitbox(self.layout.panel).collidepoint(position):
+            return AFFECT_INTENT
+        if self.selected_container in self.world.containers:
+            marks = container_scrap_hitboxes(
+                self.layout.panel.topleft, self.world, self.selected_container or "", self.layout.panel.width
+            )
+            for rect, instance_id in marks:
+                if rect.collidepoint(position):
+                    return scrap_intent(instance_id)
         if self.selected_id in self.world.residents and tab_hitbox(self.layout.panel).collidepoint(position):
             return PANEL_TAB_INTENT
         if (
@@ -366,6 +408,7 @@ class Hud:
         panels += [self.jobs_rect()] if self.jobs_open else []
         panels += [self.stores_rect()] if self.stores_open else []
         panels += [self.research_rect()] if self.research_open else []
+        panels += [self.affect_rect()] if self.affect_open else []
         return any(rect is not None and rect.collidepoint(position) for rect in panels)
 
     def _float(self, width: int, height: int) -> pygame.Rect:
@@ -381,6 +424,10 @@ class Hud:
 
     def research_rect(self) -> pygame.Rect:
         return self._float(RESEARCH_WIDTH, research_board_height(self.world, self.font))
+
+    def affect_rect(self) -> pygame.Rect:
+        height = affect_board_height(self.world, self.selected_id or "", self.affect_group, self.affect_kind)
+        return self._float(AFFECT_WIDTH, height)
 
     def stores_rect(self) -> pygame.Rect:
         rows = max(1, len(settlement_stock(self.world)))
@@ -445,6 +492,11 @@ class Hud:
             self._render_stores(self.stores_rect())
         if self.research_open:
             draw_research_board(self.canvas, self.font, self.research_rect(), self.world)
+        if self.affect_open and self.selected_id in self.world.residents:
+            draw_affect_board(
+                self.canvas, self.font, self.affect_rect(), self.world, self.selected_id or "",
+                self.affect_group, self.affect_kind, self.pointer,
+            )
 
     def _menu_active(self, intent: Hashable) -> bool:
         if intent == ROSTER_INTENT:
@@ -493,8 +545,20 @@ class Hud:
         width = top.right - MARGIN - self.clock_left
         waiting = next(iter(self.world.decisions.values()), None)
         asker = self.world.residents.get(waiting.resident_id) if waiting is not None else None
+        builder = next(
+            (
+                resident
+                for resident in self.world.residents.values()
+                if self.world.construction.waiting_for_material(self.world, resident) is not None
+            ),
+            None,
+        )
         if self._notice_left > 0:
             self.font.draw(self.canvas, self.font.truncate(self._notice, width), (self.clock_left, 14), PALETTE["glow"])
+        elif asker is None and builder is not None:
+            # Somebody sits by a site with nothing to build with: they can be told what to take apart.
+            hint = self.font.truncate(f"! {builder.name} pide material: selecciónale y pulsa Afectar", width)
+            self.font.draw(self.canvas, hint, (self.clock_left, 14), PALETTE["lamp"])
         elif asker is not None:
             hint = self.font.truncate(f"! {asker.name} necesita consejo: TAB o clic", width)
             self.font.draw(self.canvas, hint, (self.clock_left, 14), PALETTE["lamp"])

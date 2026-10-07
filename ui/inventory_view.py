@@ -14,6 +14,9 @@ ROW_HEIGHT = ICON_SIZE[1] + 2
 PADDING = 5
 PANEL_WIDTH = 184
 EMPTY_TEXT = "No lleva nada"
+# The mark at the end of a row that breaks the item up for scrap, and how wide it is.
+SCRAP_MARK = "desg."
+SCRAP_WIDTH = 30
 # Condition from which a thing is shown as sound, and from which as merely worn.
 SOUND_CONDITION = 50.0
 WORN_CONDITION = 20.0
@@ -84,6 +87,23 @@ def container_item_hitboxes(
     ]
 
 
+def container_scrap_hitboxes(
+    position: tuple[int, int], world: SimulationWorld, container_id: str, width: int = PANEL_WIDTH
+) -> list[tuple[pygame.Rect, str]]:
+    """Where each item that can be broken up for scrap is clicked to do it, paired with the
+    item's own ID: at the right end of its row. Nothing on a counter is: that is for sale."""
+    inventory = world.containers.get(container_id)
+    if inventory is None or selling_use(world, container_id) is not None:
+        return []
+    right = position[0] + width - PADDING
+    top = position[1] + PADDING + LINE_HEIGHT + 2
+    return [
+        (pygame.Rect(right - SCRAP_WIDTH, top + index * ROW_HEIGHT + 1, SCRAP_WIDTH, ROW_HEIGHT - 2), item.instance_id)
+        for index, item in enumerate(inventory.items)
+        if world.salvaging.scrap_units(world, item) > 0
+    ]
+
+
 def draw_container_panel(
     target: pygame.Surface,
     font: BitmapFont,
@@ -108,6 +128,7 @@ def draw_container_panel(
     y += LINE_HEIGHT + 2
     if not inventory.items:
         font.draw(target, "Vacía", (x, y + 3), PALETTE["stone"])
+    scrap = dict((item_id, mark) for mark, item_id in container_scrap_hitboxes(position, world, container_id, width))
     for item in inventory.items:
         definition = world.registries.items.resolve(item.definition_id)
         target.blit(icons.icon(item.definition_id), (x, y))
@@ -123,6 +144,11 @@ def draw_container_panel(
         else:
             owner = world.residents.get(item.owner_id or "")
             text += f" (de {owner.name})" if owner is not None else " (de todos)"
+        mark = scrap.get(item.instance_id)
+        if mark is not None:
+            draw_panel(target, mark, fill="shadow", border="copper")
+            font.draw(target, SCRAP_MARK, (mark.centerx - font.width(SCRAP_MARK) // 2, mark.y + 1), PALETTE["sand"])
+            room -= SCRAP_WIDTH + 3
         font.draw(target, font.truncate(text, room), (x + ICON_SIZE[0] + 4, y + 3), PALETTE["bone"])
         y += ROW_HEIGHT
     return rect

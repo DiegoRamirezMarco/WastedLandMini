@@ -1,0 +1,117 @@
+{
+  "hold_minutes": 30,
+  "strong_feeling": 50,
+  "most_targets": 8,
+  "needs": {
+    "eat": {
+      "label": "Que coma algo",
+      "need": "hunger"
+    },
+    "drink": {
+      "label": "Que beba",
+      "need": "thirst"
+    },
+    "sleep": {
+      "label": "Que se acueste",
+      "need": "tiredness",
+      "asleep": true
+    },
+    "unwind": {
+      "label": "Que se dé un respiro",
+      "need": "stress"
+    },
+    "heal": {
+      "label": "Que vaya a que le curen",
+      "heals": true
+    }
+  },
+  "with": {
+    "talk": {
+      "label": "Que charle con {target}",
+      "interaction": "chat"
+    },
+    "open_up": {
+      "label": "Que hable las cosas con {target}",
+      "interaction": "heart_to_heart"
+    },
+    "confront": {
+      "label": "Que le plante cara a {target}",
+      "interaction": "argument"
+    },
+    "confess": {
+      "label": "Que le diga a {target} lo que siente",
+      "interaction": "confession",
+      "who": "single"
+    },
+    "propose": {
+      "label": "Que le pida a {target} que se casen",
+      "interaction": "proposal",
+      "who": "partner"
+    },
+    "part": {
+      "label": "Que lo deje con {target}",
+      "interaction": "breakup",
+      "who": "partner"
+    }
+  },
+  "incite": {
+    "strike": {
+      "label": "Que vaya a por {target}",
+      "interaction": "fight",
+      "feeling": "resentment"
+    },
+    "have_it_out": {
+      "label": "Que le suelte a {target} todo lo que le guarda",
+      "interaction": "argument",
+      "feeling": "resentment"
+    },
+    "woo": {
+      "label": "Que se lance con {target}",
+      "interaction": "confession",
+      "feeling": "attraction",
+      "who": "single"
+    },
+    "slip_away": {
+      "label": "Que se pierda un rato con {target}",
+      "interaction": "tryst",
+      "feeling": "attraction"
+    },
+    "seek_out": {
+      "label": "Que busque a {target}, que tanto quiere",
+      "interaction": "heart_to_heart",
+      "feeling": "affection"
+    }
+  },
+  "words": {
+    "calm": {
+      "label": "Tranquilo",
+      "needs": {
+        "stress": -15
+      },
+      "mood": 3
+    },
+    "cheer": {
+      "label": "Ánimo",
+      "needs": {
+        "stress": -5
+      },
+      "mood": 10
+    },
+    "scold": {
+      "label": "Así no",
+      "needs": {
+        "stress": 12
+      },
+      "mood": -8
+    }
+  },
+  "tasks": {
+    "to_post": "Que vaya a su puesto",
+    "take_charge": "Que se haga cargo de la obra: {target}",
+    "salvage": "Que desguace {target}",
+    "take_job": "Que se ocupe de un puesto: {target}",
+    "leave_job": "Que deje su puesto",
+    "treat": "Que se dé un gusto: {target}",
+    "stop": "Que deje lo que está haciendo"
+  }
+}

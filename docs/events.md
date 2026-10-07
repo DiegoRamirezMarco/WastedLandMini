@@ -95,6 +95,8 @@ Event types emitted so far:
 | `leader_resigned`, `council_seat_left` | Somebody steps down from leading, or from the council, with the `role` in `data` | 65 |
 | `leader_seat_empty` | Nobody can be found for the leader's seat | 60 |
 | `election_called`, `election_held` | A vote for a seat is called, with when it is held (`at`), and held, with the `winner`, whether they `kept` the seat, the `tally` as given out, whether it was `open`, and their `backers` after a show of hands | 50, 60 |
+| `resident_held` | The player stops a resident, who stands and listens | 10 |
+| `order_given` | The player tells a resident to do something, with the `kind` of thing and its `target` in `data` | 25 |
 | `material_wanted` | Whoever sees to a site sits by it with nothing to build with, with `site_id`, what is `wanted` and what could be taken apart for it (`salvageable`) in `data`. Once a day for each site | 45 |
 | `salvage_ordered`, `salvage_started` | A resident is told to take something apart, and gets to it, with `object_id` in `data` | 20, 5 |
 | `object_salvaged` | It is taken apart and gone, with `object_id`, `kind`, `tile`, `item_id` and `units` in `data` | 30 |

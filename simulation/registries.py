@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from simulation.ai.affect import AffectSettings, affect_settings_from_data
 from simulation.economy.settings import EconomySettings, economy_settings_from_data
 from simulation.events.decision import DecisionDefinition, decision_definition_from_data
 from simulation.events.world_event import RAID, STRANGER, WorldEventSettings, world_event_settings_from_data
@@ -167,6 +168,8 @@ class BuiltInRegistries:
     # How time tells on people, and how families come about.
     family: FamilySettings = field(default_factory=FamilySettings)
     politics: PoliticsSettings = field(default_factory=PoliticsSettings)
+    # What the player can tell a resident they have stopped.
+    affect: AffectSettings = field(default_factory=AffectSettings)
     # The laws there are to pass, and how a settlement decides what is put to it.
     laws: LawSettings = field(default_factory=LawSettings)
     proposals: ProposalSettings = field(default_factory=ProposalSettings)
@@ -269,6 +272,9 @@ class BuiltInRegistries:
         governments_path = root / "governments.json"
         if governments_path.is_file():
             registries.politics = politics_settings_from_data(_read_object(governments_path))
+        affect_path = root / "affect.json"
+        if affect_path.is_file():
+            registries.affect = affect_settings_from_data(_read_object(affect_path))
         laws_path = root / "laws.json"
         if laws_path.is_file():
             registries.laws = law_settings_from_data(_read_object(laws_path))
@@ -369,6 +375,9 @@ class BuiltInRegistries:
             for outcome in decision.outcomes.values():
                 if outcome.interaction is not None and outcome.interaction not in self.interactions:
                     raise ValueError(f"Decision {kind} uses unknown interaction: {outcome.interaction}")
+        for name, order in {**self.affect.exchanges, **self.affect.incitements}.items():
+            if order.interaction not in self.interactions:
+                raise ValueError(f"What a resident can be told ({name}) uses an unknown interaction: {order.interaction}")
         for law_id, law in self.laws.laws.items():
             named = [law.needs_kind] if law.needs_kind is not None else []
             for degree in law.degrees:

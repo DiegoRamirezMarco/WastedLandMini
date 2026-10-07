@@ -68,6 +68,8 @@ TASTE_ICONS = {LOVED: "relish", LIKED: "relish", DISLIKED: "disgust", HATED: "di
 TASTE_COLORS = {LOVED: "lichen", LIKED: "lichen", DISLIKED: "ember", HATED: "ember"}
 # Beside it, on how they live, the way to where their manners are chosen.
 MANNERS_LABEL = "Maneras"
+AFFECT_LABEL = "Afectar"
+AFFECT_WIDTH = 48
 MANNERS_WIDTH = 46
 # A switch on the tastes for looking at the figures the game keeps to itself. Not for play.
 DEBUG_LABEL = "Debug"
@@ -112,6 +114,12 @@ def draw_roster(
         doing = "fuera" if resident.away else describe_action(world, resident)
         left += font.width(resident.name) + 6
         font.draw(target, font.truncate(doing, row.right - left), (left, row.y + 2), PALETTE["stone"])
+
+
+def affect_hitbox(panel: pygame.Rect) -> pygame.Rect:
+    """Where a resident is stopped to be told something: under what they are about, beside their face."""
+    bottom = panel.y + PADDING + FACE_SIZE[1]
+    return pygame.Rect(panel.right - PADDING - AFFECT_WIDTH, bottom - LINE_HEIGHT - 1, AFFECT_WIDTH, LINE_HEIGHT + 2)
 
 
 def tab_hitbox(panel: pygame.Rect) -> pygame.Rect:
@@ -286,12 +294,16 @@ def draw_resident_panel(
         (describe_job(world, resident), "stone"),
     ]
     line_y = y + LINE_HEIGHT * 2 + 2
+    affect = affect_hitbox(panel)
     for text, color in lines:
         for line in font.wrap(text, room)[:2]:
-            if line_y + LINE_HEIGHT > portrait.bottom + 2:
+            # What is said of them stops short of the way to affect them.
+            if line_y + LINE_HEIGHT > affect.top:
                 break
             font.draw(target, line, (beside, line_y), PALETTE[color])
             line_y += LINE_HEIGHT
+    draw_panel(target, affect, fill="shadow", border="lamp")
+    font.draw(target, AFFECT_LABEL, (affect.centerx - font.width(AFFECT_LABEL) // 2, affect.y + 1), PALETTE["glow"])
     y = portrait.bottom + 6
 
     # Health and mood are better full; the needs between them are better empty.

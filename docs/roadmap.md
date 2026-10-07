@@ -2371,6 +2371,81 @@ Still open here:
 - Nobody takes anything apart unasked, however long a site waits
 - A site that asks for a job is still worked on only by whoever holds it
 
+### S37 — Affecting a resident (needs S4 and S36) — done
+The user's idea: "cuando seleccionas a un personaje deberíamos incluir una opción de afectar,
+ahí se queda pensando... y nos da opciones para interactuar con él: así podemos afectar en todo
+momento a los pj". Asked first, and answered: what can be said is seeing to a need, going to
+somebody, getting on with something and a few words, and besides, in the user's words, "si
+tiene mucho odio a alguien o a algo incitarle, si tiene afecto también"; what is said is an
+order; and an order costs nothing.
+
+- **The one place where the player's word is an order.** Everywhere else residents decide and
+  the player advises. Here the player stops a resident, who leaves off what they were doing
+  and stands listening, and tells them what to do. They do it, as far as it can be done
+- **What can be said is data** (`data/affect.json`), in five groups: a need to see to (eat,
+  drink, lie down, take a rest, be mended), somebody to go to and what for (talk, talk things
+  over, face them, tell them what they feel, ask them to marry, leave them), something to get
+  on with (their post, a site to take charge of, something to take apart, a post to take or
+  to leave, a treat, dropping what they are at), and a few words that calm, cheer or scold
+- **A resident can be set on to act on what they feel strongly**: to go for somebody they
+  resent or have it out with them, to make a move on somebody they are drawn to or slip away
+  with them, to seek out somebody they are fond of. Only what they feel that strongly is on offer
+- **What is on offer follows from how things stand**: nobody is sent to a post out of hours,
+  to a site there is not, or to somebody who is away
+- **An order costs nothing.** Nobody thinks the more or the less of the player for it
+
+Done when: a resident who is stopped leaves off what they were doing and stands there until
+told something or let go; told to eat, sleep, go to somebody or take something apart, they do,
+whatever they are like; set on somebody they hate, it comes to blows with nobody asked; what
+they do not feel strongly they cannot be set on to; and the same orders on the same seed come
+out the same.
+
+As it was built, where the lines above leave it open:
+- **Stopped, a resident listens for half an hour** and then goes about their day. Whoever they
+  were talking to is left free. Somebody asleep can be woken for it. Somebody away, thrown
+  out or with a decision of their own open cannot be told anything: that decision comes first
+- **Strongly is fifty or more** of resentment, attraction or affection
+- **Going to somebody is setting out to have that exchange with them**, as when a resident
+  makes up their own mind to: the other may be busy, and what is asked of them is still
+  theirs to answer. A fight that is ordered starts with no decision opened for anybody
+- **A post or a site put in their hands is theirs at once**: they are not asked, as they are
+  when it is proposed to them (S6, S16)
+- **Of what is felt for a thing**, only a treat is there: going to eat what they like best, if
+  there is any. Nothing is done about a thing they loathe
+- **A few words** take fifteen from their nerves, or add ten to their spirits, or the other way
+  about, and stop them no longer
+- Nothing new is saved: somebody stopped is doing that, as anything else they do
+
+Still open here:
+- The user chose orders over advice and no cost over a cost, which is not how the rest of the
+  game goes (S4, S27). If it turns out to make advising pointless, what an order costs is one
+  number away: what the player is to a resident is already there (S27)
+- Dragging a resident and dropping them on something (P27) is the same order given another
+  way, and is not built
+- A resident cannot be told to do anything about a thing they loathe, to give somebody
+  something, or to work out of hours
+
+### P30 — Affecting, and breaking things up, on screen (needs S36 and S37) — done
+- **A way to affect whoever is selected**, in their panel beside their face. It stops them,
+  and what they are about reads `se queda pensando...`
+- **What can be said opens over the map**, a step at a time: the kind of thing, the thing, and
+  who or what it is about, with a way back at each. What is chosen is said at once and the
+  panel shuts. While the player is choosing, they go on standing there. Left for somebody
+  else, or the panel shut, they go about their day
+- **A builder who sits waiting for material is pointed out** in the line under the clock, and
+  affected goes straight to what there is to take apart, the nearest first with how far it is
+- **An item is broken up from the panel of the container it is in**: a mark at the end of its
+  row, for whatever gives scrap. What is somebody's is put to them, and the answer is said.
+  Nothing on a shop's counter has the mark
+- What a resident is doing is said for what it is: waiting for material, taking something
+  apart, standing stopped
+
+Still open here:
+- What somebody carries is not broken up from their panel, only what is kept in a container
+- Nothing on the map shows which rusted car or heap of junk a line of the panel is, beyond how
+  far it is
+- The panel has no keys: it is all clicks
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it

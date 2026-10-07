@@ -550,6 +550,25 @@ settlement is created, in `SimulationWorld.demo_world`.
 - The game opens `rig_election` by ID. Its scores may weigh `losing` and `scruples`. The
   decisions at the gate may weigh `law`: 1 when a law says nobody comes in and whoever answers keeps it.
 
+## Affecting a resident
+
+`data/affect.json` holds what the player can tell a resident they have stopped.
+
+- `needs` lists what they can be told to see to, each with a `label` and the `need` it lowers,
+  or `"heals": true` for being mended. `"asleep": true` is for what is done lying down.
+- `with` lists what they can go to somebody for: a `label` with `{target}` for who, the
+  `interaction` from `data/social.json`, and `who` it can be with (`anybody`, `single` for
+  somebody they are no couple with, `partner`).
+- `incite` is the same, with the `feeling` (`resentment`, `attraction`, `affection`, `trust`,
+  `fear`) that has to be `strong_feeling` or more for it to be on offer.
+- `words` lists what is simply said to them: a `label`, the `needs` it changes and what it
+  does to their `mood`.
+- `tasks` gives a label to each thing they can be told to get on with: `to_post`,
+  `take_charge`, `salvage`, `take_job`, `leave_job`, `treat` and `stop`. What each does is
+  code; one left out is not on offer.
+- `hold_minutes` is how long somebody who is stopped stands listening, and `most_targets` how
+  many people or things are offered to choose among, the nearest first.
+
 ## Taking things apart
 
 - An object in `data/interactables.json`, or in a pack, may have `"salvage": {"item": "scrap",

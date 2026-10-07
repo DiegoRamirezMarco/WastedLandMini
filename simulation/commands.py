@@ -1,6 +1,7 @@
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
+from simulation.ai.affect import AffectResult
 from simulation.economy.terms import TradeResult
 from simulation.politics.government import PoliticsResult
 from simulation.work.research import ResearchResult
@@ -53,6 +54,15 @@ class CommandTarget(Protocol):
         ...
 
     def order_salvage(self, resident_id: str, object_id: str) -> UrbanismResult:
+        ...
+
+    def hold_resident(self, resident_id: str) -> AffectResult:
+        ...
+
+    def release_resident(self, resident_id: str) -> bool:
+        ...
+
+    def affect_resident(self, resident_id: str, kind: str, target_id: str | None) -> AffectResult:
         ...
 
     def scrap_item(self, item_id: str, option_id: str) -> UrbanismResult:
@@ -269,6 +279,45 @@ class CancelSiteCommand:
 
     def apply(self, world: CommandTarget) -> UrbanismResult:
         return world.cancel_site(self.site_id)
+
+
+@dataclass(frozen=True)
+class HoldResidentCommand:
+    """The player stops a resident: they leave off what they were doing and stand there
+    listening for a while, to be told something. With nothing said they go about their day."""
+
+    resident_id: str
+
+    def apply(self, world: CommandTarget) -> AffectResult:
+        return world.hold_resident(self.resident_id)
+
+
+@dataclass(frozen=True)
+class ReleaseResidentCommand:
+    """The player lets a resident they had stopped go, with nothing said."""
+
+    resident_id: str
+
+    def apply(self, world: CommandTarget) -> bool:
+        return world.release_resident(self.resident_id)
+
+
+@dataclass(frozen=True)
+class AffectCommand:
+    """The player tells a resident to do something. It is the one place where what the player
+    says is an order: the resident does it, as far as it can be done.
+
+    `kind` is one of what the world offers for that resident right now, such as `need:eat`,
+    `with:talk`, `incite:strike`, `task:salvage` or `words:calm`, and `target_id` who or what it
+    is about where it is about somebody or something.
+    """
+
+    resident_id: str
+    kind: str
+    target_id: str | None = None
+
+    def apply(self, world: CommandTarget) -> AffectResult:
+        return world.affect_resident(self.resident_id, self.kind, self.target_id)
 
 
 @dataclass(frozen=True)

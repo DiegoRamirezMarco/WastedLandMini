@@ -125,6 +125,15 @@ class RoutineSystem:
             if (use := world.definition_of(placed).use) is not None
         )
 
+    def relieves(self, world: "SimulationWorld", resident: Resident, placed: Interactable, need: str) -> bool:
+        """Whether using an object would lower a need of a resident's, as things stand."""
+        use = world.definition_of(placed).use
+        return use is not None and self._offers(world, resident, placed, use, need)
+
+    def use(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> Activity | None:
+        """The walk to an object and the use of it. None if there is no getting to it."""
+        return self._use(world, resident, placed)
+
     def _offers(
         self, world: "SimulationWorld", resident: Resident, placed: Interactable, use: UseDefinition, need: str
     ) -> bool:

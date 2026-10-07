@@ -14,7 +14,8 @@
 
 ## Resident agency
 - Residents act autonomously.
-- Player choices influence decisions but do not normally force outcomes.
+- Player choices influence decisions but do not normally force outcomes. The one exception is
+  affecting a resident the player has stopped (S37): what is said to them there is an order.
 - Relationships are directional: A -> B is independent from B -> A.
 - Knowledge is local to residents. A character must not know something merely because the world state knows it.
 

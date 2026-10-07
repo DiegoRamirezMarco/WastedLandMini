@@ -290,6 +290,15 @@ room. An argument's importance rises with the resentment between the two.
 - **Charisma and leadership** are two more sides of a way of being: how readily others are won
   over by somebody, and how well others do under them.
 
+### Affecting a resident
+
+- **The one place where the player gives orders.** A resident who is stopped leaves off what
+  they were doing and stands listening for a while. Told to see to a need, go to somebody, get
+  on with something or simply hear a few words, they do it, as far as it can be done.
+- **What they feel strongly they can be set on to act on**: to go for somebody they resent, to
+  make a move on somebody they are drawn to, to seek out somebody they are fond of.
+- **It costs nothing**, and what is on offer follows from how things stand.
+
 ### Tasks, and taking things apart
 
 - **A site in somebody's charge is their work**, ahead of their own post: by day they carry to
