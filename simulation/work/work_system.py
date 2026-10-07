@@ -364,6 +364,7 @@ class WorkSystem:
         speed *= self.mood_pace(resident)
         speed *= world.trade.unpaid_pace(world, resident)
         speed *= world.substances.work_pace(world, resident)
+        speed *= world.politics.work_pace(world, resident)
         # What has been worked out about a trade makes it go faster.
         speed *= world.research.factor(world, f"{JOB_PACE}{job.job_id}")
         needed = math.ceil(rule.every_minutes / speed)

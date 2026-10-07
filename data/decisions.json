@@ -1053,5 +1053,62 @@
         }
       }
     ]
+  },
+  "resign": {
+    "event_type": "resign_stirring",
+    "window_minutes": 120,
+    "cooldown_minutes": 10080,
+    "anger_threshold": 0,
+    "importance": 60,
+    "text": "{name} se pregunta si no será hora de dejar el cargo",
+    "prompt": "Esto me puede. ¿Dejo el cargo?",
+    "outcomes": {
+      "resign": {
+        "score": {
+          "bias": -0.25,
+          "stress": 0.6,
+          "support": -0.5
+        },
+        "agrees": true,
+        "needs": {
+          "stress": -15
+        },
+        "text": "{name} deja el cargo"
+      },
+      "stay": {
+        "score": {
+          "bias": 0.1,
+          "courage": 0.25,
+          "support": 0.2
+        },
+        "needs": {
+          "stress": 4
+        },
+        "text": "{name} sigue en el cargo"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Déjalo: ya has hecho bastante",
+        "influence": {
+          "resign": 0.5,
+          "stay": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "discourage",
+        "text": "Aguanta: te necesitan",
+        "influence": {
+          "stay": 0.5,
+          "resign": -0.3
+        }
+      }
+    ]
   }
 }

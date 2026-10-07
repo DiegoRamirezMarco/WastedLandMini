@@ -107,8 +107,12 @@ def learn(
         Belief(fact.fact_id, credibility, source, world.clock.total_minutes, told_by),
     )
     if source == SOURCE_PARTICIPANT:
+        # Whoever a thing was done to by those who govern needs nobody to tell them.
+        world.politics.learned(world, resident, fact, credibility)
         return True
     react(world, resident, fact, credibility)
+    # What those who govern are known to have done tells on what is made of the government.
+    world.politics.learned(world, resident, fact, credibility)
     teller = world.residents.get(told_by) if told_by else None
     text = f"{teller.name} me contó que {fact.text}." if teller is not None else f"Vi que {fact.text}."
     world.memories.remember(

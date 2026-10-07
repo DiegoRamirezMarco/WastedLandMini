@@ -158,7 +158,9 @@ class OutcomeTests(unittest.TestCase):
         after = world.relationship("marta", "raul").resentment, world.relationship("raul", "marta").resentment
         self.assertGreater(after[0], before[0])
         self.assertGreater(after[1], before[1])
-        self.assertEqual(_types(world)[:3], ["crisis_opened", "crisis_resolved", "argument_started"])
+        # A settlement of nine sets about choosing a government in its first minute, which is another matter.
+        kinds = [kind for kind in _types(world) if kind != "government_choosing"]
+        self.assertEqual(kinds[:3], ["crisis_opened", "crisis_resolved", "argument_started"])
         self.assertIn("Discutí con Marta.", [memory.text for memory in world.memories.of("raul")])
         self.assertTrue(any(fact.event_type == "argument_started" for fact in world.knowledge.facts.values()))
 

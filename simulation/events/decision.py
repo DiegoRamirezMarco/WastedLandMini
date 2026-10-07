@@ -12,7 +12,7 @@ from simulation.work.expedition import EXPEDITION_CHOICES
 SCORE_INPUTS = (
     "bias", "anger", "aggression", "impulsiveness", "empathy", "courage", "sociability", "greed",
     "stress", "affection", "resentment", "fear", "attraction", "health", "vacancy", "idle",
-    "mood", "burden", "effort", "short", "savings", "goods", "bargain", "kin", "room",
+    "mood", "burden", "effort", "short", "savings", "goods", "bargain", "kin", "room", "support",
 )
 
 

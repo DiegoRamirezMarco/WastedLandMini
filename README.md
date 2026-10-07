@@ -11,6 +11,10 @@ watches, advises and intervenes, but does not control them.
 - Residents with jobs, posts, shifts and days off; places that only work while someone staffs them.
 - A working economy: what is made is carried to where it is used, tools wear out and are mended,
   work earns credits and credits buy things, and a post left empty is taken up by someone else.
+- Politics: no government until there are three; six kinds of government as data, chosen by
+  the residents with the player's one proposal; leaders who are residents with a role, and who
+  are followed when they die, resign or lose a vote; what each resident holds about it; and
+  seven measures of the settlement.
 - Families: a calendar, birthdays and old age; sex, gender and who each is drawn to; couples
   that marry; children carried, born, seen to and grown; kin by blood and by adoption; and
   families that come to the gate together.

@@ -21,6 +21,9 @@ from simulation.memory.memory import Memory
 from simulation.registries import DEFAULT_MAP_ID, BuiltInRegistries, builtin_registries
 from simulation.residents.activity import Activity
 from simulation.residents.needs import Needs
+from simulation.politics.government import MEASURES
+from simulation.politics.political_event import PoliticalEvent
+from simulation.politics.profile import PoliticalProfile
 from simulation.residents.personality import Personality
 from simulation.residents.resident import FACINGS, Resident
 from simulation.rng import SimulationRNG
@@ -93,6 +96,9 @@ FIRST_UPKEEP_VERSION = 27
 # In a save from before everyone is the age they were, is who the game says or their ID makes
 # them, is drawn to both, and is kin to nobody.
 FIRST_FAMILY_VERSION = 29
+# Version 30 added charisma and leadership, the roles a resident holds, the government the
+# settlement has and what each resident holds about it. In a save from before everyone is in
+# the middle for both, nobody holds a role and there is no government yet: one is chosen.
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 28
@@ -111,7 +117,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 29
+    CURRENT_VERSION = 30
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -157,6 +163,10 @@ class SaveManager:
             "newcomers_seen": list(world.newcomers_seen),
             "gate_party": list(world.gate_party),
             "kinship": {person_id: vars(kin) for person_id, kin in world.kinship.items()},
+            "government": {**vars(world.government), "measures": dict(world.government.measures)},
+            "political_profiles": {
+                resident_id: vars(profile) for resident_id, profile in world.political_profiles.items()
+            },
             "bundles": [
                 {**{key: value for key, value in vars(bundle).items() if key != "personality"}, "personality": vars(bundle.personality)}
                 for bundle in world.bundles.values()
@@ -245,6 +255,7 @@ class SaveManager:
                     "drawn_to": resident.drawn_to,
                     "expecting_with": resident.expecting_with,
                     "due_day": resident.due_day,
+                    "roles": list(resident.roles),
                     "couple_with": resident.couple_with,
                     "expedition": vars(resident.expedition) if resident.expedition is not None else None,
                     "last_expedition_day": resident.last_expedition_day,
@@ -390,6 +401,8 @@ class SaveManager:
                     greed=float(personality_data.get("greed", 50.0)),
                     courage=float(personality_data.get("courage", 50.0)),
                     libido=float(personality_data.get("libido", 50.0)),
+                    charisma=float(personality_data.get("charisma", 50.0)),
+                    leadership=float(personality_data.get("leadership", 50.0)),
                 ),
                 mood=float(resident_data.get("mood", 50.0)),
                 current_action=str(resident_data.get("current_action", "idle")),
@@ -442,6 +455,7 @@ class SaveManager:
                 drawn_to=str(resident_data.get("drawn_to", "both")),
                 expecting_with=_text_or_none(resident_data.get("expecting_with")),
                 due_day=int(resident_data.get("due_day", 0)),
+                roles=[str(role) for role in _list_or_empty(resident_data.get("roles"))],
                 couple_with=_text_or_none(resident_data.get("couple_with")),
                 expedition=Expedition(
                     returns_at=int(trip.get("returns_at", 0)),
@@ -510,6 +524,7 @@ class SaveManager:
                     world.memories.remember(str(resident_id), _memory_from_data(memory_data))
 
         self._restore_kin(world, data, version)
+        self._restore_politics(world, data)
         self._restore_items(world, data, version)
         deaths = data.get("deaths", [])
         world.deaths = [
@@ -535,6 +550,31 @@ class SaveManager:
         self._restore_tastes(world, data)
         self._restore_research(world, data, version)
         return world
+
+    def _restore_politics(self, world: SimulationWorld, data: dict[str, Any]) -> None:
+        """Put back the government and what each resident holds about it. A save from before
+        has neither: the settlement chooses a government as one that has just grown to it does."""
+        saved = _object_or_empty(data.get("government"))
+        state = world.government
+        state.kind = _text_or_none(saved.get("kind"))
+        state.leader = _text_or_none(saved.get("leader"))
+        state.council = [str(member) for member in _list_or_empty(saved.get("council"))]
+        for measure, value in _object_or_empty(saved.get("measures")).items():
+            if measure in MEASURES:
+                state.measures[measure] = float(value)
+        state.chosen_on = int(saved["chosen_on"]) if saved.get("chosen_on") is not None else None
+        state.term_began = int(saved.get("term_began", 0))
+        for moment in ("choosing_until", "election_at", "vacant_since"):
+            setattr(state, moment, int(saved[moment]) if saved.get(moment) is not None else None)
+        state.proposed = _text_or_none(saved.get("proposed"))
+        state.heir = _text_or_none(saved.get("heir"))
+        state.resigned = _text_or_none(saved.get("resigned"))
+        held = vars(PoliticalProfile())
+        for resident_id, values in _object_or_empty(data.get("political_profiles")).items():
+            if isinstance(values, dict):
+                world.political_profiles[str(resident_id)] = PoliticalProfile(
+                    **{name: float(values.get(name, default)) for name, default in held.items()}
+                )
 
     def _restore_kin(self, world: SimulationWorld, data: dict[str, Any], version: int) -> None:
         """Put back who is kin to whom. In a save from before, nobody is, and everyone is who
@@ -1186,7 +1226,7 @@ def _decision_from_data(data: dict[str, Any]) -> Decision:
 
 def _event_from_data(data: dict[str, Any]) -> DomainEvent:
     location_id = data.get("location_id")
-    return DomainEvent(
+    event = DomainEvent(
         event_type=str(data.get("event_type", "")),
         importance=int(data.get("importance", 0)),
         text=str(data.get("text", "")),
@@ -1196,6 +1236,10 @@ def _event_from_data(data: dict[str, Any]) -> DomainEvent:
         timestamp=int(data.get("timestamp", 0)),
         data=dict(_object_or_empty(data.get("data"))),
     )
+    if "government" in data:
+        # A political event says under which government it happened, and stays one.
+        return PoliticalEvent(**vars(event), government=_text_or_none(data.get("government")))
+    return event
 
 
 def _memory_from_data(data: dict[str, Any]) -> Memory:

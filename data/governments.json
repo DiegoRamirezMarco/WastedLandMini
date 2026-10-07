@@ -1,0 +1,337 @@
+{
+  "founding_residents": 3,
+  "choosing_hours": 12,
+  "election_hours": 24,
+  "proposal_weight": 0.6,
+  "leadership_pace": 0.06,
+  "resign_stress": 85,
+  "resign_support": 25,
+  "roles": {
+    "mayor": {
+      "name": "alcalde",
+      "names": {
+        "f": "alcaldesa"
+      }
+    },
+    "councillor": {
+      "name": "concejal",
+      "names": {
+        "f": "concejala"
+      }
+    },
+    "commander": {
+      "name": "comandante"
+    },
+    "ruler": {
+      "name": "caudillo",
+      "names": {
+        "f": "caudilla"
+      }
+    }
+  },
+  "governments": {
+    "strong_mayor": {
+      "name": "Alcaldía",
+      "leader_role": "mayor",
+      "proposes": "leader",
+      "approves": "leader",
+      "votes": "nobody",
+      "leader_weight": 1.0,
+      "veto": true,
+      "term_days": 56,
+      "succession": [
+        "election"
+      ],
+      "abuse_tolerance": 40,
+      "starts": {
+        "authoritarianism": 45
+      },
+      "appeal": {
+        "authoritarian_tolerance": 0.3,
+        "individualism": 0.4,
+        "justice_sensitivity": 0.3,
+        "fearfulness": 0.2
+      }
+    },
+    "council": {
+      "name": "Consejo",
+      "council_role": "councillor",
+      "council_seats": 3,
+      "proposes": "council",
+      "approves": "council",
+      "votes": "council",
+      "term_days": 56,
+      "abuse_tolerance": 30,
+      "starts": {
+        "authoritarianism": 30
+      },
+      "appeal": {
+        "justice_sensitivity": 0.5,
+        "political_interest": 0.2
+      }
+    },
+    "direct_democracy": {
+      "name": "Asamblea",
+      "proposes": "everyone",
+      "approves": "everyone",
+      "votes": "everyone",
+      "abuse_tolerance": 20,
+      "starts": {
+        "authoritarianism": 10
+      },
+      "appeal": {
+        "political_interest": 0.6,
+        "individualism": 0.3,
+        "authoritarian_tolerance": -0.5
+      }
+    },
+    "military_leadership": {
+      "name": "Mando militar",
+      "leader_role": "commander",
+      "proposes": "leader",
+      "approves": "leader",
+      "votes": "nobody",
+      "leader_weight": 1.0,
+      "veto": true,
+      "succession": [
+        "strongest"
+      ],
+      "abuse_tolerance": 65,
+      "starts": {
+        "authoritarianism": 75
+      },
+      "appeal": {
+        "authoritarian_tolerance": 0.7,
+        "fearfulness": 0.4,
+        "revengefulness": 0.2
+      }
+    },
+    "commune": {
+      "name": "Comuna",
+      "proposes": "everyone",
+      "approves": "everyone",
+      "votes": "everyone",
+      "approval": 0.75,
+      "abuse_tolerance": 15,
+      "starts": {
+        "authoritarianism": 15
+      },
+      "appeal": {
+        "collectivism": 0.7,
+        "individualism": -0.5,
+        "authoritarian_tolerance": -0.3
+      }
+    },
+    "personalist_rule": {
+      "name": "Caudillaje",
+      "leader_role": "ruler",
+      "proposes": "leader",
+      "approves": "leader",
+      "votes": "nobody",
+      "leader_weight": 1.0,
+      "veto": true,
+      "succession": [
+        "heir",
+        "following"
+      ],
+      "abuse_tolerance": 80,
+      "starts": {
+        "authoritarianism": 85
+      },
+      "appeal": {
+        "authoritarian_tolerance": 0.5,
+        "justice_sensitivity": -0.4,
+        "collectivism": -0.3,
+        "political_interest": -0.2
+      }
+    }
+  },
+  "profile": {
+    "leanings": {
+      "authoritarian_tolerance": {
+        "aggression": 0.3,
+        "empathy": -0.2,
+        "courage": -0.1
+      },
+      "justice_sensitivity": {
+        "empathy": 0.4,
+        "greed": -0.3
+      },
+      "collectivism": {
+        "sociability": 0.3,
+        "empathy": 0.3,
+        "greed": -0.3
+      },
+      "individualism": {
+        "greed": 0.4,
+        "sociability": -0.2,
+        "courage": 0.1
+      },
+      "revengefulness": {
+        "aggression": 0.4,
+        "empathy": -0.3
+      },
+      "fearfulness": {
+        "courage": -0.6
+      },
+      "political_interest": {
+        "sociability": 0.3,
+        "leadership": 0.4,
+        "charisma": 0.1
+      }
+    },
+    "own_spread": 25,
+    "trust_start": 50,
+    "backed_trust": 10,
+    "unbacked_trust": -10,
+    "fear_fade": 0.03,
+    "resentment_fade": 0.02,
+    "sways": {
+      "fear": "fearfulness",
+      "resentment": "revengefulness",
+      "trust": "justice_sensitivity",
+      "loyalty": "justice_sensitivity"
+    },
+    "obedience": {
+      "loyalty": 0.4,
+      "fear": 0.5,
+      "trust": 0.2,
+      "authoritarian_tolerance": 0.2
+    }
+  },
+  "loyalty": {
+    "base": 35,
+    "from": {
+      "affection": 0.3,
+      "trust": 0.3,
+      "resentment": -0.3,
+      "fear": -0.1
+    },
+    "charisma": 0.4,
+    "backed": 15,
+    "drift": 0.05
+  },
+  "ways": {
+    "election": {
+      "charisma": 0.4,
+      "leadership": 0.3,
+      "affection": 0.5,
+      "trust": 0.5,
+      "resentment": -0.5,
+      "fear": -0.3,
+      "loyalty": 0.5,
+      "self": 1.0,
+      "self_from": 70
+    },
+    "strongest": {
+      "courage": 1.0,
+      "aggression": 0.5,
+      "leadership": 0.5,
+      "health": 0.3,
+      "feared": 1.0
+    },
+    "following": {
+      "charisma": 1.0,
+      "leadership": 0.3,
+      "liked": 0.5
+    },
+    "heir": {
+      "regard": 60
+    }
+  },
+  "seated": {
+    "election": {
+      "legitimacy": 8,
+      "stability": 4
+    },
+    "council": {
+      "legitimacy": 4
+    },
+    "strongest": {
+      "legitimacy": -6,
+      "authoritarianism": 4
+    },
+    "heir": {
+      "legitimacy": -4
+    },
+    "following": {
+      "legitimacy": 2
+    }
+  },
+  "measures": {
+    "legitimacy_floor": 30,
+    "change_stability": -10,
+    "lost_stability": -15,
+    "vacancy_legitimacy": -2,
+    "vacancy_stability": 20,
+    "unrest_drift": 0.25,
+    "unrest_from_support": 0.5,
+    "stability_drift": 0.2,
+    "corruption_fade": 0.01
+  },
+  "reactions": {
+    "fight_started": {
+      "holds": {
+        "fear": 10,
+        "loyalty": -8,
+        "resentment": 4
+      },
+      "measures": {
+        "legitimacy": -3,
+        "authoritarianism": 2,
+        "stability": -2
+      }
+    },
+    "theft_committed": {
+      "holds": {
+        "trust": -8,
+        "loyalty": -8,
+        "resentment": 3
+      },
+      "measures": {
+        "corruption": 6,
+        "legitimacy": -4
+      }
+    },
+    "death": {
+      "holds": {
+        "fear": 30,
+        "loyalty": -20,
+        "trust": -10,
+        "resentment": 10
+      },
+      "measures": {
+        "legitimacy": -15,
+        "authoritarianism": 10,
+        "stability": -10
+      }
+    },
+    "affair": {
+      "holds": {
+        "loyalty": -4
+      },
+      "measures": {
+        "legitimacy": -1
+      }
+    },
+    "kin_together": {
+      "holds": {
+        "loyalty": -8,
+        "trust": -3
+      },
+      "measures": {
+        "legitimacy": -4
+      }
+    },
+    "raid_repelled": {
+      "holds": {
+        "loyalty": 10,
+        "trust": 6
+      },
+      "measures": {
+        "legitimacy": 5,
+        "stability": 3
+      }
+    }
+  }
+}

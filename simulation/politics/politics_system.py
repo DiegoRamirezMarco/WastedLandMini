@@ -1,0 +1,52 @@
+"""Politics: who is in charge of the settlement, and what its people make of it.
+
+The player is nobody in the settlement. They may put a kind of government to everyone when
+one is being chosen, and advise whoever is making up their mind, and never govern.
+"""
+
+from typing import TYPE_CHECKING
+
+from simulation.knowledge.fact import Fact
+from simulation.politics.government import PoliticsResult
+from simulation.politics.leadership import Leadership
+from simulation.politics.legitimacy import Legitimacy
+from simulation.residents.resident import Resident
+
+if TYPE_CHECKING:
+    from simulation.world import SimulationWorld
+
+
+class PoliticsSystem:
+    leadership = Leadership()
+    legitimacy = Legitimacy()
+
+    def tick(self, world: "SimulationWorld") -> None:
+        """One minute of politics, and at the start of each day what a day does."""
+        self.leadership.tick(world)
+        if world.clock.hour == 0 and world.clock.minute == 0 and world.government.kind is not None:
+            self.legitimacy.tick_day(world)
+            self.leadership.tick_day(world)
+
+    def propose_government(self, world: "SimulationWorld", government_id: str) -> PoliticsResult:
+        """The player's one proposal of a kind of government, while the settlement chooses."""
+        return self.leadership.propose(world, government_id)
+
+    def learned(self, world: "SimulationWorld", resident: Resident, fact: Fact, credibility: float) -> None:
+        """A resident has just learned a fact: what it does to their politics, if anything."""
+        self.legitimacy.learned(world, resident, fact, credibility)
+
+    def leader(self, world: "SimulationWorld") -> Resident | None:
+        """Whoever leads the settlement, if anybody does and they are alive."""
+        return world.residents.get(world.government.leader or "")
+
+    def work_pace(self, world: "SimulationWorld", resident: Resident) -> float:
+        """How much faster or slower a resident works for who leads them: a good leader gets
+        more out of people and a poor one less, and more so out of whoever is loyal to them."""
+        leader = self.leader(world)
+        if leader is None or leader is resident or leader.away:
+            return 1.0
+        pace = world.registries.politics.leadership_pace
+        if pace == 0.0 or leader.personality.leadership == 50.0:
+            return 1.0
+        loyalty = self.legitimacy.profile(world, resident).loyalty / 100.0
+        return 1.0 + (leader.personality.leadership - 50.0) / 50.0 * pace * loyalty

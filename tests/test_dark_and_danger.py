@@ -253,7 +253,8 @@ class RaidTests(unittest.TestCase):
         self.assertEqual(before["cooking_pot"], after["cooking_pot"], "they do not stop to eat")
         self.assertEqual(self.world.containers["crate_1"].count("canned_beans"), private)
         self.assertEqual(_types(self.world).count("raid"), 1)
-        self.assertIn("Unos merodeadores entran de noche: se llevan 12 cosas", self.world.event_log[-1])
+        raid = next(line for line in reversed(self.world.event_log) if " | raid | " in line)
+        self.assertIn("Unos merodeadores entran de noche: se llevan 12 cosas", raid)
         self.assertIsNone(self.world.under_raid)
 
     def test_a_guard_at_the_gate_gets_to_decide_and_the_player_to_advise(self) -> None:

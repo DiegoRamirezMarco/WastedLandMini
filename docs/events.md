@@ -84,6 +84,17 @@ Event types emitted so far:
 | `child_alone` | Someone is asked to take in a bundle nobody is seeing to, and waits for advice | 65 |
 | `child_taken_in` | They do, with `child_id` in `data` | 65 |
 | `child_died` | A bundle nobody looked after dies, with `child_id` in `data` | 90 |
+| `government_choosing` | The settlement has grown to where it wants a government, with `until` and the `kinds` there are in `data` | 65 |
+| `government_proposed` | The player puts one kind to everyone, with `government` in `data` | 40 |
+| `government_chosen` | The residents settle on a kind, with `government` and how many `wanted` each in `data` | 75 |
+| `government_changed` | A settlement that had one kind of government takes another, with `from` and `to` in `data` | 75 |
+| `leader_chosen` | Somebody comes to lead, with their `role`, the `way` and their `backers` in `data` | 65 |
+| `council_seated` | Seats on the council are filled, with the `role` and the whole `council` in `data` | 55 |
+| `leader_lost` | Whoever led is dead or gone, with `resident_id`, `role` and `died` in `data` | 75 |
+| `resign_stirring` | A leader wonders whether to step down, and waits for advice | 60 |
+| `leader_resigned`, `council_seat_left` | Somebody steps down from leading, or from the council, with the `role` in `data` | 65 |
+| `leader_seat_empty` | Nobody can be found for the leader's seat | 60 |
+| `election_called`, `election_held` | A vote for a seat is called, with when it is held (`at`), and held, with the `winner`, their `backers` and whether they `kept` the seat | 50, 60 |
 | `kin_together` | Two close kin are a couple, or go off alone together: once for the two of them, with nobody knowing of it but whoever sees them | 60 |
 | `family_parted` | One of two who came to the gate together is let in and the other is not, with `left` in `data` | 60 |
 | `friendship_changed` | What one resident feels for another grows into a friendship, or out of it | 25 |
@@ -126,6 +137,9 @@ participants of an ongoing event of importance 50 or more. An event that importa
 the game back to normal speed.
 
 Events describe what is happening. Decisions describe how the player can influence it. Advice should usually modify the resident's decision inputs rather than directly commanding the outcome.
+
+Events of politics are a `PoliticalEvent`, which is a `DomainEvent` that also says the kind of
+`government` it happened under.
 
 ## Particulars
 

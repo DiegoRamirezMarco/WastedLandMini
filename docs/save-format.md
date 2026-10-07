@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 29 (current)
+## Version 30 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `29` |
+| `version` | `30` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -68,6 +68,13 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 30** added `charisma` and `leadership` among the sides of a personality; a resident's
+  `roles`; `government` (its `kind`, `leader`, `council`, the seven `measures`, `chosen_on`,
+  `term_began`, `choosing_until` and what was `proposed` while a kind is being chosen,
+  `election_at`, `vacant_since`, `heir` and `resigned`); `political_profiles` (per resident ID:
+  the seven leanings, and `loyalty`, `trust`, `fear` and `resentment`); and `government` on an
+  event in `history` that is a political one. In an older save everyone is in the middle for
+  both sides, nobody holds a role, and there is no government: one is chosen as the game goes on.
 - **Version 29** added a resident's `born` (the day they were born, counted as the settlement's
   days are, less than 1 for before it began), `sex`, `gender`, `drawn_to`, `expecting_with` and
   `due_day`, and `libido` among the sides of their personality; `kinship` (per person ID, living,

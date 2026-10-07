@@ -511,6 +511,40 @@ settlement is created, in `SimulationWorld.demo_world`.
   `let_first` or `let_second`, and texts may use `{first}` and `{second}`) and `take_in` by ID.
   Their scores may weigh `kin` and `room`.
 
+## Governments
+
+`data/governments.json` holds every kind of government, and how politics goes.
+
+- `governments` lists the kinds by ID, each with a `name`; a `leader_role` if somebody leads; a
+  `council_role` and `council_seats` if there is a council; who `proposes`, who `approves` and
+  who `votes` (`leader`, `council`, `everyone` or `nobody`); the share it takes to approve
+  (`approval`), the `leader_weight` and whether there is a `veto`; `term_days` (0 for no
+  terms); `succession`, the ways the next leader comes to be in the order they are tried
+  (`election`, `council`, `strongest`, `heir`, `following`); `abuse_tolerance` from 0 to 100;
+  the measures it `starts` with; and its `appeal`, how much each leaning of a resident counts
+  for or against it. A kind with a leader needs a way of succession, and one without has none.
+- `roles` gives each role a `name` and, by gender, other `names`.
+- `founding_residents`, `choosing_hours`, `election_hours` and `proposal_weight` say when a
+  government is chosen, how long that and a vote take, and how much the player's proposal adds.
+- `profile` says where each leaning comes from (`leanings`: for each, how much every side of a
+  personality moves it from the middle), how far a leaning of somebody's own may fall
+  (`own_spread`), where trust starts, how fast fear and resentment fade, which leaning `sways`
+  each thing held, and what goes into `obedience`.
+- `loyalty` says where loyalty to a leader starts (`base`), how much what is felt for them
+  (`from`) and their `charisma` add, what having `backed` them adds, and its daily `drift`.
+- `ways` holds what counts in each way of coming to lead, and `seated` what coming to the seat
+  by each does to the measures. `measures` holds how the measures move.
+- `reactions` says, by the type of a fact, what learning that somebody who governs did it does:
+  `holds` (to the fear, loyalty, trust and resentment of whoever learns it), `measures` (to the
+  settlement if everybody learned it) and `victim` (how many times over for whoever it was
+  done to).
+- `leadership_pace`, `resign_stress` and `resign_support` say how much a leader tells on work,
+  and when one thinks of stepping down.
+- A trait in `data/traits.json` may give `"politics": {"justice_sensitivity": -25}`: so much
+  more or less of a leaning.
+- `charisma` and `leadership` are sides of a personality like any other, from 0 to 100.
+- The game opens `resign` by ID. Its scores may weigh `support`.
+
 ## Substances
 
 - An item is a substance with a `substance` entry:

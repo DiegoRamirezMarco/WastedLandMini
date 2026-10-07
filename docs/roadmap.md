@@ -1511,7 +1511,13 @@ Still open here:
 Still to settle:
 - How small the body of a ten-year-old is, and whether it grows year by year or in a few steps
 
-### S26 — Who is in charge (needs S20) — planned
+### S26 — Who is in charge (needs S20) — done
+Asked first, and answered: the ready-made settlement has no government and chooses one on its
+first day; loyalty is to the person, and what passes from one leader to the next is trust in
+the government; a resident's politics come of their way of being, their traits and a leaning of
+their own made from the seed; and the player puts one kind of government to everyone, once,
+which weighs with each as advice does.
+
 Politics comes in four milestones, S26 to S29, and a screen, P26. It has a module of its own,
 `simulation/politics/`: `government.py`, `leadership.py`, `voting.py`, `law.py`, `punishment.py`,
 `legitimacy.py`, `unrest.py`, `faction.py` and `political_event.py`.
@@ -1575,12 +1581,62 @@ Tests it is not done without: no government with two and one chosen with three; 
 leader; the mayor's death without the game ending; fear apart from loyalty; a save from before
 loading with charisma and leadership in the middle; and the module imported without pygame.
 
-Still to settle:
-- Which kind the ready-made settlement starts under, or whether it chooses on its first day
-- Whether loyalty is to the person or to the place they hold, and so what is left of it for
-  the next leader
-- Where a resident's political profile starts from: their personality and traits, and whether a
-  leaning of their own on top, made from the seed as tastes are (S19)
+As it was built, where the lines above leave it open:
+- **Of the module, S26 has** `government.py` (kinds as data, and the settlement's government as
+  state), `profile.py`, `leadership.py` (choosing a kind, seats, succession), `legitimacy.py`
+  (what each resident holds, and the measures), `political_event.py` and `politics_system.py`.
+  The rest come with S27 to S29
+- **Choosing takes twelve hours** from the minute a third resident lives there. Each adult who
+  is in the settlement says which kind they would have, by how much each kind appeals to what
+  they hold, and the one most of them want is the government. Its seats are filled there and
+  then. How many wanted it is how legitimate it starts, and whoever did trusts it the more
+- **The player's one proposal** (`ProposeGovernmentCommand`) adds to that kind's appeal with
+  each resident by how they take advice. It can be made only while they are choosing
+- **Five ways of coming to lead**, tried in the order a government lists them: a vote of
+  everyone, a vote of the council, whoever is strongest, whoever the last leader would have had,
+  and whoever has the most behind them. A vote goes by what each voter feels for whoever
+  stands, by the candidate's charisma and leadership, and for whoever leads already by the
+  loyalty they have earned or lost. Somebody votes for themselves only if politics matter
+  enough to them
+- **A vote for a seat left empty takes a day to hold**, and the seat stands empty meanwhile.
+  The other ways name somebody at once, if there is anybody. Whoever stepped down is not the
+  one to follow themselves. A seat nobody can be found for is tried again each day, and costs
+  legitimacy while it stands empty
+- **A term is eight weeks** where there are terms: whoever leads has to win again, and the
+  council is seated anew
+- **A leader thinks of resigning** when worn down or with nobody behind them, and the player
+  may advise (`resign`)
+- **A leader has in mind who would follow them** where the government goes by that: their
+  partner, the grown kin they care for most, or whoever they think most of, if it is enough
+- **What those who govern are seen, or said, to have done** tells on what each resident who
+  learns of it holds: fear, loyalty, trust and resentment, each more or less by their leanings,
+  by whether it was done to them, and by what they feel for whoever it was done to. Through
+  them it tells on legitimacy, corruption and authoritarianism, and a government that is
+  expected to abuse loses less legitimacy by it
+- **Public support and fear are what the residents hold, on average.** Unrest and stability
+  come to where the rest puts them a day at a time. Legitimacy, authoritarianism and corruption
+  move only by what happens
+- **Obeying** is worked out from loyalty, fear, trust and tolerance of a firm hand, and says
+  nothing of resentment, which is kept by itself. Nothing asks for it until there are laws (S28)
+- **Leadership tells on work**: under a leader at either end of it people work up to six in a
+  hundred faster or slower, the more so the more loyal they are
+- **Charisma and leadership** are in the data of the nine of the ready-made settlement
+- Save version 30
+
+Still open here:
+- Who may propose, who approves, who votes, the leader's weight and the veto are in each
+  government's data and nothing acts on them until there is something to propose (S27)
+- Nothing a leader does as a leader exists yet: they lead in name, in what is thought of them
+  and in how people work. What they decide comes with S27 and S28
+- Nobody remembers how they voted, and nobody resents having lost: political memories are S27
+- Abuse of power is only what anybody might do, done by somebody who governs. What only a
+  government can do, such as punishing, is S28
+- A leader who is away on a trip cannot stand in a vote held meanwhile, and loses the seat
+- Unrest is a figure and nothing comes of it (S29)
+- How much each kind appeals, and every weight in a vote, are first guesses. With the nine of
+  the ready-made settlement, forty seeds chose a commune sixteen times, an assembly twelve, a
+  council four, a ruler four, a mayor three and a commander once
+- None of it is on screen: P26. Until then a government is proposed by command
 
 ### S27 — Proposals and votes (needs S26) — planned
 - **The player proposes and the settlement decides.** A proposal goes into the process of the
@@ -1703,6 +1759,8 @@ Still to settle:
 ### P26 — Politics on screen (needs S26 to S29) — planned
 - A government entry in the menu: its kind, who leads, who sits on the council, the laws in force
 - The choosing of a government, when the third resident comes, as something seen and advised on
+- Charisma and leadership where the first resident is made, beside the other sides (P16)
+- Who holds which role seen on the map and in their panel, and a seat that stands empty
 - The jail, the stocks, the gallows and the guillotine, in Urbanismo and in their editors
 - Where a proposal is made, and where it is seen to go: who has it, how each vote went, what
   came of it

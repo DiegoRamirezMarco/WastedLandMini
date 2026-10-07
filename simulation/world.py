@@ -28,6 +28,9 @@ from simulation.items.theft import TheftAttempt
 from simulation.knowledge.fact import Fact, KnowledgeStore
 from simulation.knowledge.knowledge_system import record_fact, witnesses_of
 from simulation.memory.memory_system import MemorySystem
+from simulation.politics.government import GovernmentState, PoliticsResult
+from simulation.politics.politics_system import PoliticsSystem
+from simulation.politics.profile import PoliticalProfile
 from simulation.registries import DEFAULT_MAP_ID, BuiltInRegistries, builtin_registries
 from simulation.residents.founding import found_resident
 from simulation.residents.manner import MannerDefinition
@@ -101,6 +104,11 @@ class SimulationWorld:
     substances: SubstanceSystem = field(default_factory=SubstanceSystem)
     family: FamilySystem = field(default_factory=FamilySystem)
     children: ChildSystem = field(default_factory=ChildSystem)
+    politics: PoliticsSystem = field(default_factory=PoliticsSystem)
+    # The government the settlement has: none until it has grown enough to choose one.
+    government: GovernmentState = field(default_factory=GovernmentState)
+    # What each resident holds about how the settlement is run, by resident ID. Kept apart from the resident.
+    political_profiles: dict[str, PoliticalProfile] = field(default_factory=dict)
     # Children under ten, by ID: carried and seen to by somebody until they walk.
     bundles: dict[str, Bundle] = field(default_factory=dict)
     # What residents have lent one another and not had back yet.
@@ -176,6 +184,7 @@ class SimulationWorld:
         self.happenings.tick(self)
         self.lending.tick(self)
         self.family.tick(self)
+        self.politics.tick(self)
         self.activities.begin_minute(self)
         for resident in list(self.residents.values()):
             # Someone may die during this very minute.
@@ -269,6 +278,10 @@ class SimulationWorld:
         """Take in the player's first resident. Returns their ID, or None if there is already someone."""
         resident = found_resident(self, name, age, personality, traits, manners, identity)
         return resident.resident_id if resident is not None else None
+
+    def propose_government(self, government_id: str) -> PoliticsResult:
+        """Put a kind of government to everyone, while the settlement is choosing one. They settle it."""
+        return self.politics.propose_government(self, government_id)
 
     def set_identity(self, resident_id: str, sex: str, gender: str, drawn_to: str) -> bool:
         """Say what a resident's sex and gender are and who they are drawn to."""
@@ -547,16 +560,19 @@ class SimulationWorld:
         # A settlement that is already running knows how to make what it has.
         world.research.grant_what_stands(world)
         residents = [
-            Resident("marta", "Marta", personality=Personality(empathy=75, sociability=65), traits=["music_lover"]),
-            Resident("raul", "Raúl", personality=Personality(aggression=72, impulsiveness=68)),
-            Resident("lucia", "Lucía", personality=Personality(empathy=60, greed=25), traits=["sweet_tooth"]),
-            Resident("tomas", "Tomás", personality=Personality(courage=75, sociability=35, aggression=55)),
-            Resident("ines", "Inés", personality=Personality(empathy=65, sociability=60, greed=40)),
-            Resident("vera", "Vera", personality=Personality(empathy=80, sociability=55, courage=60)),
-            Resident("paco", "Paco", personality=Personality(empathy=45, sociability=45, impulsiveness=40), traits=["dim"]),
-            Resident("nuria", "Nuria", personality=Personality(empathy=55, sociability=70, greed=65)),
+            Resident("marta", "Marta", personality=Personality(empathy=75, sociability=65, charisma=68, leadership=58), traits=["music_lover"]),
+            Resident("raul", "Raúl", personality=Personality(aggression=72, impulsiveness=68, charisma=42, leadership=55)),
+            Resident("lucia", "Lucía", personality=Personality(empathy=60, greed=25, charisma=55, leadership=45), traits=["sweet_tooth"]),
+            Resident("tomas", "Tomás", personality=Personality(courage=75, sociability=35, aggression=55, charisma=45, leadership=70)),
+            Resident("ines", "Inés", personality=Personality(empathy=65, sociability=60, greed=40, charisma=60, leadership=50)),
+            Resident("vera", "Vera", personality=Personality(empathy=80, sociability=55, courage=60, charisma=62, leadership=64)),
+            Resident("paco", "Paco", personality=Personality(empathy=45, sociability=45, impulsiveness=40, charisma=40, leadership=35), traits=["dim"]),
+            Resident("nuria", "Nuria", personality=Personality(empathy=55, sociability=70, greed=65, charisma=70, leadership=40)),
             Resident(
-                "sergio", "Sergio", personality=Personality(courage=70, greed=60, impulsiveness=55), traits=["rogue"]
+                "sergio",
+                "Sergio",
+                personality=Personality(courage=70, greed=60, impulsiveness=55, charisma=55, leadership=52),
+                traits=["rogue"],
             ),
         ]
         # Who works where, and the day of the week each has off. Marta cooks what Raúl and Inés

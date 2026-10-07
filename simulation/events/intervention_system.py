@@ -13,6 +13,7 @@ from simulation.events.crisis import Crisis
 from simulation.events.decision import Decision, DecisionDefinition, DecisionOption, OutcomeDefinition
 from simulation.events.event import DomainEvent
 from simulation.family.children import TAKE_IN
+from simulation.politics.leadership import RESIGN
 from simulation.memory.memory import Memory
 from simulation.residents.activity import Activity
 from simulation.residents.resident import Resident
@@ -98,6 +99,7 @@ def score_inputs(world: "SimulationWorld", resident: Resident, target: Resident 
         "bargain": 0.0,
         "kin": 0.0,
         "room": 0.0,
+        "support": 0.5,
     }
     if target is not None:
         feelings = world.relationship(resident.resident_id, target.resident_id)
@@ -531,6 +533,8 @@ class InterventionSystem:
             world.substances.decided(world, resident, chosen.substance)
         if decision.kind == TAKE_IN:
             world.children.decided(world, resident, chosen.agrees)
+        if decision.kind == RESIGN and chosen.agrees:
+            world.politics.leadership.resign(world, resident)
         return chosen.outcome_id
 
     def _grievance_target(self, world: "SimulationWorld", resident: Resident) -> Resident | None:

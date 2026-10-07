@@ -2,6 +2,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from simulation.economy.terms import TradeResult
+from simulation.politics.government import PoliticsResult
 from simulation.work.research import ResearchResult
 from world.map import Tile
 from world.urbanism import UrbanismResult
@@ -81,6 +82,9 @@ class CommandTarget(Protocol):
         ...
 
     def set_identity(self, resident_id: str, sex: str, gender: str, drawn_to: str) -> bool:
+        ...
+
+    def propose_government(self, government_id: str) -> PoliticsResult:
         ...
 
     def set_manner(self, resident_id: str, kind_id: str, manner_id: str) -> bool:
@@ -284,6 +288,17 @@ class ProposeBarterCommand:
 
     def apply(self, world: CommandTarget) -> TradeResult:
         return world.propose_barter(self.option_id)
+
+
+@dataclass(frozen=True)
+class ProposeGovernmentCommand:
+    """The player's one proposal of a kind of government, while the settlement is choosing one.
+    It weighs with each resident as advice does, and they settle it among themselves."""
+
+    government_id: str
+
+    def apply(self, world: CommandTarget) -> PoliticsResult:
+        return world.propose_government(self.government_id)
 
 
 @dataclass(frozen=True)

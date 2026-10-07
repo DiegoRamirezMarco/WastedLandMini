@@ -117,6 +117,8 @@ class GameShellTests(unittest.TestCase):
 
     def test_speed_keys_scale_time_and_space_pauses(self) -> None:
         self._make_everyone_get_along()
+        # The first minute of a settlement calls for attention by itself: it sets about choosing a government.
+        self._play(1)
         self.game.handle_key(pygame.K_3)
         start = self._minutes()
         self._play(5)

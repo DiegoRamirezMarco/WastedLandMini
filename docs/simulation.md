@@ -265,6 +265,31 @@ room. An argument's importance rises with the resentment between the two.
 - **More mouths, more hands.** A job may take one more worker for every so many residents: the
   garden does, so that a settlement that grows goes on feeding itself.
 
+## Politics
+
+- **The player is nobody in the settlement.** They put things to people and advise, and never
+  govern. Whoever leads is a resident like any other, with a role.
+- **No government until there are three.** When a third resident lives there the adults take
+  twelve hours to settle on a kind, each by what they hold, and the player may put one kind to
+  them all, once. The ready-made settlement does it on its first day.
+- **A kind of government** says whether somebody leads, whether there is a council, and how the
+  next leader comes to be: voted for by everyone or by the council, whoever is strongest,
+  whoever the last one would have had, or whoever has the most behind them. Where there are
+  terms, whoever leads has to win again.
+- **Losing a leader ends nothing.** Dead, gone, voted out or resigned, the government's own
+  ways name the next one, or the seat stands empty until they do.
+- **What each resident holds** is kept apart from them: seven leanings that come of their way
+  of being, their traits and something of their own, and what they feel about whoever leads
+  (loyalty, which is to the person) and about the government (trust, fear and resentment).
+- **It moves with what they learn.** Somebody who governs and is seen, or said, to have started
+  a fight, stolen or killed is feared more and trusted less by whoever learns of it, each in
+  their own way. Nobody thinks any different because the world knows.
+- **Seven measures of the settlement**, from 0 to 100: legitimacy, public support, fear, unrest,
+  stability, authoritarianism and corruption. A place can be afraid, obedient and full of
+  resentment at once.
+- **Charisma and leadership** are two more sides of a way of being: how readily others are won
+  over by somebody, and how well others do under them.
+
 ## Substances
 
 - **Taking one.** A substance is an item: owned and used like any other, or had over a bar that

@@ -67,6 +67,8 @@ class Resident:
     # Whose child they are carrying, while they carry one, and the day it is due.
     expecting_with: str | None = None
     due_day: int = 0
+    # IDs of the roles they hold in how the settlement is run, such as `mayor`.
+    roles: list[str] = field(default_factory=list)
     # ID of the resident they are a couple with, who names them in turn.
     couple_with: str | None = None
     # The trip outside the settlement they are on, while they are on one.
