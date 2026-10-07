@@ -1772,6 +1772,39 @@ Still to settle:
   mood of the place. What each resident holds is found out, as their tastes are, and not read
   off a panel
 
+### P27 — Picked up and put down (needs P10) — planned
+The user's idea: residents can be dragged and dropped, and where one is dropped is what they do.
+
+- **A resident is picked up with the mouse on the map and carried with the pointer**, their
+  body hanging from it as a paper doll's would (P10), and put down wherever the button is let go
+- **What they are dropped on is what they set about**, as far as it can be done:
+  - on a place of work, they work at it
+  - on another resident, the two have something to do with each other
+  - on a bed, they lie down and sleep
+  - on whatever else is used, they use it: the pot or the pantry to eat, the tank to drink,
+    the bar, the clinic's bed, a seat, the study desk, the radio
+  - on bare ground, they are simply there now
+- **What a drop would do is shown before the button is let go**: the thing under the pointer
+  lights up and says what will come of it, or that nothing will
+- The simulation gets it as a command like any other, by stable IDs, so that it runs headless
+  and can be tested without a screen: who, and on what or on whom
+- A drop that cannot be acted on puts them down and nothing else: a post that is not theirs to
+  take, a bed that is somebody else's, somebody who is asleep or out of the settlement
+
+Still to settle, to be asked before it is built:
+- **Whether a drop is an order or a nudge.** Everywhere else residents decide for themselves and
+  the player advises (S4). Either a drop is the one place where the player's hand settles it, or
+  it puts the thing in front of them and they do it unless they have a strong reason not to
+- What two residents do when one is dropped on the other: what they would have done anyway by
+  what they feel for each other, or something the player picks as they let go
+- Whether dropping somebody on a place of work gives them the post, or only has them lend a
+  hand there this once
+- Whether they are where they are dropped at once, or walk there from where they were
+- Whether time stops while somebody is in the air
+- What being carried about is to them: nothing, or something that tells on their nerves and on
+  what they make of being told what to do (S20)
+- Whether a child's bundle can be picked up and handed to somebody the same way (S25)
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it
