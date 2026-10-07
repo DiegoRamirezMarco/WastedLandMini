@@ -286,7 +286,8 @@ class GlobalView:
         width, height = minimap_size((world.tile_map.width, world.tile_map.height))
         # The part of the canvas that shows the map, and the map pixel at its top-left corner.
         self.viewport = self.hud.layout.map.copy()
-        # The minimap keeps to the bottom left of the map, out of the way of what opens on the right.
+        # The minimap keeps to the bottom left of the map, out of the way of what opens on the right,
+        # and goes up over the dock while that is open.
         self._minimap_rect = pygame.Rect(
             self.viewport.left + MINIMAP_MARGIN, self.viewport.bottom - MINIMAP_MARGIN - height, width, height
         )
@@ -581,8 +582,14 @@ class GlobalView:
         in_front = tile[1] == room.y + room.height and room.x - 1 <= tile[0] <= room.x + room.width
         return tile in self.roof_tiles[room_id] or in_front
 
+    def _seat_minimap(self) -> None:
+        """Keep the minimap at the foot of the map, or just over the dock while that is open."""
+        dock = self.hud.dock_rect()
+        self._minimap_rect.bottom = (dock.top if dock is not None else self.viewport.bottom) - MINIMAP_MARGIN
+
     def click(self, position: tuple[int, int]) -> None:
         """Handle a left click at a canvas position: a button, the minimap, a resident, or empty ground."""
+        self._seat_minimap()
         intent = self.hud.click(position)
         minimap = self.hud.minimap_rect
         if intent is not None:
@@ -814,6 +821,7 @@ class GlobalView:
         if self.layers is not None:
             self.layers.clear()
         self.canvas.fill(PALETTE["ink"])
+        self._seat_minimap()
         region = self._visible_region()
         ground = self._ground()
         # Decide the state of buildings before making the scene: a freehand building needs an

@@ -2512,6 +2512,28 @@ Still open here:
 - The bar is one colour whatever the task, and says nothing of how long is left in hours
 - Whoever is out of the settlement has none, nor does anybody in the roster on the right
 
+### P33 — Nothing kept open under the map (no dependency) — done
+The user's words: "la parte de abajo donde se ve el historial, lo vamos a quitar, cuando demos a
+eventos se abre, no lo quiero todo el rato abierto".
+
+- **The map goes down to the foot of the screen**, and so does the menu. The strip that listed
+  the latest events under it all the time is gone
+- **What has been going on is read from `Eventos`**, in the panel that already opened from
+  there, now wide and tall enough for whole lines
+- **The dock is still where people talk**, but only while they do: it opens over the foot of
+  the map when whoever is selected is in an exchange, or when somebody asks for advice, and
+  goes when they are done. The minimap moves up out of its way, and a panel of the menu stops
+  short of it
+
+Decided without asking: the history opens in the corner panel `Eventos` already had, not in
+the strip at the foot, which is left to conversations.
+
+Still open here:
+- The dock coming and going as a selected resident starts and ends a chat moves the minimap
+  each time
+- The names of the menu are cut by the row under them; with the menu taller there is room to
+  space the rows, but the lower ones would be under the dock while it is open
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it

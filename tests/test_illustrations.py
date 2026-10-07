@@ -12,6 +12,7 @@ from graphics.illustrations import Illustrations, nine_slice
 from graphics.screen_layers import ScreenLayers
 from settings import SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE
 from simulation.commands import AdvanceTimeCommand
+from simulation.residents.activity import Activity
 
 GROUND = (150, 110, 70)
 SHOP = (40, 160, 200)
@@ -209,7 +210,7 @@ class IllustratedGameTests(unittest.TestCase):
         view = game.global_view
         layout = view.hud.layout
         window = self._shown(game)
-        for part in (layout.top, layout.sidebar, layout.panel, layout.dock):
+        for part in (layout.top, layout.sidebar, layout.panel):
             corner = (part.right - 3, part.bottom - 3)
             self.assertEqual(game.canvas.get_at(corner)[3], 0, part)
             self.assertTrue(_is(tuple(window.get_at((corner[0] * SCALE, corner[1] * SCALE))), SKIN), part)
@@ -221,6 +222,16 @@ class IllustratedGameTests(unittest.TestCase):
         self.assertGreater(painted, 40)
         # The map has no skin: without a drawn ground it is the game's own, on the canvas.
         self.assertEqual(game.canvas.get_at(layout.map.center)[3], 255)
+        # Nor has the foot of it, until the dock opens there for whoever is talking.
+        corner = (layout.dock.right - 3, layout.dock.bottom - 3)
+        self.assertEqual(game.canvas.get_at(corner)[3], 255)
+        world = game.world
+        view.hud.select_resident("raul")
+        world.residents["raul"].activity = Activity("chat", partner_id="tomas", using=True)
+        world.residents["tomas"].activity = Activity("chat", partner_id="raul", using=True)
+        window = self._shown(game)
+        self.assertEqual(game.canvas.get_at(corner)[3], 0)
+        self.assertTrue(_is(tuple(window.get_at((corner[0] * SCALE, corner[1] * SCALE))), SKIN))
 
     def test_illustrated_faces_are_shown_large_in_the_panel_and_in_the_dock(self) -> None:
         _picture(self.root, "faces/raul/angry.png", FACE, (1024, 1024))

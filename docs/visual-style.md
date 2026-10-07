@@ -132,7 +132,7 @@ illustrations/                   free of the style contract: see Illustrations
   own picture, in among the residents.
 - **A face** that has a picture is shown in it wherever that resident's face is: large in the
   dock and in the panel, and brought down for the small markers on the map.
-- **The skin** dresses the bar, the menu, the panel and the dock: its border keeps its width and
+- **The skin** dresses the bar, the menu, the panel and the dock while it is open: its border keeps its width and
   its middle stretches. Text, bars and buttons are still drawn on the canvas, over it.
 - With nothing in the folder, or without the folder, the game looks exactly as it did.
 
@@ -222,7 +222,11 @@ on displays of different resolutions.
   comic speech bubble, `paper` with an `ink` outline and a tail towards whoever speaks. A line
   that ends in `!` is written at ×2 where it fits. Beside them, a column of text or of buttons.
 - While whoever is selected is in an exchange, the dock shows it, the two taking turns with the
-  lines written for that exchange. Otherwise it lists the latest events.
+  lines written for that exchange. The rest of the time there is no dock: the map goes down to
+  the foot of the screen, and the dock opens over the foot of it, the minimap moving up out of
+  its way. Nothing is kept open down there.
+- **What has been going on** is read from `Eventos` in the menu, in a panel over the corner of
+  the map wide enough for whole lines, and put away the same way.
 
 ## Global view
 - Top-down settlement, outdoors and post-apocalyptic: bare ground and dry grass, shacks of salvaged

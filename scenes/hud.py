@@ -1,4 +1,5 @@
-"""Everything round the map: the bar on top, the menu on the left, the panel on the right and the dock below."""
+"""Everything round the map: the bar on top, the menu on the left and the panel on the right, and what
+opens over it: the panels of the menu, and the dock of whoever is talking."""
 
 from collections.abc import Hashable, Iterable
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from settings import SPEEDS
 from simulation.events.event import DomainEvent
+from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
 from ui.button import Button
 from ui.dock import draw_scene
@@ -61,7 +63,8 @@ from ui.tutorial_panel import PANEL_WIDTH as TUTORIAL_WIDTH
 from ui.tutorial_panel import draw_tutorial, tutorial_button, tutorial_height
 
 MARGIN = 6
-LOG_SIZE = (250, 168)
+# What has been going on is read here and nowhere else, so it is given room for whole lines.
+LOG_SIZE = (340, 232)
 STORES_WIDTH = 184
 OUTLOOK_WIDTH = 300
 OUTLOOK_PADDING = 4
@@ -94,7 +97,6 @@ FOCUS_INTENTS = {
 CLOCK_FOCUS = "clock"
 STORES_TITLE = "Almacén: lo que es de todos"
 STORES_EMPTY = "No queda nada"
-DOCK_TITLE = "Lo último"
 # The picture that the large parts of the screen wear, if there is one, and how wide its border is drawn.
 SKIN_PATH = "ui/panel.png"
 SKIN_BORDER_PIXELS = 20
@@ -167,7 +169,8 @@ class Hud:
         self.faces = faces
         self.assets = assets
         self.layout: Layout = layout_for(canvas.get_size())
-        # The bar, the menu, the panel and the dock wear the skin, if the game has been given one.
+        # The bar, the menu, the panel and the dock, while it is open, wear the skin, if the game has
+        # been given one.
         self._skin_source = illustrations.find(SKIN_PATH) if illustrations is not None and layers is not None else None
         self._skinned = {tuple(part) for part in (self.layout.top, self.layout.sidebar, self.layout.panel, self.layout.dock)}
         self._skins: dict[tuple[int, int, int, int], pygame.Surface] = {}
@@ -403,7 +406,7 @@ class Hud:
         """True if `position` is not on the map, or something of the HUD is in front of the map there."""
         if not self.layout.map.collidepoint(position):
             return True
-        panels = [self.minimap_rect, self.outlook_rect(), self.tutorial_rect()]
+        panels = [self.minimap_rect, self.outlook_rect(), self.tutorial_rect(), self.dock_rect()]
         panels += [self.log_rect()] if self.log_open else []
         panels += [self.jobs_rect()] if self.jobs_open else []
         panels += [self.stores_rect()] if self.stores_open else []
@@ -412,9 +415,10 @@ class Hud:
         return any(rect is not None and rect.collidepoint(position) for rect in panels)
 
     def _float(self, width: int, height: int) -> pygame.Rect:
-        """A panel that opens over the top right corner of the map."""
-        area = self.layout.map
-        return pygame.Rect(area.right - MARGIN - width, area.y + MARGIN, width, min(height, area.height - MARGIN * 2))
+        """A panel that opens over the top right corner of the map, and stops short of the dock while that is open."""
+        area, dock = self.layout.map, self.dock_rect()
+        room = (dock.top if dock is not None else area.bottom) - area.y
+        return pygame.Rect(area.right - MARGIN - width, area.y + MARGIN, width, min(height, room - MARGIN * 2))
 
     def log_rect(self) -> pygame.Rect:
         return self._float(*LOG_SIZE)
@@ -588,16 +592,27 @@ class Hud:
         else:
             draw_roster(self.canvas, self.font, self.faces, panel, self.world)
 
-    def _render_dock(self) -> None:
-        """Under the map: the exchange the selected resident is in, or else what has been going on."""
-        dock = self.layout.dock
+    def _exchange(self) -> tuple[Resident, Resident] | None:
+        """Whoever is selected and whoever they are in an exchange with, while they are in one."""
         resident = self.world.residents.get(self.selected_id or "")
         activity = resident.activity if resident is not None else None
         partner = self.world.residents.get(activity.partner_id or "") if activity is not None and activity.using else None
         if resident is None or partner is None or resident.away:
+            return None
+        return resident, partner
+
+    def dock_rect(self) -> pygame.Rect | None:
+        """Where the exchange of whoever is selected is shown, while they are in one. The rest of the
+        time nothing is there but the map."""
+        return self.layout.dock if self._exchange() is not None else None
+
+    def _render_dock(self) -> None:
+        """Over the foot of the map: the exchange the selected resident is in, while they are in one."""
+        dock, exchange = self.layout.dock, self._exchange()
+        if exchange is None:
             self.spoken = None
-            self.feed.draw_panel(self.canvas, self.font, dock, title=DOCK_TITLE)
             return
+        resident, partner = exchange
         # They take turns to speak, a few minutes each.
         turn = (self.world.clock.total_minutes // 4) % 2
         speaker = resident if turn == 0 else partner

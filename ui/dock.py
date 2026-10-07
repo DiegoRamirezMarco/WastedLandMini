@@ -94,6 +94,11 @@ def draw_scene(
     one on the side `speaker` points at says, in a bubble, or what happened, in a plain box.
     Returns the areas of the dock, the last of which is left for the caller to fill.
     """
+    if layers is not None and layers.active:
+        # The dock opens over the map: what of the map is drawn under the canvas must not show
+        # through wherever the dock clears the canvas for a picture of its own.
+        behind = layers.on_screen(dock)
+        layers.under(lambda screen: screen.fill(PALETTE["ink"], behind))
     draw_panel(target, dock, fill="shadow", border="iron")
     areas = dock_areas(dock)
     draw_portrait(target, font, faces, areas.left, *left, layers=layers)

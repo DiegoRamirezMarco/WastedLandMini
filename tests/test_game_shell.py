@@ -1373,21 +1373,26 @@ class GameShellTests(unittest.TestCase):
 
     # --- The frame round the map ---
 
-    def test_the_screen_is_a_map_with_a_bar_a_menu_a_panel_and_a_dock_round_it(self) -> None:
+    def test_the_screen_is_a_map_with_a_bar_a_menu_and_a_panel_round_it(self) -> None:
         view = self.game.global_view
         layout = view.hud.layout
         canvas = self.game.canvas.get_rect()
-        parts = [layout.top, layout.sidebar, layout.map, layout.dock, layout.panel]
+        parts = [layout.top, layout.sidebar, layout.map, layout.panel]
         self.assertEqual(sum(part.width * part.height for part in parts), canvas.width * canvas.height)
         for index, part in enumerate(parts):
             self.assertTrue(canvas.contains(part))
             self.assertFalse(any(part.colliderect(other) for other in parts[index + 1 :]))
         self.assertEqual(view.viewport, layout.map)
         self.assertGreater(layout.map.width, layout.panel.width * 2)
+        self.assertEqual(layout.map.bottom, canvas.bottom, "the map goes down to the foot of the screen")
         # Only the map is map: everything round it is in front of it.
         self.assertFalse(view.hud.covers(layout.map.center))
-        for part in (layout.top, layout.sidebar, layout.dock, layout.panel):
+        for part in (layout.top, layout.sidebar, layout.panel):
             self.assertTrue(view.hud.covers(part.center))
+        # The dock is no part of it: it opens over the foot of the menu and the map, clear of the menu's rows.
+        self.assertTrue(layout.sidebar.union(layout.map).contains(layout.dock))
+        self.assertEqual(layout.dock.bottom, canvas.bottom)
+        self.assertLessEqual(max(button.rect.bottom for button in view.hud.menu), layout.dock.top)
 
     def test_with_nobody_selected_the_panel_lists_everybody_to_be_picked(self) -> None:
         view, world = self.game.global_view, self.game.world
@@ -1458,6 +1463,55 @@ class GameShellTests(unittest.TestCase):
         self.assertTrue(view.viewport.contains(hud.log_rect()))
         self.assertTrue(view.viewport.contains(hud.jobs_rect()))
 
+    def test_nothing_is_kept_open_at_the_foot_of_the_map_and_what_has_gone_on_opens_from_the_menu(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        hud, dock = view.hud, view.hud.layout.dock
+        foot = (view.viewport.right - 20, dock.centery)
+        self.game.handle_key(pygame.K_3)
+        self._play(8)
+        self.assertIsNotNone(hud.feed.latest(), "things have gone on")
+        view.render()
+        # With things going on and nobody talking, there is only map down there.
+        self.assertIsNone(hud.dock_rect())
+        self.assertIsNone(hud.spoken)
+        self.assertFalse(hud.covers(foot))
+        self.assertTrue(view._on_map(foot))
+        self.assertGreater(hud.minimap_rect.bottom, dock.top, "and the minimap sits at the foot of it")
+        self.assertTrue(view.viewport.contains(hud.minimap_rect))
+        # What has gone on is read by asking for it, and put away the same way.
+        closed = pygame.image.tobytes(self.game.canvas.subsurface(hud.log_rect()), "RGB")
+        self._click(hud.log_button.rect.center)
+        self.assertTrue(hud.log_open)
+        view.render()
+        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(hud.log_rect()), "RGB"), closed)
+        self.assertTrue(hud.covers(hud.log_rect().center))
+        self.assertFalse(hud.covers(foot), "it is not down there that it opens")
+        self._click(hud.log_button.rect.center)
+        self.assertFalse(hud.log_open)
+        # Somebody selected who is talking to somebody opens the dock, and the minimap makes way.
+        self._stand_together("raul", "tomas")
+        raul, tomas = world.residents["raul"], world.residents["tomas"]
+        hud.select_resident("raul")
+        raul.activity = Activity("chat", partner_id="tomas", using=True)
+        tomas.activity = Activity("chat", partner_id="raul", using=True)
+        view.render()
+        self.assertEqual(hud.dock_rect(), dock)
+        self.assertTrue(hud.covers(foot))
+        self.assertFalse(view._on_map(foot))
+        self.assertLessEqual(hud.minimap_rect.bottom, dock.top)
+        # A panel of the menu opened meanwhile stops short of it.
+        hud.toggle_jobs()
+        self.assertLessEqual(hud.jobs_rect().bottom, dock.top)
+        hud.toggle_jobs()
+        # A click on the dock is not a click on the map under it: whoever is selected stays selected.
+        self._click(foot)
+        self.assertEqual(hud.selected_id, "raul")
+        # When they stop talking it goes, and the map and the minimap are back.
+        raul.activity = tomas.activity = None
+        view.render()
+        self.assertIsNone(hud.dock_rect())
+        self.assertGreater(hud.minimap_rect.bottom, dock.top)
+
     def test_the_dock_shows_the_exchange_of_whoever_is_selected(self) -> None:
         view, world = self.game.global_view, self.game.world
         self._stand_together("raul", "tomas")
@@ -1465,9 +1519,11 @@ class GameShellTests(unittest.TestCase):
         dock = view.hud.layout.dock
         view.hud.select_resident("raul")
         view.render()
+        self.assertIsNone(view.hud.dock_rect(), "talking to nobody, there is nothing to show")
         quiet = pygame.image.tobytes(self.game.canvas.subsurface(dock), "RGB")
         raul.activity = Activity("chat", partner_id="tomas", using=True)
         tomas.activity = Activity("chat", partner_id="raul", using=True)
+        self.assertEqual(view.hud.dock_rect(), dock)
         self.assertIn(spoken_line(world, raul), world.registries.dialogue["chat"])
         self.assertEqual(expression_of(world, raul), "happy")
         with self.assertNoLogs("graphics.assets", level="WARNING"):
