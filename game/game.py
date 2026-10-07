@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pygame
 
-from audio.audio_manager import AudioManager, load_sound_map
+from audio.ambience import actions_in_view, ambience_for
+from audio.audio_manager import SOUNDS_DIR, AudioManager, load_sound_settings
 from audio.music import load_music_settings, track_for
 from audio.voice_player import VoicePlayer
 from audio.voice_synth import VoiceSynth
@@ -78,6 +79,7 @@ class Game:
         custom_content_dir: Path = CUSTOM_CONTENT_DIR,
         start_in_menu: bool = True,
         save_path: Path = SAVE_PATH,
+        sounds_dir: Path | None = SOUNDS_DIR,
     ) -> None:
         pygame.init()
         pygame.display.set_caption("Wasteland Minis")
@@ -113,11 +115,13 @@ class Game:
         # Residents whose body has been drawn, cut into parts that move.
         self.dolls = DollStore(self.illustrations, load_template(), builtin_plan())
         self.music = load_music_settings(DATA_DIR / "audio.json")
+        # A sound of the player's own, in the folder for them, is played in place of the game's.
         self.audio = AudioManager(
             ASSETS_DIR / "sounds",
-            load_sound_map(DATA_DIR / "audio.json"),
+            load_sound_settings(DATA_DIR / "audio.json"),
             ASSETS_DIR / "music",
             self.music.tracks.values(),
+            own_dir=sounds_dir,
         )
         # What residents say is said out loud, each in their own voice, if there is a folder for voices.
         self.voices: VoicePlayer | None = None
@@ -148,6 +152,7 @@ class Game:
             self.canvas, self.world, self.assets, self.font, self.icons, self.faces, self.custom,
             self.illustrations, self.layers, self.dolls, self.voices,
         )
+        self.global_view.sound = self.audio.interface
         # Advice is asked for in the dock under the map, with the settlement left on show around it.
         self.interaction_view = InteractionView(
             self.canvas,
@@ -543,6 +548,17 @@ class Game:
         self.audio.set_music(track_for(self.world, self.music))
         self.audio.keep_music_going()
 
+    def update_sound(self, dt: float) -> None:
+        """Have what is heard follow the settlement: the hour and the weather, what is in view,
+        and what those in view are doing. Outside the settlement there is nothing to hear."""
+        on_the_map = self.scene_name == "global" and self.in_session
+        kinds, people = self.global_view.in_view() if on_the_map else (set(), [])
+        heard = ambience_for(self.world, self.audio.settings.ambience, self.music, kinds, people) if on_the_map else {}
+        self.audio.set_ambience(heard)
+        if on_the_map and not self.world.clock.paused:
+            self.audio.on_actions(actions_in_view(self.world, people), dt)
+        self.audio.update(dt)
+
     def advance_simulation(self, dt: float) -> None:
         """Play the game minutes that `dt` real seconds are worth. Time stops outside the global view."""
         if self.scene_name != "global" or self.world.clock.paused:
@@ -587,6 +603,7 @@ class Game:
 
             self.advance_simulation(dt)
             self.update_music()
+            self.update_sound(dt)
             if self.voices is not None:
                 self.voices.update()
             self.active_scene.update(dt)

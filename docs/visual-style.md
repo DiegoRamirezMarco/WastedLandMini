@@ -97,6 +97,7 @@ assets/
         eyes/<expression>.png    brows/<expression>.png    mouth/<expression>.png
     ui/font.png
     sounds/<name>.wav            16-bit mono, 22050 Hz
+    sounds/ambience/<name>.wav   the same, four seconds that go round and round
     music/<name>.wav             16-bit mono, 11025 Hz, written to loop
     ui/icon_<name>.png
 custom_content/

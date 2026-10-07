@@ -2446,6 +2446,45 @@ Still open here:
   far it is
 - The panel has no keys: it is all clicks
 
+### P31 — Sound (no dependency) — done
+The user's words: "tenemos que añadir efectos de sonido: el juego se siente pobre en cuanto
+sonido y efectos". Asked first, and answered: synthesised, with room for the user's own.
+
+- **Sixty effects where there were eleven**, still written by the art tool and still made of
+  nothing recorded: notes that can slide and be louder or softer, rough sound of three colours
+  for blows, scrapes and hiss, and a second voice under the ones that want body
+- **Nearly everything that happens has a sound**: 145 kinds of event, where 50 had one. A
+  death is not an injury, a law passed is not a law broken, and a vote, a wedding, a birth, a
+  knock at the gate, somebody thrown out and an order given each have their own
+- **What is being done in view is heard for as long as it is**: hammering on a site, metal
+  taken apart, loads carried, something mended, blows, somebody asleep. Each comes again every
+  so often, and more quietly than what happens
+- **The player's own hand sounds**: a click, somebody selected, the panel for affecting
+  opening, an order given, something refused
+- **Ambience under it all**, six loops of four seconds: wind by day, crickets by night, a
+  storm that drowns both, a fire or a generator while it is in view, and a murmur while people
+  in view talk. Each comes up and dies away, and is silenced with the rest
+- **Room for the user's own**: a file in `sounds/` with the name of one of the game's is played
+  in its place, `.wav` or `.ogg`. `sounds/README.md` names every one and says when it is heard
+- What sounds and when, and how loud each kind is, is data (`data/audio.json`)
+
+Done when: every sound the data asks for is a file there is; a sound of the player's own is
+played in place of the game's, and one that cannot be read breaks nothing; what is heard of
+the air follows the hour, the weather and what is in view; hammering is heard while somebody
+in view builds and stops when they do; and the folder for the player's own sounds says what
+each is called.
+
+Still open here:
+- **Nobody has listened to any of it.** It was written and checked by its numbers: no file is
+  silent, none breaks up, and ambience joins its own beginning. Whether it sounds like what it
+  is meant to is for an ear to say. The synthesised music was taken out for being a torment
+  (P8), and ambience is the same kind of thing: if any of it grates, taking its entry out of
+  `ambience` in `data/audio.json` silences it, and a file in `sounds/` replaces it
+- What happens out of view sounds as loud as what happens in it
+- The editors, Urbanismo and the menu are still silent
+- Steps, doors and the day's small noises have no sound
+- Music is still waiting for music worth playing (P8)
+
 ## Later
 - SQLite persistence
 - Semantic/vector memory if the amount of narrative memory justifies it

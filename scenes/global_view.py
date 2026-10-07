@@ -295,6 +295,8 @@ class GlobalView:
         # player moves the view by hand. `_selection_seen` is what tells a new selection from an old one.
         self.following: str | None = None
         self._selection_seen: str | None = None
+        # What sounds the player's own clicks, if anything does: given the name of what was done.
+        self.sound: Callable[[str], object] | None = None
         # Whoever the player has stopped to tell something, while they are choosing what.
         self._affected: str | None = None
         # Where on the canvas the left button went down on the map and where the mouse last was
@@ -580,6 +582,7 @@ class GlobalView:
         intent = self.hud.click(position)
         minimap = self.hud.minimap_rect
         if intent is not None:
+            self._sound("click")
             self._apply(intent)
         elif minimap is not None and minimap.collidepoint(position):
             self.following = None
@@ -588,6 +591,7 @@ class GlobalView:
             # The resident drawn last is in front, so it is the one picked.
             picked = [rid for rid, rect in self.hitboxes.items() if rect.collidepoint(position)]
             if picked:
+                self._sound("select")
                 self.hud.select_resident(picked[-1])
             else:
                 containers = [cid for cid, rect in self.container_hitboxes.items() if rect.collidepoint(position)]
@@ -701,6 +705,27 @@ class GlobalView:
                     return room.room_id
         return roofed[0].room_id if roofed else None
 
+    def in_view(self) -> tuple[set[str], list[str]]:
+        """What can be seen of the settlement right now: the kinds of object, and who is there.
+        For whoever sounds it: nothing here is drawn."""
+        region = self._visible_region()
+
+        def seen(x: int, y: int) -> bool:
+            return region.collidepoint(x * TILE_SIZE + TILE_SIZE // 2, y * TILE_SIZE + TILE_SIZE // 2)
+
+        kinds = {placed.kind for placed in self.world.interactables.values() if seen(placed.x, placed.y)}
+        people = [
+            resident_id
+            for resident_id, resident in self.world.residents.items()
+            if not resident.away and seen(resident.x, resident.y)
+        ]
+        return kinds, people
+
+    def _sound(self, what: str) -> None:
+        """Sound something the player did with their own hand, if there is anything to sound it with."""
+        if self.sound is not None:
+            self.sound(what)
+
     def _toggle_affect(self) -> None:
         """Stop whoever is selected so that they can be told something, or let them go."""
         resident_id = self.hud.selected_id
@@ -712,8 +737,10 @@ class GlobalView:
         waiting = self.world.construction.waiting_for_material(self.world, self.world.residents[resident_id])
         result = self.world.apply_command(HoldResidentCommand(resident_id))
         if not result.ok:
+            self._sound("refuse")
             self.hud.notify(result.message)
             return
+        self._sound("open")
         self._affected = resident_id
         salvage = f"{TASK}:{SALVAGE}"
         if waiting is not None and any(option.kind == salvage for option in self.world.affect_options(resident_id)):
@@ -745,6 +772,7 @@ class GlobalView:
             return
         result = self.world.apply_command(AffectCommand(resident_id, kind, target_id))
         self.hud.notify(result.message)
+        self._sound("order" if result.ok else "refuse")
         if result.ok:
             self._affected = None
             self.hud.close_affect()
