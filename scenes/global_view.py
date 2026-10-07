@@ -491,9 +491,13 @@ class GlobalView:
             self.leave()
         elif not self.hud.covers(position) and self.viewport.collidepoint(position):
             picked = [rid for rid, rect in self.hitboxes.items() if rect.collidepoint(position)]
+            kept = [cid for cid, rect in self.container_hitboxes.items() if rect.collidepoint(position)]
             if picked:
                 self._sound("select")
-            self.hud.select_resident(picked[-1] if picked else None)
+                self.hud.select_resident(picked[-1])
+            else:
+                # What things are kept in is looked into from in here, as it was under the roof.
+                self.hud.select_container(kept[-1] if kept else None)
             decision = self._decision_of(self.hud.selected_id)
             if decision is not None:
                 self.requested_decision = decision
@@ -683,30 +687,15 @@ class GlobalView:
         return chosen
 
     def looked_into(self) -> set[str]:
-        """Roofed rooms that stand open this frame: under the pointer, or holding what is selected."""
-        if self.overview:
+        """Roofed rooms that stand open this frame.
+
+        From the map a building is always shut (S40): what is in it is seen by going in, and
+        who is in it by their faces on its roof. Only the key that takes every roof off opens
+        them, and then all at once.
+        """
+        if self.overview or self.roofs_on:
             return set()
-        if not self.roofs_on:
-            return set(self.roof_tiles)
-        looked_at: list[Tile] = []
-        if self.pointer is not None and self.viewport.collidepoint(self.pointer) and not self.hud.covers(self.pointer):
-            # The sign of a building that stands closed is the way into it, and stays where it
-            # is under the pointer: resting on it does not take the roof off.
-            on_sign = any(
-                box.collidepoint(self.pointer) for room_id, box in self.sign_boxes.items() if room_id in self._closed
-            )
-            if not on_sign:
-                x, y = self._map_point(self.pointer)
-                looked_at.append((int(x // TILE_SIZE), int(y // TILE_SIZE)))
-        selected = self.world.residents.get(self.hud.selected_id or "")
-        if selected is not None:
-            looked_at.append(selected.tile)
-        container = self.world.interactables.get(self.hud.selected_container or "")
-        if container is not None:
-            looked_at.append((container.x, container.y))
-        return {
-            room_id for room_id in self.roof_tiles if any(self._is_at(room_id, tile) for tile in looked_at)
-        }
+        return set(self.roof_tiles)
 
     def _is_at(self, room_id: str, tile: Tile) -> bool:
         """Whether a tile is under a building's roof or in the wall in front of it, door included."""
@@ -1785,7 +1774,8 @@ class GlobalView:
 
         def overlay() -> None:
             self.canvas.blit(face, hitbox)
-            self._draw_overhead(resident, hitbox.midtop, with_name=False, resting=lying_in is not None)
+            # Over a face on a roof, what they are doing in there: talking, eating, asleep, at work.
+            self._draw_overhead(resident, hitbox.midtop, with_name=False, resting=lying_in is not None, unseen=True)
 
         def draw() -> None:
             self.hitboxes[resident.resident_id] = hitbox
@@ -1864,8 +1854,9 @@ class GlobalView:
 
         return (bed.bottom, 1, draw)
 
-    def _status_icon(self, resident: Resident, resting: bool) -> str | None:
-        """Icon for what a resident is doing, most urgent first."""
+    def _status_icon(self, resident: Resident, resting: bool, unseen: bool = False) -> str | None:
+        """Icon for what a resident is doing, most urgent first. For somebody `unseen`, who is
+        only a face on a roof, it also says what would otherwise be seen of them: that they eat."""
         if self._decision_of(resident.resident_id) is not None:
             return "alert"
         activity = resident.activity
@@ -1881,6 +1872,8 @@ class GlobalView:
             return "argument" if interaction is not None and interaction.hostile else "chat"
         if resting:
             return "sleep"
+        if unseen and activity is not None and activity.using and activity.action == EAT_ACTION:
+            return "eat"
         if resident.health < HURT_HEALTH:
             return "hurt"
         at_work = activity is not None and activity.using and activity.action in (WORK_ACTION, BUILD_ACTION)
@@ -1923,7 +1916,7 @@ class GlobalView:
         return activity.item_id if activity.target_id is not None and activity.partner_id is None else None
 
     def _draw_overhead(
-        self, resident: Resident, top_centre: tuple[int, int], with_name: bool, resting: bool = False
+        self, resident: Resident, top_centre: tuple[int, int], with_name: bool, resting: bool = False, unseen: bool = False
     ) -> None:
         """Stack how far along they are with a task, their name, a status icon and the
         selection arrow above a resident."""
@@ -1938,7 +1931,7 @@ class GlobalView:
             y -= CELL_SIZE[1]
             name = self.font.render(resident.name, PALETTE["paper"])
             self.canvas.blit(name, (self._name_left(resident, x, name.get_width()), y))
-        icons = [self._status_icon(resident, resting), self.mark_over(resident.resident_id)]
+        icons = [self._status_icon(resident, resting, unseen), self.mark_over(resident.resident_id)]
         if resident.resident_id == self.hud.selected_id:
             icons.append("selected")
         else:

@@ -190,11 +190,11 @@ class InsideABuildingTests(unittest.TestCase):
         self.view.render()
         self.assertNotIn("south_house", self.view.looked_into(), "the sign stays where the pointer found it")
         self.assertEqual(self.view.sign_boxes["south_house"], sign)
-        # Anywhere else on the building, the roof still comes off.
+        # Nor does resting anywhere else on it: from the map a building is always shut.
         room = self.world.rooms["south_house"]
-        x, y = self.view._tile_pixel(room.x + room.width / 2, room.y + room.height / 2)
+        x, y = self.view._tile_pixel(room.x + room.width / 2, room.y + 0.5)
         self._move((x, y))
-        self.assertIn("south_house", self.view.looked_into())
+        self.assertEqual(self.view.looked_into(), set())
         self._move(sign.center)
         self.view.render()
         self._move(sign.center)
@@ -355,6 +355,49 @@ class InsideABuildingTests(unittest.TestCase):
         self.assertEqual([entry[0] for entry in carried], ["scrap"])
         self.view.render()
         self.assertTrue(layout.cell > 0)
+
+    def test_over_a_face_on_a_roof_is_what_they_are_doing_in_there(self) -> None:
+        view, world = self.view, self.world
+        self._indoors("ines", "south_house")
+        self._indoors("paco", "south_house", (3, 1))
+        ines, paco = world.residents["ines"], world.residents["paco"]
+        self._see("south_house")
+        self.assertEqual(view.looked_into(), set(), "the roof is on")
+        self.assertIn("ines", view.hitboxes)
+        self.assertIsNone(view._status_icon(ines, False, unseen=True), "doing nothing in particular")
+        world.stock(ines.inventory, "canned_beans", 1, "ines")
+        ines.activity = Activity("eat", minutes_left=20, using=True, item_id=ines.inventory.items[-1].instance_id)
+        self.assertEqual(view._status_icon(ines, False, unseen=True), "eat")
+        self.assertIsNone(view._status_icon(ines, False), "seen whole, the meal is in her hand and says it")
+        ines.activity = Activity("chat", partner_id="paco", minutes_left=10, using=True)
+        paco.activity = Activity("chat", partner_id="ines", minutes_left=10, using=True)
+        self.assertEqual(view._status_icon(ines, False, unseen=True), "chat")
+        self.assertEqual(view._status_icon(paco, True, unseen=True), "chat")
+        paco.activity = None
+        self.assertEqual(view._status_icon(paco, True, unseen=True), "sleep")
+        view.render()
+
+    def test_what_things_are_kept_in_is_picked_from_inside(self) -> None:
+        room = self.world.rooms["south_house"]
+        crate = next(
+            placed
+            for placed in self.world.interactables.values()
+            if placed.object_id in self.world.containers and room.contains((placed.x, placed.y))
+        )
+        self.view.enter("south_house")
+        self.view.render()
+        self.assertIn(crate.object_id, self.view.container_hitboxes)
+        self.view.click(self.view.container_hitboxes[crate.object_id].center)
+        self.assertEqual((self.hud.selected_container, self.hud.selected_id), (crate.object_id, None))
+        self.assertIsNotNone(self.hud.container_rect())
+        self.view.render()
+        # A click on somebody in there picks them in its place, and one on nothing puts it away.
+        self._indoors("ines", "south_house", (3, 2))
+        self.view.render()
+        self.view.click(self.view.hitboxes["ines"].center)
+        self.assertEqual((self.hud.selected_container, self.hud.selected_id), (None, "ines"))
+        self.view.click((self.view.viewport.centerx, self.view.viewport.bottom - 30))
+        self.assertEqual((self.hud.selected_container, self.hud.selected_id), (None, None))
 
     def test_every_building_there_is_can_be_seen_from_inside(self) -> None:
         for room_id, room in self.world.rooms.items():

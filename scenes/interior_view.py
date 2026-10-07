@@ -242,10 +242,12 @@ class InteriorView:
         canvas, viewport, world = view.canvas, view.viewport, view.world
         layout = self.layout(room)
         draws: list[tuple[float, object]] = []
+        labels = []
         for placed in world.interactables.values():
             if room.contains((placed.x, placed.y)):
                 draws.extend(self._object(room, layout, placed))
-        labels = []
+                if placed.object_id in world.containers:
+                    labels.append(self._kept_in(room, layout, placed))
         for resident in world.residents.values():
             if resident.away or not room.contains(resident.tile):
                 continue
@@ -328,6 +330,24 @@ class InteriorView:
             target.blit(picture, (corner[0] + left, corner[1] + bottom - height))
 
         return [(bottom - 0.5, draw)]
+
+    def _kept_in(self, room: Room, layout: InteriorLayout, placed: Interactable):
+        """Where something that things are kept in is on the screen, to be picked there."""
+        view = self.view
+        definition = view.world.definition_of(placed)
+        column, row = self.place(room, placed.x, placed.y)
+        left, top = layout.spot(column, row)
+        own = self._own(layout, definition)
+        rise = own.rise if own is not None else 0
+        box = pygame.Rect(left, top - rise, definition.width * layout.cell, definition.height * layout.depth + rise)
+        hitbox = pygame.Rect(self._to_canvas(box.topleft), (max(4, box.width // SCALE), max(4, box.height // SCALE)))
+
+        def label() -> None:
+            view.container_hitboxes[placed.object_id] = hitbox
+            if placed.object_id == view.hud.selected_container:
+                pygame.draw.rect(view.canvas, PALETTE["glow"], hitbox, 1)
+
+        return label
 
     def _own(self, layout: InteriorLayout, definition) -> ObjectPicture | None:
         """The game's picture of a kind of thing, which is what is shown of it in here. None if it has none.

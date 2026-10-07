@@ -109,9 +109,9 @@ python -m simulation.headless --days 7 --seed 7
 - Whoever is outside the settlement waits as a face in the top left corner; click it to select
   them. What the residents have heard is coming is listed there too, with how many know
 - With a resident selected, a heart marks their partner and a star those they hold as friends
-- A building keeps its roof on until you rest the mouse on it or select someone or something
-  inside. Whoever is under a roof shows as a face on it. `T` takes every roof off, or puts them
-  back
+- A building is always shut from the map. Whoever is in it shows as a face on its roof, with
+  what they are doing over it: talking, eating, asleep, at work. To see more, go in. `T` takes
+  every roof off, or puts them back
 - Click the sign of a building, or press `I` with the pointer on it, to go inside: the room is
   seen with its back wall face on and its floor from a little above, as a grid, with whoever
   is in it. `Salir` or `I` goes back out. It is a first try of the look: nothing can be

@@ -2860,7 +2860,11 @@ Still to settle, when it is reached:
   the floor and on the wall, with the catalogue of pictures (P38)
 - Furniture put to a resident to be built, as outside; ornaments, floor and walls at once
 - Whose house it is, said from inside, and what it is like, seen there; its lock
-- From the map, over each face on a roof, what they are doing: talking, eating, sleeping
+- From the map, over each face on a roof, what they are doing: talking, eating, sleeping.
+  **Built**: a building no longer opens under the pointer or for whoever is selected in it;
+  over a face on a roof there is what would otherwise be seen of them, eating included; and
+  what things are kept in is picked from inside, where it used to be picked under the roof.
+  `T` still takes every roof off, which was left in as the one way to see into them all at once
 - A way for the player to draw each kind of thing for the view from inside themselves
 
 ### P41 — Everything in one hand (needs P39) — done

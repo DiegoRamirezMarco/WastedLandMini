@@ -90,11 +90,13 @@ class GameShellTests(unittest.TestCase):
         self.assertEqual(pygame.display.get_window_size(), pygame.display.get_desktop_sizes()[0])
 
     def _look_into(self, room_id: str) -> None:
-        """Rest the mouse on a building, which takes its roof off, and draw the result.
+        """See into a building from the map, and draw the result.
 
-        Towards its back: its sign hangs over its front, and resting on that leaves the roof on (P39).
+        From the map a building is always shut (S40): the one way to see into it there is to
+        have every roof off. The mouse is rested on it too, as somebody looking at it would.
         """
         view = self.game.global_view
+        view.roofs_on = False
         room = self.game.world.rooms[room_id]
         x, y = view._tile_pixel(room.x + room.width / 2, room.y + 0.5)
         moved = pygame.event.Event(
@@ -1291,26 +1293,30 @@ class GameShellTests(unittest.TestCase):
         self.assertNotIn("crate_dorm", view.container_hitboxes)
         self.assertEqual(view.hitboxes["marta"].size, MARKER_SIZE, "under a roof she is a face on it")
 
-        self._look_into("dormitory")
-        self.assertEqual(view.looked_into(), {"dormitory"})
-        self.assertIn("crate_dorm", view.container_hitboxes)
-        self.assertEqual(view.hitboxes["marta"].size, FRAME_SIZE)
-        self._look_into("shop")
-        self.assertEqual(view.looked_into(), {"shop"}, "only what is looked at stands open")
-
-        # Whoever is selected is followed indoors, wherever the mouse is.
+        # Resting the mouse on it does not open it, and nor does selecting whoever is inside:
+        # from the map a building is always shut, and is seen into by going in.
+        room = world.rooms["dormitory"]
+        x, y = view._tile_pixel(room.x + room.width / 2, room.y + 0.5)
+        view.handle_event(
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(x * SCALE + 1, y * SCALE + 1), rel=(0, 0), buttons=(0, 0, 0))
+        )
+        view.render()
+        self.assertEqual(view.looked_into(), set())
         view.hud.select_resident("marta")
-        self.assertEqual(view.looked_into(), {"dormitory", "shop"})
-        view.hud.select_container("pantry_1")
-        self.assertEqual(view.looked_into(), {"storehouse", "shop"})
+        view.render()
+        self.assertEqual(view.looked_into(), set())
+        self.assertEqual(view.hitboxes["marta"].size, MARKER_SIZE)
+        self.assertNotIn("crate_dorm", view.container_hitboxes)
+        view.hud.select_resident(None)
 
-        view.hud.select_container(None)
         view.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_t))
         self.assertEqual(view.hud.notice, ROOFS_OFF)
         self.assertEqual(view.looked_into(), set(view.roof_tiles))
         with self.assertNoLogs("graphics.assets", level="WARNING"):
             view.render()
         self.assertIn("pantry_1", view.container_hitboxes)
+        self.assertIn("crate_dorm", view.container_hitboxes)
+        self.assertEqual(view.hitboxes["marta"].size, FRAME_SIZE, "with the roofs off she is seen whole")
         view.set_zoom(0)
         self.assertEqual(view.looked_into(), set(), "from afar every roof is on")
 
