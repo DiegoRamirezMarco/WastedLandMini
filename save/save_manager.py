@@ -9,7 +9,9 @@ from simulation.events.crisis import Crisis
 from simulation.events.decision import Decision, DecisionOption
 from simulation.events.event import DomainEvent
 from simulation.events.world_event import MERCHANT, Upcoming, Weather
-from simulation.events.world_event_system import RAID_DECISION, STRANGER_DECISION
+from simulation.events.world_event_system import GATE_DECISIONS, RAID_DECISION
+from simulation.family.children import PLACES, Bundle
+from simulation.family.kin import KinRecord
 from simulation.health.injury import Death, Injury
 from simulation.items.inventory import Inventory
 from simulation.items.item import ItemInstance
@@ -87,6 +89,10 @@ FIRST_UPKEEP_VERSION = 27
 # Version 28 added what each resident is under and their history with each substance, and made
 # the bar hold what it serves. In a save from before nobody is under anything, and the bar starts
 # with what the map puts in it.
+# Version 29 added dates of birth, sex, gender, who each resident is drawn to, libido and kin.
+# In a save from before everyone is the age they were, is who the game says or their ID makes
+# them, is drawn to both, and is kin to nobody.
+FIRST_FAMILY_VERSION = 29
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 28
@@ -105,7 +111,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 28
+    CURRENT_VERSION = 29
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -149,6 +155,12 @@ class SaveManager:
                 else None
             ),
             "newcomers_seen": list(world.newcomers_seen),
+            "gate_party": list(world.gate_party),
+            "kinship": {person_id: vars(kin) for person_id, kin in world.kinship.items()},
+            "bundles": [
+                {**{key: value for key, value in vars(bundle).items() if key != "personality"}, "personality": vars(bundle.personality)}
+                for bundle in world.bundles.values()
+            ],
             "map_id": world.map_id,
             "terrain": [list(row) for row in world.tile_map.tiles],
             "rooms": [
@@ -227,6 +239,12 @@ class SaveManager:
                     "habits": {item_id: vars(habit) for item_id, habit in resident.habits.items()},
                     "tempted_by": resident.tempted_by,
                     "age": resident.age,
+                    "born": resident.born,
+                    "sex": resident.sex,
+                    "gender": resident.gender,
+                    "drawn_to": resident.drawn_to,
+                    "expecting_with": resident.expecting_with,
+                    "due_day": resident.due_day,
                     "couple_with": resident.couple_with,
                     "expedition": vars(resident.expedition) if resident.expedition is not None else None,
                     "last_expedition_day": resident.last_expedition_day,
@@ -371,6 +389,7 @@ class SaveManager:
                     sociability=float(personality_data.get("sociability", 50.0)),
                     greed=float(personality_data.get("greed", 50.0)),
                     courage=float(personality_data.get("courage", 50.0)),
+                    libido=float(personality_data.get("libido", 50.0)),
                 ),
                 mood=float(resident_data.get("mood", 50.0)),
                 current_action=str(resident_data.get("current_action", "idle")),
@@ -416,6 +435,13 @@ class SaveManager:
                 },
                 tempted_by=_text_or_none(resident_data.get("tempted_by")),
                 age=int(resident_data.get("age", 30)),
+                # In a save from before, the day that makes them the age they were is worked out when it is asked for.
+                born=int(resident_data["born"]) if resident_data.get("born") is not None else None,
+                sex=str(resident_data.get("sex", "")),
+                gender=str(resident_data.get("gender", "")),
+                drawn_to=str(resident_data.get("drawn_to", "both")),
+                expecting_with=_text_or_none(resident_data.get("expecting_with")),
+                due_day=int(resident_data.get("due_day", 0)),
                 couple_with=_text_or_none(resident_data.get("couple_with")),
                 expedition=Expedition(
                     returns_at=int(trip.get("returns_at", 0)),
@@ -483,6 +509,7 @@ class SaveManager:
                 if isinstance(memory_data, dict):
                     world.memories.remember(str(resident_id), _memory_from_data(memory_data))
 
+        self._restore_kin(world, data, version)
         self._restore_items(world, data, version)
         deaths = data.get("deaths", [])
         world.deaths = [
@@ -508,6 +535,59 @@ class SaveManager:
         self._restore_tastes(world, data)
         self._restore_research(world, data, version)
         return world
+
+    def _restore_kin(self, world: SimulationWorld, data: dict[str, Any], version: int) -> None:
+        """Put back who is kin to whom. In a save from before, nobody is, and everyone is who
+        the game says they are or their ID makes them."""
+        if version < FIRST_FAMILY_VERSION:
+            for resident in world.residents.values():
+                world.family.from_before(world, resident)
+            return
+        for person_id, saved in _object_or_empty(data.get("kinship")).items():
+            if not isinstance(saved, dict):
+                continue
+            world.kinship[str(person_id)] = KinRecord(
+                name=str(saved.get("name", person_id)),
+                gender=str(saved.get("gender", "")),
+                parents=[str(each) for each in _list_or_empty(saved.get("parents"))],
+                adoptive=[str(each) for each in _list_or_empty(saved.get("adoptive"))],
+                siblings=[str(each) for each in _list_or_empty(saved.get("siblings"))],
+                spouse=_text_or_none(saved.get("spouse")),
+            )
+        sides = vars(Personality())
+        for saved in _list_or_empty(data.get("bundles")):
+            if not isinstance(saved, dict) or "child_id" not in saved:
+                continue
+            place = str(saved.get("place", "ground"))
+            carrier = _text_or_none(saved.get("carried_by"))
+            bundle = Bundle(
+                child_id=str(saved["child_id"]),
+                name=str(saved.get("name", saved["child_id"])),
+                sex=str(saved.get("sex", "f")),
+                gender=str(saved.get("gender", saved.get("sex", "f"))),
+                drawn_to=str(saved.get("drawn_to", "both")),
+                born=int(saved.get("born", world.clock.day)),
+                personality=Personality(
+                    **{
+                        side: float(value)
+                        for side, value in _object_or_empty(saved.get("personality")).items()
+                        if side in sides
+                    }
+                ),
+                # A trait that is no longer defined is dropped, as it is for anybody.
+                traits=[str(trait) for trait in _list_or_empty(saved.get("traits")) if world.registries.traits.find(str(trait))],
+                carried_by=carrier if carrier in world.residents else None,
+                place=place if place in PLACES else "ground",
+                x=int(saved.get("x", 0)),
+                y=int(saved.get("y", 0)),
+                hunger=float(saved.get("hunger", 0.0)),
+                health=float(saved.get("health", 100.0)),
+                left=int(saved.get("left", 0)),
+                refused=[str(each) for each in _list_or_empty(saved.get("refused"))],
+                asking=_text_or_none(saved.get("asking")),
+                asked_at=int(saved.get("asked_at", 0)),
+            )
+            world.bundles[bundle.child_id] = bundle
 
     def _restore_research(self, world: SimulationWorld, data: dict[str, Any], version: int) -> None:
         """Put back what is known and what is being worked out. A subject that is gone is forgotten."""
@@ -732,8 +812,10 @@ class SaveManager:
         waiting = _text_or_none(data.get("at_the_gate"))
         known = {newcomer.newcomer_id for newcomer in events.newcomers}
         # Whoever waits at the gate does so only while someone is deciding about them.
-        deciding = any(decision.kind == STRANGER_DECISION for decision in world.decisions.values())
+        deciding = any(decision.kind in GATE_DECISIONS for decision in world.decisions.values())
         world.at_the_gate = waiting if waiting in known and deciding else None
+        party = [str(each) for each in _list_or_empty(data.get("gate_party")) if each in known]
+        world.gate_party = party if world.at_the_gate is not None else []
         raid = _text_or_none(data.get("under_raid"))
         # Raiders are only at the gate while someone is deciding what to do about them.
         facing = any(decision.kind == RAID_DECISION for decision in world.decisions.values())

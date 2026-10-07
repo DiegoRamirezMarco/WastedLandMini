@@ -434,7 +434,11 @@ class BarTests(unittest.TestCase):
         self.assertEqual(world.staffing.candidates(world, "bartender"), [], "nobody leaves a post that matters more")
         newcomer = Resident("nuevo", "Nuevo", seeks_work=True)
         world.residents[newcomer.resident_id] = newcomer
-        self.assertEqual(world.staffing.opening_for(world, newcomer), "bartender")
+        self.assertEqual(world.staffing.opening_for(world, newcomer), "farmer", "a tenth mouth wants more hands in the garden")
+        self.assertTrue(world.staffing.assign(world, newcomer, "farmer"))
+        another = Resident("otra", "Otra", seeks_work=True)
+        world.residents[another.resident_id] = another
+        self.assertEqual(world.staffing.opening_for(world, another), "bartender")
 
 
 class MoodTests(unittest.TestCase):

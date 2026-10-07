@@ -487,6 +487,27 @@ settlement is created, in `SimulationWorld.demo_world`.
   outcome's `"gate"` (`let_in` or `turn_away`) is what is done about them.
 - A map's `arrivals` lists the tiles just inside the gate where someone let in first stands.
 
+## Families
+
+- `data/family.json` holds `start_year`; `old_age` (`from`, `chance_per_year`, `doubles_every`);
+  `sleeping_rough` (`per_minute`, `from` how tired, `minutes`); `casual` (`affection` and `desire`
+  it takes for two who are no couple); `marriage` (`affection`, `trust`, `accept_affection`); `kin`
+  (`affection` and `trust` to begin with, the `events` that tell on whoever sees them happen to
+  one of their own, and how much `stress`); `parted_at_gate`; and `children`: the `chance` of
+  one, `carried_weeks`, `fertile_until`, the `weeks` a child is a bundle for and the age it is
+  `grown_at`, `names` by sex, `mix_spread` and `trait_chance`, how a `bundle` fares, and what is
+  made of a child's lot by whoever sees it (`seen`).
+- `people` in the same file says who those the game has by name are: `sex` (`m` or `f`),
+  `gender` (`m`, `f`, `nb` or `bi`, the same as `sex` if left out), `drawn_to` (`m`, `f` or
+  `both`), and their `siblings` and `parents` by ID. `arrive_together` lists pairs of newcomers
+  who come to the gate together.
+- `libido` is a side of a personality like any other, from 0 to 100.
+- A job with `"per_residents": 4.5` takes one more worker for every so many people who live in
+  the settlement, and never fewer than `needed`.
+- The game opens `proposal`, `strangers` (two at the gate: an outcome's `"gate"` may also be
+  `let_first` or `let_second`, and texts may use `{first}` and `{second}`) and `take_in` by ID.
+  Their scores may weigh `kin` and `room`.
+
 ## Substances
 
 - An item is a substance with a `substance` entry:

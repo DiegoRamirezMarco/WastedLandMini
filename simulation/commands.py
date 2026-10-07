@@ -76,7 +76,11 @@ class CommandTarget(Protocol):
         personality: Mapping[str, float],
         traits: Sequence[str],
         manners: Mapping[str, str] | None = None,
+        identity: Mapping[str, str] | None = None,
     ) -> str | None:
+        ...
+
+    def set_identity(self, resident_id: str, sex: str, gender: str, drawn_to: str) -> bool:
         ...
 
     def set_manner(self, resident_id: str, kind_id: str, manner_id: str) -> bool:
@@ -338,10 +342,28 @@ class FoundResidentCommand:
     traits: Sequence[str] = ()
     # Their way of doing each kind of thing, by kind. A kind left out goes by their own by default.
     manners: Mapping[str, str] = field(default_factory=dict)
+    # Their `sex` (`m` or `f`), their `gender` (`m`, `f`, `nb` or `bi`) and who they are `drawn_to`
+    # (`m`, `f` or `both`). What is left out follows from who they are.
+    identity: Mapping[str, str] = field(default_factory=dict)
 
     def apply(self, world: CommandTarget) -> str | None:
         """Returns the ID of whoever now lives there, or None if the settlement would not have them."""
-        return world.found_resident(self.name, self.age, self.personality, self.traits, self.manners)
+        return world.found_resident(self.name, self.age, self.personality, self.traits, self.manners, self.identity)
+
+
+@dataclass(frozen=True)
+class SetIdentityCommand:
+    """The player's say on a resident's sex, their gender and who they are drawn to: for someone
+    out of a save from before there was any of it, whom the game could only guess at."""
+
+    resident_id: str
+    sex: str
+    gender: str
+    drawn_to: str = "both"
+
+    def apply(self, world: CommandTarget) -> bool:
+        """Returns whether they are now so: there must be such a resident, and it must make sense."""
+        return world.set_identity(self.resident_id, self.sex, self.gender, self.drawn_to)
 
 
 @dataclass(frozen=True)

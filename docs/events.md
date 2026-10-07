@@ -74,6 +74,17 @@ Event types emitted so far:
 | `injured` | A resident comes out of something hurt | 45 |
 | `limb_lost` | A resident loses a limb to an injury, in place of `injured` | 85 |
 | `death` | A resident dies | 95 |
+| `birthday` | A resident is a year older, with `age` in `data` | 20 |
+| `slept_rough` | Someone lies down on the ground for want of a bed | 15 |
+| `proposal_stirring` | A resident wonders whether to ask their partner to marry them, and waits for advice | 55 |
+| `proposal_started`, `couple_married`, `proposal_rejected` | One asks; the other says yes, or no | 50, 65, 45 |
+| `child_conceived` | Someone is carrying a child, with `other` and `due_day` in `data`. Nobody in the settlement knows | 35 |
+| `child_born` | A child is born, with `child_id`, `parents` and `sex` in `data` | 70 |
+| `child_grew` | A child is ten, and a resident from now on, with `child_id` in `data` | 50 |
+| `child_alone` | Someone is asked to take in a bundle nobody is seeing to, and waits for advice | 65 |
+| `child_taken_in` | They do, with `child_id` in `data` | 65 |
+| `child_died` | A bundle nobody looked after dies, with `child_id` in `data` | 90 |
+| `family_parted` | One of two who came to the gate together is let in and the other is not, with `left` in `data` | 60 |
 | `friendship_changed` | What one resident feels for another grows into a friendship, or out of it | 25 |
 | `feelings_stirring` | A resident wonders whether to tell someone what they feel, and waits for advice | 50 |
 | `confession_started` | A resident tells another what they feel | 45 |

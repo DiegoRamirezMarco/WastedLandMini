@@ -11,6 +11,9 @@ watches, advises and intervenes, but does not control them.
 - Residents with jobs, posts, shifts and days off; places that only work while someone staffs them.
 - A working economy: what is made is carried to where it is used, tools wear out and are mended,
   work earns credits and credits buy things, and a post left empty is taken up by someone else.
+- Families: a calendar, birthdays and old age; sex, gender and who each is drawn to; couples
+  that marry; children carried, born, seen to and grown; kin by blood and by adoption; and
+  families that come to the gate together.
 - Substances: drink, smoke, pills, powder and the needle, each with the good it does, the harm
   of its own and what others make of it; dependence that comes by chance, is the worse for
   going without and passes; and a say for the player when someone starts or goes back.

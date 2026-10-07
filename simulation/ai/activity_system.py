@@ -8,6 +8,7 @@ from simulation.ai.crowd import Crowd, spots_taken, walking
 from simulation.ai.navigation import path_beside
 from simulation.ai.routine_system import RoutineSystem
 from simulation.economy.merchant import VISIT_ACTION
+from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.events.event import DomainEvent
 from simulation.health.health_system import RECOVERED_HEALTH
 from simulation.items.item_system import ITEM_ACTIONS
@@ -141,6 +142,9 @@ class ActivitySystem:
             return
         if activity.action == VISIT_ACTION:
             world.merchants.visit_tick(world, resident, activity)
+            return
+        if activity.action == SLEEP_ROUGH_ACTION:
+            world.family.rough_tick(world, resident, activity)
             return
         if activity.action == EXPEDITION_ACTION:
             world.expeditions.tick(world, resident, activity)

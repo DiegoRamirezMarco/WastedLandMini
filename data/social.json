@@ -179,5 +179,27 @@
       "romance"
     ],
     "romance": "breakup"
+  },
+  "proposal": {
+    "hostile": false,
+    "minutes": [
+      5,
+      12
+    ],
+    "importance": 50,
+    "per_minute": {
+      "social": -0.5,
+      "stress": 0.3
+    },
+    "relationship": {
+      "trust": 1.0
+    },
+    "text": "{a} le pide a {b} que se casen",
+    "memory": "Hablé con {other} de casarnos.",
+    "emotional_value": 0.2,
+    "tags": [
+      "romance"
+    ],
+    "romance": "proposal"
   }
 }

@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 28 (current)
+## Version 29 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `28` |
+| `version` | `29` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -68,6 +68,14 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 29** added a resident's `born` (the day they were born, counted as the settlement's
+  days are, less than 1 for before it began), `sex`, `gender`, `drawn_to`, `expecting_with` and
+  `due_day`, and `libido` among the sides of their personality; `kinship` (per person ID, living,
+  dead or never let in: `name`, `gender`, `parents`, `adoptive`, `siblings` and `spouse`);
+  `bundles` (children under ten: who they are, where they are and how they fare); and
+  `gate_party` (everyone waiting at the gate together). In an older save everyone has the date
+  of birth that makes them the age they were, is who the game says or their ID makes them, is
+  drawn to both, and is kin to nobody.
 - **Version 28** added what each resident is `under` (what they have taken and are under or
   coming down from: `item_id`, `until`, `after_until`, `sign` and `unaware`), their `habits` (per
   item ID: `uses`, `last_taken`, `dependent`, `without`, `recovered`, `allowed_until` and

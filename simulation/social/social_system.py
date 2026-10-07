@@ -302,6 +302,9 @@ class SocialSystem:
         if sought and definition.hostile:
             importance += CONFRONTATION_IMPORTANCE
         event_type, subjects = f"{definition.interaction_id}_started", None
+        if definition.romance == TRYST:
+            # A child may come of it.
+            world.children.together(world, speaker, listener)
         betrayed = world.bonds.betrayed_by(world, speaker, listener) if definition.romance == TRYST else []
         if betrayed:
             # Behind someone's back it is another thing, and it is also about whoever is not there.

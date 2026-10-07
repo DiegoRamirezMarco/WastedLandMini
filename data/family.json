@@ -1,0 +1,181 @@
+{
+  "start_year": 2226,
+  "old_age": {
+    "from": 80,
+    "chance_per_year": 0.05,
+    "doubles_every": 5
+  },
+  "sleeping_rough": {
+    "per_minute": {
+      "tiredness": -0.12,
+      "stress": 0.02
+    },
+    "from": 60,
+    "minutes": 480
+  },
+  "casual": {
+    "affection": 55,
+    "desire": 60
+  },
+  "marriage": {
+    "affection": 55,
+    "trust": 20,
+    "accept_affection": 45
+  },
+  "kin": {
+    "affection": 40,
+    "trust": 30,
+    "events": [
+      "injured",
+      "limb_lost",
+      "fight_started",
+      "theft_committed"
+    ],
+    "stress": 0.25
+  },
+  "parted_at_gate": {
+    "feelings": {
+      "resentment": 35,
+      "trust": -25
+    },
+    "stress": 25
+  },
+  "arrive_together": [
+    [
+      "hugo",
+      "carmen"
+    ]
+  ],
+  "people": {
+    "marta": {
+      "sex": "f",
+      "drawn_to": "m",
+      "siblings": [
+        "vera"
+      ]
+    },
+    "raul": {
+      "sex": "m",
+      "drawn_to": "f"
+    },
+    "lucia": {
+      "sex": "f",
+      "drawn_to": "both"
+    },
+    "tomas": {
+      "sex": "m",
+      "drawn_to": "f"
+    },
+    "ines": {
+      "sex": "f",
+      "drawn_to": "m"
+    },
+    "vera": {
+      "sex": "f",
+      "drawn_to": "f",
+      "siblings": [
+        "marta"
+      ]
+    },
+    "paco": {
+      "sex": "m",
+      "drawn_to": "m",
+      "siblings": [
+        "bruno"
+      ]
+    },
+    "nuria": {
+      "sex": "f",
+      "drawn_to": "m"
+    },
+    "sergio": {
+      "sex": "m",
+      "drawn_to": "both"
+    },
+    "olga": {
+      "sex": "f",
+      "drawn_to": "both"
+    },
+    "hugo": {
+      "sex": "m",
+      "drawn_to": "f",
+      "siblings": [
+        "carmen"
+      ]
+    },
+    "carmen": {
+      "sex": "f",
+      "drawn_to": "m",
+      "siblings": [
+        "hugo"
+      ]
+    },
+    "bruno": {
+      "sex": "m",
+      "drawn_to": "f",
+      "siblings": [
+        "paco"
+      ]
+    }
+  },
+  "children": {
+    "chance": 0.06,
+    "carried_weeks": 9,
+    "fertile_until": 50,
+    "weeks": 12,
+    "grown_at": 10,
+    "names": {
+      "m": [
+        "Leo",
+        "Nico",
+        "Abel",
+        "Iván",
+        "Saúl",
+        "Teo",
+        "Darío",
+        "Unai"
+      ],
+      "f": [
+        "Alba",
+        "Noa",
+        "Vega",
+        "Irene",
+        "Lía",
+        "Sara",
+        "Jana",
+        "Elsa"
+      ]
+    },
+    "drawn_by_chance": true,
+    "mix_spread": 15,
+    "trait_chance": 0.5,
+    "bundle": {
+      "hunger_per_minute": 0.3,
+      "feed_from": 60,
+      "feed_cost": {
+        "tiredness": 2,
+        "stress": 1
+      },
+      "harm": {
+        "surface": 0.01,
+        "ground": 0.02
+      },
+      "left_scale": 240,
+      "hunger_harm": 0.05,
+      "mend_per_minute": 0.02,
+      "neglect_minutes": 720,
+      "ask_gap_minutes": 60
+    },
+    "seen": {
+      "events": [
+        "work_started",
+        "injured",
+        "limb_lost",
+        "substance_taken",
+        "fight_started"
+      ],
+      "mood": 6,
+      "stress": 3
+    }
+  }
+}

@@ -230,6 +230,37 @@ room. An argument's importance rises with the resentment between the two.
   bed, and the gate stands empty.
 - **Vermin** get into the pantries by night and eat a share of the food that is everyone's.
 
+## Families
+
+- **The date.** A settlement begins on the first of January of 2226 and its days are counted
+  from there: twelve months, 365 days, no leap years. Everyone has a date of birth, their age
+  follows from it, and a birthday comes round by itself. From eighty on, each day carries a
+  small chance of dying of old age, which doubles every five years.
+- **Who somebody is.** A sex, `m` or `f`; a gender, which is how they are spoken of and nothing
+  else; and the sex of those they are drawn to, or both. Nobody courts, becomes a couple with or
+  goes off alone with someone they are not drawn to, anyone under age, or close kin.
+- **Libido** is one more side of a way of being. What it weighs at a given time falls with
+  nerves, low spirits, tiredness and a hurt body. Two who get on very well and both want it
+  enough go off alone together without being a couple.
+- **Marrying.** A couple that is doing well thinks of it, the player may advise, one asks and
+  the other answers.
+- **Kin** are kept by ID for the living, the dead and those who never came in: parents by
+  birth and by having been taken in, a spouse, and brothers and sisters. What is felt for close
+  kin starts from being kin, and seeing one of their own hurt tells on whoever sees it.
+- **At the gate.** Some come two together. Whoever answers decides for each, there has to be a
+  bed for each one let in, and whoever is let in while the other is not does not forget it.
+- **A child** may come when a man and a woman by sex go off alone together or marry. It is
+  carried nine weeks and born a bundle: on the back of whichever parent is seeing to it, beside
+  them when they sleep, fed by them at a cost in rest. Put down anywhere but a bed it fares
+  worse the longer it is left. With no parent to see to it, someone is asked to take it in, with
+  the player given a say, and if nobody does it dies. Twelve weeks on it is ten, and a resident
+  like any other but for romance: whoever sees a child at work, hurt or taking something is the
+  worse for it.
+- **No bed.** Whoever is tired enough with no bed to go to lies down where they are, and
+  rests the worse for it.
+- **More mouths, more hands.** A job may take one more worker for every so many residents: the
+  garden does, so that a settlement that grows goes on feeding itself.
+
 ## Substances
 
 - **Taking one.** A substance is an item: owned and used like any other, or had over a bar that

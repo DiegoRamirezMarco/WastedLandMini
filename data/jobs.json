@@ -31,7 +31,8 @@
     },
     "priority": 5,
     "needed": 2,
-    "outdoors": true
+    "outdoors": true,
+    "per_residents": 4.5
   },
   "cook": {
     "name": "Cocina",

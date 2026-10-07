@@ -14,7 +14,10 @@ KINDS = (STRANGER, STOCK, WEATHER, SPOIL, RAID, MERCHANT)
 # What whoever answers the gate can do about a stranger.
 LET_IN = "let_in"
 TURN_AWAY = "turn_away"
-GATE_CHOICES = (LET_IN, TURN_AWAY)
+# Of two who come together: letting in only the first of them, or only the second.
+LET_FIRST = "let_first"
+LET_SECOND = "let_second"
+GATE_CHOICES = (LET_IN, TURN_AWAY, LET_FIRST, LET_SECOND)
 # What whoever is on watch can do about raiders.
 STAND_GROUND = "stand_ground"
 GIVE_WAY = "give_way"

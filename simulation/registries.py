@@ -7,6 +7,7 @@ from typing import Any
 from simulation.economy.settings import EconomySettings, economy_settings_from_data
 from simulation.events.decision import DecisionDefinition, decision_definition_from_data
 from simulation.events.world_event import RAID, STRANGER, WorldEventSettings, world_event_settings_from_data
+from simulation.family.settings import FamilySettings, family_settings_from_data
 from simulation.health.injury import (
     InjuryDefinition,
     LimbDefinition,
@@ -66,6 +67,7 @@ class PersonalityRegistry:
                     sociability=float(values.get("sociability", 50.0)),
                     greed=float(values.get("greed", 50.0)),
                     courage=float(values.get("courage", 50.0)),
+                    libido=float(values.get("libido", 50.0)),
                 ),
             )
 
@@ -157,6 +159,8 @@ class BuiltInRegistries:
     world_events: WorldEventSettings = field(default_factory=WorldEventSettings)
     # How tastes are made, how they are taken, and what they are called.
     tastes: TasteSettings = field(default_factory=TasteSettings)
+    # How time tells on people, and how families come about.
+    family: FamilySettings = field(default_factory=FamilySettings)
     # How substances work in general. What each one does is in its own item.
     substances: SubstanceSettings = field(default_factory=SubstanceSettings)
     # The ways there are of walking, eating and fighting, for each resident to have their own.
@@ -250,6 +254,9 @@ class BuiltInRegistries:
         tastes_path = root / "tastes.json"
         if tastes_path.is_file():
             registries.tastes = taste_settings_from_data(_read_object(tastes_path))
+        family_path = root / "family.json"
+        if family_path.is_file():
+            registries.family = family_settings_from_data(_read_object(family_path))
         substances_path = root / "substances.json"
         if substances_path.is_file():
             registries.substances = substance_settings_from_data(_read_object(substances_path))

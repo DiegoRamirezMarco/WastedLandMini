@@ -26,11 +26,11 @@ class InteractionDefinition:
     returns_stolen: bool = False
     # Range of harm each side does the other, for an exchange that comes to blows.
     damage: tuple[int, int] | None = None
-    # What the exchange is to a romance: `confession`, `tryst` or `breakup`. None for any other.
+    # What the exchange is to a romance: `confession`, `tryst`, `breakup` or `proposal`. None for any other.
     romance: str | None = None
 
 
-ROMANCE_KINDS = ("confession", "tryst", "breakup")
+ROMANCE_KINDS = ("confession", "tryst", "breakup", "proposal")
 
 
 def interaction_definition_from_data(interaction_id: str, data: dict[str, Any]) -> InteractionDefinition:

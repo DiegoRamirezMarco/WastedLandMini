@@ -12,6 +12,7 @@ from simulation.ai.decision_system import advice_influence
 from simulation.events.crisis import Crisis
 from simulation.events.decision import Decision, DecisionDefinition, DecisionOption, OutcomeDefinition
 from simulation.events.event import DomainEvent
+from simulation.family.children import TAKE_IN
 from simulation.memory.memory import Memory
 from simulation.residents.activity import Activity
 from simulation.residents.resident import Resident
@@ -26,6 +27,7 @@ JOB_OFFER = "job_offer"
 BUILD_PROPOSAL = "build_proposal"
 CONFESSION = "confession"
 BREAKUP = "breakup"
+PROPOSAL = "proposal"
 BROOD_ACTION = "brood"
 # Resentment below this is not a grievance worth a crisis, however stressed the resident is.
 MIN_RESENTMENT = 30.0
@@ -94,6 +96,8 @@ def score_inputs(world: "SimulationWorld", resident: Resident, target: Resident 
         "savings": 0.0,
         "goods": 0.0,
         "bargain": 0.0,
+        "kin": 0.0,
+        "room": 0.0,
     }
     if target is not None:
         feelings = world.relationship(resident.resident_id, target.resident_id)
@@ -195,6 +199,7 @@ class InterventionSystem:
         for kind, find in (
             (BREAKUP, world.bonds.soured_partner),
             (CONFESSION, world.bonds.confession_target),
+            (PROPOSAL, world.bonds.proposal_target),
         ):
             definition = world.registries.decisions.get(kind)
             if definition is None or self._cooling_down(world, definition, resident):
@@ -206,7 +211,12 @@ class InterventionSystem:
         return None
 
     def ask(
-        self, world: "SimulationWorld", resident: Resident, kind: str, subject: str | None = None
+        self,
+        world: "SimulationWorld",
+        resident: Resident,
+        kind: str,
+        subject: str | None = None,
+        inputs: dict[str, float] | None = None,
     ) -> Decision | None:
         """Open a decision for a resident without stopping what they are doing.
 
@@ -216,7 +226,7 @@ class InterventionSystem:
         definition = world.registries.decisions.get(kind)
         if definition is None or self.pending_for(world, resident.resident_id) is not None:
             return None
-        decision = self._decision(world, resident, None, definition, 0.0, subject=subject)
+        decision = self._decision(world, resident, None, definition, 0.0, subject=subject, inputs=inputs)
         world.decisions[decision.decision_id] = decision
         world.emit_event(
             DomainEvent(
@@ -491,7 +501,7 @@ class InterventionSystem:
         # The answer is put into words before the gate is opened or shut, while the visitor still has a name.
         answer = self.fill(world, chosen.text, resident, target, decision.job_id, decision.subject)
         if chosen.gate is not None:
-            world.happenings.answer_gate(world, chosen.gate)
+            world.happenings.answer_gate(world, chosen.gate, resident)
         if chosen.raid is not None:
             world.happenings.answer_raid(world, resident, chosen.raid)
         if chosen.interaction is not None and target is not None:
@@ -519,6 +529,8 @@ class InterventionSystem:
             world.terms.raised(world, resident, chosen.raises)
         if chosen.substance is not None:
             world.substances.decided(world, resident, chosen.substance)
+        if decision.kind == TAKE_IN:
+            world.children.decided(world, resident, chosen.agrees)
         return chosen.outcome_id
 
     def _grievance_target(self, world: "SimulationWorld", resident: Resident) -> Resident | None:
@@ -544,11 +556,13 @@ class InterventionSystem:
     ) -> str:
         """Put the names of who and what a decision is about into one of its texts."""
         job = world.registries.jobs.get(job_id or "")
-        visitor = world.happenings.visitor(world)
+        visitors = world.happenings.visitors(world)
         return (
             text.replace("{name}", resident.name)
             .replace("{target}", target.name if target else "nadie")
             .replace("{job}", job.name if job else "ninguno")
-            .replace("{visitor}", visitor.name if visitor else "alguien")
+            .replace("{visitor}", " y ".join(each.name for each in visitors) or "alguien")
+            .replace("{first}", visitors[0].name if visitors else "alguien")
+            .replace("{second}", visitors[-1].name if visitors else "alguien")
             .replace("{thing}", subject or "algo")
         )

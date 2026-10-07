@@ -16,6 +16,9 @@ from simulation.economy.trade_system import TradeSystem
 from simulation.events.intervention_system import InterventionSystem
 from simulation.events.world_event import Upcoming, Weather
 from simulation.events.world_event_system import WorldEventSystem
+from simulation.family.children import Bundle, ChildSystem
+from simulation.family.family_system import SLEEP_ROUGH_ACTION, FamilySystem
+from simulation.family.kin import KinRecord
 from simulation.health.health_system import HealthSystem
 from simulation.health.injury import Death
 from simulation.items.inventory import Inventory
@@ -96,6 +99,10 @@ class SimulationWorld:
     merchant: Merchant | None = None
     lending: LendingSystem = field(default_factory=LendingSystem)
     substances: SubstanceSystem = field(default_factory=SubstanceSystem)
+    family: FamilySystem = field(default_factory=FamilySystem)
+    children: ChildSystem = field(default_factory=ChildSystem)
+    # Children under ten, by ID: carried and seen to by somebody until they walk.
+    bundles: dict[str, Bundle] = field(default_factory=dict)
     # What residents have lent one another and not had back yet.
     debts: list[Debt] = field(default_factory=list)
     # Units of what was bought for the settlement that wait at the gate to be carried in, by item ID.
@@ -115,6 +122,10 @@ class SimulationWorld:
     # ID of the raid that is at the gate while whoever is on watch makes up their mind.
     under_raid: str | None = None
     newcomers_seen: list[str] = field(default_factory=list)
+    # Everyone waiting at the gate together, when they are more than one.
+    gate_party: list[str] = field(default_factory=list)
+    # Who is kin to whom, by person ID: the living, the dead and those who never came in.
+    kinship: dict[str, KinRecord] = field(default_factory=dict)
     health: HealthSystem = field(default_factory=HealthSystem)
     # Game minute since which each job has been short of people, by job ID.
     vacancies: dict[str, int] = field(default_factory=dict)
@@ -164,11 +175,14 @@ class SimulationWorld:
         self.research.tick(self)
         self.happenings.tick(self)
         self.lending.tick(self)
+        self.family.tick(self)
         self.activities.begin_minute(self)
         for resident in list(self.residents.values()):
             # Someone may die during this very minute.
             if resident.resident_id in self.residents:
                 self.activities.tick(self, resident)
+        # Once everybody has moved: a bundle is wherever whoever carries it has got to.
+        self.children.tick(self)
         self.guide.check(self)
 
     def apply_command(self, command: SimulationCommand) -> object:
@@ -250,10 +264,15 @@ class SimulationWorld:
         personality: Mapping[str, float],
         traits: Sequence[str],
         manners: Mapping[str, str] | None = None,
+        identity: Mapping[str, str] | None = None,
     ) -> str | None:
         """Take in the player's first resident. Returns their ID, or None if there is already someone."""
-        resident = found_resident(self, name, age, personality, traits, manners)
+        resident = found_resident(self, name, age, personality, traits, manners, identity)
         return resident.resident_id if resident is not None else None
+
+    def set_identity(self, resident_id: str, sex: str, gender: str, drawn_to: str) -> bool:
+        """Say what a resident's sex and gender are and who they are drawn to."""
+        return self.family.set_identity(self, resident_id, sex, gender, drawn_to)
 
     def manner_of(self, resident: Resident, kind_id: str) -> MannerDefinition | None:
         """How a resident does one kind of thing: as was chosen for them, or else in their own way."""
@@ -296,6 +315,8 @@ class SimulationWorld:
         fact = None
         if at is not None:
             event.witnesses = witnesses_of(self, at, exclude=event.participants)
+            self.family.witnessed(self, event)
+        self.children.seen(self, event)
         if fact_text is not None:
             fact = record_fact(self, event, euphonic(fact_text), subjects, expires_at)
         importance = self.registries.event_settings.get("importance", {})
@@ -387,6 +408,8 @@ class SimulationWorld:
         if resident.under and self.substances.out_of_it(self, resident):
             return False
         activity = resident.activity
+        if activity is not None and activity.using and activity.action == SLEEP_ROUGH_ACTION:
+            return False
         if activity is None or not activity.using or activity.target_id is None:
             return True
         placed = self.interactables.get(activity.target_id)
@@ -563,6 +586,8 @@ class SimulationWorld:
         for index, resident in enumerate(residents):
             resident.x, resident.y = spawns[index % len(spawns)]
             world.residents[resident.resident_id] = resident
+        for resident in residents:
+            world.family.welcome(world, resident)
         # A settlement that is already running trades with the credits it has always had.
         world.terms.settle_on_credits(world)
         # The opening situation: Marta and Raúl are at odds over the provisions, and it is getting to him.

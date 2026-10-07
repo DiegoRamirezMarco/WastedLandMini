@@ -76,6 +76,9 @@ class JobDefinition:
     priority: int = 1
     # How many residents it takes. With fewer, the job has a vacancy.
     needed: int = 1
+    # With this set, the job takes one more pair of hands for every so many people who live in
+    # the settlement, and never fewer than `needed`: more mouths want more of what it makes.
+    per_residents: float = 0.0
     # For a job done outside the settlement: the worker leaves from the post instead of standing at it.
     expedition: ExpeditionRule | None = None
     # Whether the work is done in the open, where bad weather stops it.
@@ -151,6 +154,7 @@ def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition
         wage=wage,
         priority=int(data.get("priority", 1)),
         needed=int(data.get("needed", 1)),
+        per_residents=max(0.0, float(data.get("per_residents", 0.0))),
         expedition=expedition_rule_from_data(job_id, data["expedition"]) if "expedition" in data else None,
         outdoors=bool(data.get("outdoors", False)),
         watch_for=str(data["watch_for"]) if "watch_for" in data else None,

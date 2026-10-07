@@ -116,7 +116,8 @@ class TradeSystem:
     def supplied(self, world: "SimulationWorld", resident: Resident) -> bool:
         """Whether the settlement still keeps a resident: they have worked in the last few days,
         or could not have. A settlement still in its opening keeps everybody."""
-        if world.tutorial.active:
+        if world.tutorial.active or world.children.is_child(world, resident):
+            # Nobody under age has to earn their keep.
             return True
         idle = world.clock.total_minutes - resident.last_worked
         return idle < world.registries.economy.idle_days * MINUTES_PER_DAY

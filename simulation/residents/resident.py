@@ -53,8 +53,20 @@ class Resident:
     # The last day on which their wage was not paid in full, and how many days running that makes.
     unpaid_on: int = 0
     unpaid_days: int = 0
-    # Age in years. Romance is only ever between adults.
+    # Age in years. Romance is only ever between adults. It follows from the day they were born.
     age: int = 30
+    # The day they were born, counted as the settlement's days are: before it began, less than 1.
+    # None for someone who has only been given an age so far.
+    born: int | None = None
+    # The sex of their body, `m` or `f`; what they take themselves to be, which is how they are
+    # spoken of and nothing else; and the sex of those they are drawn to, or `both`. Empty until
+    # the settlement knows who they are.
+    sex: str = ""
+    gender: str = ""
+    drawn_to: str = "both"
+    # Whose child they are carrying, while they carry one, and the day it is due.
+    expecting_with: str | None = None
+    due_day: int = 0
     # ID of the resident they are a couple with, who names them in turn.
     couple_with: str | None = None
     # The trip outside the settlement they are on, while they are on one.

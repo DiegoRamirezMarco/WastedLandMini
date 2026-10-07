@@ -51,6 +51,7 @@ def found_resident(
     personality: Mapping[str, float],
     traits: Sequence[str],
     manners: Mapping[str, str] | None = None,
+    identity: Mapping[str, str] | None = None,
 ) -> Resident | None:
     """Put the player's first resident just inside the gate.
 
@@ -82,7 +83,12 @@ def found_resident(
         credits=world.registries.economy.starting_credits if world.fund.currency(world) is not None else 0.0,
         last_worked=world.clock.total_minutes,
     )
+    given = identity or {}
+    resident.sex, resident.gender = str(given.get("sex", "")), str(given.get("gender", ""))
+    resident.drawn_to = str(given.get("drawn_to", resident.drawn_to))
     world.residents[resident.resident_id] = resident
+    # Whatever was left unsaid, or made no sense, is put right as the settlement gets to know them.
+    world.family.welcome(world, resident)
     room = world.room_at(resident.tile)
     world.emit_event(
         DomainEvent(

@@ -11,7 +11,9 @@ from simulation.events.event import DomainEvent
 from simulation.knowledge.fact import SOURCE_PARTICIPANT
 from simulation.knowledge.knowledge_system import learn
 from simulation.events.world_event import (
+    LET_FIRST,
     LET_IN,
+    LET_SECOND,
     MERCHANT,
     RAID,
     SPOIL,
@@ -33,6 +35,9 @@ if TYPE_CHECKING:
     from simulation.world import SimulationWorld
 
 STRANGER_DECISION = "stranger"
+# Two who come to the gate together: either of them may be let in without the other.
+PAIR_DECISION = "strangers"
+GATE_DECISIONS = (STRANGER_DECISION, PAIR_DECISION)
 RAID_DECISION = "raid"
 RAID_IMPORTANCE = 75
 REPELLED_IMPORTANCE = 70
@@ -67,6 +72,7 @@ class WorldEventSystem:
         if world.at_the_gate is not None and not self._being_decided(world):
             # Nobody is left to answer: whoever was waiting gives up and goes.
             world.at_the_gate = None
+            world.gate_party = []
         if world.under_raid is not None and not any(d.kind == RAID_DECISION for d in world.decisions.values()):
             # Nobody is left in their way.
             self.answer_raid(world, None, "")
@@ -181,10 +187,40 @@ class WorldEventSystem:
         return self.weather_now(world) is not None
 
     def visitor(self, world: "SimulationWorld") -> Newcomer | None:
-        """Whoever is waiting at the gate to be let in."""
+        """Whoever is waiting at the gate to be let in: the first of them, if they are two."""
         return next(
             (n for n in world.registries.world_events.newcomers if n.newcomer_id == world.at_the_gate), None
         )
+
+    def visitors(self, world: "SimulationWorld") -> list[Newcomer]:
+        """Everyone waiting at the gate together, the one who knocked first."""
+        first = self.visitor(world)
+        if first is None:
+            return []
+        known = {n.newcomer_id: n for n in world.registries.world_events.newcomers}
+        others = [known[each] for each in world.gate_party if each in known and each != first.newcomer_id]
+        return [first, *others]
+
+    def _come_to_gate(self, world: "SimulationWorld", keeper: Resident, newcomer: Newcomer, alone: bool) -> bool:
+        """Have somebody knock, with whoever comes with them unless they are to come alone, and
+        put it to `keeper`. Returns whether it could be put to them."""
+        companion = None if alone else world.family.companion(world, newcomer.newcomer_id)
+        unseen = {each.newcomer_id for each in self._unseen(world)}
+        together = companion in unseen and PAIR_DECISION in world.registries.decisions
+        world.at_the_gate = newcomer.newcomer_id
+        world.gate_party = [newcomer.newcomer_id, companion] if together else [newcomer.newcomer_id]
+        kin = any(
+            world.family.kin.close(world, each, resident_id)
+            for each in world.gate_party
+            for resident_id in world.residents
+            if each in world.kinship or each in world.registries.family.people
+        )
+        inputs = {"kin": 1.0 if kin else 0.0, "room": 1.0 if self._free_beds(world) >= len(world.gate_party) else 0.0}
+        kind = PAIR_DECISION if together else STRANGER_DECISION
+        if world.interventions.ask(world, keeper, kind, inputs=inputs) is None:
+            world.at_the_gate, world.gate_party = None, []
+            return False
+        return True
 
     def answer_raid(self, world: "SimulationWorld", keeper: Resident | None, choice: str) -> None:
         """Carry out what whoever was on watch decided about the raiders. With nobody there, they help themselves."""
@@ -275,24 +311,37 @@ class WorldEventSystem:
             return False
         if world.interventions.pending_for(world, keeper.resident_id) is not None:
             return False
-        world.at_the_gate = world.event_rng.choice(self._unseen(world)).newcomer_id
-        if world.interventions.ask(world, keeper, STRANGER_DECISION) is None:
-            world.at_the_gate = None
-            return False
-        return True
+        return self._come_to_gate(world, keeper, world.event_rng.choice(self._unseen(world)), alone=True)
 
-    def answer_gate(self, world: "SimulationWorld", choice: str) -> None:
-        """Carry out what was decided about the stranger at the gate."""
-        newcomer = self.visitor(world)
-        world.at_the_gate = None
-        if newcomer is None:
+    def answer_gate(self, world: "SimulationWorld", choice: str, keeper: Resident | None = None) -> None:
+        """Carry out what was decided about whoever is at the gate.
+
+        Of two who came together either may be let in without the other, and there has to be a
+        bed for each one who is. Whoever is let in while the other is not does not forget it.
+        """
+        waiting = self.visitors(world)
+        world.at_the_gate, world.gate_party = None, []
+        if not waiting:
             return
+        wanted = {LET_IN: waiting, LET_FIRST: waiting[:1], LET_SECOND: waiting[-1:]}.get(choice, [])
+        admitted: list[Resident] = []
+        for newcomer in waiting:
+            room = self._free_beds(world) > 0
+            resident = self._settle_one(world, newcomer, admit=newcomer in wanted and room)
+            if resident is not None:
+                admitted.append(resident)
+        for newcomer in waiting:
+            if len(admitted) == 1 and newcomer.newcomer_id != admitted[0].resident_id:
+                world.family.parted_at_gate(world, admitted[0], newcomer.newcomer_id, newcomer.name, keeper)
+
+    def _settle_one(self, world: "SimulationWorld", newcomer: Newcomer, admit: bool) -> Resident | None:
+        """Let one of those at the gate in to stay, or send them on their way for good."""
         world.newcomers_seen.append(newcomer.newcomer_id)
-        if choice != LET_IN:
+        if not admit:
             world.emit_event(
                 DomainEvent("stranger_turned_away", TURNED_AWAY_IMPORTANCE, f"{newcomer.name} se aleja de la puerta")
             )
-            return
+            return None
         x, y = self.arrival_tile(world)
         resident = Resident(
             newcomer.newcomer_id,
@@ -310,6 +359,7 @@ class WorldEventSystem:
             seeks_work=True,
         )
         world.residents[resident.resident_id] = resident
+        world.family.welcome(world, resident)
         room = world.room_at(resident.tile)
         world.emit_event(
             DomainEvent(
@@ -322,11 +372,12 @@ class WorldEventSystem:
             at=resident.tile,
             fact_text=f"{newcomer.name} llegó al asentamiento",
         )
+        return resident
 
     # ----- whether and how -----
 
     def _being_decided(self, world: "SimulationWorld") -> bool:
-        return any(decision.kind == STRANGER_DECISION for decision in world.decisions.values())
+        return any(decision.kind in GATE_DECISIONS for decision in world.decisions.values())
 
     def _can_happen(self, world: "SimulationWorld", definition: WorldEventDefinition) -> bool:
         if definition.kind == STRANGER:
@@ -418,8 +469,7 @@ class WorldEventSystem:
                 )
             )
             return
-        world.at_the_gate = newcomer.newcomer_id
-        world.interventions.ask(world, keeper, STRANGER_DECISION)
+        self._come_to_gate(world, keeper, newcomer, alone=False)
 
     def _stock(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
         container = containers_of_kind(world, definition.container or "")[0][1]

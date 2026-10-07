@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 CONFESSION = "confession"
 TRYST = "tryst"
 BREAKUP = "breakup"
+PROPOSAL = "proposal"
 # Action of a resident on their way to be alone with someone.
 TRYST_ACTION = "tryst"
 TRYST_APPEAL = 0.7
@@ -34,6 +35,7 @@ AFFAIR_EVENT = "affair"
 AFFAIR_IMPORTANCE = 15
 FRIENDSHIP_IMPORTANCE = 25
 COUPLE_IMPORTANCE = 60
+MARRIAGE_IMPORTANCE = 65
 REJECTION_IMPORTANCE = 45
 BREAKUP_IMPORTANCE = 65
 # Nobody thinks of romance, or of ending one, with a bodily need this high.
@@ -176,10 +178,11 @@ class BondSystem:
     def attraction_rate(self, world: "SimulationWorld", resident: Resident, other: Resident) -> float:
         """How fast a friendly exchange draws `resident` towards `other`, as a multiple of its base.
 
-        It takes a spark, or an attraction that is there already, and both being adults. Someone
-        who has a partner is slower to be drawn to anyone else.
+        It takes a spark, or an attraction that is there already, both being adults, the other
+        being of a sex they are drawn to, and the two not being close kin. Someone who has a
+        partner is slower to be drawn to anyone else.
         """
-        if not (self.is_adult(world, resident) and self.is_adult(world, other)):
+        if not world.family.may_court(world, resident, other):
             return 0.0
         feelings = world.relationships.get((resident.resident_id, other.resident_id))
         felt = feelings.attraction / 100.0 if feelings is not None else 0.0
@@ -199,7 +202,7 @@ class BondSystem:
             feelings = world.relationships.get((resident.resident_id, other.resident_id))
             if other is resident or feelings is None or other.couple_with is not None:
                 continue
-            if not self.is_adult(world, other):
+            if not world.family.may_court(world, resident, other):
                 continue
             if feelings.attraction < settings.confess_attraction or feelings.affection < settings.confess_affection:
                 continue
@@ -225,6 +228,7 @@ class BondSystem:
         if max(resident.needs.hunger, resident.needs.tiredness) > MAX_BODILY_NEED:
             return []
         scored: list[ScoredAction] = []
+        desire = world.family.desire(world, resident)
         for other in world.residents.values():
             feelings = world.relationships.get((resident.resident_id, other.resident_id))
             if other is resident or other.away or feelings is None:
@@ -233,22 +237,28 @@ class BondSystem:
                 continue
             if other.activity is not None and other.activity.partner_id is not None:
                 continue
-            score = TRYST_APPEAL * feelings.attraction / 100.0 - DISTANCE_COST * manhattan(resident.tile, other.tile)
+            # It is attraction that draws them, or with someone they are no couple with, wanting it.
+            pull = max(feelings.attraction, desire if not self.are_couple(resident, other) else 0.0)
+            score = TRYST_APPEAL * pull / 100.0 - DISTANCE_COST * manhattan(resident.tile, other.tile)
             scored.append(ScoredAction(TRYST_ACTION, score, partner_id=other.resident_id))
         return scored
 
     def _would_seek(
         self, world: "SimulationWorld", resident: Resident, other: Resident, feelings: Relationship
     ) -> bool:
-        """Whether `resident` would go looking for `other` tonight: their partner, or someone behind a partner's back."""
+        """Whether `resident` would go looking for `other` tonight: their partner, someone they
+        get on very well with and want, or someone behind a partner's back."""
         settings = self.settings(world)
-        if not self.is_adult(world, other):
+        if not world.family.may_court(world, resident, other):
             return False
         last = feelings.last_together
         if last is not None and world.clock.total_minutes - last < settings.tryst_cooldown_minutes:
             return False
         if self.are_couple(resident, other):
             return feelings.attraction >= settings.tryst_attraction
+        if world.family.casual(world, resident, feelings):
+            # Two need not be a couple. Whoever has a partner still has to have it in them.
+            return resident.couple_with is None or resident.personality.empathy < settings.affair_max_empathy
         # Anyone else only when one of the two has a partner: singles say what they feel first.
         if resident.couple_with is None and other.couple_with is None:
             return False
@@ -269,9 +279,12 @@ class BondSystem:
         mine = world.relationship(resident.resident_id, other.resident_id)
         theirs = world.relationship(other.resident_id, resident.resident_id)
         willing = (
-            self.is_adult(world, resident)
-            and self.is_adult(world, other)
-            and theirs.attraction >= self.settings(world).tryst_attraction
+            world.family.may_court(world, resident, other)
+            and world.family.may_court(world, other, resident)
+            and (
+                theirs.attraction >= self.settings(world).tryst_attraction
+                or (not self.are_couple(resident, other) and world.family.casual(world, other, theirs))
+            )
             and max(other.needs.hunger, other.needs.tiredness) <= MAX_BODILY_NEED
         )
         if not willing:
@@ -320,6 +333,8 @@ class BondSystem:
         """Settle what the one who started a confession or a breakup came for."""
         if definition.romance == CONFESSION:
             self._answer(world, initiator, other)
+        elif definition.romance == PROPOSAL and self.are_couple(initiator, other):
+            self._answer_proposal(world, initiator, other)
         elif definition.romance == BREAKUP and self.are_couple(initiator, other):
             self.part(world, initiator, other)
             self._remember(world, initiator, other, f"Rompí con {other.name}.", -0.5)
@@ -333,15 +348,62 @@ class BondSystem:
             )
 
     def part(self, world: "SimulationWorld", a: Resident, b: Resident) -> None:
-        """End a couple. What they feel for each other is theirs to get over."""
+        """End a couple, married or not. What they feel for each other is theirs to get over."""
         a.couple_with = b.couple_with = None
+        for one, other in ((a, b), (b, a)):
+            kin = world.kinship.get(one.resident_id)
+            if kin is not None and kin.spouse == other.resident_id:
+                kin.spouse = None
+
+    def are_married(self, world: "SimulationWorld", a: Resident, b: Resident) -> bool:
+        return (
+            world.family.kin.spouse_of(world, a.resident_id) == b.resident_id
+            and world.family.kin.spouse_of(world, b.resident_id) == a.resident_id
+        )
+
+    def proposal_target(self, world: "SimulationWorld", resident: Resident) -> Resident | None:
+        """A resident's partner, if things between them are good enough to think of marrying them."""
+        partner = world.residents.get(resident.couple_with or "")
+        if partner is None or not self.are_couple(resident, partner) or self.are_married(world, resident, partner):
+            return None
+        family = world.registries.family
+        feelings = world.relationship(resident.resident_id, partner.resident_id)
+        settled = feelings.affection >= family.marry_affection and feelings.trust >= family.marry_trust
+        return partner if settled and feelings.resentment < self.settings(world).breakup_resentment / 2 else None
+
+    def _answer_proposal(self, world: "SimulationWorld", asker: Resident, asked: Resident) -> None:
+        theirs = world.relationship(asked.resident_id, asker.resident_id)
+        if theirs.affection >= world.registries.family.marry_accept_affection:
+            for one, other in ((asker, asked), (asked, asker)):
+                world.family.kin.record(world, one.resident_id, one.name, one.gender).spouse = other.resident_id
+                one.needs.apply({"stress": -15.0})
+                self._remember(world, one, other, f"{other.name} y yo nos casamos.", 0.9)
+            self._announce(
+                world, "couple_married", MARRIAGE_IMPORTANCE, asker, asked,
+                f"{asker.name} y {asked.name} se casan",
+                f"{asker.name} y {asked.name} se casaron",
+            )
+            world.children.together(world, asker, asked)
+            return
+        asker.needs.apply({"stress": 12.0})
+        self._remember(world, asker, asked, f"Le pedí a {asked.name} que nos casáramos y me dijo que no.", -0.7)
+        self._remember(world, asked, asker, f"{asker.name} me pidió que nos casáramos. Le dije que no.", -0.2)
+        world.emit_event(
+            DomainEvent(
+                "proposal_rejected",
+                REJECTION_IMPORTANCE,
+                f"{asked.name} no quiere casarse con {asker.name}",
+                [asker.resident_id, asked.resident_id],
+            ),
+            at=asker.tile,
+        )
 
     def _answer(self, world: "SimulationWorld", asker: Resident, asked: Resident) -> None:
         settings = self.settings(world)
         theirs = world.relationship(asked.resident_id, asker.resident_id)
         mine = world.relationship(asker.resident_id, asked.resident_id)
         free = asker.couple_with is None and asked.couple_with is None
-        adults = self.is_adult(world, asker) and self.is_adult(world, asked)
+        adults = world.family.may_court(world, asker, asked) and world.family.may_court(world, asked, asker)
         feels_the_same = (
             theirs.attraction >= settings.accept_attraction and theirs.affection >= settings.accept_affection
         )

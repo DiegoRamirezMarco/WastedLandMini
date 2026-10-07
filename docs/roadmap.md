@@ -1309,7 +1309,15 @@ Still open here:
 - Seen while this was run: a guard who stays up for raiders can be drawn off the watch by their
   partner, and the raiders walk in (S13)
 
-### S25 — Families (needs S9) — planned
+### S25 — Families (needs S9) — done
+Asked first, and answered: a settlement begins on the first of January of 2226; the chance of
+dying of old age is five in a hundred a year at eighty and doubles every five years; in a save
+from before, those the game has by name are who its data says and anybody else is who their ID
+makes them, to be changed later; libido is fixed and the moment counts; a child takes its way
+of being, mixed, and its traits from its parents, and not their tastes; and there are kin from
+the start, families come to the gate together, and one of them may be let in without the other,
+which is not forgotten.
+
 - **A couple may marry.** Like a confession and a breakup, it is something the player is given a
   say in beforehand
 - **Libido, one more side to a way of being**, from 0 to 100 like the others, with a slider
@@ -1403,14 +1411,59 @@ than an adult at the same post; the same seed giving the same births; kin, sex, 
 they are drawn to and dates of birth kept by saving and loading; and a save from before, with
 everyone the age they were and drawn to both.
 
-Still to settle:
-- What date a settlement begins on
-- How fast the chance of dying of old age grows after eighty
-- What somebody in a save from before has for sex and gender
-- Whether libido is fixed like the rest of a way of being, or rises and falls
-- What a child takes from their parents: way of being, traits, tastes, looks
-- Whether those who come to the gate come with kin, and whether anyone there already is kin to
-  anyone
+As it was built, where the lines above leave it open:
+- **Libido is theirs and the moment counts**: what it weighs at any time falls with nerves, low
+  spirits, tiredness and a hurt body. Two who are no couple go off alone together when each gets
+  on very well with the other and wants it enough there and then
+- **A couple that is doing well thinks of marrying**, one of them asks, and the other answers
+  by what they feel. Marrying is kin, and ends if the couple does
+- **A child comes of it six times in a hundred**, to nobody of fifty or more, and one at a time
+- **A child is named from a list**, is `m` or `f` by chance and takes itself for the same, and
+  who it is drawn to is by chance too. Each side of its way of being falls within fifteen of the
+  middle of its parents', and each trait of theirs is taken half the time, two at most
+- **A bundle is on the back of whoever sees to it while they are awake, and beside them when
+  they sleep**: the first of its parents who is here and in a state to. Feeding it costs them
+  rest and nerves, and nothing else. With neither parent there it is put down: in a bed that is
+  free, on something under a roof, or on the ground. Left twelve hours, or with no parent
+  living, someone is asked to take it in, the likeliest first, one at a time. It does not die
+  while somebody is making up their mind
+- **Nobody under age has to earn their keep** (S23), whether they are given a post or not
+- **Being kin** is forty of affection and thirty of trust to begin with, each way. Whoever sees
+  one of their own hurt, in a fight or robbing is the worse for it in nerves. Whoever sees a
+  child at work, hurt, in a fight or taking something is the worse for it in mood and nerves
+- **Those the game has by name have a sex and who they are drawn to as data**
+  (`data/family.json`), and so do their kin: Marta and Vera are sisters, Paco and Bruno
+  brothers, and Hugo and Carmen brother and sister, who come to the gate together
+- **Two at the gate are put to whoever answers it together**: both, either of them, or neither,
+  and a bed for each one let in. Having kin inside weighs on the answer. Whoever is let in
+  while the other is not remembers it, and holds it against whoever decided
+- **Whoever sleeps on the ground** rests a little over half as fast as in a bed, and wakes on edge
+- Who somebody is can be said where a first resident is made and with `SetIdentityCommand`.
+  Save version 29
+
+Found by running half a year, and put right:
+- **The garden takes more hands as more people live here** (`per_residents`, on a job): with
+  two in it whatever came, a tenth mouth emptied the pantries in forty days and everybody
+  starved. Now a third is wanted from ten, and somebody is asked as for any post left empty.
+  With it, three seeds run for half a year lose nobody, and in each a couple marries, has two
+  children, and the first of them is ten and walking by the end
+
+Still open here:
+- A couple with a child on the way or on their back lives as before: nothing changes in where
+  they sleep or how they spend the day, and whoever carries one works as before (S28)
+- Whoever sees to a bundle picks it up wherever it is, without walking to it, and is the same
+  parent as long as they are fit: the other only steps in when they cannot
+- A bundle eats nothing out of the pantry. From ten a child eats like anybody
+- A child of ten is a small adult in all but romance: nothing teaches them, and no post is
+  kept from them
+- What is done to one of their own tells on whoever sees it, and that is all: they do not
+  turn on whoever did it more than anybody would
+- A couple, once it starts, has a child every ten weeks or so, and nothing but age stops it
+- Nobody knows somebody is expecting, the two of them included: it is not a fact anyone holds
+- Whoever is turned away at the gate while their brother or sister is let in is gone for good
+- The water does not take more hands as the garden does: with one tank there is one post
+- None of it is on screen: who somebody is, the date, a family's tree and a bundle on a back
+  are for P25
 
 ### P25 — Coin, smoke and kin on screen (needs S23 to S25) — planned
 - The currency named and drawn in the game, and seen wherever something is paid
@@ -1431,6 +1484,8 @@ Still to settle:
 - **A child nobody has drawn has a look the game comes with for children**, one for all of them
 - Sex, gender, who they are drawn to and the slider for libido where the first resident is made
 - The date by the clock, and a birthday seen when it comes round
+- Two at the gate seen together, and what is advised about each of them
+- Whoever sleeps on the ground seen to, and a couple marrying
 
 Still to settle:
 - How small the body of a ten-year-old is, and whether it grows year by year or in a few steps

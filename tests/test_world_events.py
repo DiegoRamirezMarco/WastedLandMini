@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from save.save_manager import SaveManager
@@ -117,6 +118,9 @@ class WhenThingsHappenTests(unittest.TestCase):
 class StrangerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.world = _settled()
+        # These are about one stranger: whoever would come with someone comes alone here.
+        registries = self.world.registries
+        self.world.registries = replace(registries, family=replace(registries.family, arrive_together=()))
         self.tomas = self.world.residents["tomas"]
         _only(self.world, "stranger")
         _on_duty(self.world, "tomas")

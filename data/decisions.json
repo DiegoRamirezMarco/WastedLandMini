@@ -396,7 +396,8 @@
           "bias": -0.05,
           "empathy": 0.6,
           "courage": 0.2,
-          "sociability": 0.2
+          "sociability": 0.2,
+          "kin": 0.5
         },
         "gate": "let_in",
         "text": "{name} abre la puerta a {visitor}"
@@ -675,7 +676,7 @@
     "cooldown_minutes": 4320,
     "anger_threshold": 0,
     "importance": 50,
-    "text": "{name} está harto de que no le cambien nada y piensa en proponer una moneda",
+    "text": "{name} se ha cansado de que no le cambien nada y piensa en proponer una moneda",
     "prompt": "Con una moneda no pasaría esto. ¿Se lo digo a todos?",
     "outcomes": {
       "raise": {
@@ -852,6 +853,204 @@
         "id": "neutral",
         "text": "Tú sabrás",
         "influence": {}
+      }
+    ]
+  },
+  "proposal": {
+    "event_type": "proposal_stirring",
+    "window_minutes": 60,
+    "cooldown_minutes": 10080,
+    "anger_threshold": 0,
+    "importance": 55,
+    "text": "{name} le da vueltas a pedirle a {target} que se casen",
+    "prompt": "Estoy bien con {target}. ¿Le pido que nos casemos?",
+    "outcomes": {
+      "propose": {
+        "score": {
+          "bias": -0.1,
+          "courage": 0.4,
+          "affection": 0.5,
+          "impulsiveness": 0.1
+        },
+        "interaction": "proposal",
+        "text": "{name} va a pedirle a {target} que se casen"
+      },
+      "wait": {
+        "score": {
+          "bias": 0.45,
+          "stress": 0.2
+        },
+        "text": "{name} prefiere esperar"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Pídeselo",
+        "influence": {
+          "propose": 0.5,
+          "wait": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "discourage",
+        "text": "No hay prisa",
+        "influence": {
+          "wait": 0.5,
+          "propose": -0.3
+        }
+      }
+    ]
+  },
+  "strangers": {
+    "event_type": "stranger_at_gate",
+    "window_minutes": 60,
+    "cooldown_minutes": 0,
+    "anger_threshold": 0,
+    "importance": 55,
+    "text": "{first} y {second} llaman a la puerta y piden quedarse: le toca decidir a {name}",
+    "prompt": "Hay dos en la puerta, {first} y {second}. Vienen juntos y quieren quedarse. ¿Abro?",
+    "outcomes": {
+      "let_in": {
+        "score": {
+          "bias": -0.25,
+          "empathy": 0.6,
+          "courage": 0.2,
+          "sociability": 0.2,
+          "kin": 0.5,
+          "room": 0.3
+        },
+        "gate": "let_in",
+        "text": "{name} abre la puerta a {first} y a {second}"
+      },
+      "let_first": {
+        "score": {
+          "bias": 0.0,
+          "empathy": 0.2,
+          "greed": 0.2,
+          "room": -0.2
+        },
+        "gate": "let_first",
+        "text": "{name} deja pasar a {first} y a {second} no"
+      },
+      "let_second": {
+        "score": {
+          "bias": -0.02,
+          "empathy": 0.2,
+          "greed": 0.2,
+          "room": -0.2
+        },
+        "gate": "let_second",
+        "text": "{name} deja pasar a {second} y a {first} no"
+      },
+      "turn_away": {
+        "score": {
+          "bias": 0.25,
+          "aggression": 0.3,
+          "greed": 0.3,
+          "stress": 0.2
+        },
+        "gate": "turn_away",
+        "text": "{name} les dice a {first} y a {second} que sigan su camino"
+      }
+    },
+    "options": [
+      {
+        "id": "open",
+        "text": "Que pasen los dos",
+        "influence": {
+          "let_in": 0.6,
+          "turn_away": -0.3
+        }
+      },
+      {
+        "id": "first",
+        "text": "Solo {first}",
+        "influence": {
+          "let_first": 0.7,
+          "let_in": -0.2
+        }
+      },
+      {
+        "id": "second",
+        "text": "Solo {second}",
+        "influence": {
+          "let_second": 0.7,
+          "let_in": -0.2
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "close",
+        "text": "Que sigan su camino",
+        "influence": {
+          "turn_away": 0.6,
+          "let_in": -0.3
+        }
+      }
+    ]
+  },
+  "take_in": {
+    "event_type": "child_alone",
+    "window_minutes": 60,
+    "cooldown_minutes": 0,
+    "anger_threshold": 0,
+    "importance": 65,
+    "text": "{thing} no tiene quien se ocupe, y {name} se pregunta si hacerse cargo",
+    "prompt": "{thing} no tiene a nadie. ¿Me hago cargo yo?",
+    "outcomes": {
+      "take_in": {
+        "score": {
+          "bias": -0.15,
+          "empathy": 0.6,
+          "kin": 0.5,
+          "affection": 0.3
+        },
+        "agrees": true,
+        "text": "{name} se hace cargo de {thing}"
+      },
+      "leave": {
+        "score": {
+          "bias": 0.3,
+          "greed": 0.2,
+          "stress": 0.25
+        },
+        "needs": {
+          "stress": 6
+        },
+        "text": "{name} no se ve capaz de hacerse cargo de {thing}"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Hazte cargo",
+        "influence": {
+          "take_in": 0.5,
+          "leave": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "discourage",
+        "text": "No es cosa tuya",
+        "influence": {
+          "leave": 0.5,
+          "take_in": -0.3
+        }
       }
     ]
   }

@@ -1,5 +1,7 @@
 """Who holds which post: taking up a job, and noticing the jobs nobody is doing."""
 
+import math
+
 from typing import TYPE_CHECKING
 
 from simulation.events.event import DomainEvent
@@ -33,9 +35,16 @@ class StaffingSystem:
             None,
         )
 
+    def needed(self, world: "SimulationWorld", job: JobDefinition) -> int:
+        """How many people a job takes right now: what its data says, and for one that feeds or
+        waters the settlement, more as more people live in it."""
+        if job.per_residents <= 0:
+            return job.needed
+        return max(job.needed, math.ceil(len(world.residents) / job.per_residents))
+
     def is_short(self, world: "SimulationWorld", job: JobDefinition) -> bool:
         """Whether a job has fewer people than it takes and a post standing free for another."""
-        return len(self.workers(world, job.job_id)) < job.needed and self.free_post(world, job) is not None
+        return len(self.workers(world, job.job_id)) < self.needed(world, job) and self.free_post(world, job) is not None
 
     def assign(self, world: "SimulationWorld", resident: Resident, job_id: str) -> bool:
         """Give a resident a job and a free post for it, in place of any they had. False if there is none."""
@@ -122,7 +131,7 @@ class StaffingSystem:
             current = world.registries.jobs.get(resident.job_id or "")
             if current is None:
                 ranked.append((0, 0, index, resident))
-            elif len(self.workers(world, current.job_id)) > current.needed:
+            elif len(self.workers(world, current.job_id)) > self.needed(world, current):
                 ranked.append((1, current.priority, index, resident))
             elif current.priority < job.priority:
                 ranked.append((2, current.priority, index, resident))

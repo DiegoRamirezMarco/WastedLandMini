@@ -7,6 +7,7 @@ from simulation.ai.crowd import spots_taken
 from simulation.ai.navigation import adjacent_spots
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency, ranked
 from simulation.economy.merchant import VISIT_ACTION
+from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item_system import ITEM_ACTIONS, ItemSystem
 from simulation.residents.activity import SHELTER_ACTION, WANDER_ACTION, Activity
 from simulation.residents.needs import NEED_NAMES
@@ -56,12 +57,14 @@ class RoutineSystem:
     def candidates(self, world: "SimulationWorld", resident: Resident) -> list[ScoredAction]:
         """Score everything the resident could do next: use an object, talk, handle an item, or wander."""
         scored: list[ScoredAction] = []
+        bed_to_be_had = False
         for placed in world.interactables.values():
             use = world.definition_of(placed).use
             if use is None or world.users_of(placed.object_id) >= use.capacity:
                 continue
             if not world.work.open_to(world, resident, use):
                 continue
+            bed_to_be_had = bed_to_be_had or (use.unaware and use.per_minute.get("tiredness", 0.0) < 0)
             score = self._score_use(world, resident, placed, use)
             if score is not None:
                 scored.append(ScoredAction(use.action, score + self._noise(world), placed.object_id))
@@ -76,6 +79,9 @@ class RoutineSystem:
         work = world.work.candidate(world, resident)
         if work is not None:
             scored.append(ScoredAction(work.name, work.score + self._noise(world), work.target_id))
+        rough = world.family.rough_candidate(world, resident, bed_to_be_had)
+        if rough is not None:
+            scored.append(ScoredAction(rough.name, rough.score + self._noise(world)))
         visit = world.merchants.candidate(world, resident)
         if visit is not None:
             scored.append(ScoredAction(visit.name, visit.score + self._noise(world)))
@@ -139,6 +145,8 @@ class RoutineSystem:
                 activity = self._shelter(world, resident)
             elif candidate.name == VISIT_ACTION:
                 activity = world.merchants.plan(world, resident)
+            elif candidate.name == SLEEP_ROUGH_ACTION:
+                return world.family.plan_rough(world, resident)
             elif candidate.target_id is None:
                 return self._wander(world, resident)
             else:
