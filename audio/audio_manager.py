@@ -3,6 +3,8 @@ and for the player's own clicks, ambience that goes round under them, and music 
 
 Never required: the game runs fine without sound. Every sound is a file with a name, and one
 of the same name in the folder for the player's own sounds is played in place of the game's.
+The game comes with effects only. Ambience and music are heard where somebody has put a file
+for them, and nowhere else.
 """
 
 import json
@@ -181,8 +183,9 @@ class AudioManager:
             sound = self._load(name, folders)
             if sound is not None:
                 self._sounds[name] = sound
+        # The game comes with no ambience of its own: what there is, somebody dropped in.
         for name in sorted(settings.ambience):
-            sound = self._load(name, [folder / AMBIENCE_FOLDER for folder in folders])
+            sound = self._load(name, [folder / AMBIENCE_FOLDER for folder in folders], expected=False)
             if sound is not None:
                 self._ambience[name] = sound
         for name in sorted(set(tracks)) if music_dir is not None else []:
@@ -205,10 +208,11 @@ class AudioManager:
             self._ambience_channels[name] = pygame.mixer.Channel(index)
             index += 1
 
-    def _load(self, name: str, folders: Sequence[Path]) -> pygame.mixer.Sound | None:
+    def _load(self, name: str, folders: Sequence[Path], expected: bool = True) -> pygame.mixer.Sound | None:
         path = find_sound(name, folders)
         if path is None:
-            logger.warning("Sound %s could not be found", name)
+            if expected:
+                logger.warning("Sound %s could not be found", name)
             return None
         try:
             sound = pygame.mixer.Sound(str(path))

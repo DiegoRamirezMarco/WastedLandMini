@@ -24,7 +24,10 @@ from simulation.events.world_event import Weather
 from simulation.registries import DATA_DIR
 from simulation.residents.activity import Activity
 from simulation.world import SimulationWorld
-from tools.art.sounds import AMBIENCE, AMBIENCE_SECONDS, PITCHED, ROUGH, SOUNDS, UNDER, duration_ms, render, render_ambience
+from tools.art.sounds import PITCHED, ROUGH, SOUNDS, UNDER, build, duration_ms, render
+
+# The ambience the game has a place for. None of it comes with the game.
+AMBIENCE = ("wind", "night", "storm", "fire", "generator", "voices")
 
 AUDIO = DATA_DIR / "audio.json"
 
@@ -59,22 +62,14 @@ class GeneratedSoundTests(unittest.TestCase):
         for shape in ROUGH:
             self.assertNotEqual(render([(300, 80, shape)]), render([(300, 80, "sine")]), shape)
 
-    def test_ambience_is_a_few_seconds_that_can_go_round_and_round(self) -> None:
-        self.assertEqual(set(AMBIENCE), {"wind", "night", "storm", "fire", "generator", "voices"})
-        for name in AMBIENCE:
-            path = ASSETS_DIR / "sounds" / AMBIENCE_FOLDER / f"{name}.wav"
-            self.assertTrue(path.exists(), name)
-            with wave.open(str(path), "rb") as sound:
-                self.assertEqual((sound.getnchannels(), sound.getsampwidth(), sound.getframerate()), (1, 2, 22050))
-                self.assertEqual(sound.getnframes(), int(22050 * AMBIENCE_SECONDS), name)
-                frames = sound.readframes(sound.getnframes())
-            samples = [int.from_bytes(frames[index : index + 2], "little", signed=True) for index in range(0, len(frames), 2)]
-            peak = max(abs(sample) for sample in samples)
-            self.assertGreater(peak, 15000, f"{name} is loud enough to be turned down, not too quiet to be heard")
-            self.assertLess(peak, 32767, name)
-
-    def test_ambience_comes_out_the_same_every_time(self) -> None:
-        self.assertEqual(render_ambience(AMBIENCE["night"], 0.5), render_ambience(AMBIENCE["night"], 0.5))
+    def test_the_game_makes_nothing_that_goes_on_and_on(self) -> None:
+        # Synthesised music, and then synthesised ambience, were both taken out for being
+        # unbearable to listen to. What the tool writes is over in a moment.
+        files = build()
+        self.assertEqual(len(files), len(SOUNDS))
+        self.assertFalse([path for path in files if AMBIENCE_FOLDER in path])
+        self.assertFalse((ASSETS_DIR / "sounds" / AMBIENCE_FOLDER).exists())
+        self.assertTrue(all(duration_ms(notes) < 600 for notes in SOUNDS.values()))
 
 
 class SoundSettingsTests(unittest.TestCase):
@@ -84,8 +79,7 @@ class SoundSettingsTests(unittest.TestCase):
     def test_everything_that_sounds_has_a_sound_there_is(self) -> None:
         for name in self.settings.names():
             self.assertIn(name, SOUNDS, name)
-        for name in self.settings.ambience:
-            self.assertIn(name, AMBIENCE, name)
+        self.assertEqual(set(self.settings.ambience), set(AMBIENCE))
         self.assertGreater(len(self.settings.events), 130)
 
     def test_what_matters_most_is_not_left_silent(self) -> None:
@@ -105,7 +99,8 @@ class SoundSettingsTests(unittest.TestCase):
         self.assertEqual(set(settings.interface), {"click", "open", "close", "select", "refuse", "order"})
         self.assertIn("build", settings.actions)
         self.assertIn("salvage", settings.actions)
-        self.assertGreater(settings.actions["sleep"].every_ms, settings.actions["build"].every_ms)
+        self.assertNotIn("sleep", settings.actions, "nothing that would be heard all night long")
+        self.assertGreater(settings.actions["carry"].every_ms, settings.actions["build"].every_ms)
         self.assertEqual(settings.ambience["fire"], AmbienceRule("near", settings.ambience["fire"].volume, "campfire"))
         self.assertTrue(settings.ambience["generator"].powered)
         self.assertEqual({rule.when for rule in settings.ambience.values()}, {"day", "night", "storm", "near", "talk"})
@@ -186,13 +181,14 @@ class AudioManagerTests(unittest.TestCase):
         audio = self._audio()
         self.assertTrue(audio.available)
         self.assertEqual(set(audio._sounds), self.settings.names())
-        self.assertEqual(set(audio._ambience), set(self.settings.ambience))
+        self.assertEqual(audio._ambience, {}, "the game comes with no ambience of its own")
+        self.assertEqual(audio._ambience_channels, {})
         self.assertEqual(audio.own, set())
 
     def test_the_players_own_sounds_are_played_in_place_of_the_games(self) -> None:
         (self.folder / AMBIENCE_FOLDER).mkdir()
         (self.folder / "hammer.wav").write_bytes(render(SOUNDS["click"]))
-        (self.folder / AMBIENCE_FOLDER / "wind.wav").write_bytes(render_ambience(AMBIENCE["wind"], 0.25))
+        (self.folder / AMBIENCE_FOLDER / "wind.wav").write_bytes(render(SOUNDS["gust"]))
         (self.folder / "toll.wav").write_bytes(b"this is no sound at all")
         audio = self._audio(self.folder)
         self.assertEqual(audio.own, {"hammer", "wind"})
@@ -225,8 +221,17 @@ class AudioManagerTests(unittest.TestCase):
         self.assertEqual(audio.on_actions(["build"], every), ["hammer"])
         self.assertEqual(audio.on_actions([], 10.0), [])
 
-    def test_ambience_comes_up_and_dies_away_and_is_silenced_with_the_rest(self) -> None:
+    def test_with_no_file_for_it_ambience_is_never_heard(self) -> None:
         audio = self._audio()
+        audio.set_ambience({name: 1.0 for name in AMBIENCE})
+        audio.update(10.0)
+        self.assertFalse(any(pygame.mixer.Channel(index).get_busy() for index in range(pygame.mixer.get_num_channels())))
+
+    def test_ambience_somebody_put_there_comes_up_and_dies_away_and_is_silenced_with_the_rest(self) -> None:
+        (self.folder / AMBIENCE_FOLDER).mkdir()
+        (self.folder / AMBIENCE_FOLDER / "night.wav").write_bytes(render(SOUNDS["gust"]))
+        audio = self._audio(self.folder)
+        self.assertEqual(set(audio._ambience), {"night"})
         self.assertTrue(all(level == 0.0 for level in audio.ambience_levels.values()))
         audio.set_ambience({"night": 1.0})
         audio.update(0.1)
@@ -237,7 +242,7 @@ class AudioManagerTests(unittest.TestCase):
         self.assertEqual(audio.ambience_levels["night"], self.settings.ambience["night"].volume)
         self.assertEqual(audio.ambience_levels["wind"], 0.0)
         self.assertTrue(audio._ambience_channels["night"].get_busy())
-        self.assertFalse(audio._ambience_channels["wind"].get_busy())
+        self.assertNotIn("wind", audio._ambience_channels, "there is no file for it")
         audio.toggle_mute()
         self.assertEqual(audio._ambience_channels["night"].get_volume(), 0.0)
         audio.toggle_mute()

@@ -2457,29 +2457,35 @@ sonido y efectos". Asked first, and answered: synthesised, with room for the use
   death is not an injury, a law passed is not a law broken, and a vote, a wedding, a birth, a
   knock at the gate, somebody thrown out and an order given each have their own
 - **What is being done in view is heard for as long as it is**: hammering on a site, metal
-  taken apart, loads carried, something mended, blows, somebody asleep. Each comes again every
-  so often, and more quietly than what happens
+  taken apart, loads carried, something mended, blows. Each comes again every so often, and
+  more quietly than what happens
 - **The player's own hand sounds**: a click, somebody selected, the panel for affecting
   opening, an order given, something refused
-- **Ambience under it all**, six loops of four seconds: wind by day, crickets by night, a
-  storm that drowns both, a fire or a generator while it is in view, and a murmur while people
-  in view talk. Each comes up and dies away, and is silenced with the rest
+- **A place for ambience under it all**, and none that comes with the game: wind by day, the
+  night, a storm that drowns both, a fire or a generator while it is in view, and a murmur
+  while people in view talk. Each is heard only from a file put in `sounds/ambience/`, comes
+  up and dies away, and is silenced with the rest
 - **Room for the user's own**: a file in `sounds/` with the name of one of the game's is played
   in its place, `.wav` or `.ogg`. `sounds/README.md` names every one and says when it is heard
 - What sounds and when, and how loud each kind is, is data (`data/audio.json`)
 
-Done when: every sound the data asks for is a file there is; a sound of the player's own is
-played in place of the game's, and one that cannot be read breaks nothing; what is heard of
-the air follows the hour, the weather and what is in view; hammering is heard while somebody
+Done when: every effect the data asks for is a file there is; a sound of the player's own is
+played in place of the game's, and one that cannot be read breaks nothing; what would be heard
+of the air follows the hour, the weather and what is in view; hammering is heard while somebody
 in view builds and stops when they do; and the folder for the player's own sounds says what
 each is called.
 
+Taken out since: the game came with six synthesised loops of ambience, and with snoring for
+as long as anybody in view slept. Once listened to, there was "un zumbido constante super
+desagradable", and all of it went the way the synthesised music had (P8). The lesson is the
+same twice over: nothing synthesised here that goes on and on.
+
 Still open here:
-- **Nobody has listened to any of it.** It was written and checked by its numbers: no file is
-  silent, none breaks up, and ambience joins its own beginning. Whether it sounds like what it
-  is meant to is for an ear to say. The synthesised music was taken out for being a torment
-  (P8), and ambience is the same kind of thing: if any of it grates, taking its entry out of
-  `ambience` in `data/audio.json` silences it, and a file in `sounds/` replaces it
+- **The effects were written and checked by their numbers**, not by ear: no file is silent
+  and none breaks up. Whether each sounds like what it is meant to is for an ear to say, and
+  one that grates is silenced by taking its line out of `data/audio.json`, or replaced by a
+  file in `sounds/`
+- There is no ambience until somebody makes some
 - What happens out of view sounds as loud as what happens in it
 - The editors, Urbanismo and the menu are still silent
 - Steps, doors and the day's small noises have no sound

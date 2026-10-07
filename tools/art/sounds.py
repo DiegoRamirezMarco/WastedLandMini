@@ -1,5 +1,8 @@
-"""Synthesised sound, written as 16-bit mono WAV files: short effects, and ambience that goes
-round and round.
+"""Synthesised sound, written as 16-bit mono WAV files: short effects.
+
+Only what is over in a moment. Sound that goes on and on, music and then ambience, was tried
+synthesised twice and taken out both times for being unbearable to listen to: the game plays
+those only from files somebody has made and dropped in.
 
 An effect is a list of notes played one after another, with an optional second list mixed
 under it. A note is `(frequency, milliseconds, waveform)`, and may go on with the frequency it
@@ -111,46 +114,6 @@ UNDER: dict[str, list[Note]] = {
     "learned": [(330, 500, "sine", 330, 0.35)],
 }
 
-# Ambience that goes round and round, each a few seconds long: voices that last the whole of it.
-# A voice is `(waveform, frequency, loudness, how often it swells a second, how far it swells)`,
-# and for something that comes in pulses, how many a second and how long each lasts.
-AMBIENCE_SECONDS = 4.0
-# How loud the loudest moment of a piece of ambience is written, of all the way, and how many
-# samples a pulse in one takes to come up.
-AMBIENCE_PEAK = 0.7
-PULSE_ATTACK = 40.0
-AMBIENCE: dict[str, list[dict]] = {
-    "wind": [
-        {"shape": "thud", "frequency": 260, "volume": 0.55, "swell": 0.25, "depth": 0.6},
-        {"shape": "hiss", "frequency": 700, "volume": 0.18, "swell": 0.5, "depth": 0.8},
-    ],
-    "night": [
-        {"shape": "sine", "frequency": 4200, "volume": 0.16, "pulses": 9.0, "pulse_ms": 28, "swell": 0.5, "depth": 0.9},
-        {"shape": "sine", "frequency": 3600, "volume": 0.10, "pulses": 6.5, "pulse_ms": 34, "swell": 0.25, "depth": 0.9},
-        {"shape": "thud", "frequency": 180, "volume": 0.22, "swell": 0.25, "depth": 0.4},
-    ],
-    "storm": [
-        {"shape": "thud", "frequency": 420, "volume": 0.9, "swell": 0.5, "depth": 0.7},
-        {"shape": "hiss", "frequency": 1400, "volume": 0.45, "swell": 0.75, "depth": 0.8},
-        {"shape": "noise", "frequency": 900, "volume": 0.25, "pulses": 14.0, "pulse_ms": 22, "swell": 0.25, "depth": 0.5},
-    ],
-    "fire": [
-        {"shape": "thud", "frequency": 300, "volume": 0.35, "swell": 0.75, "depth": 0.5},
-        {"shape": "noise", "frequency": 1600, "volume": 0.45, "pulses": 7.0, "pulse_ms": 14, "swell": 0.5, "depth": 0.9},
-        {"shape": "noise", "frequency": 800, "volume": 0.3, "pulses": 2.75, "pulse_ms": 30, "swell": 0.25, "depth": 0.6},
-    ],
-    "generator": [
-        {"shape": "saw", "frequency": 55, "volume": 0.45, "swell": 6.0, "depth": 0.25},
-        {"shape": "square", "frequency": 110, "volume": 0.12, "swell": 3.0, "depth": 0.4},
-        {"shape": "thud", "frequency": 200, "volume": 0.2, "pulses": 12.0, "pulse_ms": 30, "swell": 0.25, "depth": 0.2},
-    ],
-    "voices": [
-        {"shape": "triangle", "frequency": 190, "volume": 0.2, "pulses": 3.25, "pulse_ms": 150, "swell": 0.5, "depth": 0.9},
-        {"shape": "triangle", "frequency": 260, "volume": 0.16, "pulses": 2.5, "pulse_ms": 170, "swell": 0.75, "depth": 0.9},
-        {"shape": "sine", "frequency": 330, "volume": 0.1, "pulses": 4.5, "pulse_ms": 110, "swell": 0.25, "depth": 0.9},
-    ],
-}
-
 
 def _wave(shape: str, phase: float) -> float:
     """One cycle of a waveform, for a phase from 0 to 1, in the range -1 to 1."""
@@ -168,10 +131,10 @@ def _rough(index: int) -> float:
     return (((index * 1103515245 + 12345) >> 16) & 32767) / 16384.0 - 1.0
 
 
-def _coloured(shape: str, frequency: float, count: int, offset: int = 0) -> list[float]:
+def _coloured(shape: str, frequency: float, count: int) -> list[float]:
     """Rough sound of a colour: as it comes for `noise`, with the low taken out for `hiss`, and
     with all but the low taken out for `thud`. The frequency says where the line is drawn."""
-    raw = [_rough(offset + index) for index in range(count)]
+    raw = [_rough(index) for index in range(count)]
     if shape == "noise":
         return raw
     # One pole: how much of each new sample is let through.
@@ -242,46 +205,5 @@ def duration_ms(notes: list[Note]) -> int:
     return sum(int(note[1]) for note in notes)
 
 
-def render_ambience(voices: list[dict], seconds: float = AMBIENCE_SECONDS) -> bytes:
-    """Return ambience as the bytes of a WAV file that can be played round and round.
-
-    Everything in it comes round a whole number of times in its length, and what is rough is
-    faded into its own beginning, so that where it joins cannot be heard.
-    """
-    count = int(SAMPLE_RATE * seconds)
-    mixed = [0.0] * count
-    for number, voice in enumerate(voices):
-        shape, frequency = str(voice["shape"]), float(voice["frequency"])
-        volume, depth = float(voice.get("volume", 1.0)), float(voice.get("depth", 0.0))
-        # How many times it swells, and pulses, in the whole of it: whole numbers, to come round.
-        swells = max(1, round(float(voice.get("swell", 0.25)) * seconds))
-        pulses = round(float(voice.get("pulses", 0.0)) * seconds)
-        pulse = int(SAMPLE_RATE * float(voice.get("pulse_ms", 0)) / 1000)
-        if shape in ROUGH:
-            extra = SAMPLE_RATE // 4
-            rough = _coloured(shape, frequency, count + extra, offset=number * 7919)
-            body = rough[:count]
-            for index in range(extra):
-                # The end is faded into what comes after it, which is laid over the beginning.
-                share = index / extra
-                body[index] = rough[count + index] * (1.0 - share) + body[index] * share
-        else:
-            cycles = max(1, round(frequency * seconds))
-            body = [_wave(shape, (index * cycles / count) % 1.0) for index in range(count)]
-        for index in range(count):
-            level = 1.0 - depth * (0.5 + 0.5 * math.sin(2.0 * math.pi * swells * index / count + number))
-            if pulses and pulse:
-                within = (index * pulses) % count / pulses
-                # Each pulse comes up in an instant, though not so fast as to click, and dies away.
-                level *= min(1.0, within / PULSE_ATTACK) * max(0.0, 1.0 - within / pulse) if within < pulse else 0.0
-            mixed[index] += volume * level * body[index]
-    # Ambience is written as loud as it will go without breaking up: how loud it is heard is
-    # for the game to say.
-    peak = max((abs(sample) for sample in mixed), default=0.0)
-    return _wav([sample * AMBIENCE_PEAK / (peak * AMPLITUDE) for sample in mixed] if peak > 0 else mixed)
-
-
 def build() -> dict[str, bytes]:
-    files = {f"sounds/{name}.wav": render(notes, UNDER.get(name)) for name, notes in SOUNDS.items()}
-    files.update({f"sounds/ambience/{name}.wav": render_ambience(voices) for name, voices in AMBIENCE.items()})
-    return files
+    return {f"sounds/{name}.wav": render(notes, UNDER.get(name)) for name, notes in SOUNDS.items()}

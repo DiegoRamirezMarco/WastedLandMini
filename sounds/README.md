@@ -1,11 +1,13 @@
 # Sounds
 
-The game makes its own sounds: short synthesised effects and a few seconds of ambience that go
-round and round, written by `python -m tools.make_art` into `assets/sounds/`.
+The game makes its own effects: short synthesised sounds, written by `python -m tools.make_art`
+into `assets/sounds/`. It comes with no ambience and no music. Sound that goes on and on was
+tried synthesised and taken out for being unbearable: it is only heard from a file put here.
 
 A sound of your own goes here. Any file in this folder with the name of one of the game's is
 played in its place: `hammer.wav` here is what is heard when somebody builds. Ambience goes in
-`ambience/`. Whatever is missing is the game's own, as it always was.
+`ambience/`, and is silent until there is a file for it. An effect that is missing is the
+game's own, as it always was.
 
 - `.wav` or `.ogg`. A `.wav` is taken before an `.ogg` of the same name.
 - Any length and any sample rate. An effect is best kept under a second. Ambience is played
@@ -65,7 +67,7 @@ played in its place: `hammer.wav` here is what is heard when somebody builds. Am
 | `siren` | events: raiders_at_gate |
 | `site` | events: site_laid |
 | `smoke` | events: substance_taken |
-| `snore` | events: slept_rough; while somebody in view does: sleep |
+| `snore` | events: slept_rough |
 | `static` | events: radio_bulletin |
 | `supplies` | events: expedition_returned, goods_left, supplies_arrived |
 | `swap` | events: item_swapped, trade_made |
@@ -82,6 +84,9 @@ played in its place: `hammer.wav` here is what is heard when somebody builds. Am
 | `whisper` | events: affair, candidate_backed, kin_together, proposal_lobbied, rumor_told, tryst_started |
 
 ## Ambience
+
+None of these comes with the game. Each is heard only once there is a file of that name in
+`ambience/`, played round and round and coming up and dying away by itself.
 
 | File | Heard |
 |---|---|

@@ -173,10 +173,6 @@
     "fight": {
       "sound": "punch",
       "every_ms": 650
-    },
-    "sleep": {
-      "sound": "snore",
-      "every_ms": 2600
     }
   },
   "ambience": {

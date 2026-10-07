@@ -732,26 +732,29 @@ settlement is created, in `SimulationWorld.demo_world`.
 `item_value_multiplier` (items with a matching tag are worth more to them) and
 `food_reaction_bonus` (food with a matching tag also eases their stress).
 
-`data/audio.json` says what sounds and when. Sounds are files in `assets/sounds/`, named as in
-that file, and ambience is in `assets/sounds/ambience/`. A file of the same name in `sounds/`,
-at the top of the project, is played in place of the game's: see `sounds/README.md`.
+`data/audio.json` says what sounds and when. Effects are files in `assets/sounds/`, named as in
+that file. A file of the same name in `sounds/`, at the top of the project, is played in place
+of the game's: see `sounds/README.md`. The game comes with no ambience and no music: each is
+heard only from a file somebody has put there, ambience in `sounds/ambience/`.
 
 - `events` says which sound each event type plays. Of what happens in the same moment, the most
   important is the one heard.
 - `actions` says what is heard while somebody in view is in the middle of doing something:
-  the name of what they do (`build`, `salvage`, `carry`, `repair`, `fight`, `sleep`, or any
-  exchange or use), the `sound`, and how often it comes again (`every_ms`).
+  the name of what they do (`build`, `salvage`, `carry`, `repair`, `fight`, or any exchange or
+  use), the `sound`, and how often it comes again (`every_ms`). Nothing that goes on for hours,
+  such as sleeping, should have one.
 - `interface` gives a sound to what the player does with their own hand: `click`, `open`,
   `close`, `select`, `order` and `refuse`.
-- `ambience` says when each loop is heard and how loud at most (`volume`, from 0 to 1): `when`
+- `ambience` says when each loop would be heard, once there is a file for it, and how loud at
+  most (`volume`, from 0 to 1): `when`
   is `always`, `day`, `night`, `storm`, `talk` (people in view talking) or `near`, with the
   `kind` of object that has to be in view. `"powered": true` is for what only runs while the
   settlement has power. One taken out of here is never heard.
 - `volumes` says how loud `effects`, `actions`, `interface` and `ambience` are, from 0 to 1.
 - The game's own sounds are written by `tools/art/sounds.py`: an effect is a list of notes,
   each `(frequency, milliseconds, waveform)` and optionally the frequency it slides to and how
-  loud it is, with a second voice under it in `UNDER`; ambience is a few voices that swell or
-  come in pulses, in `AMBIENCE`. `python -m tools.make_art` writes whatever is missing.
+  loud it is, with a second voice under it in `UNDER`. `python -m tools.make_art` writes
+  whatever is missing. It writes nothing that goes on and on.
 
 Its `music` section says which track plays in each mood: `tracks` maps `day`, `night`, `storm`
 and `tension` to WAV files in `assets/music/`, and `night_hours` says when night falls and ends.
