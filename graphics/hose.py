@@ -157,12 +157,20 @@ def _heading(start: Point, end: Point) -> Point:
 
 
 def _lay(
-    points: Sequence[Point], drawn: Sequence[float], rounding: float, volume: float, before: float, after: float
+    points: Sequence[Point],
+    drawn: Sequence[float],
+    rounding: float,
+    volume: float,
+    before: float,
+    after: float,
+    rest: Sequence[float] | None = None,
 ) -> list[_Section] | None:
     """The line down the middle of a limb whose joints are at `points`, a section to each part.
 
     `drawn` is how long each part is on the drawing, and `before` and `after` how far the drawing
-    goes on past its first joint and past its last. None for a limb with a part of no length.
+    goes on past its first joint and past its last. `rest` is how long each part is when nothing
+    squashes it or draws it out, if that is not as long as it was drawn. None for a limb with a
+    part of no length.
     """
     count = len(points) - 1
     rounds: dict[int, tuple[Point, Point, Point]] = {}
@@ -184,10 +192,10 @@ def _lay(
     for line, reach in zip(lines, reaches):
         for index in range(1, len(line)):
             reach.append(reach[-1] + math.dist(line[index - 1], line[index]))
-    # Shorter than it was drawn, a part is that much wider, and the other way about.
+    # Shorter than it is at rest, a part is that much wider, and the other way about.
     wides = [
-        min(WIDEST, max(NARROWEST, (reach[-1] / long) ** -volume)) if volume else 1.0
-        for reach, long in zip(reaches, drawn)
+        min(WIDEST, max(NARROWEST, (reach[-1] / long) ** -volume)) if volume and long > 0 else 1.0
+        for reach, long in zip(reaches, rest if rest is not None else drawn)
     ]
     sections = []
     begun = 0.0
@@ -262,7 +270,12 @@ def _colors(seen: Any) -> Any:
 
 
 def bent(
-    strip: Strip, points: Sequence[Point], rounding: float = 1.0, volume: float = 0.0, fine: float = 1.0
+    strip: Strip,
+    points: Sequence[Point],
+    rounding: float = 1.0,
+    volume: float = 0.0,
+    fine: float = 1.0,
+    rest: Sequence[float] | None = None,
 ) -> tuple[pygame.Surface, Point] | None:
     """A limb laid along its joints, and where on that picture the first of them is.
 
@@ -270,8 +283,9 @@ def bent(
     pixels of the strip go to one of those: a strip finer than the picture makes a smoother one.
     `rounding` is how much of the limb each bend takes up: none of it at 0, where a joint is a
     corner, and all of it at 2, where a limb of two parts is one curve. `volume` is how much
-    wider a limb gets for being shorter than it was drawn: not at all at 0, enough to take up
-    as much room as before at 1. None if the limb cannot be laid out.
+    wider a limb gets for being shorter than it is at rest: not at all at 0, enough to take up
+    as much room as before at 1. `rest` is how long each of its parts is at rest, in pixels of
+    the picture, if that is not as long as it was drawn. None if the limb cannot be laid out.
     """
     joints = strip.joints
     if len(points) != len(joints) or len(points) < 2:
@@ -284,7 +298,9 @@ def bent(
     corners = [((x - joints[0][0]) / fine, (y - joints[0][1]) / fine) for x in (0, width) for y in (0, height)]
     alongs = [x * way[0] + y * way[1] for x, y in corners]
     reach = max(abs(x * side[0] + y * side[1]) for x, y in corners)
-    sections = _lay(points, drawn, rounding, volume, max(0.0, -min(alongs)), max(0.0, max(alongs) - sum(drawn)))
+    sections = _lay(
+        points, drawn, rounding, volume, max(0.0, -min(alongs)), max(0.0, max(alongs) - sum(drawn)), rest
+    )
     if sections is None:
         return None
     widest = max(float(section.wide.max()) for section in sections)

@@ -10,6 +10,7 @@ from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from scenes.global_view import HELD_AHEAD, HELD_SIZE
 from simulation.registries import BuiltInRegistries
 from simulation.residents.manner import WALK, MannerDefinition
+from skeleton.character import Character
 from skeleton.plan import SkeletonPlan
 from skeleton.rig import Skeleton
 
@@ -20,6 +21,8 @@ GROUND = 0.13
 # Turns of the walking clip a second at one turn to the stride: slower than on the map, to be looked at.
 WALK_RATE = 1.1
 HAND_ANCHOR = "held_item"
+# Bodies kept moving, one for each doll and manner on show. Past this many they are all let go.
+MOST_BODIES = 16
 
 
 class MannerPreview:
@@ -43,9 +46,23 @@ class MannerPreview:
         self.icons = icons
         self.time = 0.0
         self._example: Doll | None = None
+        # The body each doll is shown on for each manner, moving on its springs as on the map.
+        self._bodies: dict[tuple[str | None, str], Character] = {}
 
     def update(self, seconds: float) -> None:
         self.time += seconds
+        for body in self._bodies.values():
+            body.update(seconds)
+
+    def _body(self, body_id: str | None, manner: MannerDefinition, plan: SkeletonPlan) -> Character:
+        key = (body_id, manner.manner_id)
+        if key not in self._bodies:
+            if len(self._bodies) >= MOST_BODIES:
+                self._bodies.clear()
+            self._bodies[key] = Character(plan)
+            self._bodies[key].lively = True
+        self._bodies[key].plan = plan
+        return self._bodies[key]
 
     def example(self) -> Doll:
         """The figure of the guide, cut as a drawing would be."""
@@ -81,7 +98,9 @@ class MannerPreview:
         doll = self.doll_of(body_id)
         plan = doll.plan or self.plan
         facing = DOLL_FACINGS["right"]
-        pose = plan.pose(facing, manner.clip, self.phase(manner))
+        body = self._body(body_id, manner, plan)
+        body.stand(0.0, 0.0, facing, manner.clip, self.phase(manner))
+        pose = body.local_pose()
         skeleton = Skeleton(plan, facing)
         skeleton.set_pose(pose)
         detail = size[1] / PLACE_HEIGHT

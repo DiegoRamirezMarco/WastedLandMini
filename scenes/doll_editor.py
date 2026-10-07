@@ -29,6 +29,7 @@ from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from scenes.scene import canvas_position
 from simulation.residents.manner import OCCASIONS
 from simulation.world import SimulationWorld
+from skeleton.character import Character
 from skeleton.plan import SkeletonPlan
 from skeleton.rig import Skeleton
 from ui.button import Button
@@ -184,6 +185,8 @@ class DollEditor:
         # The canvas being drawn on and where the stroke last was, while the button is held.
         self._stroke: tuple[str, tuple[int, int]] | None = None
         self._preview: Doll | None = None
+        # The body the doll is shown moving on beside the paper: on springs, as on the map.
+        self._body = Character(plan)
         # A shape being laid down, whether shapes are filled, and whether the mouse is held on the field of colour.
         self._draft: ShapeDraft | None = None
         self.filled = False
@@ -670,6 +673,7 @@ class DollEditor:
 
     def update(self, dt: float) -> None:
         self.time += dt
+        self._body.update(dt)
 
     def render(self) -> None:
         self.layers.clear()
@@ -790,7 +794,11 @@ class DollEditor:
             clip, facing, phase, detail = PREVIEW_CLIPS[1], DOLL_FACINGS["right"], 0.0, MEASURE_DETAIL
         plan = self.doll_plan
         skeleton = Skeleton(plan, facing)
-        skeleton.set_pose(plan.pose(facing, clip, phase))
+        body = self._body
+        # While it is being measured it is posed exactly, so that its joints are where they are taken hold of.
+        body.plan, body.lively = plan, self.tool != MEASURE_TOOL
+        body.stand(0.0, 0.0, facing, clip, phase)
+        skeleton.set_pose(body.local_pose())
         before = screen.get_clip()
         screen.set_clip(place)
         draw_doll(screen, self._preview, plan, skeleton, (place.centerx, place.bottom - PREVIEW_FOOT), detail)

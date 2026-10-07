@@ -1594,6 +1594,8 @@ class GlobalView:
         own = doll.plan if doll is not None and doll.plan is not None else self.bodies.plan
         if character.plan is not own and not character.physical:
             character.plan = own
+        # A doll moves on springs, with some weight to it. A body kept as pictures is posed exactly.
+        character.lively = doll is not None
         # A doll turns smoothly; the game's own bodies go from one kept picture to the next.
         character.stand(spot[0], spot[1], facing, clip, turn % 1.0 if doll is not None else index / frames, overlay)
 
@@ -1657,14 +1659,13 @@ class GlobalView:
         return self._doll_facing.get(resident_id, DOLL_FACING)
 
     def _posed_skeleton(self, resident_id: str, character) -> Skeleton:
-        """A skeleton standing as a resident's clips have them right now, to lay their doll over."""
+        """A skeleton standing as a resident's body is right now, to lay their doll over."""
         plan = character.plan
         key = (resident_id, character.facing, tuple(character.lost), id(plan))
         if key not in self._posed:
             self._posed[key] = Skeleton(plan, character.facing, character.lost)
         skeleton = self._posed[key]
-        pose = plan.pose(character.facing, character.clip, character.phase, character.overlay)
-        skeleton.set_pose(pose, character.x, character.y)
+        skeleton.set_pose(character.local_pose(), character.x, character.y)
         return skeleton
 
     def _remains_draw(self, remains: Remains) -> Draw:

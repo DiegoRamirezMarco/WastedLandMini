@@ -60,7 +60,7 @@ BOX_DETAIL = 4.0
 # within half a pixel of where it should be: this many for each pixel to one of the skeleton's,
 # in twelves, and never fewer or more than these.
 TURN_STEPS_PER_PIXEL = 40
-FEWEST_LIMB_TURNS, MOST_LIMB_TURNS = 60, 360
+FEWEST_LIMB_TURNS, MOST_LIMB_TURNS = 60, 192
 # From there each of its parts is bent in this many steps of a full turn, and drawn out in steps
 # of this many hundredths of the length it was drawn at. These are coarse: bending is what
 # costs, and the coarser they are the fewer shapes a limb has to be bent into.
@@ -73,7 +73,7 @@ LARGE = 8.0
 # Limbs are kept to be shown again, every doll's together, up to this many bytes of them: bent,
 # which is costly to make and of which there are few, and bent and turned, of which there are many.
 BENT = rubber.Kept(24 * 1024 * 1024)
-KEPT = rubber.Kept(32 * 1024 * 1024)
+KEPT = rubber.Kept(48 * 1024 * 1024)
 _TOKENS = itertools.count()
 
 
@@ -82,7 +82,7 @@ def limb_turns(detail: float) -> int:
     return min(MOST_LIMB_TURNS, max(FEWEST_LIMB_TURNS, round(detail * TURN_STEPS_PER_PIXEL / 12) * 12))
 
 
-def _apart(shape: Sequence[tuple[int, int]], other: Sequence[tuple[int, int]]) -> float:
+def _apart(shape: Sequence[tuple[int, ...]], other: Sequence[tuple[int, ...]]) -> float:
     """How unlike two shapes of a limb are, in steps of how its parts are drawn out and bent."""
     return sum(
         abs(a[0] - b[0]) / STRETCH_STEP + min((a[1] - b[1]) % BEND_STEPS, (b[1] - a[1]) % BEND_STEPS)
@@ -856,19 +856,23 @@ class Doll:
 
         return DollPart(image, moved(part.start), moved(part.end))
 
-    def _sized_part(self, bone: str, mirrored: bool, detail: float, stretch: int) -> DollPart:
+    def _sized_part(self, bone: str, mirrored: bool, detail: float, stretch: int, wide: int = 100) -> DollPart:
         """A part at the size it is shown, and in a mirror if the body faces the other way.
 
-        `stretch` is how much longer than drawn its bone is, in hundredths.
+        `stretch` is how much longer than drawn its bone is, and `wide` how much wider than drawn
+        the part is shown across it, both in hundredths.
         """
-        key = (bone, mirrored, round(detail * 1000), stretch)
+        key = (bone, mirrored, round(detail * 1000), stretch, wide)
         if key not in self._sized:
             part = self._drawn_out(self.parts[bone], stretch)
             factor = detail / self.unit
-            size = (max(1, round(part.image.get_width() * factor)), max(1, round(part.image.get_height() * factor)))
+            # Wider across the way it runs, which is up and down its paper or from side to side of it.
+            upright = abs(part.end[1] - part.start[1]) >= abs(part.end[0] - part.start[0])
+            across = (factor * wide / 100, factor) if upright else (factor, factor * wide / 100)
+            size = (max(1, round(part.image.get_width() * across[0])), max(1, round(part.image.get_height() * across[1])))
             image = pygame.transform.smoothscale(part.image, size)
-            start = (part.start[0] * factor, part.start[1] * factor)
-            end = (part.end[0] * factor, part.end[1] * factor)
+            start = (part.start[0] * across[0], part.start[1] * across[1])
+            end = (part.end[0] * across[0], part.end[1] * across[1])
             if mirrored:
                 image = pygame.transform.flip(image, True, False)
                 start, end = (size[0] - start[0], start[1]), (size[0] - end[0], end[1])
@@ -876,21 +880,22 @@ class Doll:
         return self._sized[key]
 
     def placed(
-        self, bone: str, mirrored: bool, detail: float, angle: float, length: float | None = None
+        self, bone: str, mirrored: bool, detail: float, angle: float, length: float | None = None, wide: float = 1.0
     ) -> tuple[pygame.Surface, Point] | None:
         """A part turned to point along `angle`, and where on that picture its first joint is.
 
         `detail` is how many pixels of the target go to one of the skeleton's, and `length` how
-        long the bone it is laid on is, if that is not the length it was drawn at. None if the
-        drawing left that part empty.
+        long the bone it is laid on is, if that is not the length it was drawn at. `wide` is how
+        many times as wide as drawn it is shown. None if the drawing left that part empty.
         """
         if bone not in self.parts:
             return None
         stretch = round(100 * length / self.drawn[bone]) if length and self.drawn[bone] else 100
-        part = self._sized_part(bone, mirrored, detail, stretch)
+        broad = round(100 * wide)
+        part = self._sized_part(bone, mirrored, detail, stretch, broad)
         drawn = math.atan2(part.end[0] - part.start[0], part.end[1] - part.start[1])
         steps = round(wrapped(angle - drawn) / math.tau * TURN_STEPS) % TURN_STEPS
-        key = (bone, mirrored, round(detail * 1000), stretch, steps)
+        key = (bone, mirrored, round(detail * 1000), stretch, broad, steps)
         if key not in self._turned:
             self._turned[key] = _turn_about(part.image, part.start, steps * math.tau / TURN_STEPS)
         return self._turned[key]
@@ -940,7 +945,9 @@ class Doll:
             stretch = round(100 * long / self.drawn[name] / STRETCH_STEP) * STRETCH_STEP if self.drawn[name] else 0
             if stretch <= 0:
                 return None
-            parts.append((stretch, round(wrapped(laid.angle - turned) / math.tau * BEND_STEPS) % BEND_STEPS))
+            # How long it is on this body at rest, which is what it is wider or thinner against.
+            rest = round(100 * laid.length / self.drawn[name] / STRETCH_STEP) * STRETCH_STEP
+            parts.append((stretch, round(wrapped(laid.angle - turned) / math.tau * BEND_STEPS) % BEND_STEPS, rest))
         shape = tuple(parts)
         limb_key = (self._token, limb.bones, mirrored, round(detail * 1000))
         shapes: dict[tuple, tuple[pygame.Surface, Point]] = BENT.get(limb_key) or {}
@@ -966,20 +973,23 @@ class Doll:
         return placed
 
     def _bent(
-        self, limb: DollLimb, mirrored: bool, detail: float, shape: Sequence[tuple[int, int]]
+        self, limb: DollLimb, mirrored: bool, detail: float, shape: Sequence[tuple[int, int, int]]
     ) -> tuple[pygame.Surface, Point] | None:
         """A limb of rubber bent to a shape, its first part pointing straight down or nearly.
 
         `shape` is, for each of its parts, how long it is in hundredths of the length it was drawn
-        at, and how far it is turned from straight down in steps of a bend.
+        at, how far it is turned from straight down in steps of a bend, and how long it is at
+        rest on the body it is laid on, in the same hundredths.
         """
         fine = FINER if detail < LARGE else 1
         points = [(0.0, 0.0)]
-        for name, (stretch, bend) in zip(limb.bones, shape):
+        rest = []
+        for name, (stretch, bend, at_rest) in zip(limb.bones, shape):
             long, angle = self.drawn[name] * stretch / 100 * detail, bend * math.tau / BEND_STEPS
             points.append((points[-1][0] + math.sin(angle) * long, points[-1][1] + math.cos(angle) * long))
+            rest.append(self.drawn[name] * at_rest / 100 * detail)
         strip = self._strip(limb, mirrored, detail * fine)
-        return rubber.bent(strip, points, self.template.rounding, self.template.volume, fine)
+        return rubber.bent(strip, points, self.template.rounding, self.template.volume, fine, rest)
 
 
 class DollStore:
@@ -1090,8 +1100,13 @@ def _laid(
                     bone = bones[0]
                     shown.update(limb.bones)
         if placed is None and bone is not None:
-            # A limb may be longer on the skeleton than it was drawn: it is drawn out to fit.
-            placed = doll.placed(name, skeleton.mirrored, detail, bone.angle, bone.length)
+            # A part may be longer on the skeleton than it was drawn: it is drawn out to fit. And
+            # its clip may have it squashed or drawn out from there, in steps, and the wider or
+            # the thinner for it.
+            squash = math.dist((bone.a.x, bone.a.y), (bone.b.x, bone.b.y)) / bone.length if bone.length else 1.0
+            squash = round(squash * 100 / STRETCH_STEP) * STRETCH_STEP / 100
+            wide = squash ** -doll.template.volume if squash > 0 and squash != 1.0 else 1.0
+            placed = doll.placed(name, skeleton.mirrored, detail, bone.angle, bone.length * (squash or 1.0), wide)
         if placed is None:
             continue
         image, joint = placed

@@ -327,6 +327,25 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   The game uses `idle`, `work`, `argue` and, over any of them, `carry`; walking, eating and
   fighting use whichever clip the resident's manner names (see Manners below). A clip that is
   missing stands still.
+- A clip goes through its keys in a curve, as fast into each as out of it, and round from the
+  last to the first. Its keys are spaced evenly unless every one of them says when it comes
+  with `at`, from 0 up to but not 1, each later than the one before: that is how a blow is
+  held back and then let go all at once. Beside its views a clip may say `"once": true`:
+  it is then done from its first key to its last, setting off and ending at rest, and does
+  not come round (its last `at`, if it gives any, may be 1).
+- `motion` is how loosely a body shown as a doll follows its clips. Each bone is drawn towards
+  where its clip has it by a spring: `speed` is how fast it gets there, `bounce` how much it
+  goes past and comes back, from 0 to under 1, and `drag` how far it is left behind by the
+  swing of the bone it hangs from. `spring` is for any bone, `root` for the body as a whole,
+  and `springs` gives a bone one of its own: stiff for legs, loose for hands and heads.
+  `jolt` is the speed a body is given when it takes up something else: `root` in pixels a
+  second, and under `bones` a turn in degrees a second and a length in lengths a second.
+- `footing` keeps feet on the ground. A clip moves the whole body with `root`; in the `views`
+  listed, a foot of one of the `legs` (a bone and the one that hangs from it) that the clip
+  has on the ground stays where it stands, and the knee bends to let the body go. A leg too
+  short to reach is drawn out up to `stretch` times its length, and past that the foot comes
+  off the ground. A foot the clip holds `free` pixels or more above the ground goes with the
+  body. Only the `doll` view is posed so: the small bodies of the game bob whole.
 - `doll`: how a body is drawn by hand. `unit` is the pixels of a drawing to one of the skeleton's;
   `canvases` gives the size of the body's and the head's in those units; and each entry of `parts`
   is a bone with the canvas it is drawn on and the two points it runs `from` and `to`. `radius`

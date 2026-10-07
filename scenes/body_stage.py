@@ -161,6 +161,8 @@ class BodyStage:
         for resident_id in [resident_id for resident_id in self.characters if resident_id not in world.residents]:
             del self.characters[resident_id]
         for character in self.characters.values():
+            # A body on springs keeps up with its clips however fast the game is going.
+            character.pace = max(1.0, float(world.clock.speed))
             character.update(seconds)
         now = world.clock.total_minutes
         self.remains = [remains for remains in self.remains if remains.until > now]

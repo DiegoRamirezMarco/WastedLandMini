@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from enum import Enum
 
 from skeleton import physics
-from skeleton.plan import IDLE_CLIP, Point, SkeletonPlan
+from skeleton.motion import Motion
+from skeleton.plan import FACINGS, IDLE_CLIP, Keyframe, Point, SkeletonPlan
 from skeleton.rig import Skeleton
 
 # Seconds a body takes to steady itself after a blow that did not knock it down, and to get up after one that did.
@@ -14,6 +15,9 @@ STAGGER_SECONDS = 0.5
 RISE_SECONDS = 0.7
 # How firmly a staggering body is held to its pose at first, from 0 to 1. It ends fully held.
 STAGGER_HOLD = 0.12
+# Seconds after which a lively body that nobody has looked at is simply put where its clips have
+# it when it is next looked at, and not swung there from wherever it was left.
+UNSEEN = 0.5
 
 
 class Mode(Enum):
@@ -46,6 +50,10 @@ class Character:
     Whoever shows it says where it stands and what it is doing with `stand`. While it is merely
     posed that is all there is to it, and `skeleton` is None. A blow, a fall or a lost part gives
     it a skeleton with every joint where the pose had it, and physics takes over from there.
+
+    A `lively` body is not posed to the letter: its bones are drawn towards where its clips have
+    them by springs, so that it has weight. That is for bodies shown moving smoothly, as a doll
+    is. One kept as a picture for each frame of its clip is posed exactly.
     """
 
     def __init__(self, plan: SkeletonPlan, lost: Iterable[str] = ()) -> None:
@@ -61,6 +69,13 @@ class Character:
         self.clip = IDLE_CLIP
         self.phase = 0.0
         self.overlay: str | None = None
+        # Whether its bones follow its clips on springs, and how many times as fast as real time
+        # those springs run: as fast as the game is going, so that they keep up with its clips.
+        self.lively = False
+        self.pace = 1.0
+        self._motion = Motion()
+        # Time gone by since its springs were last moved, which is when it was last looked at.
+        self._owed = 0.0
         # Seconds left of the present stagger or of lying knocked down, and how long the stagger is.
         self._left = 0.0
         self._span = STAGGER_SECONDS
@@ -95,16 +110,37 @@ class Character:
         self.x, self.y, self.facing = x, y, facing
         self.clip, self.phase, self.overlay = clip, phase, overlay
 
+    def aim(self) -> Keyframe:
+        """How its clips have its bones right now, for a body facing the unmirrored way."""
+        return self.plan.turned(FACINGS[self.facing][0], self.clip, self.phase, self.overlay)
+
+    def local_pose(self) -> dict[str, Point]:
+        """Where every joint is right now, from the spot between its feet: where its springs have
+        it if the body is lively, and exactly where its clips would if not.
+
+        The springs of a lively body are moved here, by as long as has gone by since it was last
+        asked. One that nobody looks at costs nothing, and is not a frame behind when it is.
+        """
+        aim = self.aim()
+        if not self.lively:
+            return self.plan.place(self.facing, aim)
+        doing = (self.clip, self.overlay)
+        if self._owed >= UNSEEN:
+            self._motion.snap(self.plan, aim, doing)
+        else:
+            self._motion.follow(self.plan, aim, self._owed, doing)
+        self._owed = 0.0
+        return self.plan.place(self.facing, self._motion.keyframe())
+
     def pose(self) -> dict[str, Point]:
-        """Where its clips would have every joint right now, in map pixels."""
-        local = self.plan.pose(self.facing, self.clip, self.phase, self.overlay)
-        return {name: (self.x + x, self.y + y) for name, (x, y) in local.items()}
+        """Where every joint is right now, in map pixels, physics aside."""
+        return {name: (self.x + x, self.y + y) for name, (x, y) in self.local_pose().items()}
 
     def _embody(self) -> Skeleton:
-        """Give it a skeleton standing exactly as it is posed, if it has none yet."""
+        """Give it a skeleton standing exactly as it is seen, if it has none yet."""
         if self.skeleton is None:
             self.skeleton = Skeleton(self.plan, self.facing, self.lost)
-            self.skeleton.set_pose(self.plan.pose(self.facing, self.clip, self.phase, self.overlay), self.x, self.y)
+            self.skeleton.set_pose(self.local_pose(), self.x, self.y)
         return self.skeleton
 
     def _struck(self, joint: str | None) -> str:
@@ -149,7 +185,11 @@ class Character:
         return BodyPart(part, piece)
 
     def update(self, seconds: float) -> None:
-        """Let real time pass. A posed body, or a limp one lying still, costs nothing."""
+        """Let real time pass. A body posed to the letter, or a limp one lying still, costs nothing."""
+        if self.lively:
+            self._owed = min(self._owed + seconds * self.pace, UNSEEN)
+        elif self._motion.started:
+            self._motion = Motion()
         skeleton = self.skeleton
         if skeleton is None:
             return

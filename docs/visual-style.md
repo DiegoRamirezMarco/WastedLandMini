@@ -187,6 +187,12 @@ cut apart where the body bends, each part laid along its bone and turned as the 
 - **Moving.** The doll is posed from the side by the same clips as any body. Facing left it is
   the same drawing in a mirror. Walking at a slant it faces the side it is going towards, and
   only straight up or down the map does it keep the side it last faced.
+  It is not posed to the letter. Every bone is drawn towards where its clip has it by a
+  spring, so that it arrives a little late and goes a little past: legs keep up, arms trail,
+  a head nods on after the body has stopped. Going from one thing to another is not a jump,
+  and gives the body a small drop and a bounce. Its feet stay on the ground while the body
+  sinks, rises and lunges over them, the knees bending and the legs drawn out to let it. A
+  trunk or a head squashed by its clip is wider, and thinner when drawn out.
   It reels, falls, loses limbs and lies still exactly as the game's own bodies do, since it is the
   same skeleton underneath.
 - **Showing.** Dolls go on the window itself, at its full resolution and with smooth edges, over

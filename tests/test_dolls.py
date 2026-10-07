@@ -3,7 +3,6 @@ import math
 import os
 import tempfile
 import unittest
-from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
@@ -26,7 +25,7 @@ from graphics.palette import PALETTE
 from scenes.hud import DRAW_INTENT
 from settings import SCALE, SCREEN_HEIGHT, SCREEN_WIDTH
 from simulation.health.injury import Injury
-from skeleton.plan import PLAN_PATH, builtin_plan
+from skeleton.plan import PLAN_PATH, Keyframe, builtin_plan
 from skeleton.rig import Skeleton
 
 RED, BLUE = (220, 30, 30), (30, 60, 220)
@@ -275,6 +274,34 @@ class DollCuttingTests(unittest.TestCase):
         tail = drawn.get_height() - round(joint[1]) - (fore.end[1] - fore.start[1])
         self.assertEqual(rows(longer, longer.get_height() - int(tail), longer.get_height()), rows(drawn, drawn.get_height() - int(tail), drawn.get_height()))
 
+    def test_a_part_squashed_by_its_clip_is_shorter_and_wider_and_one_drawn_out_longer_and_thinner(self) -> None:
+        trunk = self.template.parts["spine"]
+        # Only the middle of the trunk is drawn, clear of the neck above it and of the hips below.
+        top, bottom = trunk.end[1] + 20, trunk.start[1] - 8
+        pygame.draw.rect(self.body, RED, pygame.Rect(trunk.start[0] - 30, top, 60, bottom - top))
+        doll = self._doll()
+        self.assertEqual(set(doll.parts), {"spine"})
+        detail = float(self.template.unit)
+        self.assertGreater(self.template.volume, 0.0)
+
+        def trunk_shown(scale: float) -> pygame.Rect:
+            skeleton = Skeleton(self.plan, "doll_right", ["arm_left", "arm_right", "leg_left", "leg_right", "head"])
+            skeleton.set_pose(self.plan.place("doll_right", Keyframe((0.0, 0.0), {"spine": (0.0, scale)})))
+            picture = pygame.Surface((400, 500), pygame.SRCALPHA)
+            draw_doll(picture, doll, self.plan, skeleton, (200, 460), detail)
+            return pygame.mask.from_surface(picture).get_bounding_rects()[0]
+
+        plain, squashed, drawn_out = trunk_shown(1.0), trunk_shown(0.8), trunk_shown(1.2)
+        self.assertLess(squashed.height, plain.height - 6)
+        self.assertGreater(squashed.width, plain.width + 3)
+        self.assertGreater(drawn_out.height, plain.height + 6)
+        self.assertLess(drawn_out.width, plain.width - 3)
+        # Asked for by itself a part is as wide as it was drawn unless told otherwise.
+        as_drawn, _ = doll.placed("spine", False, detail, math.pi)
+        wider, _ = doll.placed("spine", False, detail, math.pi, wide=1.25)
+        self.assertEqual(wider.get_height(), as_drawn.get_height())
+        self.assertAlmostEqual(wider.get_width(), as_drawn.get_width() * 1.25, delta=2)
+
     def test_no_dark_edge_shows_where_a_drawing_is_cut(self) -> None:
         upper, fore = self.template.parts["upper_arm_right"], self.template.parts["forearm_right"]
         half = 22
@@ -475,9 +502,8 @@ class RubberLimbTests(unittest.TestCase):
             self.assertTrue(self._solid(picture, at["shoulder_right"]), bend)
 
     def test_hanging_straight_it_is_the_drawing_it_was_cut_from(self) -> None:
-        # The arm of the body it is laid on here is longer than the drawing. Left as wide as it
-        # was drawn, it is what the parts of it would be, drawn out the same.
-        self.template = replace(self.template, volume=0.0)
+        # The arm of the body it is laid on here is longer than the drawing: it is drawn out to
+        # fit, as its parts would be, and no thinner for it. That is how long it is at rest.
         bent, _ = self._arm(self._doll(), 0)
         with mock.patch.object(rubber, "AVAILABLE", False):
             in_parts = self._doll()

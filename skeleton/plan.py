@@ -36,6 +36,9 @@ FACINGS: dict[str, tuple[str, str, bool, bool]] = {
 }
 SIDES = ("_left", "_right")
 ROOT_KEY = "root"
+# In a key of a clip: when in the clip it comes. In a clip: that it is done once and does not come round.
+AT_KEY = "at"
+ONCE_KEY = "once"
 IDLE_CLIP = "idle"
 
 
@@ -103,6 +106,110 @@ class Keyframe:
     root: Point = (0.0, 0.0)
     # Per bone, how far it is turned from its rest direction, in radians, and how long it looks.
     bones: dict[str, tuple[float, float]] = field(default_factory=dict)
+    # When in its clip it comes, from 0 to 1. None for a key spaced evenly with the others.
+    at: float | None = None
+
+
+def added(frame: Keyframe, layer: Keyframe, share: float = 1.0) -> Keyframe:
+    """One pose laid over another: every bone the second names is turned by as much more, and is
+    as many times as long again, and the whole body is moved by as much. `share` is how much of
+    the second is laid on, from none of it at 0."""
+    bones = dict(frame.bones)
+    for name, (angle, scale) in layer.bones.items():
+        turned, long = bones.get(name, (0.0, 1.0))
+        bones[name] = (turned + angle * share, long * (1.0 + (scale - 1.0) * share))
+    return Keyframe((frame.root[0] + layer.root[0] * share, frame.root[1] + layer.root[1] * share), bones)
+
+
+@dataclass(frozen=True)
+class Spring:
+    """How a bone is drawn towards where its clip has it: `pull` is how hard, for how far off it
+    is, and `hold` how much it is slowed, for how fast it is going."""
+
+    pull: float = 400.0
+    hold: float = 28.0
+    # How far behind it is left by the swing of the bone it hangs from: seconds of that swing.
+    drag: float = 0.0
+
+    @classmethod
+    def of(cls, speed: float, bounce: float = 0.0, drag: float = 0.0) -> "Spring":
+        """A spring by how fast it gets there, and by how much it goes past and comes back: not
+        at all at 0, and the nearer 1 the longer it goes on swinging."""
+        return cls(speed * speed, 2.0 * (1.0 - bounce) * speed, drag)
+
+    @functools.cache
+    def stepped(self, step: float) -> tuple[float, float, float, float]:
+        """What a step of so many seconds makes of how far off something is and how fast it is
+        going: how much of each goes into how far off it is then, and into how fast it goes.
+
+        This is what the spring does, worked out and not added up in small pieces, so a stiff
+        spring is as steady as a loose one however long the step.
+        """
+        pull, half = self.pull, self.hold / 2.0
+        if pull <= 0.0:
+            return (1.0, step, 0.0, 1.0)
+        swing = pull - half * half
+        fade = math.exp(-half * step)
+        if swing > 1e-9:
+            # It goes past and comes back, less each time.
+            rate = math.sqrt(swing)
+            sine, cosine = math.sin(rate * step), math.cos(rate * step)
+            return (
+                fade * (cosine + half / rate * sine),
+                fade * sine / rate,
+                -fade * pull / rate * sine,
+                fade * (cosine - half / rate * sine),
+            )
+        if swing > -1e-9:
+            # It gets there as fast as can be without going past.
+            return (fade * (1.0 + half * step), fade * step, -fade * pull * step, fade * (1.0 - half * step))
+        # It creeps there.
+        root = math.sqrt(-swing)
+        slow, quick = -half + root, -half - root
+        slower, quicker = math.exp(slow * step), math.exp(quick * step)
+        both = (slower - quicker) / (slow - quick)
+        return (
+            (slow * quicker - quick * slower) / (slow - quick),
+            both,
+            -pull * both,
+            (slow * slower - quick * quicker) / (slow - quick),
+        )
+
+
+@dataclass(frozen=True)
+class Footing:
+    """Which limbs a body stands on, and how they keep their feet on the ground.
+
+    A clip moves the whole body with `root`: down as it takes a weight, up and forward as it
+    lunges. A foot that the clip has on the ground stays where it was, and its leg bends or is
+    drawn out to let the body go. One the clip has lifted goes with the body.
+    """
+
+    # The views a body is posed in this way.
+    views: frozenset[str] = frozenset()
+    # For each leg: the bone from the hip, and the one from the knee to the foot.
+    legs: tuple[tuple[str, str], ...] = ()
+    # How far off the ground a clip has to hold a foot for it to go wholly with the body.
+    free: float = 1.0
+    # How many times its length a leg may be drawn out before its foot leaves the ground.
+    stretch: float = 1.12
+
+
+@dataclass(frozen=True)
+class MotionSettings:
+    """How loosely the bones of a body that is shown moving follow its clips."""
+
+    # The spring of any bone that has none of its own, and that of the body as a whole.
+    spring: Spring = Spring()
+    root: Spring = Spring()
+    springs: dict[str, Spring] = field(default_factory=dict)
+    # The speed a body is given when it takes up something else: the whole of it in pixels a
+    # second, and each bone in radians a second and in lengths of itself a second.
+    jolt_root: Point = (0.0, 0.0)
+    jolt_bones: dict[str, tuple[float, float]] = field(default_factory=dict)
+    # Seconds to a step of the springs, and how many are caught up with after a stall.
+    step: float = 1.0 / 60.0
+    max_steps: int = 4
 
 
 @dataclass(frozen=True)
@@ -147,10 +254,22 @@ class SkeletonPlan:
     # Semantic places presentation may attach things to, kept in the body-plan data so callers do
     # not need to know any particular joint name.
     anchors: dict[str, str] = field(default_factory=dict)
+    # The clips that are done once, from their first key to their last, and do not come round.
+    once: frozenset[str] = frozenset()
+    motion: MotionSettings = field(default_factory=MotionSettings)
+    footing: Footing = field(default_factory=Footing)
     # Per pose view and bone, how long it is and which way it points while the body stands at rest.
     _at_rest: dict[str, dict[str, tuple[float, float]]] = field(init=False, repr=False, compare=False)
+    # The bone each bone hangs from, from the root outwards. None for one that hangs from the root.
+    hangs_from: dict[str, str | None] = field(init=False, repr=False, compare=False)
+    _beyond: dict[str, tuple[str, ...]] = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
+        ends = {bone.end: bone.name for bone in self.bones.values()}
+        object.__setattr__(self, "hangs_from", {bone.name: ends.get(bone.start) for bone in self.bones.values()})
+        # For each leg a body stands on: its foot, and every joint that hangs from that.
+        beyond = {shin: tuple(self.bones[name].end for name in self.bones_beyond(shin)) for _, shin in self.footing.legs}
+        object.__setattr__(self, "_beyond", beyond)
         at_rest: dict[str, dict[str, tuple[float, float]]] = {}
         for view, rest in self.rests.items():
             at_rest[view] = {}
@@ -196,23 +315,80 @@ class SkeletonPlan:
         return views.get(self.like(view)) or (Keyframe(),)
 
     def sample(self, clip: str, view: str, phase: float) -> Keyframe:
-        """A clip part-way through, `phase` going from 0 to 1 over one turn of it."""
+        """A clip part-way through, `phase` going from 0 to 1 over one turn of it.
+
+        It goes through every key in a curve, as fast into each as out of it, and not in straight
+        lines from one to the next. A clip that is done once stays as its first key before it
+        starts and as its last when it is over, and sets off from each of those two at rest.
+        """
         keyframes = self._keyframes(clip, view)
-        if len(keyframes) == 1:
+        count = len(keyframes)
+        if count == 1:
             return keyframes[0]
-        position = (phase % 1.0) * len(keyframes)
-        index = int(position) % len(keyframes)
-        before, after = keyframes[index], keyframes[(index + 1) % len(keyframes)]
-        blend = position - int(position)
+        once = clip in self.once and clip in self.clips
+        times = [frame.at for frame in keyframes]
+        if times[0] is None:
+            times = [index / (count - 1 if once else count) for index in range(count)]
+
+        def at(index: int) -> float:
+            """When a key comes, counting on through the turns before this one and after it."""
+            return times[index % count] + index // count
+
+        if once:
+            phase = min(max(phase, times[0]), times[-1])
+            before = max(index for index in range(count - 1) if times[index] <= phase)
+        else:
+            phase %= 1.0
+            before = max((index for index in range(count) if times[index] <= phase), default=-1)
+        after = before + 1
+        span = at(after) - at(before)
+        share = (phase - at(before)) / span if span > 0 else 0.0
+        # How much of each key there is in the curve between two of them: the two themselves,
+        # and the one either side, by which it leans the way it is going.
+        weights = {
+            before: 2 * share**3 - 3 * share**2 + 1,
+            after: 3 * share**2 - 2 * share**3,
+            before - 1: 0.0,
+            after + 1: 0.0,
+        }
+        if not once or before > 0:
+            lean = (share**3 - 2 * share**2 + share) * span / (at(after) - at(before - 1))
+            weights[before - 1] -= lean
+            weights[after] += lean
+        if not once or after < count - 1:
+            lean = (share**3 - share**2) * span / (at(after + 1) - at(before))
+            weights[after + 1] += lean
+            weights[before] -= lean
+        used = [(keyframes[index % count], weight) for index, weight in weights.items() if weight]
         bones = {}
-        for bone in before.bones.keys() | after.bones.keys():
-            (angle_a, scale_a), (angle_b, scale_b) = before.bones.get(bone, (0.0, 1.0)), after.bones.get(bone, (0.0, 1.0))
-            bones[bone] = (angle_a + (angle_b - angle_a) * blend, scale_a + (scale_b - scale_a) * blend)
-        root = (
-            before.root[0] + (after.root[0] - before.root[0]) * blend,
-            before.root[1] + (after.root[1] - before.root[1]) * blend,
-        )
+        for bone in set().union(*(frame.bones for frame, _ in used)):
+            angle = scale = 0.0
+            for frame, weight in used:
+                turned, long = frame.bones.get(bone, (0.0, 1.0))
+                angle += turned * weight
+                scale += long * weight
+            bones[bone] = (angle, scale)
+        root = (sum(frame.root[0] * weight for frame, weight in used), sum(frame.root[1] * weight for frame, weight in used))
         return Keyframe(root, bones)
+
+    def every_bone(self, frame: Keyframe) -> dict[str, tuple[float, float]]:
+        """How far every bone is turned and how long it looks in a pose, the ones it does not
+        name too: a bone that follows another turns as that one does, and any other is at rest."""
+        turned, follows = frame.bones, self.follows
+        return {name: turned.get(name) or (turned.get(follows.get(name, ""), (0.0, 1.0))[0], 1.0) for name in self.bones}
+
+    def turned(self, view: str, clip: str = IDLE_CLIP, phase: float = 0.0, overlay: str | None = None) -> Keyframe:
+        """How a clip part-way through has the bones of a body seen from one side.
+
+        `overlay` names a second clip whose bones take the place of the first one's, such as arms
+        held out to carry something while the legs go on walking.
+        """
+        frame = self.sample(clip, view, phase)
+        if overlay is None:
+            return frame
+        bones = dict(frame.bones)
+        bones.update(self.sample(overlay, view, phase).bones)
+        return Keyframe(frame.root, bones)
 
     def pose(
         self, facing: str, clip: str = IDLE_CLIP, phase: float = 0.0, overlay: str | None = None
@@ -222,26 +398,73 @@ class SkeletonPlan:
         `overlay` names a second clip whose bones take the place of the first one's, such as arms
         held out to carry something while the legs go on walking.
         """
+        return self.place(facing, self.turned(FACINGS[facing][0], clip, phase, overlay))
+
+    def place(self, facing: str, frame: Keyframe) -> dict[str, Point]:
+        """Where every joint of a body facing one way is, from the spot between the feet, with
+        its bones turned as a pose has them."""
         view, _, mirrored, swapped = FACINGS[facing]
-        frame = self.sample(clip, view, phase)
-        turned = dict(frame.bones)
-        if overlay is not None:
-            turned.update(self.sample(overlay, view, phase).bones)
+        turned = frame.bones
         rest = self.rests[view]
         root_x, root_y = rest[self.root]
         positions = {self.root: (root_x + frame.root[0], root_y + frame.root[1])}
         # Bones are listed from the root outwards, so a bone's start is always placed before it.
         at_rest = self._at_rest[view]
+        whole = self.every_bone(frame)
         for bone in self.bones.values():
-            angle, scale = turned.get(bone.name) or (turned.get(self.follows.get(bone.name, ""), (0.0, 1.0))[0], 1.0)
+            angle, scale = whole[bone.name]
             length, rest_angle = at_rest[bone.name]
             angle += rest_angle
             reach = length * scale
             start_x, start_y = positions[bone.start]
             positions[bone.end] = (start_x + math.sin(angle) * reach, start_y + math.cos(angle) * reach)
+        if view in self.footing.views:
+            self._plant(positions, frame.root, rest)
         if not mirrored:
             return positions
         return {(other_side(name) if swapped else name): (-x, y) for name, (x, y) in positions.items()}
+
+    def _plant(self, positions: dict[str, Point], moved: Point, rest: dict[str, Point]) -> None:
+        """Keep on the ground the feet a pose has there, though it moves the body they are under.
+
+        `moved` is how far the pose has moved the whole body, feet and all. A foot that would be
+        on the ground without that is put back where it would be, and the knee goes where it
+        must, bending to the front. A leg too short to reach is drawn out, so far and no further.
+        A foot the pose holds well off the ground is left to go with the body, and no foot is
+        ever put under the ground.
+        """
+        footing = self.footing
+        for thigh, shin in footing.legs:
+            hip, knee, foot = self.bones[thigh].start, self.bones[thigh].end, self.bones[shin].end
+            (hip_x, hip_y), (foot_x, foot_y) = positions[hip], positions[foot]
+            ground = rest[foot][1]
+            still_x, still_y = foot_x - moved[0], foot_y - moved[1]
+            lifted = min(1.0, max(0.0, ground - still_y) / footing.free) if footing.free > 0 else 1.0
+            lifted = lifted * lifted * (3.0 - 2.0 * lifted)
+            to_x = still_x + (foot_x - still_x) * lifted
+            to_y = min(ground, still_y + (foot_y - still_y) * lifted)
+            if abs(to_x - foot_x) < 1e-9 and abs(to_y - foot_y) < 1e-9:
+                continue
+            upper, lower = math.dist(positions[hip], positions[knee]), math.dist(positions[knee], positions[foot])
+            reach_x, reach_y = to_x - hip_x, to_y - hip_y
+            far = math.hypot(reach_x, reach_y)
+            if upper <= 0.0 or lower <= 0.0 or far <= 0.0:
+                continue
+            drawn_out = min(max(far / (upper + lower), 1.0), footing.stretch)
+            upper, lower = upper * drawn_out, lower * drawn_out
+            if far > upper + lower:
+                # Not even drawn out does it reach: the foot comes off the ground, as near as it gets.
+                reach_x, reach_y = reach_x * (upper + lower) / far, reach_y * (upper + lower) / far
+                far = upper + lower
+            far = max(far, abs(upper - lower) + 1e-6)
+            along = (upper * upper - lower * lower + far * far) / (2.0 * far)
+            aside = math.sqrt(max(0.0, upper * upper - along * along))
+            way_x, way_y = reach_x / far, reach_y / far
+            positions[knee] = (hip_x + way_x * along + way_y * aside, hip_y + way_y * along - way_x * aside)
+            shift = (hip_x + reach_x - foot_x, hip_y + reach_y - foot_y)
+            for joint in self._beyond[shin]:
+                x, y = positions[joint]
+                positions[joint] = (x + shift[0], y + shift[1])
 
 
 def _pair(value: Any, what: str) -> tuple[float, float]:
@@ -253,13 +476,73 @@ def _pair(value: Any, what: str) -> tuple[float, float]:
 def _keyframe(data: dict[str, Any], bones: dict[str, BoneSpec], where: str) -> Keyframe:
     turned = {}
     for bone, value in data.items():
-        if bone == ROOT_KEY:
+        if bone in (ROOT_KEY, AT_KEY):
             continue
         if bone not in bones:
             raise ValueError(f"{where} moves unknown bone: {bone}")
         angle, scale = _pair(value, f"{where} {bone}") if isinstance(value, (list, tuple)) else (float(value), 1.0)
         turned[bone] = (math.radians(angle), scale)
-    return Keyframe(_pair(data.get(ROOT_KEY, (0, 0)), f"{where} root"), turned)
+    at = float(data[AT_KEY]) if AT_KEY in data else None
+    return Keyframe(_pair(data.get(ROOT_KEY, (0, 0)), f"{where} root"), turned, at)
+
+
+def _keyframes(frames: Any, bones: dict[str, BoneSpec], once: bool, where: str) -> tuple[Keyframe, ...]:
+    """The keys of a clip from one side. Either none of them says when it comes, or they all do,
+    each later than the one before."""
+    keys = tuple(_keyframe(frame, bones, where) for frame in frames)
+    times = [key.at for key in keys]
+    if any(time is not None for time in times):
+        last = 1.0 if once else 1.0 - 1e-9
+        in_order = all(time is not None for time in times) and all(a < b for a, b in zip(times, times[1:]))
+        if not in_order or times[0] < 0.0 or times[-1] > last:
+            raise ValueError(f"{where}: every key must say when it comes, from 0 to 1 and each later than the last")
+    return keys
+
+
+def _spring(value: Any, what: str) -> Spring:
+    if not isinstance(value, dict):
+        raise ValueError(f"Expected a spring for {what}, got {value!r}")
+    speed, bounce = float(value.get("speed", 20.0)), float(value.get("bounce", 0.0))
+    if speed <= 0.0 or not 0.0 <= bounce < 1.0:
+        raise ValueError(f"The spring of {what} needs a speed above 0 and a bounce from 0 to under 1")
+    return Spring.of(speed, bounce, float(value.get("drag", 0.0)))
+
+
+def _footing(data: Any, bones: dict[str, BoneSpec], views: Any) -> Footing:
+    if not isinstance(data, dict):
+        return Footing()
+    legs = tuple((str(thigh), str(shin)) for thigh, shin in data.get("legs", ()))
+    for thigh, shin in legs:
+        if thigh not in bones or shin not in bones or bones[shin].start != bones[thigh].end:
+            raise ValueError(f"A leg to stand on is a bone and the one that hangs from it: {thigh}, {shin}")
+    seen = frozenset(str(view) for view in data.get("views", ()))
+    if not seen <= set(views):
+        raise ValueError(f"Footing for unknown views: {sorted(seen - set(views))}")
+    known = Footing()
+    free, stretch = float(data.get("free", known.free)), float(data.get("stretch", known.stretch))
+    if free < 0.0 or stretch < 1.0:
+        raise ValueError("Footing needs a `free` of 0 or more and a `stretch` of 1 or more")
+    return Footing(seen, legs, free, stretch)
+
+
+def _motion(data: Any, bones: dict[str, BoneSpec]) -> MotionSettings:
+    if not isinstance(data, dict):
+        return MotionSettings()
+    spring = _spring(data["spring"], "any bone") if "spring" in data else Spring()
+    root = _spring(data["root"], "the whole body") if "root" in data else spring
+    springs = {str(bone): _spring(value, bone) for bone, value in data.get("springs", {}).items()}
+    jolt = data.get("jolt") or {}
+    jolted = {
+        str(bone): (math.radians(pair[0]), pair[1])
+        for bone, pair in ((bone, _pair(value, f"jolt {bone}")) for bone, value in (jolt.get("bones") or {}).items())
+    }
+    if not set(springs) | set(jolted) <= bones.keys():
+        raise ValueError(f"Springs for unknown bones: {sorted((set(springs) | set(jolted)) - bones.keys())}")
+    known = MotionSettings()
+    return MotionSettings(
+        spring, root, springs, _pair(jolt.get(ROOT_KEY, (0, 0)), "jolt root"), jolted,
+        float(data.get("step", known.step)), int(data.get("max_steps", known.max_steps)),
+    )
 
 
 def plan_from_data(data: dict[str, Any]) -> SkeletonPlan:
@@ -325,10 +608,10 @@ def plan_from_data(data: dict[str, Any]) -> SkeletonPlan:
             raise ValueError(f"Skin for unknown bone: {bone}")
         kind = "sprite" if "sprite" in values else "strip"
         skins[str(bone)] = SkinSpec(str(bone), kind, str(values[kind]), str(values.get("anchor", "middle")))
+    once = frozenset(str(clip) for clip, views in data.get("clips", {}).items() if views.get(ONCE_KEY))
     clips = {
         str(clip): {
-            view: tuple(_keyframe(frame, bones, f"Clip {clip} ({view})") for frame in views.get(view, [{}]))
-            for view in VIEWS
+            view: _keyframes(views.get(view, [{}]), bones, clip in once, f"Clip {clip} ({view})") for view in VIEWS
         }
         for clip, views in data.get("clips", {}).items()
     }
@@ -339,6 +622,7 @@ def plan_from_data(data: dict[str, Any]) -> SkeletonPlan:
     return SkeletonPlan(
         root, joints, bones, braces, parts, limits, rests, orders, skins, clips,
         physics=physics, likes=likes, follows=follows, anchors=anchors,
+        once=once, motion=_motion(data.get("motion"), bones), footing=_footing(data.get("footing"), bones, rests),
     )
 
 

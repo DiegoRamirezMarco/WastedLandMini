@@ -2987,21 +2987,60 @@ Still open here:
 - The cost has not been measured in the game itself, with the map under it, nor on a slower
   machine
 
-### P43 — Movement with weight and bounce (needs P42) — planned
+### P43 — Movement with weight and bounce (needs P42) — done
 Answered with P42: "Muy cartoon".
 
-- Clips go from one key to the next in a curve, where they went in straight lines
-- A key can say when in the clip it comes (`at`), to hold an anticipation and let the blow go
-  fast, and a clip can be one that is done once and does not come round again (`once`)
-- **Springs** (`skeleton/motion.py`): every bone is drawn towards where its clip has it, loosely
-  enough to arrive late and go past. Hands, forearms and the head are the loosest. Going from
-  one clip to another is no longer a jump, and gives the body a squash and a bounce
-- One way of posing a doll for the map, the inside of a building, the editor and the pick of
-  a manner, which each do it by themselves today
-- The trunk and the head are squashed and stretched, wider for being shorter
-- Walking, working, arguing, eating, carrying and every manner of fighting written again from
-  the side: the body sinks and rises, the trunk leans and turns against the legs, shoulders
-  and hips move, a foot rolls, a leg stretches as it pushes off
+- **Clips go from key to key in a curve**, as fast into each key as out of it, where they went
+  in straight lines and turned a corner at every one. The game's own small bodies are posed by
+  the same clips, and so move a little more smoothly too
+- **A key can say when it comes** (`at`), so that a blow is held back and then let go all at
+  once, and a clip can be one that is done once and does not come round (`once`)
+- **Springs** (`skeleton/motion.py`): every bone of a doll is drawn towards where its clip has
+  it, and gets there a little late and goes a little past. Legs keep up, so that a foot lands
+  where it should; arms trail; a head nods on after the body has stopped. How loose each bone
+  is, is data (`motion` in `data/skeleton.json`)
+- **Going from one thing to another is not a jump.** The body swings into what it takes up,
+  and is given a small drop and a bounce as it does (`motion.jolt`)
+- **Feet stay on the ground** (`footing`). A clip moves the whole body; a foot it has on the
+  ground stays where it stands, and the knee bends, or the leg is drawn out, to let the body
+  sink, rise and lunge over it. So does the bounce of the springs: it is the body that
+  bounces, on its legs
+- **A trunk or a head squashed by its clip is wider, and thinner when drawn out**, as a limb of
+  rubber already was (`doll.hose.volume`)
+- **One body for every screen.** The map, the inside of a building, the editor and the pick of
+  a manner all show a doll through the same lively body, where each posed it by itself. It
+  is moved when it is looked at, by the time gone by since: one that is not in sight costs
+  nothing, and one that comes back into sight is simply where its clips have it
+- **Turning round is still at once**, as was asked: springs work on the body facing one way,
+  and the mirror comes last
+- **Written again from the side**: walking in eight keys (a foot lands, takes the weight, the
+  other leg passes, the first pushes off), plain, shuffling and swaggering; working, with
+  something raised, held and brought down; arguing; fighting, with a fist drawn back before
+  it is thrown; eating, with the head coming down to the hand. The three walks are one walk
+  with other measures. What the game reads from them is as it was: a foot lands at 0 and at
+  a half, and the bite is at a half
+
+Decided without asking:
+- Springs run as fast as the game is going, so that they keep up with walking at four and
+  sixteen times the speed
+- The body in the editor is posed exactly while it is being measured, so that its joints are
+  where they are taken hold of
+- The clips with a weapon, and carrying, are as they were. They already moved the trunk and the
+  head, and the springs do the rest
+- From the front, which only the game's own small bodies are seen from, no clip was touched
+
+What it costs, on the user's machine: posing twelve dolls on springs, 0.9 ms a frame. Drawing
+them, 1.2 ms at the size the map opens at and about 4 at the nearest, with every one of them
+taking up something new every three seconds. The game itself, with nine residents and seven in
+sight, shows a frame in 9 to 10 ms without a window, at the first zoom and at the nearest.
+
+Still open here:
+- Feet slide: one turn of the walk takes a body two tiles, which is four times as far as its
+  legs reach. It was so before, and the bounce makes it no worse
+- A limp body, struck or knocked down, has no springs: physics has it, as before
+- The clips with a weapon have no anticipation of their own yet
+- It has not been seen on a real window by the user: all of it was checked on pictures made
+  without one
 
 ### P44 — Life at rest (needs P43) — planned
 Answered with P42: "Además, gestos sueltos".

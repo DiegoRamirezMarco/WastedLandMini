@@ -59,16 +59,22 @@ class PlanTests(unittest.TestCase):
         self.assertLessEqual(builtin_registries().limbs.keys(), self.plan.parts.keys())
 
     def test_a_pose_keeps_every_bone_its_length_unless_a_clip_foreshortens_it(self) -> None:
+        footing = self.plan.footing
         for facing, (view, _, _, _) in FACINGS.items():
             pose = self.plan.pose(facing, "walk", 0.3)
             frame = self.plan.sample("walk", view, 0.3)
+            # A leg that a body stands on may be drawn out to keep its foot on the ground, so far and no further.
+            standing = {bone for leg in footing.legs for bone in leg} if view in footing.views else set()
             for bone in self.plan.bones.values():
                 name = other_side(bone.name) if FACINGS[facing][3] else bone.name
                 start, end = (other_side(j) if FACINGS[facing][3] else j for j in (bone.start, bone.end))
                 scale = frame.bones.get(bone.name, (0.0, 1.0))[1]
-                self.assertAlmostEqual(
-                    math.dist(pose[start], pose[end]), self.plan.length(view, bone.name) * scale, 6, (facing, name)
-                )
+                long, posed = math.dist(pose[start], pose[end]), self.plan.length(view, bone.name) * scale
+                if bone.name in standing:
+                    self.assertGreaterEqual(long, posed - 1e-6, (facing, name))
+                    self.assertLessEqual(long, posed * footing.stretch + 1e-6, (facing, name))
+                else:
+                    self.assertAlmostEqual(long, posed, 6, (facing, name))
 
     def test_facing_left_is_facing_right_in_a_mirror_with_the_sides_swapped(self) -> None:
         right, left = self.plan.pose("right", "walk", 0.1), self.plan.pose("left", "walk", 0.1)

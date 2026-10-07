@@ -26,7 +26,7 @@ from graphics.palette import PALETTE, Color
 from graphics.screen_layers import TRANSPARENT
 from graphics.shelf_display import displayed_goods
 from graphics.ui_art import darker, lighter, mix
-from scenes.body_stage import HEAD_BONE, LYING_HEAD_OFFSET, LYING_HEAD_ROWS, LYING_NECK
+from scenes.body_stage import HEAD_BONE, LYING_HEAD_OFFSET, LYING_HEAD_ROWS, LYING_NECK, ground_spot
 from settings import SCALE, TILE_SIZE
 from simulation.residents.manner import WALK
 from simulation.residents.resident import Resident
@@ -388,7 +388,13 @@ class InteriorView:
             if key not in self._skeletons:
                 self._skeletons[key] = Skeleton(plan, facing)
             skeleton = self._skeletons[key]
-            pose = plan.pose(facing, clip, turn % 1.0, overlay)
+            # The same body as on the map, moving as it does there: on its springs.
+            character = view.bodies.character(resident)
+            if character.plan is not plan and not character.physical:
+                character.plan = plan
+            character.lively = True
+            character.stand(*ground_spot(x, y), facing, clip, turn % 1.0, overlay)
+            pose = character.local_pose()
             skeleton.set_pose(pose)
             held = self.in_hand(resident, facing, pose, turn, stride)
             reach = doll.standing(plan)
