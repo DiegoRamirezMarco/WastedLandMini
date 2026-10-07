@@ -30,7 +30,15 @@ from graphics.tileset import (
     SETTLEMENT_SHEET_SIZE,
     Tileset,
 )
-from scenes.body_stage import BodyStage, Remains, ground_spot
+from scenes.body_stage import (
+    HEAD_BONE,
+    LYING_HEAD_OFFSET,
+    LYING_HEAD_ROWS,
+    LYING_NECK,
+    BodyStage,
+    Remains,
+    ground_spot,
+)
 from audio.voice_player import VoicePlayer
 from scenes.hud import (
     BUILD_INTENT,
@@ -130,10 +138,6 @@ HELD_SIZE = 11
 HELD_AHEAD = 2
 # A meal is seen with a bite more gone from it at each of these shares of the way through.
 BITES_AT = (0.2, 0.4, 0.6, 0.8)
-# Rows of a head left visible when a resident lies in a bed: hair and eyes above the blanket.
-LYING_HEAD_ROWS = 10
-# Where the corner of that head goes on the bed, so that it rests on the pillow.
-LYING_HEAD_OFFSET = (1, -2)
 # Frames per second of animated objects and bobbing icons.
 ANIMATION_FPS = 5
 ENTER_HINT = "clic: entrar"
@@ -203,9 +207,6 @@ Held = tuple[str, tuple[float, float], bool, int, list[Crumb], tuple[float, floa
 DollDraw = tuple[float, Doll, Skeleton | None, tuple[float, float] | None]
 # Which way a doll faces until its resident has walked to one side or the other.
 DOLL_FACING = DOLL_FACINGS["right"]
-HEAD_BONE = "skull"
-# Where the neck of a doll lying in a bed is, from the bed's top left corner, in map pixels.
-LYING_NECK = (7.5, 10.0)
 
 
 class GlobalView:

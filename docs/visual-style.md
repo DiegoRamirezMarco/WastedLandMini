@@ -367,7 +367,8 @@ illustrations are.
   hard edges; a drawing of the player's is brought to size smoothly.
 - Residents are their doll or the game's own body at the size of the cells, with their name
   and what is over their head on the canvas, as on the map. Whoever stands further down the
-  floor is in front.
+  floor is in front. Whoever lies in a bed shows their own head on the pillow, at the size of
+  the cells: a doll's head as it was drawn, or the head of the game's body down to the eyes.
 
 ## Interaction view
 - A resident asking for advice takes over the dock, framed in `lamp`, and time stops. The rest

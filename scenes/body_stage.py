@@ -39,6 +39,16 @@ SEVER_SPIN = 9.0
 FEET_ABOVE_EDGE = 2
 
 
+# Rows of a head left visible when a resident lies in a bed: hair and eyes above the blanket.
+LYING_HEAD_ROWS = 10
+# Where the corner of that head goes on the bed, so that it rests on the pillow.
+LYING_HEAD_OFFSET = (1, -2)
+# The part of a doll that is its head, and where the neck of one lying in a bed is, from the
+# bed's top left corner, in map pixels.
+HEAD_BONE = "skull"
+LYING_NECK = (7.5, 10.0)
+
+
 def ground_spot(x: float, y: float) -> tuple[int, int]:
     """The map pixel between the feet of someone standing on a tile, given in tiles."""
     return (

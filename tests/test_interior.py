@@ -209,7 +209,16 @@ class InsideABuildingTests(unittest.TestCase):
         ines.activity = Activity("sleep", target_id=bed.object_id, minutes_left=300, using=True)
         self.view.enter("south_house")
         self.view.render()
-        self.assertIn("ines", self.view.hitboxes)
+        # They are picked by the bed they lie in, which is seen as the floor is: less deep than wide.
+        layout = self.view.interior.layout(room)
+        box = self.view.hitboxes["ines"]
+        self.assertEqual(box.size, (layout.cell // SCALE, layout.depth * 2 // SCALE))
+        # It is their own head that shows on the pillow, as on the map, and not a mark for them.
+        head = self.view.bodies.renderer.head("ines")
+        shown = [picture for key, picture in self.view.interior._pictures.items() if key[:2] == ("head", "ines")]
+        self.assertEqual(len(shown), 1)
+        self.assertEqual(shown[0].get_width(), round(head.get_width() * layout.cell / 16))
+        self.assertLess(shown[0].get_height(), shown[0].get_width(), "down to the eyes: the rest is under the blanket")
 
     def test_the_way_out_and_the_key_bring_the_map_back_as_it_was(self) -> None:
         self.hud.minimap_rect = self.view._minimap_rect

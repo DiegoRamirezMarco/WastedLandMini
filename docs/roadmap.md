@@ -2756,7 +2756,10 @@ This one is only the view, to see whether the angle is right before anything is 
   about six tenths as deep as it is wide. Every cell has a line round it
 - **What stands up is as tall as it is drawn, and what lies flat is seen as the floor is**
 - **Whoever is in the building is seen in the room**, as their doll or the game's own body, to
-  be selected with a click. Whoever lies in a bed is their face on it
+  be selected with a click. Whoever lies in a bed is seen as on the map: their own head on the
+  pillow, a doll's as it was drawn, and the rest of them under the blanket. The first try had
+  the small face that marks them from afar, blown up, and the user's word for it was that the
+  people looked bad
 - **`Salir`, or `I`, goes back out** to the map as it was left
 - **`scenes/interior_view.py`** lays the room out and draws it, at the resolution of the window
 

@@ -24,6 +24,7 @@ from graphics.font import LINE_HEIGHT
 from graphics.palette import PALETTE, Color
 from graphics.screen_layers import TRANSPARENT
 from graphics.ui_art import darker, lighter, mix
+from scenes.body_stage import HEAD_BONE, LYING_HEAD_OFFSET, LYING_HEAD_ROWS, LYING_NECK
 from settings import SCALE, TILE_SIZE
 from simulation.residents.manner import WALK
 from simulation.residents.resident import Resident
@@ -386,22 +387,34 @@ class InteriorView:
         return (foot[1], draw, label)
 
     def _asleep(self, room: Room, layout: InteriorLayout, resident: Resident, lying_in: Interactable):
-        """Somebody lying in something: their face on it, at its head."""
+        """Somebody lying in something, as the map shows them: their own head on the pillow, the rest under the blanket."""
         view = self.view
         definition = view.world.definition_of(lying_in)
         column, row = self.place(room, lying_in.x, lying_in.y)
-        centre = layout.spot(column + definition.width / 2, row + 0.55)
-        face = view.faces.marker(resident.resident_id)
-        side = max(8, round(layout.cell * 0.62))
-        key = (id(face), side)
-        if key not in self._pictures:
-            self._pictures[key] = pygame.transform.scale(face, (side, side))
-        shown = self._pictures[key]
-        box = shown.get_rect(center=centre)
-        hitbox = pygame.Rect(self._to_canvas(box.topleft), (max(4, side // SCALE), max(4, side // SCALE)))
+        left, top = layout.spot(column, row)
+        # What they lie in is seen as the floor is, so a place on it is less far down than across.
+        across, down = layout.cell / TILE_SIZE, layout.depth / TILE_SIZE
+        bed = pygame.Rect(left, top, definition.width * layout.cell, definition.height * layout.depth)
+        doll = view._doll_of(resident.resident_id)
+        head = doll.placed(HEAD_BONE, False, across, math.pi) if doll is not None else None
+        if head is not None:
+            # A doll's head, upright, by where its neck is on the pillow.
+            shown, joint = head
+            place = (round(left + LYING_NECK[0] * across - joint[0]), round(top + LYING_NECK[1] * down - joint[1]))
+        else:
+            # The head of the game's own body, down to the eyes.
+            whole = view.bodies.renderer.head(resident.resident_id)
+            piece = whole.subsurface((0, 0, whole.get_width(), LYING_HEAD_ROWS))
+            size = (round(piece.get_width() * across), round(piece.get_height() * across))
+            key = ("head", resident.resident_id, size)
+            if key not in self._pictures:
+                self._pictures[key] = pygame.transform.scale(piece, size)
+            shown = self._pictures[key]
+            place = (round(left + LYING_HEAD_OFFSET[0] * across), round(top + LYING_HEAD_OFFSET[1] * down))
+        hitbox = pygame.Rect(self._to_canvas(bed.topleft), (max(4, bed.width // SCALE), max(4, bed.height // SCALE)))
 
         def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
-            target.blit(shown, box.move(corner))
+            target.blit(shown, (corner[0] + place[0], corner[1] + place[1]))
 
         def label() -> None:
             view.hitboxes[resident.resident_id] = hitbox
