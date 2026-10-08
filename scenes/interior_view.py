@@ -60,6 +60,7 @@ from ui.decor_board import PICTURE as DECOR_PICTURE
 from ui.decor_board import DecorEntry, decor_board_height, decor_buttons, decor_click, draw_decor_board
 from ui.house_board import PANEL_WIDTH as HOUSE_WIDTH
 from ui.house_board import draw_house_board, house_board_height, house_buttons
+from ui.object_panel import speaks
 from world.interactable import Interactable
 from world.map import Tile
 from world.room import Room
@@ -605,7 +606,7 @@ class InteriorView:
         for placed in world.interactables.values():
             if room.contains((placed.x, placed.y)):
                 draws.extend(self._object(room, layout, placed))
-                if placed.object_id in world.containers:
+                if placed.object_id in world.containers or speaks(world, placed):
                     labels.append(self._kept_in(room, layout, placed))
         for resident in world.residents.values():
             # Whoever is in the player's hand is in here with it, wherever the map has them.
@@ -697,7 +698,7 @@ class InteriorView:
         # What stands up is as tall as it is drawn. What lies flat is seen as the floor is: from a little above.
         height = round(tiles_tall * layout.cell) if upright else definition.height * layout.depth
         left, bottom = layout.spot(column, row + definition.height)
-        drawing = view.object_art.shown(definition, (width, height)) if view.layers is not None else None
+        drawing = view.object_art.shown(definition, (width, height), placed.level) if view.layers is not None else None
         key = (definition.kind, width, height, frame, drawing is not None)
         if key not in self._pictures:
             if drawing is not None:
@@ -718,7 +719,8 @@ class InteriorView:
         return [(bottom - 0.5, draw)]
 
     def _kept_in(self, room: Room, layout: InteriorLayout, placed: Interactable):
-        """Where something that things are kept in is on the screen, to be picked there."""
+        """Where something that things are kept in, or that has something to say of itself,
+        is on the screen, to be picked there, with whatever is seen over it."""
         view = self.view
         definition = view.world.definition_of(placed)
         column, row = self.place(room, placed.x, placed.y)
@@ -729,9 +731,10 @@ class InteriorView:
         hitbox = pygame.Rect(self._to_canvas(box.topleft), (max(4, box.width // SCALE), max(4, box.height // SCALE)))
 
         def label() -> None:
-            view.container_hitboxes[placed.object_id] = hitbox
-            if placed.object_id == view.hud.selected_container:
-                pygame.draw.rect(view.canvas, PALETTE["glow"], hitbox, 1)
+            if placed.object_id in view.world.containers:
+                view.container_hitboxes[placed.object_id] = hitbox
+            view.thing_hitboxes[placed.object_id] = hitbox
+            view.mark_thing(placed, hitbox)
 
         return label
 

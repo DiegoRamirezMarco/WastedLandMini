@@ -265,6 +265,11 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
   may refuse; what it takes carried to it and worked on like any site; and the thing is a
   level better when it is done. Each level takes as many times the first as the level the
   thing has. The rarity it would come to has to have been studied.
+- **With nobody named it is put to whoever keeps the thing** (P60): `UpgradeSystem.keeper`
+  gives whoever has it as their post, or else anybody of the job it is a post of; then
+  whose house it stands in; then whoever mends what breaks down (`WearSystem.mender`).
+  Whoever is away is not asked. `ProposeUpgradeCommand(object_id)` alone does that, and
+  says what stands in the way of the work before it says there is nobody to ask.
 - **It is not used meanwhile**: not worked at, not slept in, not eaten from. A store goes
   on holding.
 - **The rarest is never made**: a rarity whose data says it is not built is only found.

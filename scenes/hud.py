@@ -20,8 +20,10 @@ from graphics.ui_art import GLYPHS, band_hue
 from graphics.ui_skin import WindowSkin
 from settings import SPEEDS
 from simulation.events.event import DomainEvent
+from simulation.work.upgrades import UPGRADED_EVENT
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
+from ui.button import HEIGHT as BUTTON_HEIGHT
 from ui.button import Button
 from ui.dock import draw_scene
 from ui.event_log import EventFeed
@@ -53,15 +55,20 @@ from ui.job_board import board_buttons, draw_job_board, job_board_height
 from ui.labels import (
     COIN_ICON,
     FEELING_LABELS,
+    away_residents,
     describe_action,
     describe_date,
     describe_weather,
     expression_of,
     known_forecasts,
+    rarity_name,
     settlement_stock,
     spoken_line,
 )
 from ui.layout import Layout, layout_for
+from ui.object_panel import STORE_HEADING, ObjectView, draw_object_view, object_view
+from ui.power_board import PANEL_WIDTH as POWER_WIDTH
+from ui.power_board import draw_power_board, power_board_height, power_buttons
 from ui.research_board import PANEL_WIDTH as RESEARCH_WIDTH
 from ui.research_board import draw_research_board, research_board_height, study_buttons
 from ui.panel import draw_item, draw_panel, set_skin
@@ -140,6 +147,7 @@ FOCUS_INTENTS = {
 }
 CLOCK_FOCUS = "clock"
 STORES_TITLE = "Almacén: lo que es de todos"
+AWAY_LABEL = "Fuera"
 STORES_EMPTY = "No queda nada"
 STORES_BAND = MARGIN + LINE_HEIGHT - 1
 
@@ -154,8 +162,18 @@ PANEL_TAB_INTENT = "panel_tab"
 PANEL_KIN_INTENT = "panel_kin"
 # Asks for the families of the whole settlement, on a screen of their own.
 FAMILY_INTENT = ("family",)
+# What the player answers when asked whether to draw anew what has just been made better.
+REDRAW_YES_INTENT = ("redraw_ask", True)
+REDRAW_NO_INTENT = ("redraw_ask", False)
+REDRAW_ASK = "{name}, ahora {rarity}: ¿lo dibujas como se ve?"
+REDRAW_YES, REDRAW_NO = "Dibujar", "Ahora no"
 # Shows the figures behind a resident's tastes, which the game otherwise keeps to itself. Not for play.
 TASTE_DEBUG_INTENT = "taste_debug"
+
+
+def resource_intent(resource_id: str) -> tuple[str, str]:
+    """A press on one of the figures of the bar on top."""
+    return ("resource", resource_id)
 
 
 def select_intent(resident_id: str) -> tuple[str, str]:
@@ -168,6 +186,15 @@ def edit_item_intent(definition_id: str) -> tuple[str, str]:
 
 def scrap_intent(instance_id: str) -> tuple[str, str]:
     return ("scrap", instance_id)
+
+
+@dataclass(frozen=True)
+class RedrawAsk:
+    """Something that has just been made better, which the player may draw as it looks now."""
+
+    kind: str
+    level: int
+    text: str
 
 
 @dataclass
@@ -237,6 +264,7 @@ class Hud:
         self.research_open = False
         self.government_open = False
         self.fund_open = False
+        self.power_open = False
         # What the player is in the middle of on the board of the fund: a currency being named
         # to put to everyone, going back to barter, or another name for the one there is.
         self.fund_entry: FundEntry | None = None
@@ -263,9 +291,11 @@ class Hud:
         self.pointer: tuple[int, int] | None = None
         # The figures of the bar on top, as last laid out: what there is of each thing, and how it stands.
         self.chips: list[Chip] = []
-        # At most one of these is set: the resident or the container whose panel is showing.
+        # At most one of these is set: the resident or the thing whose panel is showing.
         self.selected_id: str | None = None
-        self.selected_container: str | None = None
+        self.selected_object: str | None = None
+        # What has just been made better and can be drawn anew, until the player says whether to.
+        self.redraw: RedrawAsk | None = None
         # Which of its two faces a resident's panel is showing. It stays as it is from one resident to the next.
         self.panel_tab = LIFE_TAB
         # Whether the tastes are shown with the figures behind them, for looking under the bonnet.
@@ -348,6 +378,7 @@ class Hud:
         fixed = [
             *self.wheel_entries(), *self.queue_entries(),
             self.pause_button, *self.speed_buttons, *self.zoom_buttons, *self.menu,
+            *self.object_buttons(), *self.redraw_buttons(),
         ]
         guide = self.tutorial_rect()
         step_button = tutorial_button(self.font, guide, self.world) if guide is not None else None
@@ -356,6 +387,8 @@ class Hud:
         waiting = self.discovery_button()
         if waiting is not None:
             fixed.append(waiting)
+        if self.power_open:
+            return fixed + power_buttons(self.font, self.power_rect(), self.world)
         if self.research_open:
             return fixed + study_buttons(self.font, self.research_rect(), self.world)
         if self.government_open:
@@ -377,6 +410,7 @@ class Hud:
         """Open one of the panels that share a corner, or shut it if it is the one open, and shut the rest."""
         for name in (
             "log_open", "jobs_open", "stores_open", "research_open", "government_open", "fund_open", "trade_open",
+            "power_open",
         ):
             setattr(self, name, name == panel and not getattr(self, name))
         self.fund_entry = None
@@ -400,6 +434,9 @@ class Hud:
 
     def toggle_fund(self) -> None:
         self._open_only("fund_open")
+
+    def toggle_power(self) -> None:
+        self._open_only("power_open")
 
     @property
     def typing(self) -> bool:
@@ -451,7 +488,20 @@ class Hud:
         return queue_entries(self.wheel_area(), self.world, self.selected_id)
 
     def on_events(self, events: Iterable[DomainEvent]) -> None:
+        events = list(events)
         self.feed.add(events)
+        for event in events:
+            if event.event_type == UPGRADED_EVENT and self.drawable:
+                self._ask_to_redraw(event)
+
+    def _ask_to_redraw(self, event: DomainEvent) -> None:
+        """A thing has been made better: ask whether it is to be drawn as it looks now."""
+        definition = self.world.registries.interactables.find(str(event.data.get("kind", "")))
+        if definition is None:
+            return
+        level = int(event.data.get("level", 1))
+        text = REDRAW_ASK.format(name=definition.name.capitalize(), rarity=rarity_name(self.world, level).lower())
+        self.redraw = RedrawAsk(definition.kind, level, text)
 
     def notify(self, text: str) -> None:
         """Show a short message from the game itself, such as a save confirmation."""
@@ -478,11 +528,47 @@ class Hud:
         step = self.world.guide.current(self.world)
         return step.focus if step is not None else None
 
+    @property
+    def selected_container(self) -> str | None:
+        """The thing whose panel is showing, if it is one that things are kept in."""
+        return self.selected_object if self.selected_object in self.world.containers else None
+
+    @selected_container.setter
+    def selected_container(self, container_id: str | None) -> None:
+        self.selected_object = container_id
+
     def select_resident(self, resident_id: str | None) -> None:
-        self.selected_id, self.selected_container = resident_id, None
+        self.selected_id, self.selected_object = resident_id, None
+
+    def select_object(self, object_id: str | None) -> None:
+        """Show what there is to say of a thing that stands, and what it holds."""
+        self.selected_id, self.selected_object = None, object_id
 
     def select_container(self, container_id: str | None) -> None:
-        self.selected_id, self.selected_container = None, container_id
+        self.select_object(container_id)
+
+    def object_view(self) -> ObjectView | None:
+        """What is said of the thing that is selected, laid out at the head of the panel.
+        None with none selected, or one with nothing to say but what it holds."""
+        if self.selected_object is None:
+            return None
+        panel = self.layout.panel
+        return object_view(self.font, self.world, self.selected_object, panel.topleft, panel.width, self.drawable)
+
+    def object_buttons(self) -> list[Button]:
+        view = self.object_view()
+        return view.buttons if view is not None else []
+
+    def _container_corner(self) -> tuple[int, int]:
+        """Where what the selected thing holds is listed: under what is said of it."""
+        view, panel = self.object_view(), self.layout.panel
+        return (panel.x, view.rect.bottom if view is not None else panel.y)
+
+    def thing_rect(self) -> pygame.Rect | None:
+        """Where the selected thing is shown, while one with anything to show is selected."""
+        if self.object_view() is None and self.container_rect() is None:
+            return None
+        return self.layout.panel
 
     def toggle_panel_tab(self) -> None:
         """From how they live to what they like, and from any other face back to how they live."""
@@ -496,6 +582,10 @@ class Hud:
         for button in self.buttons:
             if button.contains(position):
                 return button.intent
+        chip = next((chip for chip in self.chips if chip.contains(position)), None)
+        if chip is not None and chip.line is not None:
+            # A figure of the bar opens what there is to see of that resource.
+            return resource_intent(chip.line.resource_id)
         if self.fund_open:
             fields = field_rects(self.font, self.fund_rect(), self.world, self.fund_entry)
             for field, box in fields.items():
@@ -505,12 +595,12 @@ class Hud:
             return AFFECT_INTENT
         if self.selected_id in self.world.residents and kin_hitbox(self.layout.panel).collidepoint(position):
             return PANEL_KIN_INTENT
-        if self.card_rect() is None and self.container_rect() is None:
+        if self.card_rect() is None and self.thing_rect() is None:
             if roster_tree_hitbox(self.layout.panel).collidepoint(position):
                 return FAMILY_INTENT
         if self.selected_container in self.world.containers:
             marks = container_scrap_hitboxes(
-                self.layout.panel.topleft, self.world, self.selected_container or "", self.layout.panel.width
+                self._container_corner(), self.world, self.selected_container or "", self.layout.panel.width
             )
             for rect, instance_id in marks:
                 if rect.collidepoint(position):
@@ -541,7 +631,7 @@ class Hud:
             return inventory_hitboxes(self.layout.panel, self.world, resident) if self.panel_tab == LIFE_TAB else []
         if self.selected_container in self.world.containers:
             return container_item_hitboxes(
-                self.layout.panel.topleft, self.world, self.selected_container or "", self.layout.panel.width
+                self._container_corner(), self.world, self.selected_container or "", self.layout.panel.width
             )
         return []
 
@@ -552,7 +642,7 @@ class Hud:
             return kin_hitboxes(self.layout.panel, self.world, resident)
         if resident is not None:
             return relationship_hitboxes(self.layout.panel, self.world, resident) if self.panel_tab == LIFE_TAB else []
-        if self.selected_container in self.world.containers:
+        if self.thing_rect() is not None:
             return []
         return roster_rows(self.layout.panel, self.world)
 
@@ -560,7 +650,7 @@ class Hud:
         """True if `position` is not on the map, or something of the HUD is in front of the map there."""
         if not self.layout.map.collidepoint(position):
             return True
-        panels = [self.minimap_rect, self.outlook_rect(), self.tutorial_rect(), self.dock_rect()]
+        panels = [self.minimap_rect, self.outlook_rect(), self.tutorial_rect(), self.dock_rect(), self.redraw_rect()]
         waiting = self.discovery_button()
         panels += [waiting.rect] if waiting is not None else []
         panels += [self.log_rect()] if self.log_open else []
@@ -569,6 +659,7 @@ class Hud:
         panels += [self.research_rect()] if self.research_open else []
         panels += [self.government_rect()] if self.government_open else []
         panels += [self.fund_rect()] if self.fund_open else []
+        panels += [self.power_rect()] if self.power_open else []
         panels += [self.trade_rect()] if self.trading else []
         if any(rect is not None and rect.collidepoint(position) for rect in panels):
             return True
@@ -594,6 +685,9 @@ class Hud:
 
     def fund_rect(self) -> pygame.Rect:
         return self._float(FUND_WIDTH, fund_board_height(self.font, self.world, self.fund_entry))
+
+    def power_rect(self) -> pygame.Rect:
+        return self._float(POWER_WIDTH, power_board_height(self.world))
 
     def trade_rect(self) -> pygame.Rect:
         return self._float(TRADE_WIDTH, trade_board_height(self.world))
@@ -636,6 +730,41 @@ class Hud:
         top = above.bottom + MARGIN if above is not None else area.y + MARGIN
         return Button.at(self.font, area.x + MARGIN, top, label, DISCOVERY_INTENT)
 
+    def away_rect(self) -> pygame.Rect | None:
+        """Where the faces of whoever is outside the settlement go, while anybody is: in
+        the corner of the map, under the forecasts."""
+        away = away_residents(self.world)
+        if not away:
+            return None
+        area, outlook = self.layout.map, self.outlook_rect()
+        top = (outlook.bottom if outlook is not None else area.top) + MARGIN
+        face = self.faces.marker(away[0].resident_id)
+        width = self.font.width(AWAY_LABEL) + 8 + (face.get_width() + 2) * len(away)
+        return pygame.Rect(area.left + MARGIN, top, width + 4, face.get_height() + 4)
+
+    def redraw_buttons(self) -> list[Button]:
+        """What is pressed to draw anew what has just been made better, or to leave it as
+        it is, while the player is being asked: under whatever else is in that corner."""
+        if self.redraw is None:
+            return []
+        area = self.layout.map
+        waiting = self.discovery_button()
+        corner = [self.outlook_rect(), self.tutorial_rect(), self.away_rect(), waiting.rect if waiting is not None else None]
+        foot = max((rect.bottom for rect in corner if rect is not None), default=area.y)
+        top = foot + MARGIN + OUTLOOK_PADDING + LINE_HEIGHT + 1
+        yes = Button.at(self.font, area.x + MARGIN + OUTLOOK_PADDING, top, REDRAW_YES, REDRAW_YES_INTENT)
+        return [yes, Button.at(self.font, yes.rect.right + 2, top, REDRAW_NO, REDRAW_NO_INTENT)]
+
+    def redraw_rect(self) -> pygame.Rect | None:
+        """Where the player is asked whether to draw anew what has just been made better."""
+        buttons = self.redraw_buttons()
+        if self.redraw is None or not buttons:
+            return None
+        left = self.layout.map.x + MARGIN
+        width = max(self.font.width(self.redraw.text), buttons[-1].rect.right - buttons[0].rect.left) + OUTLOOK_PADDING * 2
+        top = buttons[0].rect.y - LINE_HEIGHT - 1 - OUTLOOK_PADDING
+        return pygame.Rect(left, top, width, buttons[0].rect.bottom + OUTLOOK_PADDING - top)
+
     def card_rect(self) -> pygame.Rect | None:
         """Where the selected resident is shown in full, while one is selected."""
         return self.layout.panel if self.selected_id in self.world.residents else None
@@ -645,8 +774,8 @@ class Hud:
         inventory = self.world.containers.get(self.selected_container or "")
         if inventory is None:
             return None
-        panel = self.layout.panel
-        return pygame.Rect(panel.x, panel.y, panel.width, min(panel.height, container_panel_height(inventory)))
+        panel, corner = self.layout.panel, self._container_corner()
+        return pygame.Rect(corner, (panel.width, min(panel.bottom - corner[1], container_panel_height(inventory))))
 
     def render(self) -> None:
         # Buttons light up under the pointer while it is this that is being drawn.
@@ -670,6 +799,12 @@ class Hud:
         if waiting is not None:
             # It asks to be seen: lit, and unlit, as what the opening points at is.
             waiting.draw(self.canvas, self.font, active=self.lit)
+        asked = self.redraw_rect()
+        if asked is not None and self.redraw is not None:
+            draw_panel(self.canvas, asked, fill="shadow", border="copper")
+            self.font.draw(self.canvas, self.redraw.text, (asked.x + OUTLOOK_PADDING, asked.y + OUTLOOK_PADDING), PALETTE["paper"])
+            for button in self.redraw_buttons():
+                button.draw(self.canvas, self.font)
         if self.log_open:
             self.feed.draw_panel(self.canvas, self.font, self.log_rect())
         if self.jobs_open:
@@ -678,6 +813,8 @@ class Hud:
             self._render_stores(self.stores_rect())
         if self.research_open:
             draw_research_board(self.canvas, self.font, self.research_rect(), self.world)
+        if self.power_open:
+            draw_power_board(self.canvas, self.font, self.power_rect(), self.world)
         if self.government_open:
             draw_government_board(
                 self.canvas, self.font, self.government_rect(), self.world, self.government_armed, band_hue("government"),
@@ -756,7 +893,7 @@ class Hud:
 
     def _menu_active(self, intent: Hashable) -> bool:
         if intent == ROSTER_INTENT:
-            return self.card_rect() is None and self.container_rect() is None
+            return self.card_rect() is None and self.thing_rect() is None
         if intent == MINIMAP_INTENT:
             return self.minimap_rect is not None
         open_panels = {
@@ -839,9 +976,17 @@ class Hud:
                 self.taste_debug,
                 self.show_coin,
             )
-        elif self.container_rect() is not None:
+        elif self.thing_rect() is not None:
             draw_panel(self.canvas, panel)
-            draw_container_panel(self.canvas, self.font, self.icons, panel.topleft, self.world, self.selected_container, panel.width)
+            view = self.object_view()
+            if view is not None:
+                draw_object_view(self.canvas, self.font, view)
+            if self.container_rect() is not None:
+                # Under what is said of it, what it holds.
+                draw_container_panel(
+                    self.canvas, self.font, self.icons, self._container_corner(), self.world,
+                    self.selected_container, panel.width, STORE_HEADING if view is not None else None,
+                )
         else:
             draw_roster(self.canvas, self.font, self.faces, panel, self.world)
 

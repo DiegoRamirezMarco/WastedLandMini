@@ -1,7 +1,9 @@
 """Furniture and loose objects as someone has drawn them: one picture a kind, for the window.
 
 A drawing takes the place of the game's own sprite for every object of its kind. Whatever nobody
-has drawn looks as it always has.
+has drawn looks as it always has. What has been made better (S54) can have a drawing of its
+own for the rarity it has reached: it is what every one of that kind as good or better is
+shown as, until a better one still has its own.
 """
 
 import pygame
@@ -22,8 +24,14 @@ ABOVE_FILL = (*PALETTE["steel"], 45)
 Size = tuple[int, int]
 
 
-def object_art_path(kind: str) -> str:
-    return f"{OBJECTS_FOLDER}/{kind}.png"
+# The most levels a kind is looked for a drawing at.
+MOST_LEVELS = 12
+
+
+def object_art_path(kind: str, level: int = 1) -> str:
+    """Where the drawing of a kind is kept: one for all of them, and one more for each
+    rarity past the first that somebody has drawn."""
+    return f"{OBJECTS_FOLDER}/{kind}.png" if level <= 1 else f"{OBJECTS_FOLDER}/{kind}@{level}.png"
 
 
 class ObjectArtStore:
@@ -46,17 +54,30 @@ class ObjectArtStore:
         width, height = self.frame_size(definition)
         return (width * OBJECT_DETAIL, height * OBJECT_DETAIL)
 
-    def drawing(self, definition: InteractableDefinition) -> pygame.Surface | None:
-        """What someone has drawn for a kind, at the size it is drawn at. None if nobody has."""
+    def drawn_path(self, kind: str, level: int = 1) -> str | None:
+        """Where the drawing one of a kind is shown as is kept: the one for its own level,
+        or else for the nearest below it that somebody has drawn. None if nobody has."""
         if self.illustrations is None:
             return None
-        return self.illustrations.fitted(object_art_path(definition.kind), self.canvas_size(definition))
+        for each in range(min(max(1, level), MOST_LEVELS), 0, -1):
+            path = object_art_path(kind, each)
+            if self.illustrations.find(path) is not None:
+                return path
+        return None
 
-    def shown(self, definition: InteractableDefinition, size: Size) -> pygame.Surface | None:
-        """The same drawing brought to the size it takes on the window, and kept at it."""
-        if self.illustrations is None or size[0] <= 0 or size[1] <= 0:
+    def drawing(self, definition: InteractableDefinition, level: int = 1) -> pygame.Surface | None:
+        """What someone has drawn for a kind, at the size it is drawn at. None if nobody has."""
+        path = self.drawn_path(definition.kind, level)
+        if self.illustrations is None or path is None:
             return None
-        return self.illustrations.fitted(object_art_path(definition.kind), size)
+        return self.illustrations.fitted(path, self.canvas_size(definition))
+
+    def shown(self, definition: InteractableDefinition, size: Size, level: int = 1) -> pygame.Surface | None:
+        """The same drawing brought to the size it takes on the window, and kept at it."""
+        path = self.drawn_path(definition.kind, level) if size[0] > 0 and size[1] > 0 else None
+        if self.illustrations is None or path is None:
+            return None
+        return self.illustrations.fitted(path, size)
 
     def starter(self, definition: InteractableDefinition) -> pygame.Surface:
         """The game's own sprite of a kind, enlarged with its hard edges, to be drawn over."""
@@ -89,4 +110,5 @@ class ObjectArtStore:
     def forget(self, kind: str) -> None:
         """Have a kind's drawing read again, as after it has been drawn anew."""
         if self.illustrations is not None:
-            self.illustrations.forget(object_art_path(kind))
+            for level in range(1, MOST_LEVELS + 1):
+                self.illustrations.forget(object_art_path(kind, level))

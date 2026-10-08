@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from simulation.events.event import DomainEvent
+from simulation.residents.resident import Resident
 from world.build import UPGRADE_SITE, BuildRule, BuildSite
 from world.interactable import Interactable
 
@@ -24,6 +25,7 @@ UPGRADED_EVENT = "object_upgraded"
 UPGRADED_IMPORTANCE = 35
 BED_NEED = "tiredness"
 NOT_THAT = "Eso no se puede mejorar"
+NOBODY_KEEPS = "Nadie lleva eso ni hay quien arregle las cosas: no hay a quién proponérselo"
 IN_HAND = "Ya hay una obra en ello"
 
 
@@ -137,6 +139,27 @@ class UpgradeSystem:
         return use is not None and use.unaware and use.per_minute.get(BED_NEED, 0.0) < 0
 
     # ----- making it better -----
+
+    def keeper(self, world: "SimulationWorld", object_id: str) -> Resident | None:
+        """Who making a thing better is put to (P60): whoever has it as their post, or else
+        holds the job it is a post of; for what stands in somebody's house, whoever the
+        house is of; and for what is nobody's, whoever mends what breaks down. None with
+        none of them here."""
+        placed = world.interactables.get(object_id)
+        if placed is None:
+            return None
+        holder = world.staffing.holder(world, object_id)
+        if holder is not None and not holder.away:
+            return holder
+        job = world.staffing.job_at(world, object_id)
+        room = world.housing.room_of(world, placed)
+        owners = world.housing.owners(world, room.room_id) if room is not None else []
+        candidates = [
+            *(world.staffing.workers(world, job.job_id) if job is not None else []),
+            *(world.residents[owner_id] for owner_id in owners),
+        ]
+        here = next((resident for resident in candidates if not resident.away), None)
+        return here if here is not None else world.residents.get(world.wear.mender(world) or "")
 
     def site_of(self, world: "SimulationWorld", object_id: str) -> BuildSite | None:
         """The site at which a thing is being made better, while it is."""

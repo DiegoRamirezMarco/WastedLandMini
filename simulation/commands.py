@@ -55,7 +55,7 @@ class CommandTarget(Protocol):
     def propose_building(self, blueprint_id: str, tile: Tile, resident_id: str, option_id: str) -> UrbanismResult:
         ...
 
-    def propose_upgrade(self, object_id: str, resident_id: str, option_id: str) -> UrbanismResult:
+    def propose_upgrade(self, object_id: str, resident_id: str | None, option_id: str) -> UrbanismResult:
         ...
 
     def switch(self, object_id: str, on: bool) -> PowerResult:
@@ -327,10 +327,12 @@ class ProposeUpgradeCommand:
     """The player's proposal to a resident that they make something that stands better: a
     post, a store, a bed, the generator (S54). It takes what that rarity has been found to
     take, carried to it and worked on, and that rarity having been studied. They agree or
-    they do not. If they do, the result names the site, and the thing is not used meanwhile."""
+    they do not. If they do, the result names the site, and the thing is not used meanwhile.
+    With nobody named it is put to whoever keeps the thing: who has it as their post, whose
+    house it stands in, or whoever mends what breaks down (P60)."""
 
     object_id: str
-    resident_id: str
+    resident_id: str | None = None
     option_id: str = "encourage"
 
     def apply(self, world: CommandTarget) -> UrbanismResult:

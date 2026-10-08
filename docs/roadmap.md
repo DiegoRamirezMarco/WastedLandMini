@@ -4704,7 +4704,7 @@ Asked again on 2026-10-08, with everything else that was still open in the layer
   is sent to a bed of the garden, which then gives more for some days. Not the
   recommendation, which was that whoever works the garden take it unasked
 
-### P60 — Stores, rarity and current on screen (needs S53 to S55, S64 and S65) — under way
+### P60 — Stores, rarity and current on screen (needs S53 to S55, S64 and S65) — done but for what goes off (S65)
 Done so far, the first of its parts:
 - **The border of the square of a thing is the colour of its rarity**, in what a resident
   carries, in a row of what somebody has on them and in what a container holds: white for
@@ -4720,19 +4720,66 @@ Answered on 2026-10-08:
 - **Of the two ways of picking somebody up, the one on `main` stays as it is** (P27). The
   branch `feature/DragDrop` is left unmerged
 
-Still to do:
-- How much room there is, in the bar and on the store
-- **The border of a thing's square says how rare it is**, wherever things are shown in a grid:
-  white, green, blue, red, purple and yellow, as the user said
-- The level of what stands and the way to make it better, from the thing itself. **When it is
-  done it asks whether to draw it again**, as the user said
-- **Making a thing better is put to whoever holds it**, as the user answered on 2026-10-08:
-  whoever works at the post, or sleeps in the bed, and with nobody there the mechanic. Not
-  the recommendation, which was whoever is selected
-- What has no current, and what is broken down, marked where it stands, and **a switch on
-  each thing that runs on current**
-- **How worn a thing is, as a bar on its square in the inventory**, as the user said, and how
-  far gone what goes off is
+Done after that, the rest of it but for what goes off, which waits for S65:
+- **A press on a thing that stands shows what there is to say of it**, in the panel on the
+  right: its name in the colour of its rarity, whose post it is, how worn, whether it has
+  current and how much it draws, and for a store how full it is of each thing, as a measure
+  beside each. What it holds is listed under that, as it was. A post, a bed, a store, the
+  generator and whatever runs on current can be pressed; a stool or a table cannot, and a
+  crate or a pantry is shown as it always was. It works from inside a building too
+- **`Mejorar` is in that panel**, with the rarity it would come to and what it takes, or why
+  it cannot be done yet: a subject to study, a breakdown to mend, a work already in hand
+- **Making a thing better is put to whoever holds it**, as the user answered on 2026-10-08,
+  and not to whoever is selected, which was the recommendation. The panel says who that is
+  before it is pressed, and they may still say no
+- **A switch on each thing that runs on current, and a board of them all**, as the user
+  answered: `Apagar` and `Encender` in the panel of the thing, and `Corriente`, which lists
+  what the generator gives, what is asked of it, the fuel left and every thing that draws,
+  with where it stands, what it draws, how it stands and its switch
+- **What stands idle is marked where it stands**: a red `!` over what has broken down, a
+  grey bolt over what is switched off, and a bolt struck through over what is on with no
+  current for it. What is better than common has a small stone at its foot in the colour
+  of its rarity, and whatever is selected a line round it
+- **When a thing has been made better it asks whether to draw it again**, as the user
+  said: `Dibujar` opens the screen where objects are drawn, and `Ahora no` leaves it. The
+  drawing is of every thing of that kind that good or better, and a common one stays as
+  it was. `Dibujar` is in the panel of the thing too, at any time
+- **How full the store is, in the bar**: a line under the figure of each resource, green,
+  yellow from four fifths and red when there is no room left. A press on a figure opens
+  what is behind it: the board of current for fuel, and what the settlement holds for the
+  rest
+
+Decided without asking:
+- **`Corriente` has no entry in the menu**: the menu ends where the dock opens, and has no
+  room for one more. It opens with `K`, from the figure of fuel in the bar, and from the
+  panel of anything that runs on current or gives it
+- **Who holds a thing**, where the answer left it open. A post: whoever has it, or else
+  anybody of the job it is a post of. What stands in somebody's house, a bed above all:
+  whose house it is, since a bed is nobody's in particular and a house is. Anything else,
+  the store and the generator among it: whoever mends what breaks down. Whoever is away is
+  not asked, and with none of them here it is said that there is nobody to put it to
+- **The drawing of what has been made better is kept apart from the common one**, as
+  `objects/<kind>@<level>.png` beside `objects/<kind>.png`, and is what every one of that
+  kind as good or better is shown as until a better one still has its own. A drawing of each
+  thing by itself would have been another way to read `redibujarlo`: it was not taken,
+  because drawings are by kind everywhere else
+- **The question stays until it is answered**, and is asked only where there is somewhere
+  to keep drawings. A second thing made better meanwhile takes its place
+- **The room there is, as a line and not as a figure**: there is no room in the bar for
+  a second number beside each. The figures are said by resting the pointer on one, as since
+  S53, and in the panel of the store
+- **Where a thing in the open is**, in the board of current, is said by the building it
+  stands beside, within six tiles: there are nine lamps and seven of them stand outside
+
+Still open here:
+- How far gone what goes off is, on its square: with S65
+- What stands under a roof shows its mark only from inside the building, or with the roofs
+  off (`T`)
+- A row of the board of current does not take the map to the thing it is about
+- Nothing says what a mark over a thing means when the pointer rests on it: it is said in
+  the panel of the thing
+- The notice of a discovery still goes over the faces of whoever is away, in the same corner
+  of the map; the question about drawing anew goes under them
 
 ### S56 — Errands, and the box (needs S51 and S39) — planned, left out for now
 Asked on 2026-10-08, and the user answered every question about it the same way: "Dejamos

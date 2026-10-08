@@ -189,6 +189,16 @@ python -m simulation.headless --days 7 --seed 7
   the well
 - The border of the square of a thing says how rare it is, and so how good: white, green,
   blue, red, purple and yellow, from common to mythic. The bar under one says how worn it is
+- Click a post, a bed, the store, the generator or anything that runs on current to see
+  what there is to say of it: how good it is, whose post, how worn, whether it has current,
+  how full a store is. `Mejorar` puts making it better to whoever holds it, who may say
+  no; `Apagar` and `Encender` switch it; `Dibujar` draws it as it looks at that rarity
+- Over a thing, a red `!` says it has broken down, a grey bolt that it is switched off,
+  and a bolt struck through that there is no current for it. A small stone at its foot
+  is the colour of its rarity. The line under a figure of the bar is how full the store
+  is of that thing
+- When a thing has been made better the game asks whether you want to draw it as it
+  looks now: the drawing is of every one of its kind that good or better
 - With nobody selected the panel on the right lists everybody: click a name to go to them. So
   does a click on anyone listed under a resident's relationships
 - While whoever is selected is talking with someone, the dock under the map shows the two of them
@@ -241,6 +251,10 @@ python -m simulation.headless --days 7 --seed 7
   propose it to. They may say no, and somebody else can be asked. Whoever agrees builds it in
   their spare time, with scrap carried to the site, and others lend a hand. A site shows how
   far along it is; click it to see what it waits for, or to give it up
+- `K`, or a click on the figure of fuel in the bar: `Corriente`, the board of what the
+  generator gives and what is asked of it, with every thing that runs on current, where
+  it stands and a switch to it. A click on any other figure of the bar opens what the
+  settlement holds
 - `Estudio` in the menu, or `E`: what the settlement knows, what it is working out and what
   is left. `Estudiar` beside a subject takes it in hand, and `Dejar` puts it down; somebody
   has to hold the post of `Estudio`, at a study desk, for anything to come of it

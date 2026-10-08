@@ -580,7 +580,7 @@ class Game:
             and self.global_view.requested_object_editor is not None
             and self.object_editor is not None
         ):
-            self.object_editor.open(self.global_view.requested_object_editor)
+            self.object_editor.open(self.global_view.requested_object_editor, self.global_view.requested_object_level)
             if not self.object_editor.closed:
                 self.scene_name = OBJECT_SCENE
         elif (
@@ -611,6 +611,7 @@ class Game:
         self.global_view.requested_urbanism = False
         self.global_view.requested_creator = False
         self.global_view.requested_object_editor = None
+        self.global_view.requested_object_level = 1
         self.global_view.requested_coin_editor = None
         self.global_view.requested_family = False
         self.global_view.requested_voice = None

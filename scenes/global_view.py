@@ -70,6 +70,7 @@ from scenes.carrying import (
 )
 from audio.voice_player import VoicePlayer
 from scenes.hud import (
+    AWAY_LABEL,
     BUILD_INTENT,
     FAMILY_INTENT,
     FUND_INTENT,
@@ -119,6 +120,7 @@ from simulation.commands import (
     ProposeCurrencyCommand,
     ProposeObjectCommand,
     ProposeSaleCommand,
+    ProposeUpgradeCommand,
     RenameCurrencyCommand,
     SurfaceCommand,
     UndecorateCommand,
@@ -134,6 +136,7 @@ from simulation.commands import (
     SetFreeWillCommand,
     ScrapItemCommand,
     SuggestJobCommand,
+    SwitchCommand,
 )
 from simulation.ai.affect import SALVAGE, SHARED, TASK
 from simulation.ai.placing import LAY, NOWHERE, STAND
@@ -165,7 +168,10 @@ from ui.trade_board import DEAL_INTENT as TRADE_DEAL_INTENT
 from ui.trade_board import DRAW_INTENT as TRADE_DRAW_INTENT
 from ui.bubble import MARK_SIZE, MARK_TAIL, PLACARD_SIZE, PLACARD_STICK, draw_mark, draw_placard
 from ui.law_board import named_items, picked_degree, picked_params
-from ui.labels import away_residents, has_birthday
+from ui.labels import away_residents, has_birthday, rarity_color
+from ui.object_marks import draw_gem, draw_object_mark, marks_of
+from ui.object_panel import speaks
+from ui.power_board import POWER_INTENT
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
 from ui.panel import draw_item, draw_panel
 from ui.task_bar import draw_task_bar, task_bar_rect, task_progress
@@ -272,7 +278,6 @@ ROOFS_ON = "Tejados puestos: se quitan al mirar dentro"
 ROOFS_OFF = "Tejados quitados"
 MINIMAP_ON = "Minimapa a la vista"
 MINIMAP_OFF = "Minimapa guardado"
-AWAY_LABEL = "Fuera"
 # What was bought at the gate and waits there to be carried in: how many kinds of it are shown.
 GATE_KINDS = 3
 MINIMAP_MARGIN = 6
@@ -404,8 +409,10 @@ class GlobalView:
         self.requested_urbanism = False
         # The opening of a new settlement asks for the screen where its first resident is made.
         self.requested_creator = False
-        # Kind of object the player asked to draw.
+        # Kind of object the player asked to draw, and how good the ones to be drawn are:
+        # past the first level, the drawing is of those made that good (P60).
         self.requested_object_editor: str | None = None
+        self.requested_object_level = 1
         # Currency whose coin the player asked to draw, by its ID.
         self.requested_coin_editor: str | None = None
         # Whether the player asked for the families of the whole settlement.
@@ -447,6 +454,11 @@ class GlobalView:
         # Where each resident was last drawn, for picking them with the mouse.
         self.hitboxes: dict[str, pygame.Rect] = {}
         self.container_hitboxes: dict[str, pygame.Rect] = {}
+        # Where each thing with something to say, or to hold, was last drawn, to be picked
+        # there; why each thing that stands idle does; and where the mark of each was drawn.
+        self.thing_hitboxes: dict[str, pygame.Rect] = {}
+        self.object_marks: dict[str, pygame.Rect] = {}
+        self._idle: dict[str, str] = {}
         # Decision the player asked to open by clicking a resident. The game shell picks it up.
         self.requested_decision: str | None = None
         self._read_layout()
@@ -560,6 +572,8 @@ class GlobalView:
             self._apply(GOVERNMENT_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_f:
             self._apply(FUND_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_k:
+            self._apply(POWER_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
             self.centre_on_resident(self.hud.selected_id)
             self.following = self.hud.selected_id
@@ -719,7 +733,7 @@ class GlobalView:
                 self._decorate_at(room, position)
         elif not self.hud.covers(position) and self.viewport.collidepoint(position):
             picked = [rid for rid, rect in self.hitboxes.items() if rect.collidepoint(position)]
-            kept = [cid for cid, rect in self.container_hitboxes.items() if rect.collidepoint(position)]
+            kept = [object_id for object_id, rect in self.thing_hitboxes.items() if rect.collidepoint(position)]
             if self.hud.wheel.open:
                 self._click_past_wheel(picked[-1] if picked else None)
                 return
@@ -730,8 +744,9 @@ class GlobalView:
                 self._sound("select")
                 self.hud.select_resident(picked[-1])
             else:
-                # What things are kept in is looked into from in here, as it was under the roof.
-                self.hud.select_container(kept[-1] if kept else None)
+                # What things are kept in is looked into from in here, as it was under the roof,
+                # and so is anything else with something to say of itself.
+                self.hud.select_object(kept[-1] if kept else None)
             decision = self._decision_of(self.hud.selected_id)
             if decision is not None:
                 self.requested_decision = decision
@@ -836,6 +851,9 @@ class GlobalView:
         """The frame while a building is looked at from inside: the room where the map was, and everything round it."""
         self.hitboxes = {}
         self.container_hitboxes = {}
+        self.thing_hitboxes = {}
+        self.object_marks = {}
+        self._idle = marks_of(self.world)
         self.task_bars = {}
         self.placards = {}
         self.sign_boxes = {}
@@ -1110,8 +1128,9 @@ class GlobalView:
                 self._sound("select")
                 self.hud.select_resident(picked[-1])
             else:
-                containers = [cid for cid, rect in self.container_hitboxes.items() if rect.collidepoint(position)]
-                self.hud.select_container(containers[-1] if containers else None)
+                # A thing with something to say of itself, or to hold: the one drawn last is in front.
+                things = [object_id for object_id, rect in self.thing_hitboxes.items() if rect.collidepoint(position)]
+                self.hud.select_object(things[-1] if things else None)
             decision = self._decision_of(self.hud.selected_id)
             if decision is not None:
                 self.requested_decision = decision
@@ -1137,6 +1156,24 @@ class GlobalView:
             self.hud.toggle_government()
         elif intent == FUND_INTENT:
             self.hud.toggle_fund()
+        elif intent == POWER_INTENT:
+            self.hud.toggle_power()
+        elif isinstance(intent, tuple) and intent[0] == "resource":
+            self._open_resource(intent[1])
+        elif isinstance(intent, tuple) and intent[0] == "switch":
+            # What runs on current is the player's to switch on and off (S55).
+            self._say(self.world.apply_command(SwitchCommand(intent[1], intent[2])))
+        elif isinstance(intent, tuple) and intent[0] == "upgrade":
+            # Making a thing better is put to whoever keeps it, who says yes or no.
+            self._say(self.world.apply_command(ProposeUpgradeCommand(intent[1])))
+        elif isinstance(intent, tuple) and intent[0] == "redraw":
+            placed = self.world.interactables.get(intent[1])
+            if placed is not None and self.object_art.available:
+                self.requested_object_editor, self.requested_object_level = placed.kind, placed.level
+        elif isinstance(intent, tuple) and intent[0] == "redraw_ask":
+            asked, self.hud.redraw = self.hud.redraw, None
+            if intent[1] and asked is not None and self.object_art.available:
+                self.requested_object_editor, self.requested_object_level = asked.kind, asked.level
         elif isinstance(intent, tuple) and intent[0] == "fund":
             self._fund(intent[1:])
         elif isinstance(intent, tuple) and intent[0] == "trade_sale":
@@ -1922,6 +1959,9 @@ class GlobalView:
                 draws.append(self._remains_draw(remains))
         self.hitboxes = {}
         self.container_hitboxes = {}
+        self.thing_hitboxes = {}
+        self.object_marks = {}
+        self._idle = marks_of(self.world)
         self.task_bars = {}
         self.work_rings = {}
         self.placards = {}
@@ -1969,6 +2009,35 @@ class GlobalView:
         self._draw_minimap(region)
         self._draw_away()
         self._draw_carry()
+
+    def _say(self, result) -> None:
+        """Say what came of something the player did, and sound it if it came to nothing."""
+        if not result.ok:
+            self._sound("refuse")
+        self.hud.notify(result.message)
+
+    def _open_resource(self, resource_id: str) -> None:
+        """A press on a figure of the bar: what the generator burns opens the board of
+        current, and anything else what the settlement holds."""
+        fuel = self.world.registries.items.find(self.world.registries.power.fuel)
+        burnt = self.world.ledger.resources_of(self.world, fuel) if fuel is not None else ()
+        if resource_id in burnt:
+            self.hud.toggle_power()
+        else:
+            self.hud.toggle_stores()
+
+    def mark_thing(self, placed: Interactable, box: pygame.Rect) -> None:
+        """What is seen of a thing over its picture (P60): that it is the one selected, a
+        stone in the colour of its rarity when it is better than common, and that it
+        stands idle and why. Drawn straight on the canvas, where it was last drawn."""
+        mark = self._idle.get(placed.object_id)
+        selected = placed.object_id == self.hud.selected_object
+        if selected:
+            pygame.draw.rect(self.canvas, PALETTE["glow"], box, 1)
+        if placed.level > 1 and not self.overview:
+            draw_gem(self.canvas, box, rarity_color(self.world, placed.level))
+        if mark is not None:
+            self.object_marks[placed.object_id] = draw_object_mark(self.canvas, box, mark)
 
     def _draw_work(self) -> None:
         """Each unit that has just come out of a post, for a moment, beside the ring of whoever
@@ -2038,12 +2107,10 @@ class GlobalView:
         away = away_residents(self.world)
         if not away:
             return
-        outlook = self.hud.outlook_rect()
-        top = (outlook.bottom if outlook is not None else self.viewport.top) + MINIMAP_MARGIN
+        panel = self.hud.away_rect()
+        if panel is None:
+            return
         label_width = self.font.width(AWAY_LABEL)
-        face = self.faces.marker(away[0].resident_id)
-        width = label_width + 8 + (face.get_width() + 2) * len(away)
-        panel = pygame.Rect(self.viewport.left + MINIMAP_MARGIN, top, width + 4, face.get_height() + 4)
         draw_panel(self.canvas, panel)
         self.font.draw(self.canvas, AWAY_LABEL, (panel.x + 4, panel.y + 4), PALETTE["dust"])
         x = panel.x + 4 + label_width + 4
@@ -2108,7 +2175,8 @@ class GlobalView:
     def _game_picture(self, definition, placed: Interactable | None = None) -> ObjectPicture | None:
         """The game's own picture of a kind of object, where it is that and not somebody's
         drawing that is shown. With `placed`, as that very one looks: a bed by what grows in it."""
-        if not self.windowed or self.object_art.drawing(definition) is not None:
+        level = placed.level if placed is not None else 1
+        if not self.windowed or self.object_art.drawing(definition, level) is not None:
             return None
         if not self.object_pictures.has(definition.kind, definition.width, definition.height):
             return None
@@ -2372,7 +2440,7 @@ class GlobalView:
             if not area.colliderect(region):
                 continue
             size = (self._scaled(area.width) * scale, self._scaled(area.height) * scale)
-            picture = self.object_art.shown(definition, size)
+            picture = self.object_art.shown(definition, size, placed.level)
             if picture is None:
                 continue
             shown.append((foot - 0.5, tuple(area), picture))
@@ -2436,8 +2504,12 @@ class GlobalView:
         # A picture of it on the window, somebody's or the game's, goes there by itself with
         # whatever it shows off: here there is only where it is, to be picked by.
         drawn = self.layers is not None and (
-            self.object_art.drawing(definition) is not None or self._game_picture(definition) is not None
+            self.object_art.drawing(definition, placed.level) is not None or self._game_picture(definition) is not None
         )
+        # Whether a press on it shows what there is to say of it: the cart of whoever has
+        # come to trade is no thing of the settlement's.
+        kept = placed.object_id in self.world.containers
+        told = kept or (placed.object_id in self.world.interactables and speaks(self.world, placed))
         # A sheet wider than the object holds animation frames side by side.
         width = definition.width * TILE_SIZE
         frame = int(self.time * ANIMATION_FPS) % self.object_sprites.frames(definition)
@@ -2452,8 +2524,13 @@ class GlobalView:
                 self._blit(image, area.topleft)
                 for definition_id, (dx, dy) in zip(goods, SLOTS):
                     self._blit(self.icons.small(definition_id), (area.left + dx, area.top + dy))
-            if placed.object_id in self.world.containers:
-                self.container_hitboxes[placed.object_id] = self._canvas_rect(area)
+            box = self._canvas_rect(area)
+            if kept:
+                self.container_hitboxes[placed.object_id] = box
+            if told:
+                self.thing_hitboxes[placed.object_id] = box
+            if placed.object_id in self._idle or placed.level > 1 or placed.object_id == self.hud.selected_object:
+                self._overlays.append(lambda: self.mark_thing(placed, box))
 
         return (bottom, 0, draw)
 
@@ -3105,7 +3182,7 @@ class GlobalView:
 
         doll = self._doll_for(resident)
         neck = (bed.left + LYING_NECK[0], bed.top + LYING_NECK[1])
-        game = self._game_picture(definition)
+        game = self._game_picture(definition, placed)
         if game is not None and game.neck is not None:
             # The game's own picture of a bed says where a head goes on it.
             detail = self._cell / TILE_SIZE

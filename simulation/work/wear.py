@@ -97,7 +97,7 @@ class WearSystem:
             at=(placed.x, placed.y),
         )
         if self.site_of(world, placed.object_id) is None and world.upgrades.site_of(world, placed.object_id) is None:
-            world.construction.lay(world, REPAIR_SITE, placed.object_id, (placed.x, placed.y), self._mender(world))
+            world.construction.lay(world, REPAIR_SITE, placed.object_id, (placed.x, placed.y), self.mender(world))
 
     def tick(self, world: "SimulationWorld") -> None:
         """Once an hour: what is waiting to be mended with nobody to see to it is put in the
@@ -106,9 +106,9 @@ class WearSystem:
             return
         for site in world.sites.values():
             if site.kind == REPAIR_SITE and site.in_charge not in world.residents:
-                site.in_charge = self._mender(world)
+                site.in_charge = self.mender(world)
 
-    def _mender(self, world: "SimulationWorld") -> str | None:
+    def mender(self, world: "SimulationWorld") -> str | None:
         """Whoever mends what breaks down: the first who holds the job for it and is here and fit."""
         job_id = self.settings(world).job
         for resident in world.residents.values():

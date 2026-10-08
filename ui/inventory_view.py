@@ -118,14 +118,17 @@ def draw_container_panel(
     world: SimulationWorld,
     container_id: str,
     width: int = PANEL_WIDTH,
+    heading: str | None = None,
 ) -> pygame.Rect:
-    """Panel listing everything in a container: whose it is, or what it costs on a shop's counter."""
+    """Panel listing everything in a container: whose it is, or what it costs on a shop's
+    counter. `heading` is said over it in place of its name, where that is said elsewhere."""
     inventory = world.containers[container_id]
     rect = pygame.Rect(position, (width, container_panel_height(inventory)))
     draw_panel(target, rect)
     x, y = rect.x + PADDING, rect.y + PADDING
     placed = world.interactables.get(container_id)
     title = world.definition_of(placed).name.capitalize() if placed is not None else container_id
+    title = heading if heading is not None else title
     selling = selling_use(world, container_id)
     if selling is not None:
         attended = selling.staffed_by is None or world.work.is_staffed(world, selling.staffed_by)

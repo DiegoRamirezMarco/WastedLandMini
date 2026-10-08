@@ -61,7 +61,7 @@ from simulation.tutorial.tutorial_system import TutorialSystem
 from simulation.work.craft import CraftResult, Discovery
 from simulation.work.craft_system import CraftSystem
 from simulation.work.construction import ConstructionSystem
-from simulation.work.upgrades import UpgradeSystem
+from simulation.work.upgrades import NOBODY_KEEPS, UpgradeSystem
 from simulation.work.wear import WearSystem
 from simulation.work.expedition_system import ExpeditionSystem
 from simulation.work.research import ResearchResult, ResearchState, ResearchSystem
@@ -292,10 +292,17 @@ class SimulationWorld:
         """Put it to a resident that they put an object up. They weigh it and decide for themselves."""
         return self.construction.propose(self, OBJECT_SITE, kind, tile, resident_id, option_id)
 
-    def propose_upgrade(self, object_id: str, resident_id: str, option_id: str) -> UrbanismResult:
+    def propose_upgrade(self, object_id: str, resident_id: str | None, option_id: str) -> UrbanismResult:
         """Put it to a resident that they make something that stands better. They weigh it
-        and decide for themselves, as with anything that is built."""
+        and decide for themselves, as with anything that is built. With nobody named it
+        is put to whoever keeps the thing (P60)."""
         placed = self.interactables.get(object_id)
+        if resident_id is None:
+            error = self.upgrades.obstacle(self, object_id)
+            keeper = self.upgrades.keeper(self, object_id)
+            if error is not None or keeper is None:
+                return UrbanismResult(False, error or NOBODY_KEEPS)
+            resident_id = keeper.resident_id
         tile = (placed.x, placed.y) if placed is not None else (0, 0)
         return self.construction.propose(self, UPGRADE_SITE, object_id, tile, resident_id, option_id)
 

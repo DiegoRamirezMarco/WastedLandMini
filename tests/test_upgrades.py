@@ -13,7 +13,7 @@ from simulation.commands import ProposeUpgradeCommand
 from simulation.registries import DATA_DIR, BuiltInRegistries
 from simulation.residents.attributes import Attributes
 from simulation.residents.needs import Needs
-from simulation.work.upgrades import IN_HAND, NOT_THAT, UPGRADED_EVENT
+from simulation.work.upgrades import IN_HAND, NOBODY_KEEPS, NOT_THAT, UPGRADED_EVENT
 from simulation.world import SimulationWorld
 from world.build import UPGRADE_SITE
 
@@ -278,6 +278,37 @@ class SavedTests(unittest.TestCase):
         data = manager.to_data(world)
         next(each for each in data["interactables"] if each["id"] == "crop_3")["level"] = 40
         self.assertEqual(manager.from_data(data).interactables["crop_3"].level, 6, "no better than the best there is")
+
+
+class KeeperTests(unittest.TestCase):
+    def test_with_nobody_named_it_is_put_to_whoever_keeps_the_thing(self) -> None:
+        world = _settled()
+        keeper = world.upgrades.keeper
+        self.assertEqual(keeper(world, "crop_1").resident_id, "raul", "whoever has it as their post")
+        self.assertEqual(keeper(world, "crop_3").job_id, "farmer", "or holds the job it is a post of")
+        self.assertEqual(keeper(world, "warehouse").job_id, "mechanic", "what is nobody's is for whoever mends")
+        bed = world.interactables["bed_1"]
+        room = world.room_at((bed.x, bed.y))
+        world.give_house(room.room_id, ["ines"])
+        self.assertEqual(keeper(world, "bed_1").resident_id, "ines", "what stands in a house is for whose it is")
+        self.assertIsNone(keeper(world, "nothing"))
+        result = world.apply_command(ProposeUpgradeCommand("crop_1"))
+        self.assertTrue(result.ok, result.message)
+        self.assertEqual(world.sites[result.entity_id].in_charge, "raul")
+
+    def test_whoever_is_away_is_not_asked_and_with_nobody_left_it_is_said(self) -> None:
+        world = _settled()
+        world.residents["raul"].expedition = object()
+        self.assertEqual(world.upgrades.keeper(world, "crop_1").resident_id, "ines", "another of the same job")
+        mechanic = world.upgrades.keeper(world, "warehouse")
+        mechanic.job_id, mechanic.post_id = None, None
+        self.assertIsNone(world.upgrades.keeper(world, "warehouse"))
+        result = world.apply_command(ProposeUpgradeCommand("warehouse"))
+        self.assertEqual((result.ok, result.message), (False, NOBODY_KEEPS))
+        self.assertFalse(world.sites)
+        # What stands in the way of the work is said before who there is to ask.
+        world.studies.known.clear()
+        self.assertIn("estudiarlo", world.apply_command(ProposeUpgradeCommand("warehouse")).message)
 
 
 if __name__ == "__main__":

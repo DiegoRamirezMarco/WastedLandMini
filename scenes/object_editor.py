@@ -62,6 +62,7 @@ FIELD_SIZE = (168, 44)
 CHOSEN = pygame.Rect(40, 44, 22, 10)
 PAPER = PALETTE["bone"]
 SAVED_TEXT = "Guardado: así se ven ya todos los de su clase"
+SAVED_BETTER_TEXT = "Guardado: así se ven ya los de esa calidad"
 PREVIEW_HEADING = "Así se ve en el mapa"
 NOTES_TEXT = (
     "Se ve desde arriba y un poco de frente, como todo en el mapa.",
@@ -95,6 +96,8 @@ class ObjectEditor:
         self.on_deed = on_deed
         self.closed = True
         self.kind: str | None = None
+        # How good the ones being drawn are: past the first level, the drawing is only theirs (P60).
+        self.level = 1
         # What is said beside the paper: what the guide's colours mean, what the picture is shown
         # as, and how it is to be drawn.
         self.legend = LEGEND
@@ -167,10 +170,12 @@ class ObjectEditor:
             self.guide_button, self.starter_button,
         ]
 
-    def open(self, kind: str | None) -> None:
-        """Start drawing a kind of object, from what has been drawn of it so far."""
+    def open(self, kind: str | None, level: int = 1) -> None:
+        """Start drawing a kind of object, from what has been drawn of it so far. With a
+        level past the first, as the ones that have been made that good are to look."""
         definition = self.world.registries.interactables.find(kind or "")
         self.kind = kind if definition is not None else None
+        self.level = max(1, level) if definition is not None else 1
         self.closed = definition is None
         self.notice = ""
         self._undo = []
@@ -182,7 +187,7 @@ class ObjectEditor:
         self.zoom = max(1, min(MAX_ZOOM, DRAWING_ROOM[0] // size[0], DRAWING_ROOM[1] // size[1]))
         self.area = pygame.Rect(DRAWING_AT, (size[0] * self.zoom, size[1] * self.zoom))
         self.drawing = pygame.Surface(size, pygame.SRCALPHA)
-        kept = self.objects.drawing(definition)
+        kept = self.objects.drawing(definition, self.level)
         if kept is not None:
             self.drawing.blit(kept, (0, 0))
         self.guide_picture = self.objects.guide(definition)
@@ -216,7 +221,7 @@ class ObjectEditor:
         if self.kind is None:
             return False
         try:
-            path = self.root / object_art_path(self.kind)
+            path = self.root / object_art_path(self.kind, self.level)
             path.parent.mkdir(parents=True, exist_ok=True)
             pygame.image.save(self.drawing, str(path))
         except (OSError, pygame.error):
@@ -225,7 +230,7 @@ class ObjectEditor:
         self.objects.forget(self.kind)
         if self.on_saved is not None:
             self.on_saved(self.kind)
-        self.notice = SAVED_TEXT
+        self.notice = SAVED_TEXT if self.level <= 1 else SAVED_BETTER_TEXT
         self._did(object_drawn_deed(self.kind))
         return True
 
@@ -379,7 +384,11 @@ class ObjectEditor:
 
     def _title(self) -> str:
         definition = self.world.registries.interactables.find(self.kind or "")
-        return f"Dibujar {definition.name}" if definition is not None else "Dibujar objeto"
+        if definition is None:
+            return "Dibujar objeto"
+        if self.level <= 1:
+            return f"Dibujar {definition.name}"
+        return f"Dibujar {definition.name} ({self.world.registries.rarities.of(self.level).name.lower()})"
 
     def _lesson(self):
         """The lesson of the opening that this drawing is part of, if it is part of one."""

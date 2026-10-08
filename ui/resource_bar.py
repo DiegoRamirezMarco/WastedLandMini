@@ -33,6 +33,8 @@ FULL, SHORT, BARE = 2, 1, 0
 TIP_PADDING = 4
 TIP_WIDTH = 190
 GOOD_SPIRITS, FAIR_SPIRITS = 0.6, 0.35
+# From how full the store is of a thing it is shown as filling up.
+FILLING_UP = 0.8
 
 PEOPLE_TIP = "Residentes, y camas que hay"
 NOT_KNOWN = "Aún no hay bastante apuntado para saber cómo va"
@@ -126,6 +128,31 @@ def _arrow(target: pygame.Surface, x: int, y: int, way: int, color) -> None:
     pygame.draw.polygon(target, color, points)
 
 
+def room_share(line: ResourceLine | None) -> float | None:
+    """How full the stores are of a resource, from 0 to 1 (S53). None with no store for it."""
+    if line is None or not line.capacity:
+        return None
+    return max(0.0, min(1.0, (line.stored or 0) / line.capacity))
+
+
+def room_color(line: ResourceLine) -> str:
+    share = room_share(line) or 0.0
+    return "ember" if line.full else "lamp" if share >= FILLING_UP else "lichen"
+
+
+def room_gauge(chip: Chip) -> pygame.Rect:
+    """Where under the figure of a resource it is shown how full the store is of it: a
+    line as wide as the figure, icon and all."""
+    return pygame.Rect(chip.rect.x, chip.rect.bottom, max(1, chip.rect.width), 1)
+
+
+def room_filled(chip: Chip) -> int:
+    """How much of that line is filled in: none of it only for a store with none of the thing."""
+    share = room_share(chip.line) or 0.0
+    width = room_gauge(chip).width
+    return max(1, round(width * share)) if share > 0 else 0
+
+
 def spirits_color(share: float) -> str:
     return "lichen" if share >= GOOD_SPIRITS else "lamp" if share >= FAIR_SPIRITS else "ember"
 
@@ -148,6 +175,14 @@ def draw_chips(
             bar = pygame.Rect(x, chip.rect.centery - MOOD_BAR[1] // 2 + 1, *MOOD_BAR)
             draw_bar(target, bar, chip.share, spirits_color(chip.share))
             continue
+        full = room_share(chip.line)
+        if full is not None and chip.line is not None:
+            # A line under it for how full the store is of it: the cap there is (P60).
+            gauge = room_gauge(chip)
+            pygame.draw.rect(target, PALETTE["shadow"], gauge)
+            filled = room_filled(chip)
+            if filled:
+                pygame.draw.rect(target, PALETTE[room_color(chip.line)], (gauge.x, gauge.y, filled, 1))
         low = chip.line is not None and chip.line.low
         font.draw(target, chip.figure, (x, y), PALETTE[("glow" if lit else "ember") if low else "bone"])
         x += font.width(chip.figure)
