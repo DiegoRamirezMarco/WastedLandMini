@@ -170,6 +170,8 @@ class SaveManager:
                 "currency_count": world.trading.currency_count,
                 "asked_on": world.trading.asked_on,
                 "refusals": dict(world.trading.refusals),
+                "asked_about": world.trading.asked_about,
+                "answers": dict(world.trading.answers),
             },
             "debts": [vars(debt) for debt in world.debts],
             "at_gate": dict(world.at_gate),
@@ -909,6 +911,12 @@ class SaveManager:
                 str(resident_id): int(times)
                 for resident_id, times in _object_or_empty(saved.get("refusals")).items()
                 if resident_id in world.residents and isinstance(times, int) and not isinstance(times, bool)
+            },
+            asked_about=str(saved.get("asked_about", "")),
+            answers={
+                str(resident_id): bool(said)
+                for resident_id, said in _object_or_empty(saved.get("answers")).items()
+                if resident_id in world.residents
             },
         )
         # What is owed to or by somebody who is gone is owed no longer.

@@ -37,6 +37,10 @@ class TradingState:
     # How many swaps each resident has had turned down at a counter since they last made
     # something of it, by resident ID.
     refusals: dict[str, int] = field(default_factory=dict)
+    # What was last put to everyone about how to trade, and what each of them said to it, by
+    # resident ID: whether they were for it.
+    asked_about: str = ""
+    answers: dict[str, bool] = field(default_factory=dict)
 
 
 @dataclass

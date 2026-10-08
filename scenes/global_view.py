@@ -47,6 +47,7 @@ from scenes.body_stage import (
 from audio.voice_player import VoicePlayer
 from scenes.hud import (
     BUILD_INTENT,
+    FUND_INTENT,
     GOVERNMENT_INTENT,
     VOICE_INTENT,
     DRAW_INTENT,
@@ -86,7 +87,11 @@ from simulation.commands import (
     GiveHouseCommand,
     LockHouseCommand,
     NameBuildingCommand,
+    ProposeBarterCommand,
+    ProposeCurrencyCommand,
     ProposeObjectCommand,
+    ProposeSaleCommand,
+    RenameCurrencyCommand,
     SurfaceCommand,
     UndecorateCommand,
     SetPausedCommand,
@@ -111,6 +116,7 @@ from simulation.world import SimulationWorld
 from skeleton.plan import IDLE_CLIP, builtin_plan
 from skeleton.rig import Skeleton
 from ui.affect_board import AFFECT_INTENT, BACK_INTENT, CLOSE_INTENT
+from ui.fund_board import BARTER_BACK, CURRENCY, RENAME, FundEntry
 from ui.trade_board import CART_INTENT as TRADE_CART_INTENT
 from ui.trade_board import DEAL_INTENT as TRADE_DEAL_INTENT
 from ui.trade_board import DRAW_INTENT as TRADE_DRAW_INTENT
@@ -191,6 +197,8 @@ ROOFS_OFF = "Tejados quitados"
 MINIMAP_ON = "Minimapa a la vista"
 MINIMAP_OFF = "Minimapa guardado"
 AWAY_LABEL = "Fuera"
+# What was bought at the gate and waits there to be carried in: how many kinds of it are shown.
+GATE_KINDS = 3
 MINIMAP_MARGIN = 6
 # What bad weather multiplies the picture of the map by, and how many streaks of dust blow across it.
 STORM_TINT = (226, 198, 156)
@@ -281,6 +289,8 @@ class GlobalView:
         self.requested_creator = False
         # Kind of object the player asked to draw.
         self.requested_object_editor: str | None = None
+        # Currency whose coin the player asked to draw, by its ID.
+        self.requested_coin_editor: str | None = None
         # Pictures made outside the game, and where they are put to go straight on the window.
         self.illustrations = illustrations if layers is not None else None
         self.layers = layers
@@ -384,9 +394,12 @@ class GlobalView:
     @property
     def typing(self) -> bool:
         """Whether what is typed is being written down somewhere, and so is no shortcut."""
-        return self.inside is not None and self.interior.naming is not None
+        return (self.inside is not None and self.interior.naming is not None) or self.hud.typing
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        if self.hud.typing and event.type == pygame.KEYDOWN:
+            self._fund_key(event)
+            return
         if self.typing and event.type == pygame.KEYDOWN:
             self._name_key(event)
             return
@@ -403,6 +416,8 @@ class GlobalView:
             self._apply(RESEARCH_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_p:
             self._apply(GOVERNMENT_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_f:
+            self._apply(FUND_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
             self.centre_on_resident(self.hud.selected_id)
             self.following = self.hud.selected_id
@@ -911,6 +926,12 @@ class GlobalView:
             self.hud.toggle_research()
         elif intent == GOVERNMENT_INTENT:
             self.hud.toggle_government()
+        elif intent == FUND_INTENT:
+            self.hud.toggle_fund()
+        elif isinstance(intent, tuple) and intent[0] == "fund":
+            self._fund(intent[1:])
+        elif isinstance(intent, tuple) and intent[0] == "trade_sale":
+            self._propose_sale(intent[1], intent[2])
         elif isinstance(intent, tuple) and intent[0] == "choose_government":
             self._choose_government(intent[1])
         elif isinstance(intent, tuple) and intent[0] == "trade_step":
@@ -1109,6 +1130,72 @@ class GlobalView:
         if not result.ok:
             self._sound("refuse")
 
+    def _fund(self, what: tuple) -> None:
+        """Something pressed on the board of the fund: a thing set about, the advice it is put
+        with, or the way out of it. What comes of it is the residents' to say."""
+        hud, entry = self.hud, self.hud.fund_entry
+        made = self.world.trading.currency
+        action = what[0]
+        if action == "propose":
+            hud.fund_entry = FundEntry(CURRENCY)
+        elif action == "barter":
+            hud.fund_entry = FundEntry(BARTER_BACK)
+        elif action == "rename" and made is not None:
+            hud.fund_entry = FundEntry(RENAME, made.name, made.singular)
+        elif action == "cancel":
+            hud.fund_entry = None
+        elif action == "field" and entry is not None:
+            entry.field = what[1]
+        elif action == "draw" and made is not None and hud.drawable:
+            self.requested_coin_editor = made.currency_id
+        elif action == "name_it" and entry is not None:
+            self._settle_fund(RenameCurrencyCommand(entry.name, entry.singular or None), entry)
+        elif action == "advise" and entry is not None:
+            if entry.mode == BARTER_BACK:
+                self._settle_fund(ProposeBarterCommand(what[1]), entry)
+            else:
+                self._settle_fund(ProposeCurrencyCommand(entry.name, entry.singular or None, what[1]), entry)
+
+    def _settle_fund(self, command, entry: FundEntry) -> None:
+        """Send what was set about on the board of the fund, and say what came of it."""
+        if entry.written and not entry.name.strip():
+            # With no name there is nothing to put to anybody: the board stays as it is.
+            self.hud.notify(self.world.apply_command(command).message)
+            self._sound("refuse")
+            return
+        result = self.world.apply_command(command)
+        self.hud.fund_entry = None
+        self.hud.notify(result.message)
+        self._sound("click" if result.ok else "refuse")
+
+    def _fund_key(self, event: pygame.event.Event) -> None:
+        """A key while a currency is being named: it goes into the name, moves on, ends it or drops it."""
+        entry = self.hud.fund_entry
+        if entry is None:
+            return
+        if event.key == pygame.K_ESCAPE:
+            self.hud.fund_entry = None
+        elif event.key == pygame.K_TAB:
+            entry.next_field()
+        elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            if entry.mode == RENAME:
+                self._fund(("name_it",))
+            else:
+                # A currency is put to them with an advice, and that is said with the mouse.
+                entry.next_field()
+        elif event.key == pygame.K_BACKSPACE:
+            entry.erase()
+        else:
+            entry.type(getattr(event, "unicode", ""))
+
+    def _propose_sale(self, resident_id: str, instance_id: str) -> None:
+        """Put it to a resident that they sell a thing of their own to whoever is at the gate.
+        Under barter what they get for it is the first thing of the merchant's put in the deal."""
+        wanted = next((item_id for item_id, units in self.hud.trade_deal()[1].items() if units > 0), None)
+        result = self.world.apply_command(ProposeSaleCommand(resident_id, instance_id, wanted))
+        self.hud.notify(result.message)
+        self._sound("click" if result.ok else "refuse")
+
     def _close_deal(self) -> None:
         """Do the deal chosen with whoever is at the gate, out of the fund and into it, and say what came of it."""
         sell, buy = self.hud.trade_deal()
@@ -1246,6 +1333,7 @@ class GlobalView:
             self._draw_held(self.canvas, (corner[0] - region.x * zoom, corner[1] - region.y * zoom), zoom)
         # Names, icons and faces go straight on the canvas, so they keep their size at any zoom.
         self._draw_zone_names()
+        self._draw_at_gate()
         for overlay in self._overlays:
             overlay()
         self.canvas.set_clip(None)
@@ -1281,6 +1369,25 @@ class GlobalView:
             if pointed:
                 hint = self.font.render(ENTER_HINT, PALETTE["glow"])
                 self.canvas.blit(hint, (sign.centerx - hint.get_width() // 2, sign.bottom + 1))
+
+    def _draw_at_gate(self) -> None:
+        """What was bought from whoever came to trade waits by the gate until somebody carries it
+        in: a thing of each kind, and how many there are in all."""
+        waiting = self.world.at_gate
+        if not waiting or self.overview:
+            return
+        gate = next(iter(self.world.entry_tiles()), None)
+        if gate is None or gate in self._hidden:
+            return
+        x, y = gate
+        left, top = self._canvas_point((x + 0.5) * TILE_SIZE, (y + 1) * TILE_SIZE)
+        kinds = sorted(waiting)[:GATE_KINDS]
+        left -= len(kinds) * (ITEM_ICON_SIZE[0] - 3) // 2
+        for index, item_id in enumerate(kinds):
+            place = pygame.Rect(left + index * (ITEM_ICON_SIZE[0] - 3), top - ITEM_ICON_SIZE[1], *ITEM_ICON_SIZE)
+            draw_item(self.canvas, self.icons, item_id, place)
+        count = self.font.render(f"x{sum(waiting.values())}", PALETTE["paper"])
+        self.canvas.blit(count, (left + len(kinds) * (ITEM_ICON_SIZE[0] - 3) + 4, top - CELL_SIZE[1]))
 
     def _draw_away(self) -> None:
         """Whoever is outside the settlement is nowhere on the map: their faces go in a corner, to be picked there."""
@@ -1506,6 +1613,10 @@ class GlobalView:
             elif resident_id == self.hud.selected_id:
                 color = "lamp"
             dots[(resident.x, resident.y)] = color
+        merchant = self.world.merchant
+        if merchant is not None and merchant.tile is not None:
+            # Whoever has come to trade is found on it too, in a colour of their own.
+            dots[merchant.tile] = "copper"
         view = pygame.Rect(
             region.x * TILE_PIXELS // TILE_SIZE,
             region.y * TILE_PIXELS // TILE_SIZE,

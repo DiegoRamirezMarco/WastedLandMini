@@ -437,6 +437,34 @@ def _lock(p: Pen) -> None:
     p.box(22.2, 30, 3.6, 8.5, 1, p.cut)
 
 
+def _coin(p: Pen) -> None:
+    p.circle(24, 24, 19.5)
+    p.circle(24, 24, 15, p.soft)
+    p.circle(24, 24, 12.5)
+    p.box(21.2, 15.5, 5.6, 17, 1.5, p.cut)
+    p.arc(24, 24, 16.8, 195, 255, 2.4, p.light)
+
+
+def _purse(p: Pen) -> None:
+    p.poly([(15.5, 4.5), (32.5, 4.5), (29, 13.5), (19, 13.5)])
+    p.circle(24, 29.5, 15)
+    p.box(10, 30, 28, 14.5, 7)
+    p.box(16.5, 12, 15, 4, 2, p.cut)
+    p.circle(24, 30, 7.2, p.cut)
+    p.circle(24, 30, 4.8, p.light)
+
+
+def _kin(p: Pen) -> None:
+    p.line([(24, 15), (24, 26)], 3.2, p.soft)
+    p.line([(11.5, 26), (36.5, 26)], 3.2, p.soft)
+    p.line([(11.5, 26), (11.5, 31)], 3.2, p.soft)
+    p.line([(36.5, 26), (36.5, 31)], 3.2, p.soft)
+    p.circle(24, 11.5, 7.6)
+    p.circle(11.5, 36, 7.6)
+    p.circle(36.5, 36, 7.6)
+    p.circle(21.5, 9, 2.2, p.light)
+
+
 GLYPHS: dict[str, Glyph] = {
     "people": _people,
     "work": _hammer,
@@ -458,6 +486,9 @@ GLYPHS: dict[str, Glyph] = {
     "medicine": _cross,
     "scrap": _gear,
     "lock": _lock,
+    "coin": _coin,
+    "fund": _purse,
+    "family": _kin,
 }
 # The colour each icon is, where it stands alone or on a tile of its own.
 HUES: dict[str, Color] = {
@@ -481,6 +512,9 @@ HUES: dict[str, Color] = {
     "medicine": (246, 240, 226),
     "scrap": (188, 172, 150),
     "lock": (226, 186, 84),
+    "coin": (240, 190, 70),
+    "fund": (206, 156, 62),
+    "family": (198, 112, 132),
 }
 # What is cut into an icon that stands alone, where it is not simply dark.
 CUTS: dict[str, Color] = {"medicine": (206, 58, 54)}

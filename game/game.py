@@ -12,6 +12,7 @@ from audio.voice_player import VoicePlayer
 from audio.voice_synth import VoiceSynth
 from audio.voice_system import CACHE_FOLDER, MODELS_FOLDER, VOICES_DIR, VoiceStore, load_voice_catalog
 from graphics.assets import ASSETS_DIR, AssetStore
+from graphics.coin_art import CoinArt
 from graphics.doll import DollStore, load_template
 from graphics.face_renderer import FaceRenderer
 from graphics.font import FONT_SHEET, SHEET_SIZE, BitmapFont
@@ -21,6 +22,7 @@ from graphics.looks import Looks
 from graphics.screen_layers import ScreenLayers
 from save.save_manager import SaveManager
 from scenes.building_editor import BuildingEditor
+from scenes.coin_editor import CoinEditor
 from scenes.doll_editor import DollEditor
 from scenes.global_view import GlobalView
 from scenes.interaction_view import InteractionView
@@ -64,6 +66,7 @@ EDITOR_SCENE, BUILDING_SCENE, ITEM_SCENE, VOICE_SCENE, URBANISM_SCENE = (
     "urbanism",
 )
 OBJECT_SCENE = "object_editor"
+COIN_SCENE = "coin_editor"
 MANNER_SCENE = "manners"
 NO_DRAWINGS = "No hay carpeta de ilustraciones disponible"
 # Screens that read the keyboard themselves: the way in, and where the first resident is made.
@@ -217,6 +220,12 @@ class Game:
             if self.illustrations.root is not None
             else None
         )
+        # The settlement's coin is drawn as an object is, and kept in the same folder.
+        self.coin_editor = (
+            CoinEditor(self.canvas, self.world, self.font, self.layers, self.illustrations.root, CoinArt(self.illustrations))
+            if self.illustrations.root is not None
+            else None
+        )
         # Items can always be edited: their overrides live in custom_content, independently of
         # the optional high-resolution illustrations folder.
         self.item_editor = ItemEditor(
@@ -363,6 +372,8 @@ class Game:
             return self.building_editor
         if self.scene_name == OBJECT_SCENE and self.object_editor is not None:
             return self.object_editor
+        if self.scene_name == COIN_SCENE and self.coin_editor is not None:
+            return self.coin_editor
         if self.scene_name == ITEM_SCENE:
             return self.item_editor
         if self.scene_name == URBANISM_SCENE:
@@ -384,6 +395,7 @@ class Game:
             EDITOR_SCENE,
             BUILDING_SCENE,
             OBJECT_SCENE,
+            COIN_SCENE,
             ITEM_SCENE,
             VOICE_SCENE,
             MANNER_SCENE,
@@ -465,6 +477,8 @@ class Game:
             self._leave_art()
         elif self.scene_name == OBJECT_SCENE and (self.object_editor is None or self.object_editor.closed):
             self._leave_art()
+        elif self.scene_name == COIN_SCENE and (self.coin_editor is None or self.coin_editor.closed):
+            self.scene_name = "global"
         elif self.scene_name == URBANISM_SCENE and self.urbanism_editor.requested_art_object is not None:
             kind = self.urbanism_editor.requested_art_object
             self.urbanism_editor.requested_art_object = None
@@ -526,6 +540,14 @@ class Game:
             self.object_editor.open(self.global_view.requested_object_editor)
             if not self.object_editor.closed:
                 self.scene_name = OBJECT_SCENE
+        elif (
+            self.scene_name == "global"
+            and self.global_view.requested_coin_editor is not None
+            and self.coin_editor is not None
+        ):
+            self.coin_editor.open(self.global_view.requested_coin_editor)
+            if not self.coin_editor.closed:
+                self.scene_name = COIN_SCENE
         elif self.scene_name == "global" and self.global_view.requested_voice is not None and self.voice_editor is not None:
             self.voice_editor.open(self.global_view.requested_voice)
             self.scene_name = VOICE_SCENE
@@ -545,6 +567,7 @@ class Game:
         self.global_view.requested_urbanism = False
         self.global_view.requested_creator = False
         self.global_view.requested_object_editor = None
+        self.global_view.requested_coin_editor = None
         self.global_view.requested_voice = None
         self.global_view.requested_manners = None
 

@@ -219,18 +219,17 @@ class TermsSystem:
         """Ask everyone who is in. Returns how many are for it and how many against, or None if it cannot be asked."""
         if kind not in world.registries.decisions:
             return None
-        world.trading.asked_on = world.clock.day
-        world.trading.refusals.clear()
-        yes = no = 0
+        trading = world.trading
+        trading.asked_on = world.clock.day
+        trading.refusals.clear()
+        trading.asked_about, trading.answers = thing, {}
         for resident in self._asked(world):
             outcome = world.interventions.put_to(
                 world, resident, kind, thing, self.decision_inputs(world, resident), option_id
             )
-            if outcome is not None and outcome.agrees:
-                yes += 1
-            else:
-                no += 1
-        return (yes, no)
+            trading.answers[resident.resident_id] = outcome is not None and outcome.agrees
+        yes = sum(trading.answers.values())
+        return (yes, len(trading.answers) - yes)
 
     def _issue(self, world: "SimulationWorld") -> None:
         """Start a currency off: something in every pocket, and something in the fund for each of them."""

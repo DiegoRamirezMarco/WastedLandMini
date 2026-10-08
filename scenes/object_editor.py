@@ -62,6 +62,7 @@ FIELD_SIZE = (168, 44)
 CHOSEN = pygame.Rect(40, 44, 22, 10)
 PAPER = PALETTE["bone"]
 SAVED_TEXT = "Guardado: así se ven ya todos los de su clase"
+PREVIEW_HEADING = "Así se ve en el mapa"
 NOTES_TEXT = (
     "Se ve desde arriba y un poco de frente, como todo en el mapa.",
     "La zona naranja es el suelo que ocupa, casilla a casilla. La azul es lo que se alza por encima y tapa lo de detrás.",
@@ -94,6 +95,11 @@ class ObjectEditor:
         self.on_deed = on_deed
         self.closed = True
         self.kind: str | None = None
+        # What is said beside the paper: what the guide's colours mean, what the picture is shown
+        # as, and how it is to be drawn.
+        self.legend = LEGEND
+        self.preview_heading = PREVIEW_HEADING
+        self.notes = NOTES_TEXT
         self.drawing = pygame.Surface((1, 1), pygame.SRCALPHA)
         self.guide_picture = pygame.Surface((1, 1), pygame.SRCALPHA)
         self.area = pygame.Rect(DRAWING_AT, (1, 1))
@@ -371,6 +377,14 @@ class ObjectEditor:
     def update(self, dt: float) -> None:
         self.time += dt
 
+    def _title(self) -> str:
+        definition = self.world.registries.interactables.find(self.kind or "")
+        return f"Dibujar {definition.name}" if definition is not None else "Dibujar objeto"
+
+    def _lesson(self):
+        """The lesson of the opening that this drawing is part of, if it is part of one."""
+        return lesson_for(self.world, deed=object_drawn_deed(self.kind or ""))
+
     def _hint_rect(self, hint: str | None) -> pygame.Rect | None:
         """Where on the screen what a lesson is about is."""
         if hint == "palette":
@@ -389,9 +403,7 @@ class ObjectEditor:
         self.layers.clear()
         canvas, font = self.canvas, self.font
         canvas.fill(PALETTE["ink"])
-        definition = self.world.registries.interactables.find(self.kind or "")
-        title = f"Dibujar {definition.name}" if definition is not None else "Dibujar objeto"
-        font.draw(canvas, title, (TOOLS_LEFT, 4), PALETTE["glow"], scale=2)
+        font.draw(canvas, self._title(), (TOOLS_LEFT, 4), PALETTE["glow"], scale=2)
         font.draw(canvas, self.notice or "El tiempo está detenido", (TOOLS_LEFT, 30), PALETTE["lamp" if self.notice else "stone"])
         for button in self.top_buttons:
             button.draw(canvas, font)
@@ -408,7 +420,8 @@ class ObjectEditor:
                 pygame.draw.rect(canvas, PALETTE["paper"], rect, 1)
         for rect, size in self.brush_buttons:
             draw_panel(canvas, rect, fill="shadow", border="lamp" if size == self.size else "iron")
-            pygame.draw.circle(canvas, PALETTE["bone"], rect.center, max(1, size * self.zoom // 2))
+            # As large as it paints on the paper, as far as its button has room for it.
+            pygame.draw.circle(canvas, PALETTE["bone"], rect.center, min(rect.height // 2 - 2, max(1, size * self.zoom // 2)))
         for button in self.tool_buttons:
             button.draw(canvas, font, active=button.intent == ("tool", self.tool))
         for button in (*self.edit_buttons, self.guide_button, self.starter_button):
@@ -420,18 +433,18 @@ class ObjectEditor:
         self.layers.under(self._show_drawing)
 
         self._render_legend()
-        font.draw(canvas, "Así se ve en el mapa", (PREVIEW.x, PREVIEW.y - LINE_HEIGHT - 1), PALETTE["dust"])
+        font.draw(canvas, self.preview_heading, (PREVIEW.x, PREVIEW.y - LINE_HEIGHT - 1), PALETTE["dust"])
         pygame.draw.rect(canvas, PALETTE["stone"], PREVIEW.inflate(2, 2), 1)
         canvas.fill(TRANSPARENT, PREVIEW)
         self.layers.under(self._show_preview)
 
-        lesson = lesson_for(self.world, deed=object_drawn_deed(self.kind or ""))
+        lesson = self._lesson()
         if lesson is not None:
             draw_lesson(canvas, font, NOTES, self.world, lesson)
             draw_hint(canvas, self._hint_rect(lesson.hint), self.time)
             return
         y = NOTES.y
-        for note in NOTES_TEXT:
+        for note in self.notes:
             for line in font.wrap(note, NOTES.width):
                 font.draw(canvas, line, (NOTES.x, y), PALETTE["bone"])
                 y += LINE_HEIGHT
@@ -441,7 +454,7 @@ class ObjectEditor:
         """Say what the guide shows: beside the paper where there is room, or else under it."""
         beside = self.area.right + 12 + LEGEND_WIDTH <= PREVIEW.x
         x, y = (self.area.right + 12, self.area.y) if beside else (self.area.x, self.area.bottom + 6)
-        for fill, text in LEGEND:
+        for fill, text in self.legend:
             if fill is not None:
                 swatch = pygame.Rect(x, y + 1, 9, 9)
                 pygame.draw.rect(self.canvas, PAPER, swatch)

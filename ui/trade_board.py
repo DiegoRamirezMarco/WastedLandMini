@@ -1,11 +1,13 @@
 """Panel for dealing with whoever has stopped by the gate to trade: what they bring and ask for
-it, what the settlement has that is nobody's and what they give for that, and the deal itself."""
+it, what the settlement has that is nobody's and what they give for that, and the deal itself.
+Under them, what is somebody's own that they would give something for: that is put to its owner."""
 
 from collections.abc import Mapping
 from dataclasses import dataclass
 
 import pygame
 
+from graphics.face_renderer import MARKER_SIZE, FaceRenderer
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.item_icons import ICON_SIZE, ItemIcons
 from graphics.palette import PALETTE, Color
@@ -30,6 +32,12 @@ DRAW_LABEL = "Dibujarle"
 CART_LABEL = "Dibujar carro"
 NOTHING_CHOSEN = "Elige con + lo que comprar y lo que vender."
 BARTER_NOTE = "A trueque: lo que se le da ha de valer lo que se le pide."
+OWN_TITLE = "De cada cual: se le propone, y decide"
+ASK_LABEL = "Proponérselo"
+OWN_ROW = MARKER_SIZE[1] + 2
+# How many things of the residents' own are listed at once.
+MAX_OWN = 3
+MORE_OWN = "y {count} más"
 DEAL_INTENT = ("trade_deal",)
 DRAW_INTENT = ("trade_draw",)
 CART_INTENT = ("trade_cart",)
@@ -37,6 +45,10 @@ CART_INTENT = ("trade_cart",)
 
 def step_intent(side: str, item_id: str, by: int) -> tuple[str, str, str, int]:
     return ("trade_step", side, item_id, by)
+
+
+def sale_intent(resident_id: str, instance_id: str) -> tuple[str, str, str]:
+    return ("trade_sale", resident_id, instance_id)
 
 
 @dataclass(frozen=True)
@@ -70,6 +82,49 @@ def goods_rows(
         if world.merchants.gives(world, item_id) > 0
     ]
     return sorted(brought, key=lambda row: row.name), sorted(held, key=lambda row: row.name)
+
+
+@dataclass(frozen=True)
+class OwnRow:
+    """A thing that is a resident's own and that whoever is here would give something for."""
+
+    resident_id: str
+    owner: str
+    # The thing itself, by its instance ID, and what kind of thing it is.
+    instance_id: str
+    item_id: str
+    name: str
+    # What it fetches, which is its owner's.
+    fetches: int
+
+
+def own_rows(world: SimulationWorld) -> list[OwnRow]:
+    """What the residents who are in own, on them or put away, that whoever is here would pay for:
+    what fetches most first."""
+    if world.merchant is None:
+        return []
+    rows = []
+    for resident in world.residents.values():
+        if resident.away:
+            continue
+        for holder in (resident.inventory, *world.containers.values()):
+            for item in holder.items:
+                if item.owner_id != resident.resident_id or item.broken:
+                    continue
+                fetches = world.merchants.gives(world, item.definition_id, item)
+                if fetches > 0:
+                    name = world.registries.items.resolve(item.definition_id).name
+                    rows.append(OwnRow(resident.resident_id, resident.name, item.instance_id, item.definition_id, name, fetches))
+    return sorted(rows, key=lambda row: (-row.fetches, row.owner, row.instance_id))
+
+
+def _own_height(world: SimulationWorld) -> int:
+    """How much of the board the things of the residents' own take, heading and all."""
+    rows = own_rows(world)
+    if not rows:
+        return 0
+    more = LINE_HEIGHT if len(rows) > MAX_OWN else 0
+    return LINE_HEIGHT + 2 + min(len(rows), MAX_OWN) * OWN_ROW + more + 4
 
 
 def chosen(rows: list[GoodsRow]) -> dict[str, int]:
@@ -125,12 +180,30 @@ def _columns(rect: pygame.Rect) -> tuple[pygame.Rect, pygame.Rect]:
 def trade_board_height(world: SimulationWorld) -> int:
     brought, held = goods_rows(world, {}, {})
     rows = max(1, len(brought), len(held))
-    return BAND + 3 + LINE_HEIGHT + 3 + LINE_HEIGHT + 1 + rows * ROW_HEIGHT + 4 + BUTTON_HEIGHT + 4 + BUTTON_HEIGHT + PADDING
+    goods = BAND + 3 + LINE_HEIGHT + 3 + LINE_HEIGHT + 1 + rows * ROW_HEIGHT + 4
+    return goods + _own_height(world) + BUTTON_HEIGHT + 4 + BUTTON_HEIGHT + PADDING
 
 
-def _floor(rect: pygame.Rect) -> int:
-    """Where the rows of things stop, to leave room for how the deal comes out and its buttons."""
-    return rect.bottom - PADDING - BUTTON_HEIGHT - 4 - BUTTON_HEIGHT - 4
+def _own_top(rect: pygame.Rect, world: SimulationWorld) -> int:
+    """Where what is the residents' own starts: over how the deal comes out and its buttons."""
+    return rect.bottom - PADDING - BUTTON_HEIGHT - 4 - BUTTON_HEIGHT - 4 - _own_height(world)
+
+
+def _floor(rect: pygame.Rect, world: SimulationWorld) -> int:
+    """Where the rows of things stop, to leave room for what comes under them."""
+    return _own_top(rect, world)
+
+
+def sale_buttons(font: BitmapFont, rect: pygame.Rect, world: SimulationWorld) -> list[Button]:
+    """A way to put it to the owner of each thing listed that they sell it."""
+    buttons = []
+    y = _own_top(rect, world) + LINE_HEIGHT + 2
+    for row in own_rows(world)[:MAX_OWN]:
+        button = Button.at(font, 0, y + (OWN_ROW - BUTTON_HEIGHT) // 2, ASK_LABEL, sale_intent(row.resident_id, row.instance_id))
+        button.rect.right = rect.right - PADDING
+        buttons.append(button)
+        y += OWN_ROW
+    return buttons
 
 
 def trade_buttons(
@@ -144,8 +217,8 @@ def trade_buttons(
     """A way to take one more or one fewer of each thing, to close the deal, and to draw whoever it is."""
     if world.merchant is None:
         return []
-    buttons: list[Button] = []
-    floor = _floor(rect)
+    buttons: list[Button] = sale_buttons(font, rect, world)
+    floor = _floor(rect, world)
     for column, rows in zip(_columns(rect), goods_rows(world, buy, sell)):
         y = column.y + LINE_HEIGHT + 1
         for row in rows:
@@ -182,6 +255,7 @@ def draw_trade_board(
     sell: Mapping[str, int],
     drawable: bool = False,
     band_color: Color | None = None,
+    faces: FaceRenderer | None = None,
 ) -> None:
     draw_panel(target, rect, band=BAND, band_color=band_color)
     x, width = rect.x + PADDING, rect.width - PADDING * 2
@@ -189,7 +263,7 @@ def draw_trade_board(
     font.draw(target, font.truncate(purses(world), width), (x, rect.y + BAND + 3), PALETTE["sand"])
     brought, held = goods_rows(world, buy, sell)
     buttons = {button.intent: button for button in trade_buttons(font, rect, world, buy, sell, drawable)}
-    floor = _floor(rect)
+    floor = _floor(rect, world)
     coin = world.fund.currency(world)
     sides = ((BRINGS_TITLE, NOTHING_BROUGHT, brought), (HOLDS_TITLE, NOTHING_HELD, held))
     for column, (heading, nothing, rows) in zip(_columns(rect), sides):
@@ -213,6 +287,27 @@ def draw_trade_board(
             middle = (fewer.rect.right + more.rect.left) // 2
             font.draw(target, count, (middle - font.width(count) // 2, more.rect.y + 1), PALETTE["glow" if row.chosen else "iron"])
             y += ROW_HEIGHT
+    owned = own_rows(world)
+    if owned:
+        y = _own_top(rect, world)
+        font.draw(target, OWN_TITLE, (x, y), PALETTE["lamp"])
+        y += LINE_HEIGHT + 2
+        for row in owned[:MAX_OWN]:
+            ask = buttons.get(sale_intent(row.resident_id, row.instance_id))
+            left = x
+            if faces is not None:
+                target.blit(faces.marker(row.resident_id), (left, y))
+                left += MARKER_SIZE[0] + 3
+            draw_item(target, icons, row.item_id, pygame.Rect(left, y + (OWN_ROW - ICON_SIZE[1]) // 2, *ICON_SIZE))
+            left += ICON_SIZE[0] + 3
+            fetches = coin.amount(row.fetches) if coin is not None else f"vale {row.fetches}"
+            room = (ask.rect.left if ask is not None else rect.right - PADDING) - 4 - left
+            font.draw(target, font.truncate(f"{row.owner}: {row.name} · {fetches}", room), (left, y + 2), PALETTE["bone"])
+            if ask is not None:
+                ask.draw(target, font)
+            y += OWN_ROW
+        if len(owned) > MAX_OWN:
+            font.draw(target, MORE_OWN.format(count=len(owned) - MAX_OWN), (x, y), PALETTE["stone"])
     deal = buttons.get(DEAL_INTENT)
     text, color = balance(world, brought, held)
     if deal is not None:

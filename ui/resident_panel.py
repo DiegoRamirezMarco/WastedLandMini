@@ -1,5 +1,7 @@
 """The panel down the right of the screen: one resident in full, or everybody at a glance."""
 
+from collections.abc import Callable
+
 import pygame
 
 from graphics.assets import AssetStore
@@ -51,6 +53,8 @@ ITEM_COLUMNS = 3
 ITEM_CELL_HEIGHT = ICON_SIZE[1] * ITEM_SCALE + LINE_HEIGHT + 4
 MAX_ITEM_ROWS = 2
 ROSTER_ROW = MARKER_SIZE[1] + 3
+# How large the settlement's coin is shown before what a resident has of it.
+COIN = 9
 TRAITS_TITLE = "Rasgos"
 RELATIONSHIPS_TITLE = "Relaciones"
 INVENTORY_TITLE = "Inventario"
@@ -276,7 +280,9 @@ def draw_resident_panel(
     layers: ScreenLayers | None = None,
     tab: str = LIFE_TAB,
     debug: bool = False,
+    show_coin: Callable[[pygame.Rect], None] | None = None,
 ) -> None:
+    """Draw a resident in full. `show_coin` puts the settlement's coin in the square it is given."""
     draw_panel(target, panel)
     x, y = panel.x + PADDING, panel.y + PADDING
     inner = panel.width - PADDING * 2
@@ -295,12 +301,17 @@ def draw_resident_panel(
     ]
     line_y = y + LINE_HEIGHT * 2 + 2
     affect = affect_hitbox(panel)
-    for text, color in lines:
-        for line in font.wrap(text, room)[:2]:
+    # What they have in coin is said under the coin itself, where the settlement counts in one.
+    coined = show_coin is not None and world.fund.currency(world) is not None
+    for index, (text, color) in enumerate(lines):
+        indent = COIN + 3 if coined and index == 0 else 0
+        for line in font.wrap(text, room - indent)[:2]:
             # What is said of them stops short of the way to affect them.
             if line_y + LINE_HEIGHT > affect.top:
                 break
-            font.draw(target, line, (beside, line_y), PALETTE[color])
+            if indent:
+                show_coin(pygame.Rect(beside, line_y + 1, COIN, COIN))
+            font.draw(target, line, (beside + indent, line_y), PALETTE[color])
             line_y += LINE_HEIGHT
     draw_panel(target, affect, fill="shadow", border="lamp")
     font.draw(target, AFFECT_LABEL, (affect.centerx - font.width(AFFECT_LABEL) // 2, affect.y + 1), PALETTE["glow"])

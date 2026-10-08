@@ -1487,13 +1487,48 @@ Still open here:
 - None of it is on screen: who somebody is, the date, a family's tree and a bundle on a back
   are for P25
 
-### P25 — Coin, smoke and kin on screen (needs S23 to S25) — planned
-- The currency named and drawn in the game, and seen wherever something is paid
-- The fund in the bar, beside what the settlement has in food and scrap
-- Putting a currency, or going back to barter, to the residents, and how each of them answered
-- A caravan seen at the gate, and dealing with it: what it brings and asks, what the settlement
-  has that is nobody's, and putting a sale to a resident. Built in P37, but for putting a
-  sale to a resident
+### P25 — Coin, smoke and kin on screen (needs S23 to S25) — under way
+Asked first, and answered:
+
+- **From ten to eighteen the body grows a little at each birthday**: six tenths of what was
+  drawn at ten, and a twentieth more every year, to all of it at eighteen. The head is as drawn
+- **The fund has an entry of its own in the menu**, `Fondo`, with its board, and what it holds
+  in coin is in the bar on top beside the food and the scrap
+- **The family tree is of the whole settlement together**, on one screen. Not the
+  recommendation, which was the tree of whoever is selected, opened from their panel
+- **When a child is born the screen for drawing them opens**, with time stopped. `Esc` leaves
+  it for later, and meanwhile they have the look the game comes with for children
+
+It is built in three parts, each with its own commit.
+
+Coin and fund, built:
+- **`Fondo` in the menu, or `F`**: how the settlement trades, what the fund holds, what there is
+  in things that is nobody's, and what each resident said the last time they were all asked,
+  face by face. The settlement keeps what each said (`asked_about` and `answers`, saved)
+- **A currency is named there**: its two names are written on the board, `TAB` changes field,
+  and it is put to the residents with one of the advices the decision has in its data.
+  `Volver al trueque` is put to them the same way. With a government either is a proposal
+- **`Cambiar nombre`** gives the currency there is another name
+- **The coin is drawn by the player**, in a screen of its own (`Dibujar moneda`), on a paper of
+  96 by 96 over the game's coin. It is kept by the ID of its currency, as a save is
+  (`illustrations/coins/`), so that a currency made after another is drawn anew
+- **The coin is seen wherever something is counted in it**: in the bar on top beside what the
+  fund holds, in the board, and in a resident's panel before what they have
+- **A thing of a resident's own is put to them from the deal with whoever is at the gate**:
+  what they own that would fetch something is listed under the deal, what fetches most first,
+  with `Proponérselo`. Under barter what they get is the first thing of the merchant's that
+  has been put in the deal
+- **What was bought waits by the gate where it can be seen**, a thing of each kind and how many
+  in all, until somebody carries it in. Whoever has come to trade is on the minimap
+
+Decided without asking, in this part:
+- A sale is put to its owner with the advice that encourages it. There is no way yet to put
+  it to them without leaning on them
+- Three things of the residents' own are listed at once, and the rest are counted
+- The rows of the menu are two pixels shorter, so that every entry of the settlement stays
+  clear of the dock with one more of them
+
+Still to build:
 - A substance seen to be taken, each of the four ways, and seen on whoever is under it: how
   they walk, the smoke round them
 - A resident's family in their panel, and the tree of it on a screen of its own
@@ -1508,9 +1543,6 @@ Still open here:
 - The date by the clock, and a birthday seen when it comes round
 - Two at the gate seen together, and what is advised about each of them
 - Whoever sleeps on the ground seen to, and a couple marrying
-
-Still to settle:
-- How small the body of a ten-year-old is, and whether it grows year by year or in a few steps
 
 ### S26 — Who is in charge (needs S20) — done
 Asked first, and answered: the ready-made settlement has no government and chooses one on its
@@ -2698,10 +2730,8 @@ Decided without asking:
 - Nothing says on the bar that a caravan is there: the news of its coming does, and the name
   over his head
 
-Still open here, which is the rest of P25:
-- Putting it to a resident that they sell a thing of their own is still a command
-- What waits at the gate to be carried in is not seen
-- Nothing shows on the minimap where he is
+What was still open here was built with P25: putting it to a resident that they sell a thing of
+their own, what waits at the gate to be carried in, and where he is on the minimap.
 
 ### P38 — A catalogue of pictures (needs P35) — done
 The user's words: "en urbanismo el menu es bastante poco familiar, es mejor que en el menu se

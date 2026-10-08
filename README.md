@@ -190,6 +190,16 @@ python -m simulation.headless --days 7 --seed 7
   things stand as seven bars, and the laws in force. `Elegir` beside a kind, and then
   `Confirmar`, gives the settlement that kind of government: it starts as legitimate as the
   number of residents who wanted it, and changing it later shakes the place
+- `Fondo` in the menu, or `F`: whether the settlement trades by barter or with a currency,
+  what its fund holds, and what each resident said the last time they were all asked.
+  `Proponer moneda` asks for its two names, written there (`TAB` changes field), and then
+  for the advice it is put to them with; `Volver al trueque` is put to them the same way.
+  `Cambiar nombre` renames the currency there is, and `Dibujar moneda` opens the screen
+  where its coin is drawn: it is shown in the bar beside what the fund holds, in the board
+  and in a resident's panel. With a government, either becomes a proposal like any other
+- While a caravaneer is at the gate, the deal also lists what is a resident's own that he
+  would pay for. `Proponérselo` puts it to its owner, who sells it or does not, and keeps
+  what it fetches. Under barter, what they get is the first thing of his put in the deal
 - `Guardar` in the menu, or `F5`, saves the game to `saves/quicksave.json`; `F9` loads it
 - `M`: sound on / off, voices and all
 - `Esc`: back to the menu, where the settlement waits; `Salir` there leaves the game

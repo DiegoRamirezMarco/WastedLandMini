@@ -298,6 +298,8 @@ PRESSING_NEED = 85.0
 SCRAP_TAG = "scrap"
 FUEL_TAG = "fuel"
 MEDICINE_TAG = "medicine"
+# The icon the fund is counted under in the bar: the settlement's coin.
+COIN_ICON = "coin"
 
 
 def taste_rows(world: SimulationWorld, resident: Resident) -> list[tuple[str, str, str | None]]:
@@ -432,7 +434,7 @@ def settlement_counts(world: SimulationWorld) -> list[tuple[str, str]]:
         scrap += quantity if SCRAP_TAG in definition.tags else 0
         fuel += quantity if FUEL_TAG in definition.tags else 0
         medicine += quantity if MEDICINE_TAG in definition.tags else 0
-    return [
+    counts = [
         ("people", f"{len(world.residents)}/{beds}"),
         ("food", str(food)),
         ("water", str(water)),
@@ -440,6 +442,10 @@ def settlement_counts(world: SimulationWorld) -> list[tuple[str, str]]:
         ("medicine", str(medicine)),
         ("scrap", str(scrap)),
     ]
+    if world.fund.currency(world) is not None:
+        # Where it counts in coin, what the fund holds, beside what it has in things.
+        counts.append((COIN_ICON, str(int(world.trading.fund))))
+    return counts
 
 
 def settlement_stock(world: SimulationWorld) -> list[tuple[str, int]]:

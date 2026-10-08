@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import pygame
 
 from graphics.assets import AssetStore
+from graphics.coin_art import CoinArt
 from graphics.face_renderer import FaceRenderer
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.icons import ICON_SIZE, icon_path
@@ -26,6 +27,8 @@ from ui.dock import draw_scene
 from ui.event_log import EventFeed
 from ui.affect_board import AFFECT_INTENT, affect_board_height, affect_rows, draw_affect_board
 from ui.affect_board import PANEL_WIDTH as AFFECT_WIDTH
+from ui.fund_board import PANEL_WIDTH as FUND_WIDTH
+from ui.fund_board import FundEntry, draw_fund_board, field_intent, field_rects, fund_board_height, fund_buttons
 from ui.government_board import PANEL_WIDTH as GOVERNMENT_WIDTH
 from ui.government_board import choose_buttons, draw_government_board, government_board_height
 from ui.inventory_view import (
@@ -37,6 +40,7 @@ from ui.inventory_view import (
 from ui.job_board import PANEL_WIDTH as BOARD_WIDTH
 from ui.job_board import draw_job_board, job_board_height, suggest_buttons
 from ui.labels import (
+    COIN_ICON,
     FEELING_LABELS,
     describe_action,
     describe_weather,
@@ -77,7 +81,7 @@ OUTLOOK_PADDING = 4
 # Rows of the menu on the left: compact enough for the game and editor controls together. Each
 # is the tile of its icon over a word, and the entries that are not of the settlement stand a
 # little apart from the ones that are.
-MENU_ROW = 30
+MENU_ROW = 28
 MENU_TOP = 2
 MENU_TILE = 18
 MENU_GAP = 4
@@ -93,6 +97,7 @@ JOBS_INTENT = ("jobs",)
 STORES_INTENT = ("stores",)
 RESEARCH_INTENT = ("research",)
 GOVERNMENT_INTENT = ("government",)
+FUND_INTENT = ("fund_board",)
 ROSTER_INTENT = ("roster",)
 MINIMAP_INTENT = ("minimap",)
 SAVE_INTENT = ("save",)
@@ -159,7 +164,7 @@ class MenuButton:
             if not skin.plate(target, plate, fill, trim):
                 pygame.draw.rect(target, PALETTE["shadow"], plate)
                 pygame.draw.rect(target, PALETTE["lamp" if active else "iron"], plate, 1)
-        place = pygame.Rect(self.rect.centerx - MENU_TILE // 2, self.rect.y + 2, MENU_TILE, MENU_TILE)
+        place = pygame.Rect(self.rect.centerx - MENU_TILE // 2, self.rect.y + 1, MENU_TILE, MENU_TILE)
         scale = skin.layers.scale if skin.layers is not None else 1
         lit = active or pointed
         if not skin.picture(target, skin.tile(self.icon, MENU_TILE * scale, lit), place):
@@ -204,6 +209,12 @@ class Hud:
         self.stores_open = False
         self.research_open = False
         self.government_open = False
+        self.fund_open = False
+        # What the player is in the middle of on the board of the fund: a currency being named
+        # to put to everyone, going back to barter, or another name for the one there is.
+        self.fund_entry: FundEntry | None = None
+        # The settlement's coin, as somebody drew it or as the game does.
+        self.coins = CoinArt(illustrations)
         # Dealing with whoever has stopped by the gate: what of theirs is being bought and what
         # of the settlement's sold, as units by item ID, until the deal is closed.
         self.trade_open = False
@@ -268,6 +279,7 @@ class Hud:
             ("study", "Estudio", RESEARCH_INTENT),
             ("stores", "Almacén", STORES_INTENT),
             ("government", "Gobierno", GOVERNMENT_INTENT),
+            ("fund", "Fondo", FUND_INTENT),
             ("events", "Eventos", LOG_INTENT),
             ("map", "Mapa", MINIMAP_INTENT),
             ("save", "Guardar", SAVE_INTENT),
@@ -306,6 +318,8 @@ class Hud:
             return fixed + study_buttons(self.font, self.research_rect(), self.world)
         if self.government_open:
             return fixed + choose_buttons(self.font, self.government_rect(), self.world, self.government_armed)
+        if self.fund_open:
+            return fixed + fund_buttons(self.font, self.fund_rect(), self.world, self.fund_entry, self.drawable)
         if self.trading:
             return fixed + trade_buttons(
                 self.font, self.trade_rect(), self.world, self.trade_buy, self.trade_sell, self.drawable
@@ -321,9 +335,11 @@ class Hud:
     def _open_only(self, panel: str) -> None:
         """Open one of the panels that share a corner, or shut it if it is the one open, and shut the rest."""
         for name in (
-            "log_open", "jobs_open", "stores_open", "research_open", "government_open", "trade_open", "affect_open"
+            "log_open", "jobs_open", "stores_open", "research_open", "government_open", "fund_open", "trade_open",
+            "affect_open",
         ):
             setattr(self, name, name == panel and not getattr(self, name))
+        self.fund_entry = None
         self.affect_group = self.affect_kind = None
         self.government_armed = None
         self.trade_buy, self.trade_sell = {}, {}
@@ -342,6 +358,14 @@ class Hud:
 
     def toggle_government(self) -> None:
         self._open_only("government_open")
+
+    def toggle_fund(self) -> None:
+        self._open_only("fund_open")
+
+    @property
+    def typing(self) -> bool:
+        """Whether what is typed is being written on one of the boards, and so is no shortcut."""
+        return self.fund_open and self.fund_entry is not None and self.fund_entry.written
 
     @property
     def trading(self) -> bool:
@@ -418,6 +442,11 @@ class Hud:
         for button in self.buttons:
             if button.contains(position):
                 return button.intent
+        if self.fund_open:
+            fields = field_rects(self.font, self.fund_rect(), self.world, self.fund_entry)
+            for field, box in fields.items():
+                if box.collidepoint(position):
+                    return field_intent(field)
         if self.selected_id in self.world.residents and affect_hitbox(self.layout.panel).collidepoint(position):
             return AFFECT_INTENT
         if self.selected_container in self.world.containers:
@@ -476,6 +505,7 @@ class Hud:
         panels += [self.stores_rect()] if self.stores_open else []
         panels += [self.research_rect()] if self.research_open else []
         panels += [self.government_rect()] if self.government_open else []
+        panels += [self.fund_rect()] if self.fund_open else []
         panels += [self.trade_rect()] if self.trading else []
         panels += [self.affect_rect()] if self.affect_open else []
         return any(rect is not None and rect.collidepoint(position) for rect in panels)
@@ -497,6 +527,9 @@ class Hud:
 
     def government_rect(self) -> pygame.Rect:
         return self._float(GOVERNMENT_WIDTH, government_board_height(self.font, self.world))
+
+    def fund_rect(self) -> pygame.Rect:
+        return self._float(FUND_WIDTH, fund_board_height(self.font, self.world, self.fund_entry))
 
     def trade_rect(self) -> pygame.Rect:
         return self._float(TRADE_WIDTH, trade_board_height(self.world))
@@ -569,13 +602,18 @@ class Hud:
             draw_government_board(
                 self.canvas, self.font, self.government_rect(), self.world, self.government_armed, band_hue("government")
             )
+        if self.fund_open:
+            draw_fund_board(
+                self.canvas, self.font, self.faces, self.fund_rect(), self.world, self.fund_entry, self.drawable,
+                band_hue("fund"), self.show_coin, self.lit,
+            )
         if self.trade_open and self.world.merchant is None:
             # They have packed up and gone, and the deal with them.
             self.trade_open, self.trade_buy, self.trade_sell = False, {}, {}
         if self.trading:
             draw_trade_board(
                 self.canvas, self.font, self.icons, self.trade_rect(), self.world, self.trade_buy, self.trade_sell,
-                self.drawable, band_hue("stores"),
+                self.drawable, band_hue("stores"), self.faces,
             )
         if self.affect_open and self.selected_id in self.world.residents:
             draw_affect_board(
@@ -599,9 +637,24 @@ class Hud:
     def _top_icon(self, name: str, x: int) -> None:
         """One of the icons of the bar on top: as fine as the window shows it, or else the game's own small one."""
         place = pygame.Rect(x, 2, TOP_ICON, TOP_ICON)
+        if name == COIN_ICON:
+            # The fund is counted under the settlement's own coin, as it was drawn.
+            self.show_coin(place)
+            return
         if self.skin.usable and self.skin.picture(self.canvas, self.skin.icon(name, TOP_ICON * self.layers.scale), place):
             return
         self.canvas.blit(self.assets.image(icon_path(name), size=ICON_SIZE), (x, 3))
+
+    def show_coin(self, place: pygame.Rect) -> None:
+        """Put the coin of the currency the settlement has made in a square of the canvas: as
+        fine as the window shows it, or else the game's own small one in the middle of it."""
+        made = self.world.trading.currency
+        if self.skin.usable:
+            picture = self.coins.shown(made.currency_id if made is not None else None, place.width * self.layers.scale)
+            if self.skin.picture(self.canvas, picture, place):
+                return
+        small = self.assets.image(icon_path(COIN_ICON), size=ICON_SIZE)
+        self.canvas.blit(small, small.get_rect(center=place.center))
 
     def _menu_active(self, intent: Hashable) -> bool:
         if intent == ROSTER_INTENT:
@@ -614,6 +667,7 @@ class Hud:
             LOG_INTENT: self.log_open,
             RESEARCH_INTENT: self.research_open,
             GOVERNMENT_INTENT: self.government_open,
+            FUND_INTENT: self.fund_open,
         }
         return open_panels.get(intent, False)
 
@@ -686,6 +740,7 @@ class Hud:
                 self.layers,
                 self.panel_tab,
                 self.taste_debug,
+                self.show_coin,
             )
         elif self.container_rect() is not None:
             draw_panel(self.canvas, panel)
