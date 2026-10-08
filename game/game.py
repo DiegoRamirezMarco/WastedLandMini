@@ -377,6 +377,9 @@ class Game:
         if self.scene_name in (MENU_SCENE, CREATOR_SCENE):
             # There the keys are a choice or a name, not shortcuts.
             return
+        if self.scene_name == "global" and self.global_view.typing:
+            # Nor while a building is being given its name.
+            return
         if key == pygame.K_ESCAPE and self.scene_name in (
             EDITOR_SCENE,
             BUILDING_SCENE,

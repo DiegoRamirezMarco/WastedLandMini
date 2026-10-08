@@ -45,6 +45,8 @@ from simulation.social.relationship import Relationship
 from simulation.tastes.knowledge import TasteKnowledge
 from simulation.tastes.taste import TasteProfile
 from simulation.tastes.taste_system import TasteSystem
+from simulation.housing.decor import DecorSystem
+from simulation.housing.housing import HousingResult, HousingState, HousingSystem
 from simulation.tutorial.tutorial import TutorialState
 from simulation.tutorial.tutorial_system import TutorialSystem
 from simulation.work.construction import ConstructionSystem
@@ -177,6 +179,10 @@ class SimulationWorld:
     guide: TutorialSystem = field(default_factory=TutorialSystem)
     # Where a new settlement is in its opening. One that is past it, or never had one, has no step.
     tutorial: TutorialState = field(default_factory=TutorialState)
+    # Whose each building is, and what has been put in it to be looked at.
+    housing: HousingSystem = field(default_factory=HousingSystem)
+    homes: HousingState = field(default_factory=HousingState)
+    decor: DecorSystem = field(default_factory=DecorSystem)
 
     def step(self, minutes: int | None = None) -> None:
         if self.clock.paused:
@@ -199,6 +205,7 @@ class SimulationWorld:
         self.lending.tick(self)
         self.family.tick(self)
         self.politics.tick(self)
+        self.housing.tick(self)
         self.activities.begin_minute(self)
         for resident in list(self.residents.values()):
             # Someone may die during this very minute.
@@ -362,6 +369,29 @@ class SimulationWorld:
             return False
         resident.manners[kind_id] = manner_id
         return True
+
+    def give_house(self, room_id: str, owners: list[str]) -> HousingResult:
+        """Say who a building belongs to. Nobody makes it the settlement's."""
+        return self.housing.give(self, room_id, owners)
+
+    def decorate(self, room_id: str, kind: str, x: int, y: int) -> HousingResult:
+        """Put an ornament in a building, at a cell of its floor or a stretch of its back wall."""
+        return self.decor.place(self, room_id, kind, x, y)
+
+    def undecorate(self, room_id: str, ornament_id: str) -> HousingResult:
+        return self.decor.remove(self, room_id, ornament_id)
+
+    def surface_building(self, room_id: str, floor: str | None = None, wall: str | None = None) -> HousingResult:
+        """Say what the floor of a building is made of, its walls, or both."""
+        return self.decor.surface(self, room_id, floor, wall)
+
+    def lock_house(self, room_id: str, locked: bool) -> HousingResult:
+        """Lock the door of a building that is somebody's, or leave it open again."""
+        return self.housing.lock(self, room_id, locked)
+
+    def name_building(self, room_id: str, name: str | None = None, use: str | None = None) -> HousingResult:
+        """Give a building a name of its own, say what it is for, or both."""
+        return self.housing.name(self, room_id, name, use)
 
     def acknowledge_tutorial(self) -> bool:
         return self.guide.acknowledge(self)
@@ -697,4 +727,7 @@ class SimulationWorld:
             # Each of the two who work the garden has a hoe of their own.
             for farmer_id in ("raul", "ines"):
                 world.stock(world.residents[farmer_id].inventory, "hoe", 1, farmer_id)
+        # A settlement that is already running has its houses given out: everybody has the
+        # one they sleep in. The player changes it from there.
+        world.housing.settle(world)
         return world

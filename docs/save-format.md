@@ -4,11 +4,11 @@ Version saves from day one. The prototype starts with JSON behind `SaveManager`;
 
 Never save render-only state. Store stable IDs for residents, item definitions and item instances.
 
-## Version 33 (current)
+## Version 34 (current)
 
 | Field | Content |
 |---|---|
-| `version` | `33` |
+| `version` | `34` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -18,6 +18,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `under_raid` | ID of the raid at the gate while whoever is on watch decides what to do |
 | `trading` | How the settlement trades: `currency` (its `currency_id`, `name` and `singular`, or `null` if it never made one), `in_use` (false under barter), `fund` (the coin the settlement holds as a whole), `currency_count`, `asked_on` (the day the residents were last asked) and `refusals` (swaps turned down per resident ID since they last made something of it) |
 | `merchant` | Whoever has stopped by to trade, or `null`: `event_id`, `leaves_at`, `goods` (units per item ID), `purse`, `fact_id` (the fact of their being there), and `tile` and `cart`: where they stand and where their cart is, by its left tile, each as `[x, y]` or `null` |
+| `housing` | Whose each building is: `owners` (resident IDs per room ID; a room that is missing is the settlement's), `names` and `uses` given by the player per room ID, `began` (whether houses have been given out for the first time), `locked` (the room IDs whose door is locked), `lifted_on` (the day a house last told on the mood of whoever lives in it), and what has been put in each to be looked at: `ornaments` (per room ID, each with `ornament_id`, `kind`, `on` which is `floor` or `wall`, and `x` and `y` in cells of its inside from its back left corner), `floors`, `walls` and `ornament_count` |
 | `debts` | What residents have lent one another and not had back: `debtor_id`, `creditor_id`, `amount`, `since` (the day) and `overdue` |
 | `at_gate` | Units of what was bought for the settlement that wait at the gate to be carried in, per item ID |
 | `government` | The government the settlement has: `kind`, `leader`, `council`, the seven `measures`, `chosen_on`, `term_began`, `choosing_until`, `proposed`, `election_at`, `vacant_since`, `heir`, `resigned`; `laws` (per law ID: `degree`, `params`, `since`, `by`, `pushed`); `meals` (per resident ID, `[day, times]` eaten out of the commons); `proposals` waiting, per ID, and those `decided`, oldest first (each with `kind`, `by`, `sponsor`, `law`, `degree`, `target`, `government`, `params`, `text`, `raised_at`, `decides_at`, `lobbied`, `pushed`, `status`, `decided_at`, `passed_degree`, `ballots` and `open_ballot`); `proposal_count`, `refused` (per matter, the day from which it may be put again) and `raised_on` (day per resident); `elections` (each with `day`, `at`, `seat`, `way`, `candidates`, the `tally` given out, `winner`, who each voter `backed`, `open_ballot`, `rigged_by` and `claimed_by`); `recall`, `rigged_by`, `rig_asked` and `backing` for the vote that has been called |
@@ -73,6 +74,10 @@ them after the map definition was loaded.
 - **Version 3** had no facts, beliefs, decisions or history; all default to empty.
 - A belief about a fact that is no longer in the save is dropped.
 - A decision whose resident or kind no longer exists is dropped.
+- **Version 34** added `housing`. In an older save everybody is given the house they were
+  sleeping in, by how many beds each building has, unless the settlement is still in its
+  opening. An owner who no longer lives here, and a building that is no longer there, are
+  dropped.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.

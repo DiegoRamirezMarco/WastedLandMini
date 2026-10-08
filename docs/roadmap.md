@@ -2827,41 +2827,126 @@ This one:
 - Who is where, and what is where, is saved. A save from before has every building's things and
   people moved inside it
 
-### S41 — Whose house it is, and what it is like (needs S40) — planned
-- **Owners**: any building can be given to one or more residents by the player. One with no
-  owners is the settlement's
-- **A bed in a building that is somebody's is theirs to sleep in**, and nobody else's. Whoever
-  has no house sleeps on the ground, wherever they are (S25)
-- **Only those who live there and whoever they would have in go in**: their partner, their kin,
-  whoever they think well of. Anybody goes into what is the settlement's
-- **Going in unasked is ill seen**, as a small theft is: whoever lives there and sees it holds
-  it against them, and it is talked of (S5, S9)
-- **A lock is a thing that is built on a door.** With it shut nobody without a key goes in
-- **What is kept inside is theirs**, and taking it is stealing
+### S41 — Whose house it is, and what it is like — done
+Built before S40, and said so to the user: the inside as a place of its own is a deep change
+(the map, the ways across it and every save), and whose a house is does not wait on it.
+
+- **Owners** (`simulation/housing/housing.py`, `GiveHouseCommand`): any building with a roof is
+  given to one or more residents by the player. One with no owners is the settlement's. Whoever
+  has died or gone owns nothing
+- **Who lives in a house** is whoever it belongs to, whoever is with one of them, and their
+  children. A grown brother or sister does not for being one
+- **A bed under a roof is for whoever lives in that building**, and so nobody's in a building
+  that is the settlement's. Whoever has no house sleeps in the open (S25), as the user asked
+- **Only those who live there and whoever they would have in go in** for what is there: whoever
+  one of the owners thinks well enough of, which is theirs to think and not the visitor's.
+  Whoever works at a thing gets to it all the same. Anybody goes into what is the settlement's
+- **Hunger or thirst bad enough drives somebody in unasked**, for what would see to it, and
+  **that is seen**: `trespass`, which whoever lives there holds against them and which is
+  talked of (S5, S9)
+- **A door is locked from the board of the building** (`LockHouseCommand`). Locked, nobody but
+  whoever lives there goes in, however well they are thought of and however hungry
+- **What is kept inside is for them**: a pantry, a pot or anything else in a house is used by
+  whoever lives there and whoever they would have in, and by nobody else without trespassing
 - **Qualities that come of how it is furnished**: comfort, warmth, light and how good it is to
-  look at, which tell on the rest and the mood of whoever lives there (S20)
-- **A name and a use of its own**, which is what its sign says
+  look at, each from 0 to 100, from what stands in it. A second of the same thing adds half of
+  what the first did. Whoever lives there rests the better in their own bed for its comfort,
+  and once a day has their mood lifted by how good it is to look at (S20)
+- **A name and a use of its own** (`NameBuildingCommand`), which is what its sign says
+- **All of it data** (`data/housing.json`): how well somebody has to be thought of, how bad a
+  need has to be, what each kind of thing adds to each quality, and the uses there are
+- **Saved** (version 34). In a save from before, and in the ready-made settlement, everybody
+  has the house they were sleeping in. In a new settlement nothing is anybody's while its
+  opening lasts, and houses are given out for the first time when it ends
+- **From inside** (`ui/house_board.py`): a board down the right of the room with its name and
+  use, its beds and who lives there, the four qualities as bars, the door, and everybody in the
+  settlement to press: lit, the building is theirs. Whoever has no house is marked. `Casa`
+  opens and shuts it
 
-Still to settle, when it is reached:
-- Who has a key: only the owners, or whoever they give one to
-- What a couple or a family does when only one of them is given a house (S25)
+Decided without asking:
+- **The lock is a switch of the house and not a thing that is built.** What was answered was
+  "se puede cerrar con llave"; a lock taking a tile of floor in a shack of six was worse than
+  what it bought. It costs nothing
+- **Brothers and sisters do not live in one another's houses** for being kin; partners and
+  children do
+- **Whoever comes to the settlement later has no house** until the player gives them one: it
+  was "la asigno yo". The player is told when they come in, and they are marked on the board
+- **A bed in a building that is the settlement's is nobody's**, the clinic's sick beds apart,
+  which are no beds to sleep the night in
+- **A house changes who may go in for a thing, not whose the thing is.** What is the
+  settlement's stays on its books wherever it is kept, is counted in `Almacén`, is traded and
+  is fetched by whoever works with it. It was first built the other way, with what was in a
+  house off the settlement's books, and taken back: when the opening of a new settlement ends
+  the founder's shack is theirs and its crate is the only store there is, so the settlement
+  was left with nothing to its name and nowhere to put what a trip brought back
+- The thefts of S9 go on as they were
+- **Sleeping in the open rests somebody better than it did** (`sleeping_rough` in
+  `data/family.json`: 0.17 a minute, from 0.12; a bed is 0.21). It was made for the odd night
+  with no bed free, and is now where whoever has no house sleeps every night. Measured over
+  eighteen seeds of ten weeks with nobody giving houses out: as it was, whoever had no house
+  slept six hours in ten and worked half of what the rest did, and four settlements starved
+  where one did before; as it is now, one does, as before
 
-### S42 — More to furnish with (needs S40) — planned
-- **Things on the wall**: pictures, shelves, windows, lamps, clocks, each taking a place on the
-  back wall
-- **More kinds of furniture and ornament**: rugs, plants, chairs, curtains, bedside tables
-- **A finer grid inside**: four cells to a cell for what is small, while what is large still
-  goes by whole ones
-- **A floor and walls to choose** for each building
-- All of it data, like everything that can be placed, and each kind drawn by the game (P41)
+Left for later:
+- Keys given to somebody who does not live there
+- A household's own stock: whoever lives in a house putting by in it what is theirs, off the
+  settlement's books
 
-### P40 — Furnishing from inside (needs S42) — planned
-- A mode of the view from inside for putting things down, moving them and taking them away, on
-  the floor and on the wall, with the catalogue of pictures (P38)
-- Furniture put to a resident to be built, as outside; ornaments, floor and walls at once
-- Whose house it is, said from inside, and what it is like, seen there; its lock
-- From the map, over each face on a roof, what they are doing: talking, eating, sleeping
+### S42 — More to furnish with — done
+Built before S40, like S41: where an ornament is goes by the building and not by the map, so
+that it stays where it was put when the inside becomes a place of its own.
+
+- **Ornaments** (`simulation/housing/decor.py`, `data/decor.json`): things put in a building only
+  to be looked at. Nobody uses one and nobody walks into one. They go where the player says at
+  once and for nothing (`DecorateCommand`), and come away the same (`UndecorateCommand`)
+- **On the floor**: a rug and a mat, which lie flat and go under anything, furniture included; a
+  plant, a chair, a bedside table and a standing lamp, which take a cell that no furniture and
+  no other of them has
+- **On the back wall**: a picture, a window, a curtain, a shelf, a lamp and a clock, each taking
+  a stretch of it. The wall is its own place: what hangs is in the way of nothing on the floor
+- **The grid inside is the finer one**: four cells of the inside to a tile of the building, as
+  the view of P39 already drew it. Furniture stands on whole tiles and an ornament on any cell
+- **A floor and walls to choose** (`SurfaceCommand`): boards, concrete, tiles or trodden earth
+  underfoot; boards, plaster, brick or sheet metal round it. Nothing said puts it back as it was
+  put up
+- **All of it tells on what the building is like** (S41): each kind, and each floor and wall,
+  adds to its comfort, warmth, light and beauty what `furnishing` in `data/housing.json` says
+- **Saved** with whose the building is (version 34). An ornament of a kind that is no longer
+  there, as when a pack is taken out, is kept and not shown
+
+Decided without asking:
+- **Ornaments cost nothing and need nobody**, floor and walls included: it was "muebles se
+  construyen, adornos no"
+- **A chair is an ornament**: nobody sits on it. The stool is still the thing to sit on
+- **Nothing stops somebody walking where an ornament stands.** They are drawn in front of it or
+  behind it by how far down the floor they are
+
+Left for later:
+- Moving an ornament without taking it away and putting it down again
+- How far up the wall a thing hangs: each kind has its own height
+
+### P40 — Furnishing from inside — done
+- **`Decorar`, inside a building** (`ui/decor_board.py`): the board down the right of the room
+  becomes a catalogue of pictures in four tabs, with the name of whatever the pointer is on and
+  what it adds
+- **`Adorno`**: press one and it is in hand; it follows the pointer over the floor or the back
+  wall, seen through, with a green line round it where it can go and a red one where it cannot.
+  A press puts it down, and it stays in hand for the next. The other button puts it away
+- **`Mueble`**: every kind of furniture the settlement knows how to make, with what it takes. A
+  press on the floor puts it to somebody to make, as in Urbanismo: whoever is selected, or else
+  whoever lives there, one after another until one of them will. What is being put up is seen
+  through where it will stand, with how far along it is
+- **`Suelo` and `Pared`**: a press changes it at once; the first tile puts it back as it was
+- **`Quitar`**: a press on an ornament takes it away. Furniture is still taken away in Urbanismo
+- **Each kind is drawn by the game** (`graphics/ornament_pictures.py`), in the hand of P41, and
+  so are the floors and the walls (`draw_shell`)
+- Whose house it is, said from inside, what it is like, and its lock: built with S41
+- From the map, over each face on a roof, what they are doing: built with S40's first step
+- While a building is being dressed a press on the room picks nobody
+
+Left for later:
 - A way for the player to draw each kind of thing for the view from inside themselves
+- Ornaments are not seen from the map, even with every roof off
 
 ### P41 — Everything in one hand (needs P39) — done
 The user liked the bed drawn for the view from inside, and said: "cambia todos los items a este

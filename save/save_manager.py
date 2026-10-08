@@ -5,6 +5,7 @@ from typing import Any
 
 from simulation.clock import SimulationClock
 from simulation.economy.merchant import Merchant
+from simulation.housing.housing import HousingState, Ornament
 from simulation.economy.terms import Currency, Debt, TradingState
 from simulation.events.crisis import Crisis
 from simulation.events.decision import Decision, DecisionOption
@@ -140,7 +141,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 33
+    CURRENT_VERSION = 34
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -172,6 +173,29 @@ class SaveManager:
             },
             "debts": [vars(debt) for debt in world.debts],
             "at_gate": dict(world.at_gate),
+            "housing": {
+                # Only whoever still lives here owns anything, and only what is still standing.
+                "owners": {
+                    room_id: owners
+                    for room_id in world.homes.owners
+                    if room_id in world.rooms and (owners := world.housing.owners(world, room_id))
+                },
+                "names": {room_id: name for room_id, name in world.homes.names.items() if room_id in world.rooms},
+                "uses": {room_id: use for room_id, use in world.homes.uses.items() if room_id in world.rooms},
+                "began": world.homes.began,
+                "locked": [
+                    room_id for room_id in world.homes.locked if room_id in world.rooms and world.housing.owners(world, room_id)
+                ],
+                "lifted_on": world.homes.lifted_on,
+                "ornaments": {
+                    room_id: [vars(ornament) for ornament in ornaments]
+                    for room_id, ornaments in world.homes.ornaments.items()
+                    if room_id in world.rooms and ornaments
+                },
+                "floors": {room_id: floor for room_id, floor in world.homes.floors.items() if room_id in world.rooms},
+                "walls": {room_id: wall for room_id, wall in world.homes.walls.items() if room_id in world.rooms},
+                "ornament_count": world.homes.ornament_count,
+            },
             "merchant": (
                 {
                     "event_id": world.merchant.event_id,
@@ -588,6 +612,7 @@ class SaveManager:
         self._restore_tutorial(world, data)
         self._restore_tastes(world, data)
         self._restore_research(world, data, version)
+        self._restore_housing(world, data)
         return world
 
     def _restore_politics(self, world: SimulationWorld, data: dict[str, Any]) -> None:
@@ -933,6 +958,47 @@ class SaveManager:
             if "tile" not in visitor:
                 tile, cart = world.merchants.stand(world, events[world.merchant.event_id])
             world.merchant.tile, world.merchant.cart = tile, cart
+
+    def _restore_housing(self, world: SimulationWorld, data: dict[str, Any]) -> None:
+        """Put back whose each building is and what has been put in it to be looked at."""
+        world.homes = HousingState()
+        saved = data.get("housing")
+        if not isinstance(saved, dict):
+            # A save from before buildings were anybody's: everybody has the house they were
+            # sleeping in, unless the settlement is still in its opening, when nothing is.
+            if not world.tutorial.active:
+                world.housing.settle(world)
+            return
+        homes = world.homes
+        # Only a building that is still there belongs to anybody, and only to whoever still lives here.
+        homes.owners = {
+            str(room_id): [str(owner) for owner in owners if str(owner) in world.residents]
+            for room_id, owners in _object_or_empty(saved.get("owners")).items()
+            if str(room_id) in world.rooms and isinstance(owners, list)
+        }
+        homes.owners = {room_id: owners for room_id, owners in homes.owners.items() if owners}
+        homes.names = {str(k): str(v) for k, v in _object_or_empty(saved.get("names")).items() if str(k) in world.rooms}
+        uses = world.registries.housing.uses
+        homes.uses = {
+            str(k): str(v) for k, v in _object_or_empty(saved.get("uses")).items() if str(k) in world.rooms and str(v) in uses
+        }
+        homes.began = bool(saved.get("began", False))
+        homes.locked = [str(room_id) for room_id in saved.get("locked", []) if str(room_id) in homes.owners]
+        homes.lifted_on = int(saved.get("lifted_on", 0))
+        homes.floors = {str(k): str(v) for k, v in _object_or_empty(saved.get("floors")).items() if str(k) in world.rooms}
+        homes.walls = {str(k): str(v) for k, v in _object_or_empty(saved.get("walls")).items() if str(k) in world.rooms}
+        homes.ornament_count = max(0, int(saved.get("ornament_count", 0)))
+        homes.ornaments = {}
+        for room_id, ornaments in _object_or_empty(saved.get("ornaments")).items():
+            if str(room_id) not in world.rooms or not isinstance(ornaments, list):
+                continue
+            kept = [
+                Ornament(str(each["ornament_id"]), str(each["kind"]), str(each.get("on", "floor")), int(each.get("x", 0)), int(each.get("y", 0)))
+                for each in ornaments
+                if isinstance(each, dict) and "ornament_id" in each and "kind" in each
+            ]
+            if kept:
+                homes.ornaments[str(room_id)] = kept
 
     def _restore_happenings(self, world: SimulationWorld, data: dict[str, Any], rng_data: dict[str, Any]) -> None:
         """Put back the weather, the gate and what has already happened from outside."""

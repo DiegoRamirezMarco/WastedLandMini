@@ -7,7 +7,7 @@
   },
   "sleeping_rough": {
     "per_minute": {
-      "tiredness": -0.12,
+      "tiredness": -0.17,
       "stress": 0.02
     },
     "from": 60,

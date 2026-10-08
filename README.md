@@ -109,9 +109,18 @@ python -m simulation.headless --days 7 --seed 7
 - Whoever is outside the settlement waits as a face in the top left corner; click it to select
   them. What the residents have heard is coming is listed there too, with how many know
 - With a resident selected, a heart marks their partner and a star those they hold as friends
-- A building keeps its roof on until you rest the mouse on it or select someone or something
-  inside. Whoever is under a roof shows as a face on it. `T` takes every roof off, or puts them
-  back
+- A building is always shut from the map. Whoever is in it shows as a face on its roof, with
+  what they are doing over it: talking, eating, asleep, at work. To see more, go in. `T` takes
+  every roof off, or puts them back
+- Inside a building, `Casa` opens the board on it: press a name to say the building is theirs,
+  or no longer is. A bed under a roof is for whoever lives there, and whoever has no house
+  sleeps in the open. `Echar llave` shuts everybody else out, `Nombre` gives it a name and
+  `Uso` says what it is for. The four bars are what it is like to live in
+- `Decorar`, inside a building, opens a catalogue of pictures. An `Adorno` goes down where you
+  press, on the floor or on the back wall, at once and for nothing; a `Mueble` is put to
+  whoever is selected, or whoever lives there, to make; `Suelo` and `Pared` change what the
+  room is made of. `Quitar` takes an ornament away, and the right button puts down what is
+  in hand
 - Click the sign of a building, or press `I` with the pointer on it, to go inside: the room is
   seen with its back wall face on and its floor from a little above, as a grid, with whoever
   is in it. `Salir` or `I` goes back out. It is a first try of the look: nothing can be

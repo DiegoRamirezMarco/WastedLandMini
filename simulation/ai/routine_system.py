@@ -72,6 +72,11 @@ class RoutineSystem:
                 continue
             if not world.work.open_to(world, resident, use):
                 continue
+            # What stands in somebody's house is theirs to use, and whoever they would have in.
+            # Anybody else goes in for it only when they have to.
+            housing = world.housing
+            if not housing.may_use(world, resident, placed, use) and not housing.pressed(world, resident, placed, use):
+                continue
             bed_to_be_had = bed_to_be_had or (use.unaware and use.per_minute.get("tiredness", 0.0) < 0)
             if governed and laws.bars(world, resident, placed, use, indoors):
                 continue
@@ -139,6 +144,8 @@ class RoutineSystem:
     ) -> bool:
         """Whether a use would lower a need, as things stand: open, within their means and not empty."""
         if not world.work.open_to(world, resident, use):
+            return False
+        if not world.housing.may_use(world, resident, placed, use) and not world.housing.pressed(world, resident, placed, use):
             return False
         if not world.trade.can_afford(world, resident, use, placed.object_id):
             return False

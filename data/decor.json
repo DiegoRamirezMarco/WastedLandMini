@@ -1,0 +1,72 @@
+{
+  "ornaments": {
+    "rug": {
+      "name": "alfombra",
+      "on": "floor",
+      "width": 3,
+      "height": 2,
+      "flat": true
+    },
+    "mat": {
+      "name": "esterilla",
+      "on": "floor",
+      "width": 1,
+      "height": 1,
+      "flat": true
+    },
+    "plant": {
+      "name": "planta",
+      "on": "floor"
+    },
+    "chair": {
+      "name": "silla",
+      "on": "floor"
+    },
+    "bedside_table": {
+      "name": "mesilla",
+      "on": "floor"
+    },
+    "floor_lamp": {
+      "name": "lámpara de pie",
+      "on": "floor"
+    },
+    "picture": {
+      "name": "cuadro",
+      "on": "wall"
+    },
+    "window": {
+      "name": "ventana",
+      "on": "wall",
+      "width": 2
+    },
+    "curtain": {
+      "name": "cortina",
+      "on": "wall"
+    },
+    "wall_shelf": {
+      "name": "repisa",
+      "on": "wall",
+      "width": 2
+    },
+    "wall_lamp": {
+      "name": "aplique",
+      "on": "wall"
+    },
+    "clock": {
+      "name": "reloj",
+      "on": "wall"
+    }
+  },
+  "floors": {
+    "floor_wood": "tablas",
+    "floor_concrete": "cemento",
+    "floor_tiles": "baldosas",
+    "floor_earth": "tierra pisada"
+  },
+  "walls": {
+    "boards": "tablas",
+    "plaster": "yeso",
+    "brick": "ladrillo",
+    "sheet": "chapa"
+  }
+}

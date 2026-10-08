@@ -5,10 +5,16 @@ from pathlib import Path
 
 import pygame
 
-from scenes.interior_view import DEPTH, GROWTH, WALL, door_columns, draw_shell, layout_for
+from scenes.global_view import NOBODY_TO_MAKE_IT
+from scenes.interior_view import DECOR_INTENT, DEPTH, GROWTH, HOUSE_INTENT, WALL, door_columns, draw_shell, layout_for
 from settings import SCALE
 from simulation.residents.activity import Activity
+from simulation.commands import DecorateCommand
+from simulation.events.event import DomainEvent
+from simulation.work.construction import OBJECT_SITE
 from simulation.world import SimulationWorld
+from ui.decor_board import DONE_INTENT, FLOORS, FURNITURE, ORNAMENTS, REMOVE_INTENT, TABS, WALLS, entries, entry_cells, pick_intent, tab_intent
+from ui.house_board import LOCK_INTENT, RENAME_INTENT, USE_INTENT, owner_intent
 from world.room import Room
 
 AREA = pygame.Rect(0, 0, 1092, 848)
@@ -190,11 +196,11 @@ class InsideABuildingTests(unittest.TestCase):
         self.view.render()
         self.assertNotIn("south_house", self.view.looked_into(), "the sign stays where the pointer found it")
         self.assertEqual(self.view.sign_boxes["south_house"], sign)
-        # Anywhere else on the building, the roof still comes off.
+        # Nor does resting anywhere else on it: from the map a building is always shut.
         room = self.world.rooms["south_house"]
-        x, y = self.view._tile_pixel(room.x + room.width / 2, room.y + room.height / 2)
+        x, y = self.view._tile_pixel(room.x + room.width / 2, room.y + 0.5)
         self._move((x, y))
-        self.assertIn("south_house", self.view.looked_into())
+        self.assertEqual(self.view.looked_into(), set())
         self._move(sign.center)
         self.view.render()
         self._move(sign.center)
@@ -355,6 +361,289 @@ class InsideABuildingTests(unittest.TestCase):
         self.assertEqual([entry[0] for entry in carried], ["scrap"])
         self.view.render()
         self.assertTrue(layout.cell > 0)
+
+    def test_over_a_face_on_a_roof_is_what_they_are_doing_in_there(self) -> None:
+        view, world = self.view, self.world
+        self._indoors("ines", "south_house")
+        self._indoors("paco", "south_house", (3, 1))
+        ines, paco = world.residents["ines"], world.residents["paco"]
+        self._see("south_house")
+        self.assertEqual(view.looked_into(), set(), "the roof is on")
+        self.assertIn("ines", view.hitboxes)
+        self.assertIsNone(view._status_icon(ines, False, unseen=True), "doing nothing in particular")
+        world.stock(ines.inventory, "canned_beans", 1, "ines")
+        ines.activity = Activity("eat", minutes_left=20, using=True, item_id=ines.inventory.items[-1].instance_id)
+        self.assertEqual(view._status_icon(ines, False, unseen=True), "eat")
+        self.assertIsNone(view._status_icon(ines, False), "seen whole, the meal is in her hand and says it")
+        ines.activity = Activity("chat", partner_id="paco", minutes_left=10, using=True)
+        paco.activity = Activity("chat", partner_id="ines", minutes_left=10, using=True)
+        self.assertEqual(view._status_icon(ines, False, unseen=True), "chat")
+        self.assertEqual(view._status_icon(paco, True, unseen=True), "chat")
+        paco.activity = None
+        self.assertEqual(view._status_icon(paco, True, unseen=True), "sleep")
+        view.render()
+
+    def test_what_things_are_kept_in_is_picked_from_inside(self) -> None:
+        room = self.world.rooms["south_house"]
+        crate = next(
+            placed
+            for placed in self.world.interactables.values()
+            if placed.object_id in self.world.containers and room.contains((placed.x, placed.y))
+        )
+        self.view.enter("south_house")
+        self.view.render()
+        self.assertIn(crate.object_id, self.view.container_hitboxes)
+        self.view.click(self.view.container_hitboxes[crate.object_id].center)
+        self.assertEqual((self.hud.selected_container, self.hud.selected_id), (crate.object_id, None))
+        self.assertIsNotNone(self.hud.container_rect())
+        self.view.render()
+        # A click on somebody in there picks them in its place, and one on nothing puts it away.
+        self._indoors("ines", "south_house", (3, 2))
+        self.view.render()
+        self.view.click(self.view.hitboxes["ines"].center)
+        self.assertEqual((self.hud.selected_container, self.hud.selected_id), (None, "ines"))
+        self.view.click((self.view.viewport.centerx, self.view.viewport.bottom - 30))
+        self.assertEqual((self.hud.selected_container, self.hud.selected_id), (None, None))
+
+    def _press(self, intent) -> None:
+        """Press what there is for something on the board of the building being looked at."""
+        room = self.world.rooms[self.view.inside]
+        self.view.render()
+        interior = self.view.interior
+        places = [(button.intent, button.rect) for button in interior.buttons(room)]
+        if interior.decorating:
+            # The tiles of what there is to put in it are pressed as buttons are.
+            tiles = entry_cells(interior.board_rect(), self.world, interior.decor_tab)
+            places += [(pick_intent(entry.tab, entry.entry_id), cell) for entry, cell in tiles]
+        self.view.click(next(rect for found, rect in places if found == intent).center)
+
+    def test_the_board_of_a_building_says_whose_it_is_and_a_press_on_a_name_changes_it(self) -> None:
+        self.view.enter("workshop")
+        owners = lambda: self.world.housing.owners(self.world, "workshop")
+        self.assertEqual(owners(), [])
+        self._press(owner_intent("marta"))
+        self.assertEqual(owners(), ["marta"])
+        self._press(owner_intent("raul"))
+        self.assertEqual(owners(), ["marta", "raul"])
+        self._press(owner_intent("marta"))
+        self.assertEqual(owners(), ["raul"])
+        self.assertEqual(self.view.inside, "workshop", "and none of it is a press on the room behind")
+
+    def test_the_door_is_locked_from_the_board_once_the_building_is_somebodys(self) -> None:
+        self.view.enter("workshop")
+        room = self.world.rooms["workshop"]
+        self.view.render()
+        self.assertNotIn(LOCK_INTENT, [button.intent for button in self.view.interior.buttons(room)])
+        self._press(owner_intent("marta"))
+        self._press(LOCK_INTENT)
+        self.assertTrue(self.world.housing.locked(self.world, room))
+        self._press(LOCK_INTENT)
+        self.assertFalse(self.world.housing.locked(self.world, room))
+
+    def test_what_a_building_is_for_goes_round_from_the_board(self) -> None:
+        self.view.enter("workshop")
+        uses = list(self.world.registries.housing.uses)
+        for use in uses:
+            self._press(USE_INTENT)
+            self.assertEqual(self.world.homes.uses["workshop"], use)
+        self._press(USE_INTENT)
+        self.assertNotIn("workshop", self.world.homes.uses, "after the last, nothing is said of it again")
+
+    def _type(self, key: int, letter: str = "") -> None:
+        self.view.handle_event(pygame.event.Event(pygame.KEYDOWN, key=key, unicode=letter))
+
+    def test_a_name_is_written_for_a_building_and_no_key_is_a_shortcut_meanwhile(self) -> None:
+        self.view.enter("workshop")
+        room = self.world.rooms["workshop"]
+        before = room.name
+        self.assertFalse(self.view.typing)
+        self._press(RENAME_INTENT)
+        self.assertTrue(self.view.typing)
+        paused = self.world.clock.paused
+        for letter in "Mi  taller!":
+            self._type(ord(letter.lower()), letter)
+            self.game.handle_key(ord(letter.lower()))
+        self._type(pygame.K_BACKSPACE)
+        self.assertEqual(self.view.inside, "workshop", "the i in it is no way out")
+        self.assertEqual(self.world.clock.paused, paused, "nor the space a pause")
+        self.view.render()
+        self.assertEqual(room.name, before, "nothing is its name until it is said to be")
+        self._type(pygame.K_RETURN)
+        self.assertEqual(room.name, "Mi taller")
+        self.assertFalse(self.view.typing)
+        # Left half way, the name stays as it was, and the game is not left with it.
+        self._press(RENAME_INTENT)
+        self._type(pygame.K_x, "x")
+        self._type(pygame.K_ESCAPE)
+        self.game.handle_key(pygame.K_i)
+        self.assertEqual((room.name, self.view.typing, self.view.inside), ("Mi taller", False, "workshop"))
+
+    def test_the_player_is_told_when_somebody_comes_to_stay_with_no_house(self) -> None:
+        event = DomainEvent("newcomer_joined", 45, "Marta entra en el asentamiento para quedarse", ["marta"])
+        self.view.on_events([event])
+        self.assertIn("Marta", self.hud.notice)
+        self.assertIn("al raso", self.hud.notice)
+
+    def test_the_room_is_laid_out_in_what_the_board_leaves_of_the_screen(self) -> None:
+        self.view.enter("south_house")
+        room = self.world.rooms["south_house"]
+        self.view.render()
+        interior, viewport = self.view.interior, self.view.viewport
+        board = interior.board_rect()
+        beside = interior.layout(room)
+        self.assertLessEqual(viewport.x + beside.whole.right // SCALE, board.left)
+        self.assertTrue(interior.covers(board.center))
+        self._press(HOUSE_INTENT)
+        self.assertIsNone(interior.board_rect())
+        self.assertFalse(interior.covers(board.center))
+        self.assertGreaterEqual(interior.layout(room).whole.width, beside.whole.width)
+        self.view.render()
+        self._press(HOUSE_INTENT)
+        self.assertIsNotNone(interior.board_rect())
+
+    def _cell(self, room_id: str, column: float, row: float) -> tuple[int, int]:
+        """Where on the canvas the middle of a cell of the floor of a building is."""
+        x, y = self.view.interior.layout(self.world.rooms[room_id]).spot(column + 0.5, row + 0.5)
+        return (self.view.viewport.x + x // SCALE, self.view.viewport.y + y // SCALE)
+
+    def _on_wall(self, room_id: str, column: float) -> tuple[int, int]:
+        layout = self.view.interior.layout(self.world.rooms[room_id])
+        x, y = layout.wall.x + round((column + 0.5) * layout.cell), layout.wall.centery
+        return (self.view.viewport.x + x // SCALE, self.view.viewport.y + y // SCALE)
+
+    def _free_cell(self, room_id: str) -> tuple[int, int]:
+        room = self.world.rooms[room_id]
+        taken = self.world.decor.furniture_cells(self.world, room)
+        columns, rows = self.world.decor.size(room)
+        return next((x, y) for y in range(1, rows) for x in range(1, columns) if (x, y) not in taken)
+
+    def _free_tile(self, room_id: str, kind: str) -> tuple[int, int]:
+        """A tile of a building where a kind of furniture could be put up."""
+        room = self.world.rooms[room_id]
+        return next(
+            (x, y)
+            for y in range(room.y, room.y + room.height)
+            for x in range(room.x, room.x + room.width)
+            if self.world.construction.site_error(self.world, OBJECT_SITE, kind, (x, y)) is None
+        )
+
+    def test_an_ornament_in_hand_goes_where_the_room_is_pressed_and_comes_away_the_same(self) -> None:
+        self.view.enter("south_house")
+        decor = self.world.decor
+        self._press(DECOR_INTENT)
+        self.assertTrue(self.view.interior.decorating)
+        self._press(pick_intent(ORNAMENTS, "plant"))
+        cell = self._free_cell("south_house")
+        self._move(self._cell("south_house", *cell))
+        self.view.render()
+        self.view.click(self._cell("south_house", *cell))
+        self.assertEqual([(each.kind, each.x, each.y) for each in decor.ornaments(self.world, "south_house")], [("plant", *cell)])
+        self.assertIsNone(self.hud.selected_id, "and nobody is picked by it")
+        # It stays in hand for the next, which does not go where the first is.
+        self.view.click(self._cell("south_house", *cell))
+        self.assertEqual(len(decor.ornaments(self.world, "south_house")), 1)
+        self._press(REMOVE_INTENT)
+        self._move(self._cell("south_house", *cell))
+        self.view.render()
+        self.view.click(self._cell("south_house", *cell))
+        self.assertEqual(decor.ornaments(self.world, "south_house"), [])
+
+    def test_what_hangs_goes_on_the_back_wall(self) -> None:
+        self.view.enter("south_house")
+        self._press(DECOR_INTENT)
+        self._press(pick_intent(ORNAMENTS, "window"))
+        self.view.click(self._cell("south_house", 4, 2))
+        self.assertEqual(self.world.decor.ornaments(self.world, "south_house"), [], "not on the floor")
+        self._move(self._on_wall("south_house", 4))
+        self.view.render()
+        self.view.click(self._on_wall("south_house", 4))
+        hung = self.world.decor.ornaments(self.world, "south_house")
+        self.assertEqual([(each.kind, each.on) for each in hung], [("window", "wall")])
+        self.assertLessEqual(hung[0].x, 4)
+        self.assertGreater(hung[0].x + 2, 4, "with the pointer at its middle")
+        self.view.render()
+
+    def test_the_floor_and_the_walls_are_chosen_from_the_board(self) -> None:
+        self.view.enter("south_house")
+        self._press(DECOR_INTENT)
+        self._press(tab_intent(WALLS))
+        self.assertEqual(self.view.interior.decor_tab, WALLS)
+        self._press(pick_intent(WALLS, "brick"))
+        self._press(tab_intent(FLOORS))
+        self._press(pick_intent(FLOORS, "floor_tiles"))
+        self.assertEqual((self.world.homes.walls, self.world.homes.floors), ({"south_house": "brick"}, {"south_house": "floor_tiles"}))
+        self.assertIsNone(self.view.interior.decor_held, "they are not things to carry about")
+        self.view.render()
+        self._press(pick_intent(FLOORS, ""))
+        self.assertEqual(self.world.homes.floors, {})
+
+    def test_a_piece_of_furniture_is_put_to_whoever_lives_there_and_not_put_down(self) -> None:
+        self.view.enter("south_house")
+        room = self.world.rooms["south_house"]
+        self._press(DECOR_INTENT)
+        self._press(tab_intent(FURNITURE))
+        self._press(pick_intent(FURNITURE, "stool"))
+        tile = self._free_tile("south_house", "stool")
+        before = len(self.world.interactables)
+        place = self._cell("south_house", (tile[0] - room.x) * GROWTH, (tile[1] - room.y) * GROWTH)
+        self._move(place)
+        self.view.render()
+        self.view.click(place)
+        self.assertEqual(len(self.world.interactables), before, "nothing stands there until it is made")
+        self.assertTrue(self.hud.notice)
+        sites = [site for site in self.world.sites.values() if (site.x, site.y) == tile]
+        if sites:
+            # Whoever agreed to it lives there, and what they are putting up is seen where it will stand.
+            self.assertIn(sites[0].in_charge, self.world.housing.owners(self.world, "south_house"))
+            self.view.render()
+
+    def test_in_a_building_that_is_nobodys_somebody_has_to_be_chosen_to_make_it(self) -> None:
+        self.view.enter("workshop")
+        room = self.world.rooms["workshop"]
+        self._press(DECOR_INTENT)
+        self._press(tab_intent(FURNITURE))
+        self._press(pick_intent(FURNITURE, "stool"))
+        tile = self._free_tile("workshop", "stool")
+        self.view.click(self._cell("workshop", (tile[0] - room.x) * GROWTH, (tile[1] - room.y) * GROWTH))
+        self.assertEqual(self.world.sites, {})
+        self.assertEqual(self.hud.notice, NOBODY_TO_MAKE_IT)
+
+    def test_the_other_button_and_the_way_out_put_down_what_is_in_hand(self) -> None:
+        self.view.enter("south_house")
+        interior = self.view.interior
+        self._press(DECOR_INTENT)
+        self._press(pick_intent(ORNAMENTS, "rug"))
+        self.assertEqual(interior.decor_held, (ORNAMENTS, "rug"))
+        self.view.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(400, 400), button=3))
+        self.assertIsNone(interior.decor_held)
+        self._press(pick_intent(ORNAMENTS, "rug"))
+        self._press(pick_intent(ORNAMENTS, "rug"))
+        self.assertIsNone(interior.decor_held, "pressed again, it is put down")
+        self._press(pick_intent(ORNAMENTS, "rug"))
+        self._press(DONE_INTENT)
+        self.assertEqual((interior.decorating, interior.decor_held), (False, None))
+        self._press(DECOR_INTENT)
+        self.view.leave()
+        self.assertFalse(interior.decorating)
+
+    def test_every_tab_of_the_board_is_drawn_with_something_in_hand_over_the_room(self) -> None:
+        self.view.enter("south_house")
+        self.world.apply_command(DecorateCommand("south_house", "rug", 4, 3))
+        self.world.apply_command(DecorateCommand("south_house", "clock", 2, 0))
+        self._press(DECOR_INTENT)
+        board = self.view.interior.board_rect()
+        for tab, _ in TABS:
+            self._press(tab_intent(tab))
+            last = entries(self.world, tab)[-1]
+            self._press(pick_intent(tab, last.entry_id))
+            for place in (self._cell("south_house", 4, 3), self._on_wall("south_house", 2), (board.x + 30, board.y + 60)):
+                self._move(place)
+                self.view.render()
+                self.game.present(pygame.Surface(self.game.screen.get_size()))
+        self._press(REMOVE_INTENT)
+        for place in (self._cell("south_house", 4, 3), self._on_wall("south_house", 2)):
+            self._move(place)
+            self.view.render()
 
     def test_every_building_there_is_can_be_seen_from_inside(self) -> None:
         for room_id, room in self.world.rooms.items():

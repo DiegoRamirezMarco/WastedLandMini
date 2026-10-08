@@ -156,13 +156,15 @@ class StrangerTests(unittest.TestCase):
         self.assertIn("newcomer_joined", _types(self.world))
         self.assertTrue(any(f"Tomás abre la puerta a {visitor.name}" in line for line in self.world.event_log))
         self.assertIn(visitor.newcomer_id, self.world.newcomers_seen)
-        # They settle in like anyone: they eat, they sleep, and nothing breaks.
+        # They settle in like anyone, and nothing breaks: they eat, and with no house of their
+        # own yet (S41) they sleep in the open until the player gives them one.
         actions = set()
         self.world.event_rng = SimulationRNG(1)
         for _ in range(3 * MINUTES_PER_DAY):
             self.world.step(1)
             actions.add(newcomer.current_action)
-        self.assertLessEqual({"eat", "sleep"}, actions)
+        self.assertLessEqual({"eat", "sleep_rough"}, actions)
+        self.assertNotIn("sleep", actions)
         # And they look for something to do without being asked: they take the post most missed.
         self.assertEqual(newcomer.job_id, "water_carrier")
         self.assertFalse(newcomer.seeks_work)

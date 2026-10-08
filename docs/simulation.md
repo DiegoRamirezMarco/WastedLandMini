@@ -763,6 +763,45 @@ Everything here is between adults, and nothing happens to anyone who does not wa
   cancels the pending decision.
 - Every event above the ambient band is appended to `world.history`, which is saved.
 
+## Houses
+
+- `world.homes` (`HousingState`) says whose each building with a roof is; `world.housing`
+  (`HousingSystem`) is what follows from it. A building nobody owns is the settlement's.
+- Who *lives* in a building is whoever owns it, whoever is with one of them, and their
+  children. Who is *welcome* in it is whoever lives there and whoever one of its owners holds
+  in enough affection (`welcome_affection`): the owner's feeling, not the visitor's. With its
+  door locked only whoever lives there is.
+- `may_use` is asked of every use the routine weighs: a bed under a roof is for whoever lives
+  in that building, and so nobody's where nobody owns it; anything else in a house is for
+  whoever is welcome. Whoever works at a thing always gets to it. Whoever has no bed to go to
+  sleeps in the open, as they did when there was none free.
+- `pressed` lets somebody in unasked for what would see to a need that has got past
+  `desperate`, never for a bed and never through a locked door. `used` then emits `trespass`,
+  seen by whoever is there and held against them by whoever lives there.
+- A house changes who may go in for a thing, not whose the thing is: what is the settlement's
+  stays on its books wherever it is kept.
+- `qualities` adds up what `furnishing` says each kind of thing in a building is worth to its
+  comfort, warmth, light and beauty, each kept from 0 to 100, a second of the same kind adding
+  half as much. `rest_factor` makes a bed in one's own house rest the better for its comfort,
+  and at midnight beauty lifts the mood of whoever owns the house, by `mood_per_day` at most.
+- None of it applies while a new settlement is in its opening. When that ends, and in the
+  ready-made settlement from the start, `settle` gives everybody without a house one of the
+  buildings with beds to spare. After that it is the player who says.
+
+## Dressing a building
+
+- `world.decor` (`DecorSystem`) puts ornaments in buildings and takes them out. What there is
+  to put is `registries.decor`; what has been put is in `world.homes`, with whose the
+  building is.
+- An ornament is where it is in cells of the inside of its building, from its back left
+  corner: `CELLS` of them to a tile, each way. A piece of furniture on a tile takes the cell
+  that tile starts at, and as many more across and down as it has tiles.
+- One that stands takes cells no furniture and no other standing ornament has. One that lies
+  flat is only in the way of another that does. One that hangs takes a stretch of the back
+  wall, and only another that hangs is in its way.
+- Nothing about an ornament touches the map: it blocks nobody, nobody uses it, and it is not
+  an interactable. What it does is add to `HousingSystem.qualities`.
+
 ## Starting a settlement
 
 - `SimulationWorld.new_settlement` gives an empty plot, the map named in `data/tutorial.json`,

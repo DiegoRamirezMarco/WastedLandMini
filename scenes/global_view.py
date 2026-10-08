@@ -64,13 +64,31 @@ from scenes.hud import (
     URBANISM_INTENT,
     Hud,
 )
-from scenes.interior_view import LEAVE_INTENT, InteriorView
+from scenes.interior_view import DECOR_INTENT, HOUSE_INTENT, LEAVE_INTENT, InteriorView
+from ui.decor_board import DONE_INTENT as DECOR_DONE_INTENT
+from ui.decor_board import FLOORS as DECOR_FLOORS
+from ui.decor_board import FURNITURE as DECOR_FURNITURE
+from ui.decor_board import ORNAMENTS as DECOR_ORNAMENTS
+from ui.decor_board import REMOVE_INTENT as DECOR_REMOVE_INTENT
+from ui.decor_board import WALLS as DECOR_WALLS
+from ui.house_board import LOCK_INTENT as HOUSE_LOCK_INTENT
+from ui.house_board import NAME_LENGTH
+from ui.house_board import RENAME_INTENT as HOUSE_RENAME_INTENT
+from ui.house_board import USE_INTENT as HOUSE_USE_INTENT
+from ui.house_board import next_use
 from scenes.scene import canvas_position
 from settings import SCALE, TILE_SIZE
 from simulation.commands import (
     AcknowledgeTutorialCommand,
     ChooseGovernmentCommand,
     DealWithMerchantCommand,
+    DecorateCommand,
+    GiveHouseCommand,
+    LockHouseCommand,
+    NameBuildingCommand,
+    ProposeObjectCommand,
+    SurfaceCommand,
+    UndecorateCommand,
     SetPausedCommand,
     SetResearchCommand,
     SetSpeedCommand,
@@ -149,6 +167,9 @@ ENTER_HINT = "clic: entrar"
 # Something shown on the window: how far down the map its foot is, where it goes in map
 # pixels (left, top, width, height), and its picture.
 Standing = tuple[float, tuple[float, float, float, float], pygame.Surface]
+NOBODY_TO_MAKE_IT = "Elige antes a quien deba hacerlo, o di de quién es la casa."
+NEWCOMER_EVENT = "newcomer_joined"
+NO_HOUSE_YET = "{name} no tiene casa y dormirá al raso: entra en un edificio y dásela en Casa"
 NOWHERE_TO_ENTER = "No hay ningún edificio ahí en el que entrar"
 BOBBING_ICONS = ("alert", "sleep")
 # What someone is doing is shown in a bubble over their head. These are not: they mark who it is.
@@ -360,7 +381,15 @@ class GlobalView:
             # A map with no plaza is first seen from where people come in.
             self.centre_on((entry[0] + 0.5, entry[1] + 0.5))
 
+    @property
+    def typing(self) -> bool:
+        """Whether what is typed is being written down somewhere, and so is no shortcut."""
+        return self.inside is not None and self.interior.naming is not None
+
     def handle_event(self, event: pygame.event.Event) -> None:
+        if self.typing and event.type == pygame.KEYDOWN:
+            self._name_key(event)
+            return
         if event.type == pygame.KEYDOWN and event.key == pygame.K_i:
             self.toggle_inside()
             return
@@ -450,6 +479,8 @@ class GlobalView:
         if self.inside is None:
             return
         self.inside = None
+        self.interior.naming = None
+        self.interior.decorating, self.interior.decor_held, self.interior.decor_removing = False, None, False
         self.hud.minimap_rect = self._minimap_rect if self._minimap_kept else None
 
     def toggle_inside(self) -> None:
@@ -477,6 +508,10 @@ class GlobalView:
             self.pointer = canvas_position(event.pos)
             self.click(self.pointer)
             return True
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+            # The other button puts down whatever is in hand.
+            self.interior.decor_held, self.interior.decor_removing = None, False
+            return True
         if event.type == pygame.MOUSEMOTION:
             self.pointer = canvas_position(event.pos)
             return True
@@ -486,17 +521,129 @@ class GlobalView:
         )
 
     def _click_inside(self, position: tuple[int, int]) -> None:
-        if self.interior.leave_button.contains(position):
+        room = self.world.rooms.get(self.inside or "")
+        intent = self.interior.click(room, position) if room is not None else None
+        if intent == LEAVE_INTENT:
             self._sound("click")
             self.leave()
+        elif intent is not None:
+            self._sound("click")
+            self._house(room, intent)
+        elif self.interior.covers(position):
+            # A press on the board that is on nothing of it is no press on the room behind.
+            return
+        elif self.interior.decorating and room is not None:
+            # While the building is being dressed, a press on the room is to put down or to take away.
+            if not self.hud.covers(position):
+                self._decorate_at(room, position)
         elif not self.hud.covers(position) and self.viewport.collidepoint(position):
             picked = [rid for rid, rect in self.hitboxes.items() if rect.collidepoint(position)]
+            kept = [cid for cid, rect in self.container_hitboxes.items() if rect.collidepoint(position)]
             if picked:
                 self._sound("select")
-            self.hud.select_resident(picked[-1] if picked else None)
+                self.hud.select_resident(picked[-1])
+            else:
+                # What things are kept in is looked into from in here, as it was under the roof.
+                self.hud.select_container(kept[-1] if kept else None)
             decision = self._decision_of(self.hud.selected_id)
             if decision is not None:
                 self.requested_decision = decision
+
+    def _house(self, room: Room, intent: Hashable) -> None:
+        """Do what was pressed on the board of the building being looked at from inside."""
+        interior, world, room_id = self.interior, self.world, room.room_id
+        result = None
+        if intent == HOUSE_INTENT:
+            # Out of dressing it, the board comes back; otherwise it opens and shuts.
+            interior.board_open = True if interior.decorating else not interior.board_open
+            interior.naming = None
+            interior.decorating, interior.decor_held, interior.decor_removing = False, None, False
+        elif intent in (DECOR_INTENT, DECOR_DONE_INTENT):
+            interior.decorating = intent == DECOR_INTENT and not interior.decorating
+            interior.naming, interior.decor_held, interior.decor_removing = None, None, False
+        elif intent == DECOR_REMOVE_INTENT:
+            interior.decor_removing, interior.decor_held = not interior.decor_removing, None
+        elif isinstance(intent, tuple) and intent[0] == "decor_tab":
+            interior.decor_tab, interior.decor_held, interior.decor_removing = intent[1], None, False
+        elif isinstance(intent, tuple) and intent[0] == "decor_pick" and intent[1] == DECOR_FLOORS:
+            result = world.apply_command(SurfaceCommand(room_id, floor=intent[2]))
+        elif isinstance(intent, tuple) and intent[0] == "decor_pick" and intent[1] == DECOR_WALLS:
+            result = world.apply_command(SurfaceCommand(room_id, wall=intent[2]))
+        elif isinstance(intent, tuple) and intent[0] == "decor_pick":
+            # Pressed again, what was in hand is put down.
+            held = (intent[1], intent[2])
+            interior.decor_held, interior.decor_removing = (None if interior.decor_held == held else held), False
+        elif intent == HOUSE_RENAME_INTENT:
+            # Pressed again, the name is left as it was.
+            interior.naming = None if interior.naming is not None else ""
+        elif intent == HOUSE_USE_INTENT:
+            result = world.apply_command(NameBuildingCommand(room_id, None, next_use(world, room_id)))
+        elif intent == HOUSE_LOCK_INTENT:
+            result = world.apply_command(LockHouseCommand(room_id, room_id not in world.homes.locked))
+        elif isinstance(intent, tuple) and intent[0] == "house_owner":
+            owners = world.housing.owners(world, room_id)
+            chosen = [each for each in owners if each != intent[1]] if intent[1] in owners else [*owners, intent[1]]
+            result = world.apply_command(GiveHouseCommand(room_id, tuple(chosen)))
+        if result is not None:
+            self.hud.notify(result.message)
+            if not result.ok:
+                self._sound("refuse")
+
+    def _decorate_at(self, room: Room, position: tuple[int, int]) -> None:
+        """Put what is in hand down where the room was pressed, or take away the ornament that is there."""
+        interior, world = self.interior, self.world
+        result = None
+        if interior.decor_removing:
+            spot = interior.spot_under(room, position)
+            ornament = world.decor.at(world, room.room_id, *spot) if spot is not None else None
+            if ornament is not None:
+                result = world.apply_command(UndecorateCommand(room.room_id, ornament.ornament_id))
+        elif interior.decor_held is not None and interior.decor_held[0] == DECOR_ORNAMENTS:
+            place = interior.held_place(room, position)
+            if place is not None:
+                result = world.apply_command(DecorateCommand(room.room_id, interior.decor_held[1], place[0], place[1]))
+        elif interior.decor_held is not None and interior.decor_held[0] == DECOR_FURNITURE:
+            tile = interior.held_tile(room, position)
+            if tile is not None:
+                self._order_furniture(room, interior.decor_held[1], tile)
+        if result is not None:
+            self.hud.notify(result.message)
+            self._sound("click" if result.ok else "refuse")
+
+    def _order_furniture(self, room: Room, kind: str, tile: Tile) -> None:
+        """Put it to somebody that they make a piece of furniture in a building: whoever is
+        selected, or else whoever lives there, one after another until one of them will."""
+        world = self.world
+        selected = self.hud.selected_id
+        asked = [selected] if selected in world.residents else world.housing.owners(world, room.room_id)
+        if not asked:
+            self.hud.notify(NOBODY_TO_MAKE_IT)
+            self._sound("refuse")
+            return
+        for resident_id in asked:
+            result = world.apply_command(ProposeObjectCommand(kind, tile, resident_id))
+            if result.ok:
+                break
+        self.hud.notify(result.message)
+        self._sound("click" if result.ok else "refuse")
+
+    def _name_key(self, event: pygame.event.Event) -> None:
+        """A key while a name is being written for the building: it goes into the name, ends it or drops it."""
+        interior = self.interior
+        written = interior.naming or ""
+        if event.key == pygame.K_ESCAPE:
+            interior.naming = None
+        elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            interior.naming = None
+            if written.strip() and self.inside is not None:
+                result = self.world.apply_command(NameBuildingCommand(self.inside, written))
+                self.hud.notify(result.message)
+        elif event.key == pygame.K_BACKSPACE:
+            interior.naming = written[:-1]
+        else:
+            letter = getattr(event, "unicode", "")
+            if letter and letter.isprintable() and len(written) < NAME_LENGTH:
+                interior.naming = written + letter
 
     def _render_inside(self, room: Room) -> None:
         """The frame while a building is looked at from inside: the room where the map was, and everything round it."""
@@ -635,6 +782,11 @@ class GlobalView:
                 self._mark(str(event.data.get("resident_id")), TASTE_MARKS.get(str(event.data.get("reaction"))))
             elif event.event_type == FOUND_OUT_EVENT:
                 self._mark(str(event.data.get("resident_id")), FOUND_OUT_MARK)
+            elif event.event_type == NEWCOMER_EVENT and event.participants and self.world.housing.applies(self.world):
+                # Whoever comes to stay has no house until they are given one (S41).
+                newcomer = self.world.residents.get(event.participants[0])
+                if newcomer is not None:
+                    self.hud.notify(NO_HOUSE_YET.format(name=newcomer.name))
         # Someone asking for advice may be off screen: bring them into view, unless the view is
         # with somebody the player chose to follow. The notice at the top says who is waiting.
         for decision in self.world.decisions.values():
@@ -683,30 +835,15 @@ class GlobalView:
         return chosen
 
     def looked_into(self) -> set[str]:
-        """Roofed rooms that stand open this frame: under the pointer, or holding what is selected."""
-        if self.overview:
+        """Roofed rooms that stand open this frame.
+
+        From the map a building is always shut (S40): what is in it is seen by going in, and
+        who is in it by their faces on its roof. Only the key that takes every roof off opens
+        them, and then all at once.
+        """
+        if self.overview or self.roofs_on:
             return set()
-        if not self.roofs_on:
-            return set(self.roof_tiles)
-        looked_at: list[Tile] = []
-        if self.pointer is not None and self.viewport.collidepoint(self.pointer) and not self.hud.covers(self.pointer):
-            # The sign of a building that stands closed is the way into it, and stays where it
-            # is under the pointer: resting on it does not take the roof off.
-            on_sign = any(
-                box.collidepoint(self.pointer) for room_id, box in self.sign_boxes.items() if room_id in self._closed
-            )
-            if not on_sign:
-                x, y = self._map_point(self.pointer)
-                looked_at.append((int(x // TILE_SIZE), int(y // TILE_SIZE)))
-        selected = self.world.residents.get(self.hud.selected_id or "")
-        if selected is not None:
-            looked_at.append(selected.tile)
-        container = self.world.interactables.get(self.hud.selected_container or "")
-        if container is not None:
-            looked_at.append((container.x, container.y))
-        return {
-            room_id for room_id in self.roof_tiles if any(self._is_at(room_id, tile) for tile in looked_at)
-        }
+        return set(self.roof_tiles)
 
     def _is_at(self, room_id: str, tile: Tile) -> bool:
         """Whether a tile is under a building's roof or in the wall in front of it, door included."""
@@ -1795,7 +1932,8 @@ class GlobalView:
 
         def overlay() -> None:
             self.canvas.blit(face, hitbox)
-            self._draw_overhead(resident, hitbox.midtop, with_name=False, resting=lying_in is not None)
+            # Over a face on a roof, what they are doing in there: talking, eating, asleep, at work.
+            self._draw_overhead(resident, hitbox.midtop, with_name=False, resting=lying_in is not None, unseen=True)
 
         def draw() -> None:
             self.hitboxes[resident.resident_id] = hitbox
@@ -1874,8 +2012,9 @@ class GlobalView:
 
         return (bed.bottom, 1, draw)
 
-    def _status_icon(self, resident: Resident, resting: bool) -> str | None:
-        """Icon for what a resident is doing, most urgent first."""
+    def _status_icon(self, resident: Resident, resting: bool, unseen: bool = False) -> str | None:
+        """Icon for what a resident is doing, most urgent first. For somebody `unseen`, who is
+        only a face on a roof, it also says what would otherwise be seen of them: that they eat."""
         if self._decision_of(resident.resident_id) is not None:
             return "alert"
         activity = resident.activity
@@ -1891,6 +2030,8 @@ class GlobalView:
             return "argument" if interaction is not None and interaction.hostile else "chat"
         if resting:
             return "sleep"
+        if unseen and activity is not None and activity.using and activity.action == EAT_ACTION:
+            return "eat"
         if resident.health < HURT_HEALTH:
             return "hurt"
         at_work = activity is not None and activity.using and activity.action in (WORK_ACTION, BUILD_ACTION)
@@ -1933,7 +2074,7 @@ class GlobalView:
         return activity.item_id if activity.target_id is not None and activity.partner_id is None else None
 
     def _draw_overhead(
-        self, resident: Resident, top_centre: tuple[int, int], with_name: bool, resting: bool = False
+        self, resident: Resident, top_centre: tuple[int, int], with_name: bool, resting: bool = False, unseen: bool = False
     ) -> None:
         """Stack how far along they are with a task, their name, a status icon and the
         selection arrow above a resident."""
@@ -1948,7 +2089,7 @@ class GlobalView:
             y -= CELL_SIZE[1]
             name = self.font.render(resident.name, PALETTE["paper"])
             self.canvas.blit(name, (self._name_left(resident, x, name.get_width()), y))
-        icons = [self._status_icon(resident, resting), self.mark_over(resident.resident_id)]
+        icons = [self._status_icon(resident, resting, unseen), self.mark_over(resident.resident_id)]
         if resident.resident_id == self.hud.selected_id:
             icons.append("selected")
         else:

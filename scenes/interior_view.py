@@ -1,9 +1,10 @@
 """A building seen from inside: its back wall face on and its floor from a little above, as a grid.
 
-This is a first try of the look (P39). What is shown is what the building holds on the map,
-spread over a floor twice as wide and twice as deep: nothing can be put down here yet, and
-whoever is inside is where the map has them. The room of its own that a building is to have
-inside, and furnishing it, come after (S40 and on).
+What is shown is what the building holds on the map, spread over a floor with more cells than
+the building has tiles, and whoever is inside is where the map has them (P39). On top of that
+it is where a building is dressed (P40): the ornaments put in it, which go by its own cells
+and not by the map, the floor and the walls chosen for it, and the board that says whose it
+is. The room of its own that a building is to have inside comes after (S40).
 
 It is a part of the global view and draws with what that has: the same bodies, dolls and
 object art. Everything is laid out in pixels of the window, since that is what it is shown in.
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import math
 import random
+from collections.abc import Hashable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -22,17 +24,27 @@ from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE
 from graphics.doll import draw_doll
 from graphics.font import LINE_HEIGHT
 from graphics.object_pictures import DEPTH, ObjectPicture
+from graphics.ornament_pictures import OrnamentPictures
 from graphics.palette import PALETTE, Color
 from graphics.screen_layers import TRANSPARENT
 from graphics.shelf_display import displayed_goods
-from graphics.ui_art import darker, lighter, mix
+from graphics.ui_art import band_hue, darker, lighter, mix
 from scenes.body_stage import HEAD_BONE, LYING_HEAD_OFFSET, LYING_HEAD_ROWS, LYING_NECK, ground_spot
 from settings import SCALE, TILE_SIZE
+from simulation.housing.decor import CELLS, FLOOR
+from simulation.housing.decor import WALL as ON_WALL
 from simulation.residents.manner import WALK
 from simulation.residents.resident import Resident
+from simulation.work.construction import OBJECT_SITE
 from skeleton.rig import Skeleton
 from ui.button import Button
+from ui.decor_board import AS_BUILT_ID, FURNITURE, ORNAMENTS, WALLS
+from ui.decor_board import PICTURE as DECOR_PICTURE
+from ui.decor_board import DecorEntry, decor_board_height, decor_buttons, decor_click, draw_decor_board
+from ui.house_board import PANEL_WIDTH as HOUSE_WIDTH
+from ui.house_board import draw_house_board, house_board_height, house_buttons
 from world.interactable import Interactable
+from world.map import Tile
 from world.room import Room
 
 if TYPE_CHECKING:
@@ -40,9 +52,20 @@ if TYPE_CHECKING:
 
 LEAVE_INTENT = ("leave_interior",)
 LEAVE_LABEL = "Salir"
-TRIAL_NOTE = "Prueba de la vista: lo que hay dentro es lo que tiene en el mapa."
+# Opens and shuts the board on the building: whose it is and what it is like.
+HOUSE_INTENT = ("house_board",)
+HOUSE_LABEL = "Casa"
+MARGIN = 6
+# Opens and shuts the mode in which the building is dressed.
+DECOR_INTENT = ("decorate",)
+DECOR_LABEL = "Decorar"
+# The line round what is in hand, by whether it can go where it is held, and round what is being put up.
+CAN_GO: Color = (126, 190, 110)
+CANNOT_GO: Color = (214, 84, 74)
+SITE_LINE: Color = (214, 170, 84)
+DECOR_NOTE = "Clic: poner o quitar · Botón derecho: soltar lo que llevas"
 # How many cells of the inside go to a tile of the building as it stands on the map, each way.
-GROWTH = 2
+GROWTH = CELLS
 # What each part takes, in widths of a cell: how tall the back wall is; how wide the walls at
 # the sides are; and how tall what is left of the front wall is, with the way out in it. How
 # deep a cell looks is `DEPTH`, which the pictures of what stands in it are drawn to.
@@ -56,8 +79,22 @@ ANIMATION_FPS = 5
 BACKDROP: Color = (17, 20, 26)
 BOARDS: Color = (150, 112, 84)
 BEAM: Color = (74, 54, 44)
-FLOORS: dict[str, Color] = {"floor_wood": (170, 128, 92), "floor_concrete": (136, 134, 128)}
+FLOORS: dict[str, Color] = {
+    "floor_wood": (170, 128, 92),
+    "floor_concrete": (136, 134, 128),
+    "floor_tiles": (190, 176, 152),
+    "floor_earth": (132, 104, 78),
+}
+# What the walls can be made of: boards, as every building is put up, or what the player has said.
+PLAIN_WALL = "boards"
+WALLS_OF: dict[str, Color] = {
+    PLAIN_WALL: BOARDS,
+    "plaster": (206, 194, 172),
+    "brick": (160, 94, 74),
+    "sheet": (126, 136, 142),
+}
 PLAIN_FLOOR: Color = (150, 130, 104)
+PLAIN_FLOOR_KIND = "floor_wood"
 MAT: Color = (150, 58, 48)
 
 
@@ -123,7 +160,17 @@ def _fade(size: tuple[int, int], color: Color, start: int, end: int, across: boo
     return pygame.transform.scale(line, (width, height))
 
 
-def draw_shell(layout: InteriorLayout, floor_kind: str, seed: int = 0) -> pygame.Surface:
+def surface_swatch(kind: str, on_wall: bool, size: int) -> pygame.Surface:
+    """A square of a floor or of a wall, as a room made of it shows it: for a catalogue."""
+    layout = layout_for(Room("swatch", "", width=1, height=2, roofed=True), pygame.Rect(0, 0, size * 4, size * 5))
+    shell = draw_shell(layout, PLAIN_FLOOR_KIND if on_wall else kind, 5, kind if on_wall else PLAIN_WALL)
+    part = (layout.wall if on_wall else layout.floor).move(-layout.whole.x, -layout.whole.y)
+    side = min(part.width, part.height)
+    piece = shell.subsurface(pygame.Rect(part.centerx - side // 2, part.centery - side // 2, side, side))
+    return pygame.transform.smoothscale(piece, (size, size))
+
+
+def draw_shell(layout: InteriorLayout, floor_kind: str, seed: int = 0, wall_kind: str = PLAIN_WALL) -> pygame.Surface:
     """The empty room: back wall, side walls, floor with its grid, and the front with the way out.
 
     The picture is the size of `layout.whole`.
@@ -136,22 +183,46 @@ def draw_shell(layout: InteriorLayout, floor_kind: str, seed: int = 0) -> pygame
     # Not the simulation's randomness: the same boards every time, and nothing rides on them.
     chance = random.Random(seed)
 
-    # The back wall: boards standing side by side, a beam along the top and a skirting along the foot.
-    picture.fill(BOARDS, wall)
+    # The back wall: what it is made of, a beam along the top and a skirting along the foot.
+    made_of = WALLS_OF.get(wall_kind, BOARDS)
+    picture.fill(made_of, wall)
     picture.blit(_fade(wall.size, (0, 0, 0), 70, 0), wall)
-    board = max(6, cell // 2)
-    for x in range(wall.left, wall.right, board):
-        shade = chance.randint(-9, 9)
-        tint = pygame.Surface((board, wall.height), pygame.SRCALPHA)
-        tint.fill((255, 255, 255, shade) if shade > 0 else (0, 0, 0, -shade))
-        picture.blit(tint, (x, wall.top), wall.clip(pygame.Rect(x, wall.top, board, wall.height)).move(-x, -wall.top))
-        pygame.draw.line(picture, darker(BOARDS, 0.32), (x, wall.top), (x, wall.bottom), max(1, cell // 40))
+    thin = max(1, cell // 40)
+    if wall_kind == "brick":
+        course = max(5, cell // 5)
+        for index, y in enumerate(range(wall.top, wall.bottom, course)):
+            pygame.draw.line(picture, darker(made_of, 0.32), (wall.left, y), (wall.right - 1, y), thin)
+            for x in range(wall.left + (course if index % 2 else 0), wall.right, course * 2):
+                pygame.draw.line(picture, darker(made_of, 0.32), (x, y), (x, min(wall.bottom, y + course)), thin)
+    elif wall_kind == "plaster":
+        # Smooth, with a damp patch here and there.
+        picture.set_clip(wall)
+        for _ in range(max(3, wall.width // max(1, cell))):
+            patch = pygame.Surface((chance.randint(cell // 3, cell), chance.randint(cell // 6, cell // 3)), pygame.SRCALPHA)
+            pygame.draw.ellipse(patch, (60, 40, 20, 16), patch.get_rect())
+            picture.blit(patch, (chance.randrange(wall.left, wall.right), chance.randrange(wall.top, wall.bottom)))
+        picture.set_clip(None)
+    elif wall_kind == "sheet":
+        rib = max(4, cell // 7)
+        for index, x in enumerate(range(wall.left, wall.right, rib)):
+            strip = pygame.Rect(x, wall.top, rib, wall.height).clip(wall)
+            tint = pygame.Surface(strip.size, pygame.SRCALPHA)
+            tint.fill((255, 255, 255, 26) if index % 2 else (0, 0, 0, 30))
+            picture.blit(tint, strip)
+    else:
+        board = max(6, cell // 2)
+        for x in range(wall.left, wall.right, board):
+            shade = chance.randint(-9, 9)
+            tint = pygame.Surface((board, wall.height), pygame.SRCALPHA)
+            tint.fill((255, 255, 255, shade) if shade > 0 else (0, 0, 0, -shade))
+            picture.blit(tint, (x, wall.top), wall.clip(pygame.Rect(x, wall.top, board, wall.height)).move(-x, -wall.top))
+            pygame.draw.line(picture, darker(made_of, 0.32), (x, wall.top), (x, wall.bottom), thin)
     beam = max(4, round(cell * 0.2))
     picture.fill(BEAM, (wall.left, wall.top, wall.width, beam))
     picture.fill(lighter(BEAM, 0.14), (wall.left, wall.top + beam - max(1, beam // 5), wall.width, max(1, beam // 5)))
     skirting = max(4, round(cell * 0.16))
-    picture.fill(darker(BOARDS, 0.38), (wall.left, wall.bottom - skirting, wall.width, skirting))
-    picture.fill(lighter(BOARDS, 0.1), (wall.left, wall.bottom - skirting, wall.width, max(1, skirting // 5)))
+    picture.fill(darker(made_of, 0.38), (wall.left, wall.bottom - skirting, wall.width, skirting))
+    picture.fill(lighter(made_of, 0.1), (wall.left, wall.bottom - skirting, wall.width, max(1, skirting // 5)))
 
     # The floor: boards running across, or a poured one, with a line round every cell.
     base = FLOORS.get(floor_kind, PLAIN_FLOOR)
@@ -167,6 +238,14 @@ def draw_shell(layout: InteriorLayout, floor_kind: str, seed: int = 0) -> pygame
                     pygame.draw.line(picture, darker(base, 0.13), piece.topleft, (piece.left, piece.bottom - 1), max(1, cell // 60))
             # The boards are only what the floor is made of: it is the grid over them that is to be read.
             pygame.draw.line(picture, darker(base, 0.12), (floor.left, y), (floor.right - 1, y), max(1, cell // 60))
+    elif floor_kind == "floor_tiles":
+        # Four tiles to a cell, one in two a little darker, with the joints between them.
+        wide, deep = max(2, cell // 2), max(2, depth // 2)
+        for row, y in enumerate(range(floor.top, floor.bottom, deep)):
+            for column, x in enumerate(range(floor.left, floor.right, wide)):
+                tile = pygame.Rect(x, y, wide, deep).clip(floor)
+                picture.fill(darker(base, 0.1) if (row + column) % 2 else lighter(base, 0.06), tile)
+                pygame.draw.rect(picture, darker(base, 0.24), tile, 1)
     else:
         for _ in range(floor.width * floor.height // 220):
             x, y = chance.randrange(floor.left, floor.right), chance.randrange(floor.top, floor.bottom)
@@ -191,13 +270,13 @@ def draw_shell(layout: InteriorLayout, floor_kind: str, seed: int = 0) -> pygame
     # The walls at the sides, seen edge on, and what is left of the front one, with the way out in it.
     for left in (wall.left - side, wall.right):
         strip = pygame.Rect(left, wall.top, side, wall.height + floor.height)
-        picture.fill(darker(BOARDS, 0.45), strip)
+        picture.fill(darker(made_of, 0.45), strip)
         # Darker towards the outside of the room.
         outer, inner = (70, 0) if left < wall.left else (0, 70)
         picture.blit(_fade(strip.size, (0, 0, 0), outer, inner, across=True), strip)
     front = pygame.Rect(wall.left - side, floor.bottom, wall.width + side * 2, layout.front)
-    picture.fill(darker(BOARDS, 0.62), front)
-    picture.fill(darker(BOARDS, 0.5), (front.left, front.top, front.width, max(1, layout.front // 5)))
+    picture.fill(darker(made_of, 0.62), front)
+    picture.fill(darker(made_of, 0.5), (front.left, front.top, front.width, max(1, layout.front // 5)))
     first, count = layout.door
     way_out = pygame.Rect(floor.left + first * cell, floor.bottom, count * cell, layout.front)
     picture.fill(darker(base, 0.34), way_out)
@@ -215,7 +294,19 @@ class InteriorView:
     def __init__(self, view: "GlobalView") -> None:
         self.view = view
         corner = view.viewport.topleft
-        self.leave_button = Button.at(view.font, corner[0] + 6, corner[1] + 6, LEAVE_LABEL, LEAVE_INTENT)
+        self.leave_button = Button.at(view.font, corner[0] + MARGIN, corner[1] + MARGIN, LEAVE_LABEL, LEAVE_INTENT)
+        self.house_button = Button.at(view.font, self.leave_button.rect.right + 3, corner[1] + MARGIN, HOUSE_LABEL, HOUSE_INTENT)
+        # Whether the board on the building is open, and the name being written for it while one is.
+        self.board_open = True
+        self.naming: str | None = None
+        self.decor_button = Button.at(view.font, self.house_button.rect.right + 3, corner[1] + MARGIN, DECOR_LABEL, DECOR_INTENT)
+        # Whether the building is being dressed, the tab of the board on show, what of it is in
+        # hand as its tab and its ID, and whether ornaments are being taken away instead.
+        self.decorating = False
+        self.decor_tab = ORNAMENTS
+        self.decor_held: tuple[str, str] | None = None
+        self.decor_removing = False
+        self.ornaments = OrnamentPictures()
         self._shells: dict[tuple, pygame.Surface] = {}
         self._pictures: dict[tuple, pygame.Surface] = {}
         self._skeletons: dict[tuple, Skeleton] = {}
@@ -225,8 +316,236 @@ class InteriorView:
         viewport = self.view.viewport
         return pygame.Rect(0, 0, viewport.width * SCALE, viewport.height * SCALE)
 
+    def board_rect(self) -> pygame.Rect | None:
+        """Where the board on the building is, on the canvas, while it is open: down the right of the room."""
+        if not self.board_open and not self.decorating:
+            return None
+        viewport = self.view.viewport
+        height = decor_board_height() if self.decorating else house_board_height(self.view.world, self.naming is not None)
+        return pygame.Rect(
+            viewport.right - MARGIN - HOUSE_WIDTH, viewport.y + MARGIN, HOUSE_WIDTH, min(height, viewport.height - MARGIN * 2)
+        )
+
+    def buttons(self, room: Room) -> list[Button]:
+        """Everything that can be pressed in here: the way out, the board, and what is on it."""
+        board = self.board_rect()
+        if board is None:
+            on_board = []
+        elif self.decorating:
+            on_board = decor_buttons(self.view.font, board)
+        else:
+            on_board = house_buttons(self.view.font, board, self.view.world, room.room_id, self.naming is not None)
+        return [self.leave_button, self.house_button, self.decor_button, *on_board]
+
+    def click(self, room: Room, position: tuple[int, int]) -> Hashable | None:
+        """What a press at a place on the canvas asks for, if it is on anything of this view's."""
+        board = self.board_rect()
+        if self.decorating and board is not None and board.collidepoint(position):
+            return decor_click(self.view.font, board, self.view.world, self.decor_tab, position)
+        return next((button.intent for button in self.buttons(room) if button.contains(position)), None)
+
+    def covers(self, position: tuple[int, int]) -> bool:
+        """Whether a place on the canvas is under the board, and so not in the room."""
+        board = self.board_rect()
+        return board is not None and board.collidepoint(position)
+
     def layout(self, room: Room) -> InteriorLayout:
-        return layout_for(room, self.stage(), door_columns(self.view.world, room))
+        area = self.stage()
+        if self.board_open or self.decorating:
+            # The room is laid out in what the board leaves of the screen.
+            area.width -= (HOUSE_WIDTH + MARGIN) * SCALE
+        return layout_for(room, area, door_columns(self.view.world, room))
+
+    # ----- dressing it -----
+
+    def spot_under(self, room: Room, position: tuple[int, int] | None) -> tuple[str, tuple[int, int]] | None:
+        """What of the room a place on the canvas is over: a cell of its floor, or a stretch of its back wall."""
+        viewport = self.view.viewport
+        if position is None or not viewport.collidepoint(position) or self.covers(position):
+            return None
+        layout = self.layout(room)
+        x, y = (position[0] - viewport.x) * SCALE, (position[1] - viewport.y) * SCALE
+        if layout.floor.collidepoint(x, y):
+            return (FLOOR, ((x - layout.floor.x) // layout.cell, (y - layout.floor.y) // layout.depth))
+        if layout.wall.collidepoint(x, y):
+            return (ON_WALL, ((x - layout.wall.x) // layout.cell, 0))
+        return None
+
+    def held_place(self, room: Room, position: tuple[int, int] | None) -> tuple[int, int] | None:
+        """Where the ornament in hand would go if it were put down at a place on the canvas: the
+        cell its corner takes, with the pointer at its middle and all of it kept inside the room."""
+        world = self.view.world
+        held = self.decor_held
+        definition = world.registries.decor.ornaments.get(held[1]) if held is not None and held[0] == ORNAMENTS else None
+        spot = self.spot_under(room, position)
+        if definition is None or spot is None or spot[0] != definition.on:
+            return None
+        columns, rows = world.decor.size(room)
+        x = min(max(0, spot[1][0] - definition.width // 2), max(0, columns - definition.width))
+        if definition.on == ON_WALL:
+            return (x, 0)
+        return (x, min(max(0, spot[1][1] - definition.height // 2), max(0, rows - definition.height)))
+
+    def held_tile(self, room: Room, position: tuple[int, int] | None) -> Tile | None:
+        """The tile of the map the piece of furniture in hand would be put up on."""
+        spot = self.spot_under(room, position)
+        if self.decor_held is None or self.decor_held[0] != FURNITURE or spot is None or spot[0] != FLOOR:
+            return None
+        return (room.x + spot[1][0] // GROWTH, room.y + spot[1][1] // GROWTH)
+
+    def _ornament(self, layout: InteriorLayout, kind: str, definition, x: int, y: int, ghost: bool | None = None):
+        """An ornament where it is, or as it would be if it were put there: `ghost` says whether it could."""
+        cell = layout.cell
+        if definition.on == ON_WALL:
+            picture, top = self.ornaments.on_wall(kind, definition.width, cell)
+            place = (layout.wall.x + x * cell, layout.wall.y + top)
+            box = pygame.Rect(place, picture.get_size())
+            depth = float(layout.wall.y)
+        else:
+            drawn = self.ornaments.on_floor(kind, (definition.width, definition.height), cell, layout.depth)
+            picture = drawn.under
+            left = layout.spot(x, y)[0]
+            bottom = layout.spot(x, y + definition.height)[1]
+            place = (left, bottom - picture.get_height())
+            box = pygame.Rect(layout.spot(x, y), (definition.width * cell, definition.height * layout.depth))
+            # What lies flat is under everything that stands on the floor.
+            depth = layout.floor.y - 0.25 if definition.flat else bottom - 0.5
+        if ghost is not None:
+            picture = self._faint(picture)
+
+        def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
+            target.blit(picture, (corner[0] + place[0], corner[1] + place[1]))
+            if ghost is not None:
+                pygame.draw.rect(target, CAN_GO if ghost else CANNOT_GO, box.move(corner), max(2, cell // 22), border_radius=4)
+
+        return (depth if ghost is None else float("inf"), draw)
+
+    def _faint(self, picture: pygame.Surface) -> pygame.Surface:
+        """A picture seen through, for what is not there yet."""
+        key = ("faint", id(picture))
+        if key not in self._pictures:
+            faint = picture.copy()
+            faint.fill((255, 255, 255, 150), special_flags=pygame.BLEND_RGBA_MULT)
+            self._pictures[key] = faint
+        return self._pictures[key]
+
+    def _site(self, room: Room, layout: InteriorLayout, site):
+        """Something being put up in the room: seen through where it will stand, with how far along it is."""
+        world = self.view.world
+        definition = world.registries.interactables.get(site.what) if site.kind == OBJECT_SITE else None
+        column, row = self.place(room, site.x, site.y)
+        wide, deep = (definition.width, definition.height) if definition is not None else (1, 1)
+        box = pygame.Rect(layout.spot(column, row), (wide * layout.cell, deep * layout.depth))
+        done = world.construction.fraction_done(world, site)
+        own = self._own(layout, definition) if definition is not None else None
+        faint = self._faint(own.under) if own is not None else None
+
+        def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
+            area = box.move(corner)
+            if faint is not None:
+                target.blit(faint, (area.x, area.bottom - faint.get_height()))
+            pygame.draw.rect(target, SITE_LINE, area.inflate(-4, -4), max(2, layout.cell // 24), border_radius=4)
+            bar = pygame.Rect(area.x + 6, area.bottom - 12, area.width - 12, 6)
+            pygame.draw.rect(target, (30, 22, 20), bar, border_radius=3)
+            pygame.draw.rect(target, CAN_GO, (bar.x, bar.y, round(bar.width * done), bar.height), border_radius=3)
+
+        return (box.bottom - 0.6, draw)
+
+    def _in_hand(self, room: Room, layout: InteriorLayout):
+        """What is in hand, where the pointer has it over the room. None with nothing in hand, or off the room."""
+        view, world = self.view, self.view.world
+        if not self.decorating or self.decor_held is None:
+            return None
+        tab, entry_id = self.decor_held
+        if tab == ORNAMENTS:
+            place = self.held_place(room, view.pointer)
+            definition = world.registries.decor.ornaments.get(entry_id)
+            if place is None or definition is None:
+                return None
+            fits = world.decor.error(world, room.room_id, entry_id, *place) is None
+            return self._ornament(layout, entry_id, definition, place[0], place[1], ghost=fits)
+        tile = self.held_tile(room, view.pointer)
+        if tile is None:
+            return None
+        definition = world.registries.interactables.get(entry_id)
+        fits = world.construction.site_error(world, OBJECT_SITE, entry_id, tile) is None
+        column, row = self.place(room, tile[0], tile[1])
+        box = pygame.Rect(layout.spot(column, row), (definition.width * layout.cell, definition.height * layout.depth))
+        own = self._own(layout, definition)
+        faint = self._faint(own.under) if own is not None else None
+
+        def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
+            area = box.move(corner)
+            if faint is not None:
+                target.blit(faint, (area.x, area.bottom - faint.get_height()))
+            pygame.draw.rect(target, CAN_GO if fits else CANNOT_GO, area, max(2, layout.cell // 22), border_radius=4)
+
+        return (float("inf"), draw)
+
+    def _to_remove(self, room: Room, layout: InteriorLayout):
+        """A line round the ornament under the pointer, while they are being taken away."""
+        world = self.view.world
+        spot = self.spot_under(room, self.view.pointer)
+        ornament = world.decor.at(world, room.room_id, *spot) if spot is not None and self.decor_removing else None
+        if ornament is None:
+            return None
+        definition = world.registries.decor.ornaments[ornament.kind]
+        if definition.on == ON_WALL:
+            picture, top = self.ornaments.on_wall(ornament.kind, definition.width, layout.cell)
+            box = pygame.Rect((layout.wall.x + ornament.x * layout.cell, layout.wall.y + top), picture.get_size())
+        else:
+            box = pygame.Rect(
+                layout.spot(ornament.x, ornament.y), (definition.width * layout.cell, definition.height * layout.depth)
+            )
+
+        def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
+            pygame.draw.rect(target, CANNOT_GO, box.move(corner), max(2, layout.cell // 20), border_radius=4)
+
+        return (float("inf"), draw)
+
+    def _decor_picture(self, entry: DecorEntry, scale: int) -> pygame.Surface | None:
+        """What a thing on the board looks like, to fit its tile: `scale` pixels of it to one of the canvas."""
+        key = ("decor", entry.tab, entry.entry_id, scale)
+        if key in self._pictures:
+            return self._pictures[key]
+        view, world = self.view, self.view.world
+        size = DECOR_PICTURE * scale
+        if entry.tab == ORNAMENTS:
+            definition = world.registries.decor.ornaments[entry.entry_id]
+            picture = self.ornaments.whole(entry.entry_id, definition.on == ON_WALL, (definition.width, definition.height), size)
+        elif entry.tab == FURNITURE:
+            definition = world.registries.interactables.get(entry.entry_id)
+            if view.object_pictures.has(definition.kind, definition.width, definition.height):
+                picture = view.object_pictures.whole(definition.kind, max(8, size // max(definition.width, definition.height)))
+            else:
+                sheet = view.object_sprites.sheet(definition)
+                picture = sheet.subsurface((0, 0, min(definition.width * TILE_SIZE, sheet.get_width()), sheet.get_height()))
+            fit = min(size / picture.get_width(), size / picture.get_height())
+            picture = pygame.transform.smoothscale(
+                picture, (max(1, round(picture.get_width() * fit)), max(1, round(picture.get_height() * fit)))
+            )
+        elif entry.entry_id == AS_BUILT_ID:
+            return None
+        else:
+            picture = surface_swatch(entry.entry_id, entry.tab == WALLS, size)
+        self._pictures[key] = picture
+        return picture
+
+    def _show_entry(self, entry: DecorEntry, cell: pygame.Rect) -> None:
+        """Put the picture of a thing on its tile of the board."""
+        view = self.view
+        skin = view.hud.skin
+        scale = view.layers.scale if skin.usable and view.layers is not None else 1
+        picture = self._decor_picture(entry, scale)
+        if picture is None:
+            # The floor or the walls as the building was put up.
+            mark = "="
+            view.font.draw(view.canvas, mark, (cell.centerx - view.font.width(mark) // 2, cell.centery - LINE_HEIGHT // 2), PALETTE["dust"])
+            return
+        place = pygame.Rect(0, 0, max(1, picture.get_width() // scale), max(1, picture.get_height() // scale))
+        place.center = cell.center
+        if not skin.picture(view.canvas, picture, place):
+            view.canvas.blit(picture, place)
 
     def place(self, room: Room, x: float, y: float) -> tuple[float, float]:
         """Where on the floor of the inside a place of the map falls, in cells."""
@@ -242,21 +561,32 @@ class InteriorView:
         canvas, viewport, world = view.canvas, view.viewport, view.world
         layout = self.layout(room)
         draws: list[tuple[float, object]] = []
+        labels = []
         for placed in world.interactables.values():
             if room.contains((placed.x, placed.y)):
                 draws.extend(self._object(room, layout, placed))
-        labels = []
+                if placed.object_id in world.containers:
+                    labels.append(self._kept_in(room, layout, placed))
         for resident in world.residents.values():
             if resident.away or not room.contains(resident.tile):
                 continue
             depth, draw, label = self._resident(room, layout, resident)
             draws.append((depth, draw))
             labels.append(label)
+        for site in world.sites.values():
+            if room.contains((site.x, site.y)):
+                draws.append(self._site(room, layout, site))
+        known = world.registries.decor.ornaments
+        for ornament in world.decor.ornaments(world, room.room_id):
+            draws.append(self._ornament(layout, ornament.kind, known[ornament.kind], ornament.x, ornament.y))
+        draws.extend(filter(None, (self._in_hand(room, layout), self._to_remove(room, layout))))
         draws.sort(key=lambda entry: entry[0])
-        floor_kind = world.tile_map.terrain_at((room.x, room.y))
-        key = (room.room_id, layout.cell, layout.columns, layout.rows, floor_kind, layout.door)
+        # What the player has said its floor and its walls are made of, or else what it was put up with.
+        floor_kind = world.decor.floor_of(world, room.room_id) or world.tile_map.terrain_at((room.x, room.y))
+        wall_kind = world.decor.wall_of(world, room.room_id) or PLAIN_WALL
+        key = (room.room_id, layout.cell, layout.columns, layout.rows, floor_kind, wall_kind, layout.door)
         if key not in self._shells:
-            self._shells[key] = draw_shell(layout, floor_kind, sum(map(ord, room.room_id)))
+            self._shells[key] = draw_shell(layout, floor_kind, sum(map(ord, room.room_id)), wall_kind)
         shell = self._shells[key]
 
         def paint(target: pygame.Surface, corner: tuple[int, int]) -> None:
@@ -284,9 +614,21 @@ class InteriorView:
             label()
         canvas.set_clip(None)
         self.leave_button.draw(canvas, view.font)
-        left = self.leave_button.rect.right + 6
+        self.house_button.draw(canvas, view.font, active=self.board_open and not self.decorating)
+        self.decor_button.draw(canvas, view.font, active=self.decorating)
+        board = self.board_rect()
+        if board is not None and self.decorating:
+            chosen = (world.homes.floors.get(room.room_id, AS_BUILT_ID), world.homes.walls.get(room.room_id, AS_BUILT_ID))
+            draw_decor_board(
+                canvas, view.font, board, world, self.decor_tab, self.decor_held, self.decor_removing,
+                view.pointer, self._show_entry, chosen, band_hue("urbanism"),
+            )
+        elif board is not None:
+            draw_house_board(canvas, view.font, board, world, room.room_id, self.naming, band_hue("buildings"))
+        left = self.decor_button.rect.right + 6
         view.font.draw(canvas, f"{room.name.capitalize()}, por dentro", (left, self.leave_button.rect.y + 1), PALETTE["paper"])
-        view.font.draw(canvas, TRIAL_NOTE, (viewport.x + 6, viewport.bottom - LINE_HEIGHT - 3), PALETTE["dust"])
+        if self.decorating:
+            view.font.draw(canvas, DECOR_NOTE, (viewport.x + 6, viewport.bottom - LINE_HEIGHT - 3), PALETTE["dust"])
 
     # ----- what stands in it -----
 
@@ -328,6 +670,24 @@ class InteriorView:
             target.blit(picture, (corner[0] + left, corner[1] + bottom - height))
 
         return [(bottom - 0.5, draw)]
+
+    def _kept_in(self, room: Room, layout: InteriorLayout, placed: Interactable):
+        """Where something that things are kept in is on the screen, to be picked there."""
+        view = self.view
+        definition = view.world.definition_of(placed)
+        column, row = self.place(room, placed.x, placed.y)
+        left, top = layout.spot(column, row)
+        own = self._own(layout, definition)
+        rise = own.rise if own is not None else 0
+        box = pygame.Rect(left, top - rise, definition.width * layout.cell, definition.height * layout.depth + rise)
+        hitbox = pygame.Rect(self._to_canvas(box.topleft), (max(4, box.width // SCALE), max(4, box.height // SCALE)))
+
+        def label() -> None:
+            view.container_hitboxes[placed.object_id] = hitbox
+            if placed.object_id == view.hud.selected_container:
+                pygame.draw.rect(view.canvas, PALETTE["glow"], hitbox, 1)
+
+        return label
 
     def _own(self, layout: InteriorLayout, definition) -> ObjectPicture | None:
         """The game's picture of a kind of thing, which is what is shown of it in here. None if it has none.

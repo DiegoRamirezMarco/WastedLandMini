@@ -1,0 +1,145 @@
+{
+  "welcome_affection": 35,
+  "desperate": {
+    "hunger": 85,
+    "thirst": 85
+  },
+  "trespass_importance": 35,
+  "housed_importance": 30,
+  "rest_per_comfort": 0.002,
+  "mood_per_day": 4.0,
+  "uses": {
+    "home": "vivienda",
+    "workshop": "taller",
+    "store": "almacén",
+    "shop": "tienda",
+    "bar": "cantina",
+    "clinic": "enfermería",
+    "hall": "sala común"
+  },
+  "furnishing": {
+    "bed": {
+      "comfort": 25
+    },
+    "clinic_bed": {
+      "comfort": 15
+    },
+    "table": {
+      "comfort": 10
+    },
+    "stool": {
+      "comfort": 6
+    },
+    "crate": {
+      "comfort": 4
+    },
+    "pantry": {
+      "comfort": 8
+    },
+    "shelf": {
+      "comfort": 6,
+      "beauty": 4
+    },
+    "study_desk": {
+      "comfort": 8,
+      "light": 10
+    },
+    "cooking_pot": {
+      "comfort": 8,
+      "warmth": 25
+    },
+    "campfire": {
+      "warmth": 35,
+      "light": 25
+    },
+    "barrel": {
+      "warmth": 25,
+      "light": 20
+    },
+    "lamp": {
+      "light": 40,
+      "beauty": 4
+    },
+    "generator": {
+      "light": 15,
+      "beauty": -10
+    },
+    "radio_set": {
+      "comfort": 10
+    },
+    "scrap_pile": {
+      "beauty": -15
+    },
+    "junk": {
+      "beauty": -10
+    },
+    "rug": {
+      "comfort": 12,
+      "warmth": 10,
+      "beauty": 12
+    },
+    "plant": {
+      "beauty": 15
+    },
+    "chair": {
+      "comfort": 10
+    },
+    "bedside_table": {
+      "comfort": 8,
+      "beauty": 4
+    },
+    "curtain": {
+      "warmth": 8,
+      "beauty": 10
+    },
+    "picture": {
+      "beauty": 18
+    },
+    "wall_shelf": {
+      "comfort": 6,
+      "beauty": 6
+    },
+    "window": {
+      "light": 30,
+      "beauty": 8
+    },
+    "wall_lamp": {
+      "light": 30,
+      "beauty": 6
+    },
+    "clock": {
+      "comfort": 4,
+      "beauty": 8
+    },
+    "mat": {
+      "comfort": 5,
+      "beauty": 5
+    },
+    "floor_lamp": {
+      "light": 30,
+      "beauty": 6
+    },
+    "floor_wood": {
+      "warmth": 6,
+      "beauty": 4
+    },
+    "floor_tiles": {
+      "beauty": 8
+    },
+    "floor_earth": {
+      "beauty": -6
+    },
+    "plaster": {
+      "light": 6,
+      "beauty": 8
+    },
+    "brick": {
+      "warmth": 10,
+      "beauty": 4
+    },
+    "sheet": {
+      "warmth": -6,
+      "beauty": -6
+    }
+  }
+}
