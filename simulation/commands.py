@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 
 from simulation.ai.affect import AffectResult
 from simulation.ai.placing import PlaceResult
+from simulation.economy.power import PowerResult
 from simulation.economy.terms import TradeResult
 from simulation.housing.housing import HousingResult
 from simulation.justice.justice_system import JusticeResult
@@ -55,6 +56,9 @@ class CommandTarget(Protocol):
         ...
 
     def propose_upgrade(self, object_id: str, resident_id: str, option_id: str) -> UrbanismResult:
+        ...
+
+    def switch(self, object_id: str, on: bool) -> PowerResult:
         ...
 
     def cancel_site(self, site_id: str) -> UrbanismResult:
@@ -302,6 +306,20 @@ class RemoveBuildingCommand:
 
     def apply(self, world: CommandTarget) -> UrbanismResult:
         return world.remove_building(self.room_id)
+
+
+@dataclass(frozen=True)
+class SwitchCommand:
+    """The player switches something that runs on current on or off (S55): a lamp, the
+    radio, the workshop, the laboratory, the tank. Off, it draws nothing and stands idle.
+    Switched on with no current to spare it goes off again at once, and the result says so:
+    when there is not enough for everything, what was switched on last is what goes off."""
+
+    object_id: str
+    on: bool
+
+    def apply(self, world: CommandTarget) -> PowerResult:
+        return world.switch(self.object_id, self.on)
 
 
 @dataclass(frozen=True)

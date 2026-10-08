@@ -14,7 +14,7 @@ from simulation.registries import DATA_DIR, BuiltInRegistries
 from simulation.residents.attributes import Attributes
 from simulation.residents.needs import Needs
 from simulation.work.upgrades import IN_HAND, NOT_THAT, UPGRADED_EVENT
-from simulation.world import POWER_ITEM, SimulationWorld
+from simulation.world import SimulationWorld
 from world.build import UPGRADE_SITE
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -241,21 +241,12 @@ class BetterTests(unittest.TestCase):
             rested[level] = before - ines.needs.tiredness
         self.assertGreater(rested[4], rested[1] * 1.3)
 
-    def test_a_better_generator_gets_more_nights_out_of_its_fuel(self) -> None:
-        burnt = {}
-        for level in (1, 5):
-            world = _settled(hour=12)
-            for resident_id in list(world.residents):
-                del world.residents[resident_id]
-            world.interactables["generator"].level = level
-            fuel = lambda: world.ledger.stock(world)["energy"]  # noqa: E731
-            world.stock(world.containers["warehouse"], POWER_ITEM, 10, None)
-            start = fuel()
-            world.step(14 * MINUTES_PER_DAY)
-            burnt[level] = start - fuel()
-            self.assertTrue(world.has_power())
-        self.assertEqual(burnt[1], 14)
-        self.assertEqual(burnt[5], 8, "a night in every 1.75 or so")
+    def test_a_better_generator_gives_more_current(self) -> None:
+        world = _settled()
+        plain = world.power.supply(world)
+        self.assertGreater(plain, 0)
+        world.interactables["generator"].level = 5
+        self.assertEqual(world.power.supply(world), round(plain * 1.75))
 
 
 class SavedTests(unittest.TestCase):

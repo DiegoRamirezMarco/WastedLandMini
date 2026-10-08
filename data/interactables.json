@@ -219,7 +219,8 @@
         "scrap": 3
       },
       "minutes": 90
-    }
+    },
+    "draws": 2
   },
   "shop_counter": {
     "name": "mostrador",
@@ -297,7 +298,8 @@
     },
     "outlet": {
       "water": 20
-    }
+    },
+    "draws": 1
   },
   "generator": {
     "name": "generador",
@@ -313,7 +315,8 @@
     },
     "outlet": {
       "energy": 4
-    }
+    },
+    "gives": 16
   },
   "clinic_bed": {
     "name": "camilla",
@@ -367,7 +370,8 @@
         "scrap": 1
       },
       "minutes": 30
-    }
+    },
+    "draws": 1
   },
   "wreck": {
     "name": "coche oxidado",
@@ -436,7 +440,8 @@
         "scrap": 3
       },
       "minutes": 90
-    }
+    },
+    "draws": 1
   },
   "lab_bench": {
     "name": "laboratorio",
@@ -458,7 +463,8 @@
         "scrap": 4
       },
       "minutes": 120
-    }
+    },
+    "draws": 2
   },
   "caravan_cart": {
     "name": "carro de caravana",

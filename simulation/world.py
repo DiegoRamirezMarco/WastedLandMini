@@ -11,8 +11,9 @@ from simulation.events.decision import Decision
 from simulation.events.event import DomainEvent, euphonic
 from simulation.events.event_manager import EventManager
 from simulation.economy.fund_system import FundSystem
+from simulation.economy.power import PowerResult, PowerSystem
 from simulation.economy.stores import StoreSystem
-from simulation.economy.ledger import BURNT, LedgerState, LedgerSystem
+from simulation.economy.ledger import LedgerState, LedgerSystem
 from simulation.economy.lending import LendingSystem
 from simulation.economy.merchant import Merchant, MerchantSystem
 from simulation.economy.terms import Debt, TradeResult, TradingState
@@ -76,10 +77,6 @@ from world.room import Room
 from world.urbanism import UrbanismResult, UrbanismSystem
 
 POWER_ITEM = "fuel"
-POWERED_LIGHTS = {"lamp"}
-GENERATOR_KIND = "generator"
-POWER_OUT_NOTICE = "power_out"
-POWER_EVENT_IMPORTANCE = 25
 
 
 @dataclass
@@ -128,6 +125,10 @@ class SimulationWorld:
     ledger: LedgerSystem = field(default_factory=LedgerSystem)
     # The stores what is everybody's is kept in, and the places it is taken from (S53).
     stores: StoreSystem = field(default_factory=StoreSystem)
+    # Current: what gives it, what draws it and what stops without it (S55). And the part of
+    # a unit of fuel that has been burnt since the last whole one.
+    power: PowerSystem = field(default_factory=PowerSystem)
+    power_burnt: float = 0.0
     accounts: LedgerState = field(default_factory=LedgerState)
     # Whoever has stopped by the gate to trade, while they are there.
     merchant: Merchant | None = None
@@ -228,7 +229,7 @@ class SimulationWorld:
         # Before anything else happens this minute: a day that has ended is counted as it ended.
         self.ledger.tick(self)
         self.stores.tick(self)
-        self._power_tick()
+        self.power.tick(self)
         self.interventions.tick(self)
         self.items.tick_world(self)
         self.staffing.tick(self)
@@ -374,6 +375,10 @@ class SimulationWorld:
     def cancel_order(self, resident_id: str, index: int) -> AffectResult:
         """Take back one of the things a resident has been told to do, counted as `orders_of` gives them."""
         return self.affect.cancel(self, resident_id, index)
+
+    def switch(self, object_id: str, on: bool) -> PowerResult:
+        """Switch something that runs on current on or off."""
+        return self.power.switch(self, object_id, on)
 
     def set_free_will(self, resident_id: str, free: bool) -> AffectResult:
         """Say whether a resident does anything of their own accord, or only what they are told."""
@@ -662,7 +667,7 @@ class SimulationWorld:
     def is_lit(self, tile: Tile) -> bool:
         """Whether a tile is within reach of something that gives light, with nothing in between."""
         opaque = self.opaque()
-        powered = self.has_power()
+        powered = self.power.enough(self)
         for placed in self.interactables.values():
             reach = self.light_of(placed, powered)
             if reach <= 0:
@@ -675,54 +680,21 @@ class SimulationWorld:
     def light_of(self, placed: Interactable, powered: bool | None = None) -> int:
         """How many tiles round it an object lights right now. A lamp gives none while the
         power is out, and nothing does that a law has put out for the night."""
-        if placed.kind in POWERED_LIGHTS and not (self.has_power() if powered is None else powered):
-            return 0
+        if self.definition_of(placed).draws > 0:
+            # What runs on current gives no light without it, nor switched off (S55).
+            if not placed.on or not (self.power.enough(self) if powered is None else powered):
+                return 0
         if self.government.laws and self.politics.laws.dark(self, placed):
             return 0
         return self.definition_of(placed).light
 
     def power_units(self) -> int:
         """Fuel units in generators that can keep lamps and the radio alive."""
-        return sum(
-            inventory.count(POWER_ITEM)
-            for object_id, inventory in self.containers.items()
-            if object_id in self.interactables and self.interactables[object_id].kind == GENERATOR_KIND
-        )
+        return self.power.fuel(self)
 
     def has_power(self) -> bool:
+        """Whether there is fuel for what gives current. Whether a thing has current is `power.powered`."""
         return self.power_units() > 0
-
-    def _power_tick(self) -> None:
-        """Burn one fuel when the lamps come on for the night."""
-        hours = self.registries.event_settings.get("perception", {}).get("dark_hours")
-        dark_start = int(hours[0]) if hours else None
-        if self.clock.minute != 0 or self.clock.hour != dark_start:
-            return
-        generator = next(
-            (
-                inventory
-                for object_id, inventory in self.containers.items()
-                if object_id in self.interactables and self.interactables[object_id].kind == GENERATOR_KIND
-            ),
-            None,
-        )
-        if generator is None:
-            # A settlement with no generator has no power to run out of.
-            return
-        stack = generator.stack_of(POWER_ITEM, None)
-        if stack is None:
-            if self.notices.get(POWER_OUT_NOTICE) != self.clock.day:
-                self.notices[POWER_OUT_NOTICE] = self.clock.day
-                self.emit_event(DomainEvent("power_failed", POWER_EVENT_IMPORTANCE, "El generador se queda sin combustible"))
-            return
-        burning = next(
-            object_id for object_id, inventory in self.containers.items() if inventory is generator
-        )
-        if self.upgrades.spares_fuel(self, burning):
-            # A generator that has been made better gets more nights out of the same fuel (S54).
-            return
-        generator.take_unit(stack.instance_id)
-        self.ledger.record(self, POWER_ITEM, -1, BURNT)
 
     def under_roof(self, tile: Tile) -> bool:
         room = self.room_at(tile)

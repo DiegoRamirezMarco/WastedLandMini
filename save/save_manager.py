@@ -144,6 +144,9 @@ LAST_MAP_CHANGE_VERSION = 16
 # Version 45 marks one more: it got a well, where water is drawn with no current (S55).
 MAP_GAINS: dict[int, tuple[str, ...]] = {42: ("warehouse",), 45: ("well",)}
 MAP_RENAMES: dict[int, dict[str, str]] = {42: {"storehouse": "almacén"}}
+# Version 46 added current (S55): what stands is switched on or off, and a tank needs some.
+FIRST_CURRENT_VERSION = 46
+TANK_KIND, WELL_KIND = "water_tank", "well"
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 28
 FIRST_MEDICINE_VERSION = 23
@@ -161,7 +164,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 45
+    CURRENT_VERSION = 46
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -284,7 +287,15 @@ class SaveManager:
                 },
             },
             "interactables": [
-                {"id": placed.object_id, "kind": placed.kind, "x": placed.x, "y": placed.y, "level": placed.level}
+                {
+                    "id": placed.object_id,
+                    "kind": placed.kind,
+                    "x": placed.x,
+                    "y": placed.y,
+                    "level": placed.level,
+                    "on": placed.on,
+                    "switched_at": placed.switched_at,
+                }
                 for placed in world.interactables.values()
             ],
             "sites": [
@@ -400,6 +411,7 @@ class SaveManager:
             "thefts": [vars(attempt) for attempt in world.thefts],
             "theft_cooldowns": dict(world.theft_cooldowns),
             "notices": dict(world.notices),
+            "power_burnt": world.power_burnt,
             "vacancies": dict(world.vacancies),
             "deaths": [vars(death) for death in world.deaths],
             "decisions": [_decision_to_data(decision) for decision in world.decisions.values()],
@@ -1103,6 +1115,8 @@ class SaveManager:
             for resident_id, minute in _object_or_empty(data.get("theft_cooldowns")).items()
         }
         world.notices = {str(name): int(day) for name, day in _object_or_empty(data.get("notices")).items()}
+        burnt = data.get("power_burnt", 0.0)
+        world.power_burnt = min(1.0, max(0.0, float(burnt))) if isinstance(burnt, (int, float)) else 0.0
         world.vacancies = {
             str(job_id): int(minute)
             for job_id, minute in _object_or_empty(data.get("vacancies")).items()
@@ -1376,6 +1390,9 @@ class SaveManager:
                 int(placed["y"]),
                 # How good it is. In a save from before everything is common (S54).
                 max(1, min(world.registries.rarities.highest, _level_of(placed))),
+                # Whether it is switched on. In a save from before everything is (S55).
+                bool(placed.get("on", True)),
+                max(0, _level_of({"level": placed.get("switched_at", 0)}) if placed.get("switched_at") else 0),
             )
             for placed in saved
             if isinstance(placed, dict) and world.registries.interactables.find(str(placed.get("kind")))
@@ -1389,6 +1406,14 @@ class SaveManager:
         if version < FIRST_MEDICINE_VERSION:
             self._move_what_the_map_moved(world)
         self._gain_from_the_map(world, from_map, version)
+        if version < FIRST_CURRENT_VERSION and not any(
+            world.definition_of(placed).gives for placed in world.interactables.values()
+        ):
+            # A tank runs on current now. Where there is nothing to give it any, it is a
+            # well from here on, which is the same post worked by hand (S55).
+            for placed in world.interactables.values():
+                if placed.kind == TANK_KIND and world.registries.interactables.find(WELL_KIND) is not None:
+                    placed.kind = WELL_KIND
         world.containers = {
             object_id: containers_before.get(object_id, Inventory())
             for object_id, placed in world.interactables.items()

@@ -4566,7 +4566,7 @@ Still open here:
 - **Nobody prefers a rarer tool** when there are two to hand, and nobody is told a thing is rare
 
 ### S55 — Current, and things that break down (needs S54 and S15) — under way
-Of its three parts the well is done. Current and switches, and wear and mending, are not.
+Of its three parts the well and current are done. Wear and mending are not.
 Asked on 2026-10-08, with S64 and after it, in two batches, and answered:
 - **With no current, what runs on it stops.** Not the recommendation, which was that it only
   lose what current gave it over working without
@@ -4601,8 +4601,44 @@ The well, done:
 - **The opening of a new settlement asks for a well** where it asked for a tank
 - **The settlement that comes ready made has one**, by its tank, and a save of it from before
   gains it (save version 45)
-- Not yet: a tank does not need current, so nothing is lost for having no well. That comes
-  with the next part, and with it whoever draws water moving to the well when the tank stops
+
+Current, done:
+- **What a kind of thing draws and what a generator gives are data**: a lamp and the radio
+  draw 1, the tank 1, the workshop and the laboratory 2, and a generator gives 16 while it
+  has fuel, the more for having been made better (S54), which is what a better generator
+  comes to now in place of burning less
+- **Whatever runs on current is switched on or off**, by a command, and is on to begin with.
+  Off, it draws nothing and stands idle
+- **With no current a thing stops**: a lamp gives no light, the radio tells nobody anything,
+  and nobody works at the workshop, the laboratory or the tank. What water there is in a
+  tank is still drunk
+- **Whoever draws water goes to the well when the tank stops**, if one stands free, and the
+  post there is theirs from then on
+- **When more is asked for than there is, what was switched on last goes off**, and then what
+  was before it, until there is enough. It is said
+- **Fuel is burnt by what is running and for how long**: a lamp for the night it is about to
+  light, a post while somebody is at it, the radio while it is listened to. Nine lamps burn
+  a unit a night, as the generator always did, and three burn a third of one
+- **With no generator nothing that draws runs.** In a save from before, a tank in a
+  settlement with no generator is a well from then on, which is the same post worked by hand
+- The save went to version 46: whether each thing is switched on and when it last was, and
+  the part of a unit of fuel burnt since the last whole one
+- Over eighteen seeds of ten weeks, against the same before current: as many alive (10.4)
+  and nobody dead in either, water 161 against 169, and fuel 15 against 34 from the 20 it
+  begins with. It ran out for a night in one seed. With the tank drawing 2 it was 9, and
+  ran out in three
+
+Decided without asking, of current:
+- **A workshop with no generator does nothing**, which follows from the two answers the user
+  gave. The workshop is studied before electricity is: a settlement that builds one first
+  has nobody mending until it has a generator
+- **The tank draws less than the workshop**, for the fuel to last
+- **Everything is on to begin with**, and what is built is on when it stands
+- **The glow of the workshop goes with its current**, as the light of a lamp does
+
+Still open here, of current:
+- **There is no switch on screen**, nor any mark on what has stopped: P60
+- **The mechanic of a workshop that has stopped is left with nothing to do**, and says nothing
 
 How the rest is to be built, worked out on 2026-10-08 and not yet done:
 - **In three parts, each its own commit**: the well; current and switches; wear and mending

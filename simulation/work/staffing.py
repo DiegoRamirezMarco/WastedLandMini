@@ -89,6 +89,16 @@ class StaffingSystem:
         self._say_changed(world, resident, text)
         return True
 
+    def fall_back(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> bool:
+        """Have somebody whose post stands idle for want of current take another post of
+        their job that is not, if one stands free: whoever draws water goes to the well when
+        the tank stops (S55). Says whether they have one they can work at now."""
+        taken = {each.post_id for each in world.residents.values()}
+        for object_id, placed in world.interactables.items():
+            if job.works_at(placed.kind) and object_id not in taken and world.power.powered(world, object_id):
+                return self.assign(world, resident, job.job_id, object_id)
+        return False
+
     def swap(self, world: "SimulationWorld", one: Resident, other: Resident) -> bool:
         """Have two residents change posts: each takes the job and the post the other had.
         Whoever changes with somebody who had none is left with none. False if there is

@@ -175,6 +175,10 @@ class WorkSystem:
         if world.upgrades.in_hand(world, resident.post_id):
             # Nobody works at a post while it is being made better.
             return None
+        if world.power.stopped(world, resident.post_id) and not world.staffing.fall_back(world, resident, job):
+            # Nor at one that runs on current and has none, unless there is another of the
+            # job's that needs none, which they take (S55).
+            return None
         leaving = job.expedition is not None and resident.last_expedition_day != world.clock.day
         pressing = SETTING_OUT_NEED if leaving else PRESSING_NEED
         if world.activities.urgent_needs(world, resident, pressing):
@@ -246,7 +250,7 @@ class WorkSystem:
         if job is None or placed is None or (job.outdoors and world.happenings.is_stormy(world)):
             self._leave(resident)
             return
-        if world.upgrades.in_hand(world, placed.object_id):
+        if world.upgrades.in_hand(world, placed.object_id) or world.power.stopped(world, placed.object_id):
             self._leave(resident)
             return
         remaining = activity.minutes_left if activity.using else self.shift_minutes_left(world, resident, job)

@@ -2,7 +2,7 @@
 
 A post, a store, a bed and a generator start out common and can be made better four times
 over: uncommon, rare, epic, legendary. Each makes the thing do what it does that much better:
-a post is worked faster, a store holds more, a bed rests better, a generator burns less. The
+a post is worked faster, a store holds more, a bed rests better, a generator gives more. The
 sixth, mythic, is never made here: it is found.
 
 Making a thing better is a site on what already stands, with what it takes carried to it and
@@ -223,9 +223,3 @@ class UpgradeSystem:
                 return index + 1
         return 1
 
-    def spares_fuel(self, world: "SimulationWorld", object_id: str) -> bool:
-        """Whether a generator burns nothing this night for being better than a common one:
-        one that is twice as good burns every other night, and so on, by the day it is."""
-        better = self.better(world, object_id)
-        day = world.clock.day
-        return better > 1.0 and int(day / better) == int((day - 1) / better)

@@ -355,7 +355,7 @@ class ActivitySystem:
         elif use.item_id is not None:
             activity.item_id = use.item_id
         world.trade.charge(world, resident, use, activity.target_id)
-        if use.radio:
+        if use.radio and world.power.powered(world, activity.target_id):
             world.happenings.hear_radio(world, resident)
         placed = world.interactables[activity.target_id]
         world.politics.laws.used(world, resident, placed, use)

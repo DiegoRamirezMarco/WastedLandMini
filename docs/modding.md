@@ -1052,6 +1052,16 @@ kept:
 - Nothing is a resource that is not named here: take one out and it is no longer counted, add
   one and it is.
 
+### Current
+
+- `"draws": 2` on a kind of object in `data/interactables.json` has it run on current: so
+  much while it is switched on. Without it gives no light, tells nothing if it is a radio,
+  and cannot be worked at if it is a post.
+- `"gives": 16` makes a kind of object a generator: so much current while it holds fuel. It
+  has to be a container.
+- `data/power.json` names the item that is `fuel`, and `fuel_lasts`: the minutes of one unit
+  of current that a unit of it is good for.
+
 ### Stores, and where what they hold is taken from
 
 Two keys of a kind of object in `data/interactables.json`, both of which need

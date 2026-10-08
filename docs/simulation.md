@@ -282,6 +282,25 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
   drawing. A trip that
   went on at something worth a risk has the odds of everything but common multiplied.
 
+### Current
+
+- **Some kinds of thing run on current** (`simulation/economy/power.py`): what a kind draws
+  and what a generator gives are whole numbers in its data. A generator gives while it has
+  fuel, and more for having been made better.
+- **Each such thing is switched on or off.** `world.power.powered(world, object_id)` says
+  whether a thing has what it needs: it draws nothing, or it is on and there is current for
+  everything that is on.
+- **With none it stops**: a lamp gives no light, a radio no word, and nobody works at a post
+  that draws. Whoever works there takes another post of their job that needs none, if one
+  stands free. Drinking from a tank needs no current.
+- **When more is asked for than there is**, what was switched on last is switched off, and so
+  on until what is left fits (`power_shed`).
+- **Fuel is burnt by what is drawn, and for how long**: what only gives light is counted for
+  the whole night as night begins, a post for each minute somebody is at it, anything else
+  for each minute it is used. `fuel_lasts` in `data/power.json` is how many minutes of one
+  unit of current a unit of fuel is good for.
+- **With no generator at all** nothing that draws runs, and nothing is said of it.
+
 ## What comes from outside
 
 - **World events** are defined in `data/world_events.json`: how likely each is on a day it can

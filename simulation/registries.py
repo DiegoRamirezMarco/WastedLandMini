@@ -39,6 +39,7 @@ from simulation.work.construction import ConstructionSettings, construction_sett
 from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
 from simulation.work.research import EFFECTS, JOB_PACE, ResearchSettings, research_settings_from_data
+from simulation.economy.power_settings import PowerSettings, power_settings_from_data
 from simulation.work.rush import RushSettings, rush_settings_from_data
 from simulation.work.upgrades import RaritySettings, rarity_settings_from_data
 from world.interactable import InteractableDefinition, interactable_definition_from_data
@@ -174,6 +175,7 @@ class BuiltInRegistries:
     # What pushing a post does, and what it risks.
     rush: RushSettings = field(default_factory=RushSettings)
     rarities: RaritySettings = field(default_factory=RaritySettings)
+    power: PowerSettings = field(default_factory=PowerSettings)
     bonds: BondSettings = field(default_factory=BondSettings)
     expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
     # How building is gone about. What each thing takes is in its own definition.
@@ -297,6 +299,9 @@ class BuiltInRegistries:
         resources_path = root / "resources.json"
         if resources_path.is_file():
             registries.resources = resource_settings_from_data(_read_object(resources_path))
+        power_path = root / "power.json"
+        if power_path.is_file():
+            registries.power = power_settings_from_data(_read_object(power_path))
         rarities_path = root / "rarities.json"
         if rarities_path.is_file():
             registries.rarities = rarity_settings_from_data(_read_object(rarities_path))
@@ -359,6 +364,10 @@ class BuiltInRegistries:
                 unknown = sorted(set(units or ()) - set(self.resources.resources))
                 if unknown:
                     raise ValueError(f"Interactable {kind} keeps a resource there is not: {unknown}")
+        if self.items.find(self.power.fuel) is None and any(
+            self.interactables.get(kind).gives for kind in self.interactables.kinds()
+        ):
+            raise ValueError(f"What gives current burns an item there is not: {self.power.fuel}")
         for rarity in self.rarities.tiers:
             if rarity.study is not None and rarity.study not in self.research.subjects:
                 raise ValueError(f"Rarity {rarity.rarity_id} is studied as a subject there is not: {rarity.study}")

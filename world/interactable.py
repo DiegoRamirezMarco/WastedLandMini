@@ -88,6 +88,10 @@ class InteractableDefinition:
     # Whether it is something to sit on: whoever is at something done sitting down, on the
     # tile it stands on, sits on it and not on the ground.
     seat: bool = False
+    # How much current one of these draws while it is switched on, and how much one gives
+    # while it has fuel (S55). Nothing for what has nothing to do with current.
+    draws: int = 0
+    gives: int = 0
     # How fast a post of this kind is worked, against any other of the same job: a well is
     # slower than a tank with its pump (S55).
     post_pace: float = 1.0
@@ -107,6 +111,10 @@ class Interactable:
     y: int
     # How good it is, from 1: the place of its rarity among those there are (S54).
     level: int = 1
+    # For what runs on current (S55): whether it is switched on, and the game minute it was
+    # last switched on, which is what goes off first when there is not enough for everything.
+    on: bool = True
+    switched_at: int = 0
 
     def footprint(self, definition: InteractableDefinition) -> list[Tile]:
         return [
@@ -135,6 +143,8 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         build=build_rule_from_data(f"interactable {kind}", data.get("build")),
         salvage=_salvage_from_data(kind, data.get("salvage")),
         seat=bool(data.get("seat", False)),
+        draws=int(data.get("draws", 0)),
+        gives=int(data.get("gives", 0)),
         post_pace=float(data.get("post_pace", 1.0)),
         store=_units_from_data(kind, "store", data.get("store")),
         outlet=_units_from_data(kind, "outlet", data.get("outlet")),
@@ -145,6 +155,8 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         raise ValueError(f"Interactable {kind} is a store: it holds something, and is taken from through others")
     if definition.seat and (definition.blocks or definition.width * definition.height != 1):
         raise ValueError(f"Interactable {kind} is a seat, so it takes up one tile and can be stood on")
+    if definition.draws < 0 or definition.gives < 0 or (definition.gives and not definition.container):
+        raise ValueError(f"Interactable {kind} draws and gives no less than nothing, and what gives current holds its fuel")
     if definition.post_pace <= 0:
         raise ValueError(f"Interactable {kind} is worked at a pace above nothing")
     if definition.light < 0:
