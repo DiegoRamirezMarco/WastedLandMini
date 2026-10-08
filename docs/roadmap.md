@@ -1001,7 +1001,8 @@ whatever had been drawn on it, and the crumbs of a bite were four squares of fix
 
 Still open here:
 - Everything eaten is bitten and sheds crumbs alike: a tin loses pieces as a slice does
-- What is held does not turn with the hand, and the hand is behind it, not round it
+- What is held does not turn with the hand, and the hand is behind it, not round it (a tool
+  at work does since P47; a meal and a weapon still do not)
 - Lists and inventories still show the 16×16 icon, twice as large in a resident's panel
 - The game's own pixel bodies, on the canvas, hold it at the canvas's resolution
 
@@ -3378,6 +3379,57 @@ Still open here:
   there
 - What had been painted outside every zone, which was never shown, is no longer on the paper
   once a drawing is laid out anew
+- Nothing of this has been seen on a real window by whoever made it
+
+### P47 — Work that looks like the work, with its tool in the hands (needs P45) — done
+The user: "Vamos a meter animaciones nuevas, como la de trabajar, cuando se trabaja en el
+huerto se coje la azada por el mango y se hace la animacion de levantar azada, clavar azada,
+acurrucarse en el suelo tambien la hacemos, cuando cargan con algo pero no lo estan usando
+que se lo guarden en el bolsillo; trabajar en la contrccion de algo lo mismo; diferentes
+animaciones a elegir en maneras para sentarse". That is four things, P47 to P50, and a fifth
+that came of the answers. Asked before designing all of them:
+- **Tools: the hoe is the real one and the hammer is for show** (recommended). The hoe is an
+  item already, which wears and makes the garden yield more: only whoever has one digs with
+  it, and whoever has none works with their hands. There is no hammer in the game: whoever
+  builds is seen with one that is nobody's
+- **Curling up on the ground: when sleeping rough** (recommended), with lying down and
+  getting up (P49)
+- **The pocket**: "por ejemplo cuando cultivan van todos con la zanahoria en las manos,
+  segun van cogiendo cosas que vaya a su inventario, no necesariamente se tiene que ver si
+  no lo estan usando". What is carried and not being used is not in the hands (P48)
+- **Sitting, each their own way: by the fire and at the radio, eating, drinking, and on a
+  stool if there is one** (all four; only the first had been recommended). The first three are
+  P50. Stools need the simulation to say who has which seat, and are left for a milestone of
+  their own
+
+What was done here:
+- **Work is shown by what it is** (`data/poses.json`): by job, a clip for bare hands and
+  another for whoever has the tool of the job on them, sound. Any job with no look of its
+  own is the plain work of before
+- **Digging with a hoe**: taken by the handle in both hands, dragged back, raised over the
+  head, held an instant and brought down fast into the ground ahead, the knees giving
+- **Working the ground with bare hands**, for whoever has no hoe or a broken one: down on
+  the haunches, one hand at the ground and then the other
+- **Hammering**, for whoever builds: one hand holds the work and the other comes down on it
+  twice
+- **A tool is held by its handle and turns with the hands.** A clip says how (`grip`): in
+  both hands the handle runs from one palm through the other, in one it comes out of the fist
+  at an angle. Where the handle is on a picture, and how long the thing is, is data
+  (`handles`). The hoe in the hands is the item's own picture, the player's drawing of it if
+  there is one. The hammer is a picture and no item
+- **The small bodies of the game no longer sink.** Shown without a window they do not bend
+  their legs, and a pose that takes the body down had their feet under the ground: plain
+  work already did by a pixel. They are left standing on it
+- The clips are written from where the hands are to be, and the arms worked out from that:
+  two hands on one handle cannot be placed by turning four bones by eye
+
+Still open here:
+- A picture of the hoe drawn anew is turned by the handle the game's own has: the item
+  editor does not show where to draw it, and nobody can say where theirs is
+- A weapon and a meal are still shown flat in the hand, in front of it
+- Whatever is held is drawn over every body, the one who holds it and anybody nearer
+- The other posts (kitchen, bar, clinic, workshop, desk) are still plain work
+- Taking a thing apart is not shown as work at all, as before
 - Nothing of this has been seen on a real window by whoever made it
 
 ### P36 — Letters as fine as the rest (needs P35) — planned

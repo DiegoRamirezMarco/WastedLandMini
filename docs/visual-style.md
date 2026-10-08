@@ -469,6 +469,14 @@ each bone, and the game draws it in whatever pose it is in.
   each, and three more for fighting with a knife and with a gun: which one a body goes through
   is its resident's manner (`data/manners.json`). A weapon is seen in the hand while its owner
   fights with it.
+- **Work looks like the work it is** (`data/poses.json`). In the garden whoever has a hoe
+  takes it by the handle in both hands, raises it over their head, holds it there an instant
+  and brings it down into the ground ahead, then drags it back; whoever has none, or a broken
+  one, squats and works the ground with their hands. Whoever builds holds the work with one
+  hand and hammers on it with the other, twice. Any other post is plain work, as before.
+- **A tool is held by its handle** and turns with the hands that hold it: it is in them, not
+  in front of them. The hoe is the resident's own, the item they carry, in the picture it has;
+  the hammer is nobody's, and is there for the look of it. Walking, hands are empty of both.
 - A posed body is drawn once for each frame of each clip and kept. While nothing happens to it,
   showing it is one blit and no physics runs.
 - **A blow** throws the body off its pose and it reels back to it. **A hard one** knocks it

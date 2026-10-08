@@ -23,6 +23,13 @@ TEETH = 3
 SEARCHED = 48
 # Folders of `custom_content/` in which a pack may bring an `icon.png`.
 PACK_FOLDERS = ("items", "foods")
+# A thing held by its handle is kept turned in this many steps of a full turn, and so many
+# pictures of it are kept before the oldest are let go.
+GRIP_TURNS = 240
+GRIPS_KEPT = 720
+# The game's own pictures are painted again, larger, for a hand that shows them larger than
+# they were made: by whole times their size, up to this many.
+LARGEST_PAINTED = 4
 
 
 def builtin_icon_path(item_id: str) -> str:
@@ -40,6 +47,8 @@ class ItemIcons:
         self._held: dict[tuple[str, int, int, bool], pygame.Surface] = {}
         self._colors: dict[str, list[tuple[int, int, int]]] = {}
         self._shown: dict[tuple[str, int], pygame.Surface] = {}
+        self._gripped: dict[tuple, tuple[pygame.Surface, tuple[float, float]]] = {}
+        self._painted_large: dict[tuple[str, int], pygame.Surface] = {}
         # Whether the game's own items are shown as it draws them for the window (P41), in place of
         # their small icons, wherever a picture as large as it was made is asked for.
         self.painted = False
@@ -100,6 +109,68 @@ class ItemIcons:
             held = drawn if drawn.get_size() == fitted else pygame.transform.smoothscale(drawn, fitted)
             self._held[key] = pygame.transform.flip(held, True, False) if mirrored else held
         return self._held[key]
+
+    def gripped(
+        self,
+        item_id: str,
+        start: tuple[float, float],
+        end: tuple[float, float],
+        long: float,
+        way: tuple[float, float],
+        at: float = 0.0,
+        mirrored: bool = False,
+    ) -> tuple[pygame.Surface, tuple[float, float]]:
+        """An item as it is seen held by its handle, and where on that picture it is held.
+
+        `start` and `end` are the two ends of its handle on its picture, in hundredths of its
+        side, the one it is held by first. It is shown with that handle `long` pixels from end
+        to end and running `way`, a direction on the screen, and the point given back is the one
+        `at` that share of the way along the handle. `mirrored` is for whoever faces left: the
+        thing is the other way round in their hands.
+        """
+        angle = math.atan2(-way[1], way[0])
+        step = round(angle / math.tau * GRIP_TURNS) % GRIP_TURNS
+        key = (item_id, start, end, max(1, round(long)), step, round(at * 100), mirrored)
+        kept = self._gripped.get(key)
+        if kept is not None:
+            return kept
+        handle = math.dist(start, end) / 100.0
+        picture = self._to_grip(item_id, key[3] / handle if handle > 0 else 1.0)
+        width, height = picture.get_size()
+        first = (start[0] * width / 100.0, start[1] * height / 100.0)
+        last = (end[0] * width / 100.0, end[1] * height / 100.0)
+        if mirrored:
+            picture = pygame.transform.flip(picture, True, False)
+            first, last = (width - first[0], first[1]), (width - last[0], last[1])
+        drawn = math.dist(first, last) or 1.0
+        scale = key[3] / drawn
+        # Turned from the way its handle runs on its picture to the way it is to run.
+        turn = step * math.tau / GRIP_TURNS - math.atan2(-(last[1] - first[1]), last[0] - first[0])
+        turned = pygame.transform.rotozoom(picture, math.degrees(turn), scale)
+        held = (first[0] + (last[0] - first[0]) * at - width / 2.0, first[1] + (last[1] - first[1]) * at - height / 2.0)
+        cos, sin = math.cos(turn), math.sin(turn)
+        point = (
+            turned.get_width() / 2.0 + (held[0] * cos + held[1] * sin) * scale,
+            turned.get_height() / 2.0 + (-held[0] * sin + held[1] * cos) * scale,
+        )
+        if len(self._gripped) >= GRIPS_KEPT:
+            for old in list(self._gripped)[: GRIPS_KEPT // 4]:
+                del self._gripped[old]
+        self._gripped[key] = (turned, point)
+        return self._gripped[key]
+
+    def _to_grip(self, item_id: str, side: float) -> pygame.Surface:
+        """The picture of an item to be turned in a hand, where its whole side would be `side`
+        pixels: the game's own painted as large as that takes, any other as it was made."""
+        picture = self.picture(item_id)
+        times = min(LARGEST_PAINTED, math.ceil(side / max(picture.get_size())))
+        own = self._custom is None or not any("icon.png" in self._custom.files(f"{folder}/{item_id}") for folder in PACK_FOLDERS)
+        if times <= 1 or not (own and self.painted and item_pictures.painted(item_id)):
+            return picture
+        key = (item_id, times)
+        if key not in self._painted_large:
+            self._painted_large[key] = item_pictures.picture(item_id, item_pictures.MADE_AT * times)
+        return self._painted_large[key]
 
     def _bitten(self, item_id: str, bites: int) -> pygame.Surface:
         """What is drawn of an item, as large as it was made, with so many bites gone from it.
@@ -168,7 +239,7 @@ class ItemIcons:
         self._small.pop(item_id, None)
         self._pictures.pop(item_id, None)
         self._colors.pop(item_id, None)
-        for kept in (self._eaten, self._held, self._shown):
+        for kept in (self._eaten, self._held, self._shown, self._gripped, self._painted_large):
             for key in [key for key in kept if key[0] == item_id]:
                 del kept[key]
         if self._custom is not None:

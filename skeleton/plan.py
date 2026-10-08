@@ -39,6 +39,12 @@ ROOT_KEY = "root"
 # In a key of a clip: when in the clip it comes. In a clip: that it is done once and does not come round.
 AT_KEY = "at"
 ONCE_KEY = "once"
+# In a clip: how something with a handle is held while it goes on.
+GRIP_KEY = "grip"
+# The places a body plan may name for the hand that holds and for the other one: the tip of its
+# fingers, which is where a small thing sits, and its wrist.
+HELD_ANCHORS = ("held_item", "held_wrist")
+OTHER_ANCHORS = ("other_item", "other_wrist")
 IDLE_CLIP = "idle"
 
 
@@ -119,6 +125,23 @@ def added(frame: Keyframe, layer: Keyframe, share: float = 1.0) -> Keyframe:
         turned, long = bones.get(name, (0.0, 1.0))
         bones[name] = (turned + angle * share, long * (1.0 + (scale - 1.0) * share))
     return Keyframe((frame.root[0] + layer.root[0] * share, frame.root[1] + layer.root[1] * share), bones)
+
+
+@dataclass(frozen=True)
+class Grip:
+    """How something with a handle is held while a clip goes on.
+
+    In one hand, the handle comes out of the palm at an angle to the way the hand points. In
+    both, it runs from the palm of the other hand through that of the hand that holds, which
+    is the nearer to its far end: where the two hands go, the thing goes.
+    """
+
+    both: bool = False
+    # How far along its handle, as a share of its length, the thing is held: by the one hand, or
+    # by the other one of the two.
+    at: float = 0.2
+    # In one hand: how far the handle is turned from the way the hand points, in radians.
+    turn: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -276,6 +299,8 @@ class SkeletonPlan:
     motion: MotionSettings = field(default_factory=MotionSettings)
     footing: Footing = field(default_factory=Footing)
     life: LifeSettings = field(default_factory=LifeSettings)
+    # How something with a handle is held during a clip, for the clips in which something is.
+    grips: dict[str, Grip] = field(default_factory=dict)
     # Per pose view and bone, how long it is and which way it points while the body stands at rest.
     _at_rest: dict[str, dict[str, tuple[float, float]]] = field(init=False, repr=False, compare=False)
     # The bone each bone hangs from, from the root outwards. None for one that hangs from the root.
@@ -320,6 +345,38 @@ class SkeletonPlan:
         if FACINGS[facing][3]:
             joint = other_side(joint)
         return pose.get(joint)
+
+    def _palm(self, anchors: tuple[str, str], facing: str, pose: dict[str, Point]) -> tuple[Point, Point] | None:
+        """The middle of a hand in a pose, and the way it points, as far as from wrist to fingertips."""
+        tip, wrist = (self.anchor(name, facing, pose) for name in anchors)
+        if tip is None or wrist is None:
+            return None
+        return ((tip[0] + wrist[0]) / 2.0, (tip[1] + wrist[1]) / 2.0), (tip[0] - wrist[0], tip[1] - wrist[1])
+
+    def handle(self, clip: str, facing: str, pose: dict[str, Point]) -> tuple[Point, Point, float] | None:
+        """Where a clip has something with a handle held, in a pose of it.
+
+        Gives a point of the handle, the way the handle runs from there towards its far end, one
+        pixel long, and how far along the handle that point is, as a share of its length. None
+        if nothing is held by a handle in that clip, or the body plan does not say where the
+        hands are.
+        """
+        grip = self.grips.get(clip)
+        held = self._palm(HELD_ANCHORS, facing, pose) if grip is not None else None
+        if grip is None or held is None:
+            return None
+        palm, pointing = held
+        if grip.both:
+            other = self._palm(OTHER_ANCHORS, facing, pose)
+            if other is None:
+                return None
+            dx, dy = palm[0] - other[0][0], palm[1] - other[0][1]
+            far = math.hypot(dx, dy)
+            # With both hands on the same spot there is no saying which way it runs.
+            return (other[0], (dx / far, dy / far), grip.at) if far > 1e-6 else None
+        # Facing the other way, everything is in a mirror, and so is the turn of the handle.
+        angle = angle_of(*pointing) + (-grip.turn if FACINGS[facing][2] else grip.turn)
+        return (palm, (math.sin(angle), math.cos(angle)), grip.at)
 
     def frames(self, clip: str, view: str) -> int:
         return len(self._keyframes(clip, view))
@@ -438,6 +495,12 @@ class SkeletonPlan:
             positions[bone.end] = (start_x + math.sin(angle) * reach, start_y + math.cos(angle) * reach)
         if view in self.footing.views:
             self._plant(positions, frame.root, rest)
+        else:
+            # A body that does not bend its legs to go down cannot go down: where a pose would
+            # have any of it under the ground it stands on, it is the whole of it higher.
+            sunk = max(y for _, y in positions.values()) - max(y for _, y in rest.values())
+            if sunk > 0.0:
+                positions = {name: (x, y - sunk) for name, (x, y) in positions.items()}
         if not mirrored:
             return positions
         return {(other_side(name) if swapped else name): (-x, y) for name, (x, y) in positions.items()}
@@ -515,6 +578,16 @@ def _keyframes(frames: Any, bones: dict[str, BoneSpec], once: bool, where: str) 
         if not in_order or times[0] < 0.0 or times[-1] > last:
             raise ValueError(f"{where}: every key must say when it comes, from 0 to 1 and each later than the last")
     return keys
+
+
+def _grip(data: Any, where: str) -> Grip:
+    """How a clip has something held by its handle: in one hand or in both, how far along, and turned how."""
+    if not isinstance(data, dict):
+        raise ValueError(f"{where}: a grip must say how a thing is held")
+    hands, at = int(data.get("hands", 1)), float(data.get("at", 0.2))
+    if hands not in (1, 2) or not 0.0 <= at <= 1.0:
+        raise ValueError(f"{where}: a thing is held in one hand or two, at a share of its handle from 0 to 1")
+    return Grip(hands == 2, at, math.radians(float(data.get("turn", 0.0))))
 
 
 def _spring(value: Any, what: str) -> Spring:
@@ -652,6 +725,11 @@ def plan_from_data(data: dict[str, Any]) -> SkeletonPlan:
         }
         for clip, views in data.get("clips", {}).items()
     }
+    grips = {
+        str(clip): _grip(views[GRIP_KEY], f"Clip {clip}")
+        for clip, views in data.get("clips", {}).items()
+        if GRIP_KEY in views
+    }
     known = PhysicsSettings()
     physics = PhysicsSettings(
         **{name: type(getattr(known, name))(value) for name, value in data.get("physics", {}).items() if hasattr(known, name)}
@@ -660,7 +738,7 @@ def plan_from_data(data: dict[str, Any]) -> SkeletonPlan:
         root, joints, bones, braces, parts, limits, rests, orders, skins, clips,
         physics=physics, likes=likes, follows=follows, anchors=anchors,
         once=once, motion=_motion(data.get("motion"), bones), footing=_footing(data.get("footing"), bones, rests),
-        life=_life(data.get("life"), clips),
+        life=_life(data.get("life"), clips), grips=grips,
     )
 
 

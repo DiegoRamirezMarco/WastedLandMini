@@ -148,8 +148,19 @@ class FootingTests(unittest.TestCase):
     def test_the_small_bodies_of_the_game_bob_whole_and_which_legs_stand_is_data(self) -> None:
         self.assertEqual(self.plan.footing.views, frozenset({"doll"}))
         self.assertEqual(set(self.plan.footing.legs), {("thigh_left", "shin_left"), ("thigh_right", "shin_right")})
-        still, sunk = self.plan.place("right", Keyframe()), self.plan.place("right", Keyframe((0.0, 1.0), {}))
-        self.assertAlmostEqual(sunk["foot_right"][1], still["foot_right"][1] + 1.0, 6)
+        still, risen = self.plan.place("right", Keyframe()), self.plan.place("right", Keyframe((0.5, -1.0), {}))
+        self.assertAlmostEqual(risen["foot_right"][1], still["foot_right"][1] - 1.0, 6)
+        self.assertAlmostEqual(risen["head"][0], still["head"][0] + 0.5, 6)
+        # They have no legs that bend to let them down: a pose that would have them under the
+        # ground leaves them standing on it, whole.
+        sunk = self.plan.place("right", Keyframe((0.5, 3.0), {}))
+        for joint in ("foot_right", "head"):
+            self.assertAlmostEqual(sunk[joint][1], still[joint][1], 6)
+            self.assertAlmostEqual(sunk[joint][0], still[joint][0] + 0.5, 6)
+        for clip in self.plan.clips:
+            for phase in (0.0, 0.3, 0.6, 0.8):
+                lowest = max(y for _, y in self.plan.pose("right", clip, phase).values())
+                self.assertLessEqual(lowest, max(y for _, y in still.values()) + 1e-6, (clip, phase))
         data = {
             "root": "a",
             "joints": {"a": {}, "b": {}, "c": {}},

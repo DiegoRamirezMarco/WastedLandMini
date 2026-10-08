@@ -14,6 +14,7 @@ from graphics.shelf_display import displayed_goods
 from scenes.body_stage import REMAINS_MINUTES
 from scenes.hud import STORES_INTENT
 from scenes.global_view import (
+    Gripped,
     MINIMAP_OFF,
     MINIMAP_ON,
     NOBODY_NEEDS_ATTENTION,
@@ -1652,7 +1653,7 @@ class GameShellTests(unittest.TestCase):
         # Eating, fighting and walking are done their own way: the clip is the one of their manner.
         self.assertEqual(clip(), world.manner_of(raul, "eat").clip)
         raul.activity = Activity("work", using=True)
-        self.assertEqual(clip(), "work")
+        self.assertEqual(clip(), view.poses.working(raul.job_id, True).clip, "work is shown by what the work is")
         raul.activity = Activity("fight", partner_id="tomas", using=True)
         self.assertEqual(clip(), world.manner_of(raul, "fight").clip)
         raul.activity = Activity("argument", partner_id="tomas", using=True)
@@ -1666,6 +1667,52 @@ class GameShellTests(unittest.TestCase):
         self.assertEqual(view.bodies.characters["raul"].clip, world.manner_of(raul, "walk").clip)
         self.assertEqual(view.bodies.characters["raul"].facing, "right")
         self.assertEqual(view.bodies.characters["tomas"].clip, "idle")
+
+    def test_work_is_shown_by_its_job_with_the_tool_of_it_in_the_hands_of_whoever_has_one(self) -> None:
+        view, world = self.game.global_view, self.game.world
+        self._stand_together("raul", "tomas")
+        raul, tomas = world.residents["raul"], world.residents["tomas"]
+        poses = view.poses
+        self.assertEqual(raul.job_id, "farmer")
+        hoe = raul.inventory.stack_of("hoe", "raul")
+        self.assertIsNone(view._work_of(raul), "with nothing to do there is no work to show")
+        raul.activity = Activity("work", using=True)
+        # With his hoe he digs, and it is his own hoe that is seen in his hands.
+        self.assertEqual(view._work_of(raul), (poses.jobs["farmer"].tool, "hoe"))
+        self.assertEqual(view._clip_of(raul), (poses.jobs["farmer"].tool.clip, poses.jobs["farmer"].tool.rate))
+        self.assertEqual(view._tool_in_hand(raul), "hoe")
+        view.render()
+        held = [entry for entry in view._held if isinstance(entry, Gripped)]
+        self.assertEqual([entry.item_id for entry in held], ["hoe"])
+        self.assertAlmostEqual(held[0].way[0] ** 2 + held[0].way[1] ** 2, 1.0, 6)
+        self.assertEqual(view.bodies.characters["raul"].clip, poses.jobs["farmer"].tool.clip)
+        # Broken, it is as good as none: he works the ground with his hands, and nothing is in them.
+        hoe.condition = 0.0
+        self.assertTrue(hoe.broken)
+        self.assertEqual(view._work_of(raul), (poses.jobs["farmer"].bare, None))
+        view.render()
+        self.assertEqual(view._held, [])
+        hoe.condition = 100.0
+        raul.inventory.remove(hoe.instance_id)
+        self.assertEqual(view._clip_of(raul)[0], poses.jobs["farmer"].bare.clip)
+        # A post with no look of its own is plain work, and on the way to it there is no work yet.
+        tomas.job_id = "cook"
+        tomas.activity = Activity("work", using=True)
+        self.assertEqual(view._work_of(tomas), (poses.work, None))
+        tomas.activity = Activity("work", path=[(21, 14)], minutes_left=3)
+        self.assertIsNone(view._work_of(tomas))
+        # Whoever builds is seen with a hammer, which is nobody's: there is no such item.
+        tomas.activity = Activity("build", using=True)
+        self.assertEqual(view._work_of(tomas), (poses.build, "hammer"))
+        self.assertIsNone(world.registries.items.find("hammer"))
+        with self.assertNoLogs("graphics.assets", level="WARNING"):
+            view.render()
+        self.assertEqual([entry.item_id for entry in view._held if isinstance(entry, Gripped)], ["hammer"])
+        # Walking, nothing of it is out: a tool is in the hand only while it is worked with.
+        tomas.trail = [(tomas.x - 1, tomas.y), tomas.tile]
+        view.tick_progress = 0.5
+        view.render()
+        self.assertEqual(view._held, [])
 
     def test_a_walk_at_a_slant_is_drawn_along_its_line_and_seen_from_the_nearest_side(self) -> None:
         view, world = self.game.global_view, self.game.world

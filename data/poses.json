@@ -1,0 +1,11 @@
+{
+  "handles": {
+    "hoe": {"from": [16, 88], "to": [72, 20], "long": 12.5},
+    "hammer": {"from": [22, 86], "to": [64, 31], "long": 6.5}
+  },
+  "work": {"clip": "work", "rate": 1.0},
+  "jobs": {
+    "farmer": {"clip": "weed", "rate": 0.55, "tool": {"clip": "hoe", "rate": 0.5}}
+  },
+  "build": {"clip": "hammer", "rate": 0.9, "prop": "hammer"}
+}

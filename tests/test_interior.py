@@ -360,6 +360,13 @@ class InsideABuildingTests(unittest.TestCase):
         carried = self.view.interior.in_hand(ines, "right", plan.pose("right", "idle", 0.0), 0.0, None)
         self.assertEqual([entry[0] for entry in carried], ["scrap"])
         self.view.render()
+        # Whoever builds in there has a hammer in hand, held by its handle as on the map.
+        ines.activity = Activity("build", using=True)
+        clip = self.view._clip_of(ines)[0]
+        building = self.view.interior.in_hand(ines, "right", plan.pose("right", clip, 0.3), 0.0, None, clip=clip)
+        self.assertEqual([(type(entry).__name__, entry.item_id) for entry in building], [("Gripped", "hammer")])
+        self.assertEqual(self.view._held, [])
+        self.view.render()
         self.assertTrue(layout.cell > 0)
 
     def test_over_a_face_on_a_roof_is_what_they_are_doing_in_there(self) -> None:

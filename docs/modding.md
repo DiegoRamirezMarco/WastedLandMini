@@ -324,9 +324,20 @@ between the feet, with `y` growing downwards. Angles are in degrees.
 - `clips`: for each view, a list of keyframes that are run through in a loop. A keyframe gives
   bones an angle from rest, or `[angle, scale]` to make one look shorter as well, and may shift
   the whole body with `root`. A positive angle swings a hanging limb to the right of the screen.
-  The game uses `idle`, `work`, `argue` and, over any of them, `carry`; walking, eating and
-  fighting use whichever clip the resident's manner names (see Manners below). A clip that is
-  missing stands still.
+  The game uses `idle`, `argue` and, over any of them, `carry`; walking, eating and fighting
+  use whichever clip the resident's manner names (see Manners below), and work whichever
+  `data/poses.json` names for it (see Work, as it is shown, below). A clip that is missing
+  stands still.
+- Beside its views a clip may say how something with a handle is held while it goes on, with
+  `grip`. `"hands": 2` has the handle run from the palm of the hand of the far side through
+  that of the near one, which is the nearer to its far end: where the two hands go, the
+  thing goes, so keep them well apart. `"hands": 1`, or none said, has it come out of the
+  palm of the near hand, turned by `turn` degrees from the way that hand points. `at` is how
+  far along its handle the thing is held, by the one hand or by the far one of two, from 0
+  at the end it is held by to 1. Where the hands are is for `anchors` to say (`held_item` and
+  `held_wrist` for the one that holds, `other_item` and `other_wrist`): no code names a joint.
+- The small bodies the game shows without a window do not bend their legs to go down. A pose
+  that would have any of one under the ground it stands on leaves it standing on it.
 - A clip goes through its keys in a curve, as fast into each as out of it, and round from the
   last to the first. Its keys are spaced evenly unless every one of them says when it comes
   with `at`, from 0 up to but not 1, each later than the one before: that is how a blow is
@@ -347,6 +358,18 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   one and the next go by from the first to the second of `every` seconds, and each is gone
   through at `rate` turns a second. A fidget should be a clip marked `once` that starts and
   ends standing. `idle` itself stays one pose: dolls are measured by it.
+- **Work, as it is shown** (`data/poses.json`). None of it changes what happens: it is how
+  what the simulation says is going on looks. `work` is the clip of any work and how many
+  turns of it a second (`clip`, `rate`). `jobs` gives a job a look of its own: its `clip`
+  and `rate` are for bare hands, and under `tool` those of whoever has the tool of the job
+  on them and not broken, which is then seen in their hands. `build` is the same for
+  building, and may name a `prop`: something seen in the hand that is no item of anybody's,
+  drawn by `graphics/item_pictures.py` under that name. `handles` says, for an item or a
+  prop by its ID, where the handle is on its picture, `from` the end it is held by `to` its
+  far end in hundredths of the picture's side, and how `long` that is in a hand, in the
+  skeleton's own measure. A thing with a handle, held in a clip that has a `grip`, turns
+  with the hands; any other is shown flat in the hand, as a meal is. A picture drawn anew
+  in the item editor is turned by the same handle: draw it along the same line.
 - `footing` keeps feet on the ground. A clip moves the whole body with `root`; in the `views`
   listed, a foot of one of the `legs` (a bone and the one that hangs from it) that the clip
   has on the ground stays where it stands, and the knee bends to let the body go. A leg too

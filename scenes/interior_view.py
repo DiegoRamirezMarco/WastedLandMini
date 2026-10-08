@@ -51,6 +51,7 @@ from simulation.housing.decor import WALL as ON_WALL
 from simulation.residents.manner import WALK
 from simulation.residents.resident import Resident
 from simulation.work.construction import OBJECT_SITE
+from skeleton.plan import IDLE_CLIP
 from skeleton.rig import Skeleton
 from ui.button import Button
 from ui.decor_board import AS_BUILT_ID, FURNITURE, ORNAMENTS, WALLS
@@ -810,7 +811,7 @@ class InteriorView:
             reach = doll.standing(plan)
             # A smaller body is brought down about the ground its soles are on.
             sole = (0.0, reach[3])
-            held = self.in_hand(resident, facing, pose, turn, stride, grown, sole)
+            held = self.in_hand(resident, facing, pose, turn, stride, grown, sole, clip)
             high = reach[1] * (HEAD_OF_HEIGHT + (1.0 - HEAD_OF_HEIGHT) * grown)
             box = pygame.Rect(
                 foot[0] + math.floor(reach[0] * detail),
@@ -832,7 +833,7 @@ class InteriorView:
             index = int(turn * frames) % frames
             picture, origin = renderer.frame(resident.resident_id, facing, clip, index, (), overlay)
             pose = view.bodies.plan.pose(facing, clip, index / frames, overlay)
-            held = self.in_hand(resident, facing, pose, turn, stride, grown)
+            held = self.in_hand(resident, facing, pose, turn, stride, grown, clip=clip)
             # The game's own small body is brought down whole for whoever is not grown.
             detail *= grown
             size = (round(picture.get_width() * detail), round(picture.get_height() * detail))
@@ -877,23 +878,16 @@ class InteriorView:
         stride: float | None,
         grown: float = 1.0,
         sole: tuple[float, float] = (0.0, 0.0),
+        clip: str = IDLE_CLIP,
     ) -> list:
         """What somebody has in their hand, as the map would show it, from where their feet are:
         the meal they are at with the bites gone from it and the crumbs that fly, what they
-        fight with, or what they carry for their job. Empty for empty hands. `grown` is how
-        much of its size their body is shown at, about the ground at `sole`."""
+        fight with, the tool of the work they are at, or what they carry for their job. Empty
+        for empty hands. `grown` is how much of its size their body is shown at, about the
+        ground at `sole`, and `clip` what their body is doing."""
         view = self.view
         kept, view._held = view._held, []
-        meal = view._meal_in_hand(resident)
-        weapon = view._weapon_in_hand(resident) if stride is None else None
-        load = view._load_of(resident)
-        about = (grown, sole)
-        if meal is not None:
-            view._hold(meal, facing, pose, 0.0, turn, view._bites_taken(resident), about)
-        elif weapon is not None:
-            view._hold(weapon, facing, pose, 0.0, about=about)
-        elif load is not None:
-            view._hold(load, facing, pose, 0.0, about=about)
+        view._hold_all(resident, facing, pose, 0.0, turn, stride, (grown, sole), clip, view._load_of(resident))
         held, view._held = view._held, kept
         return held
 

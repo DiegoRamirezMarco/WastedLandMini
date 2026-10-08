@@ -247,6 +247,27 @@ HOE = [
 ]
 HOE_LEGEND = {"o": "ink", "d": "dust", "s": "stone", "k": "copper"}
 
+# No item of the game: what is seen in the hand of whoever builds.
+HAMMER = [
+    "................",
+    "................",
+    "........oo......",
+    ".......oiio.....",
+    "......oiiiio....",
+    ".....oiiiiiio...",
+    "......oiikiiio..",
+    ".......okkoiio..",
+    "......okko.oo...",
+    ".....okko.......",
+    "....okko........",
+    "...okko.........",
+    "..okko..........",
+    "..oko...........",
+    "...o............",
+    "................",
+]
+HAMMER_LEGEND = {"o": "ink", "i": "iron", "k": "copper"}
+
 SCRAP = [
     "................",
     "................",
@@ -388,6 +409,7 @@ def build() -> dict[str, pygame.Surface]:
         builtin_icon_path("baton"): _checked(paint(BATON, BATON_LEGEND), "baton"),
         builtin_icon_path("rusty_knife"): _checked(paint(RUSTY_KNIFE, RUSTY_KNIFE_LEGEND), "rusty_knife"),
         builtin_icon_path("hoe"): _checked(paint(HOE, HOE_LEGEND), "hoe"),
+        builtin_icon_path("hammer"): _checked(paint(HAMMER, HAMMER_LEGEND), "hammer"),
         builtin_icon_path("scrap"): _checked(paint(SCRAP, SCRAP_LEGEND), "scrap"),
         builtin_icon_path("liquor"): _checked(paint(LIQUOR, LIQUOR_LEGEND), "liquor"),
         builtin_icon_path("cigarette"): _checked(paint(CIGARETTE, CIGARETTE_LEGEND), "cigarette"),

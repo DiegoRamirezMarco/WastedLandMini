@@ -1,5 +1,6 @@
 import math
 from collections.abc import Callable, Hashable, Iterable
+from dataclasses import dataclass
 
 import pygame
 
@@ -26,6 +27,7 @@ from graphics.shelf_display import GOODS_SIZE
 from graphics.stand_ins import child_stand_in, stand_in
 from graphics.map_renderer import GROUND_TILES, render_roofs, render_terrain, roof_names
 from graphics.palette import PALETTE
+from graphics.poses import Doing, builtin_poses
 from graphics.shelf_display import SLOTS, displayed_goods
 from graphics.tileset import (
     ROOF_CELLS,
@@ -159,14 +161,14 @@ TILES_PER_STRIDE = 2
 LEAN = 0.05
 # What a body does besides standing and walking, and how many times a second its clip goes round.
 # Walking, eating and fighting are done each resident's own way, and those go by their manner.
+# Work is shown by what the work is (`graphics.poses`).
 WALK_CLIP = "walk"
-WORK_CLIP = "work"
 ARGUE_CLIP = "argue"
 FIGHT_CLIP = "fight"
 CARRY_CLIP = "carry"
 EAT_CLIP = "eat"
 EAT_ACTION = "eat"
-CLIP_RATES = {WORK_CLIP: 1.0, ARGUE_CLIP: 1.2, FIGHT_CLIP: 1.5, EAT_CLIP: 1.15}
+CLIP_RATES = {ARGUE_CLIP: 1.2, FIGHT_CLIP: 1.5, EAT_CLIP: 1.15}
 # The clip and the rate of whoever has no manner to go by, as on a game with none defined.
 PLAIN_CLIPS = {WALK: WALK_CLIP, EAT: EAT_CLIP, FIGHT: FIGHT_CLIP}
 # The semantic anchors live in the body plan; these only place the mouth a little below and in
@@ -279,7 +281,24 @@ ZOOM_KEYS = {
 Draw = tuple[float, int, Callable[[], None]]
 # Something in someone's hand this frame: what, where in map pixels, whether they face left, how
 # many bites are gone from it, and the crumbs flying from their mouth with where that is.
-Held = tuple[str, tuple[float, float], bool, int, list[Crumb], tuple[float, float]]
+InHand = tuple[str, tuple[float, float], bool, int, list[Crumb], tuple[float, float]]
+
+
+@dataclass(frozen=True)
+class Gripped:
+    """Something held by its handle this frame, as a tool is: what, the point of its handle that
+    is in the hand, in map pixels, the way the handle runs from there and how far along it that
+    point is, how much of its size it is shown at, and whether whoever holds it faces left."""
+
+    item_id: str
+    hand: tuple[float, float]
+    way: tuple[float, float]
+    at: float
+    share: float
+    left: bool
+
+
+Held = InHand | Gripped
 # A paper doll to put on the window this frame: how far down the map it stands, the doll, and either
 # the skeleton it is laid over or, for someone lying under a blanket, where their neck is. Then
 # how much of its drawn size the body is shown at, and the spot between its feet that it is
@@ -350,6 +369,8 @@ class GlobalView:
         self.assets = assets
         self.font = font
         self.icons = icons
+        # How what residents do is shown: the clip of each kind of work, and the handles of what they hold.
+        self.poses = builtin_poses()
         self.object_sprites = ObjectSprites(assets, custom)
         # Furniture and objects somebody has drawn take the place of the game's own, kind by kind.
         self.object_art = ObjectArtStore(self.illustrations, self.object_sprites)
@@ -2024,16 +2045,12 @@ class GlobalView:
                 self._blit(self.icons.small(load), (body.left + dx, body.top + dy))
             hitbox = self._canvas_rect(body)
             self.hitboxes[resident.resident_id] = hitbox
-            meal = self._meal_in_hand(resident)
-            weapon = self._weapon_in_hand(resident) if stride is None else None
-            about = (grown, sole)
-            if meal is not None and not character.physical:
-                self._hold(meal, facing, character.pose(), spot[1], turn, self._bites_taken(resident), about)
-            elif weapon is not None and not character.physical:
-                self._hold(weapon, facing, character.pose(), spot[1], about=about)
-            elif load is not None and doll is not None and not character.physical:
+            if not character.physical:
                 # A doll carries its load in its hands, where the carrying clip holds them out.
-                self._hold(load, facing, character.pose(), spot[1], about=about)
+                self._hold_all(
+                    resident, facing, character.pose(), spot[1], turn, stride, (grown, sole), clip,
+                    load if doll is not None else None,
+                )
             self._overlays.append(lambda: self._draw_overhead(resident, hitbox.midtop, with_name=True))
 
         return (top + TILE_SIZE, 1, draw)
@@ -2190,8 +2207,35 @@ class GlobalView:
             return (ARGUE_CLIP, CLIP_RATES[ARGUE_CLIP])
         if activity.action == EAT_ACTION:
             return self._way_of(resident, EAT)
-        working = activity.action in (WORK_ACTION, BUILD_ACTION)
-        return (WORK_CLIP, CLIP_RATES[WORK_CLIP]) if working else (IDLE_CLIP, 0.0)
+        work = self._work_of(resident)
+        return (work[0].clip, work[0].rate) if work is not None else (IDLE_CLIP, 0.0)
+
+    def _work_of(self, resident: Resident) -> tuple[Doing, str | None] | None:
+        """How the work a resident is at right now is shown, and what they are seen to do it with.
+
+        At their post that is the tool of their job, if they carry one that is not broken:
+        whoever has none works as the job is done with bare hands. Building, it is whatever
+        builders are seen with, which is nobody's. None for somebody who is not at work.
+        """
+        activity = resident.activity
+        if activity is None or not activity.using or activity.partner_id is not None:
+            return None
+        if activity.action == BUILD_ACTION:
+            return (self.poses.build, self.poses.build.prop)
+        if activity.action != WORK_ACTION:
+            return None
+        job = self.world.work.job_of(self.world, resident)
+        job_id = job.job_id if job is not None else None
+        tool = self.world.work.tool_of(self.world, resident, job) if job is not None else None
+        doing = self.poses.working(job_id, tool is not None)
+        with_tool = tool is not None and doing is not self.poses.working(job_id, False)
+        return (doing, tool.definition_id if with_tool else doing.prop)
+
+    def _tool_in_hand(self, resident: Resident) -> str | None:
+        """ID of what a resident at work is seen to work with: an item of theirs, or something
+        that is only there for the look of it. None for bare hands."""
+        work = self._work_of(resident)
+        return work[1] if work is not None else None
 
     def _meal_in_hand(self, resident: Resident) -> str | None:
         """Definition ID of the food in a resident's hand during an active meal."""
@@ -2226,12 +2270,24 @@ class GlobalView:
         turn: float | None = None,
         bites: int = 0,
         about: tuple[float, tuple[float, float]] | None = None,
+        clip: str | None = None,
     ) -> None:
         """Have something shown in the hand of a resident whose feet are `ground` down the map.
         With `turn`, how many turns of the eating clip have gone, it is a meal and crumbs fly from each bite.
         `about` is how much of its size their body is shown at and the spot between their feet,
-        for somebody not yet grown: their hand is where their smaller arm has it."""
+        for somebody not yet grown: their hand is where their smaller arm has it. `clip` is what
+        their body is doing: in one that holds things by the handle, a thing that has one is
+        held by it, and turns with the hands."""
         plan = self.bodies.plan
+        left = facing.endswith("left")
+        gripped = plan.handle(clip, facing, pose) if clip is not None and item_id in self.poses.handles else None
+        if gripped is not None:
+            point, way, at = gripped
+            share, (foot_x, foot_y) = about if about is not None else (1.0, (0.0, 0.0))
+            if share < 1.0:
+                point = (foot_x + (point[0] - foot_x) * share, foot_y + (point[1] - foot_y) * share)
+            self._held.append(Gripped(item_id, point, way, at, share, left))
+            return
         hand = plan.anchor("held_item", facing, pose)
         mouth = plan.anchor("mouth", facing, pose)
         if hand is None or mouth is None:
@@ -2242,16 +2298,50 @@ class GlobalView:
             mouth = (foot_x + (mouth[0] - foot_x) * share, foot_y + (mouth[1] - foot_y) * share)
         offset = MOUTH_OFFSETS.get(facing, (0, 2))
         mouth = (mouth[0] + offset[0], mouth[1] + offset[1])
-        left = facing.endswith("left")
         forward = -1 if left else (1 if facing.endswith("right") else 0)
         flying = crumbs(turn, forward, ground - mouth[1]) if turn is not None else []
         self._held.append((item_id, (hand[0] + forward * HELD_AHEAD, hand[1]), left, bites, flying, mouth))
+
+    def _hold_all(
+        self,
+        resident: Resident,
+        facing: str,
+        pose: dict[str, tuple[float, float]],
+        ground: float,
+        turn: float,
+        stride: float | None,
+        about: tuple[float, tuple[float, float]],
+        clip: str,
+        load: str | None = None,
+    ) -> None:
+        """Have whatever a resident has in hand shown: the meal they are at, with the bites gone
+        from it, what they fight with, the tool of the work they are at, or else the `load` they
+        carry. Nothing for empty hands. `stride` is None for somebody standing still."""
+        meal = self._meal_in_hand(resident)
+        weapon = self._weapon_in_hand(resident) if stride is None else None
+        tool = self._tool_in_hand(resident) if stride is None else None
+        if meal is not None:
+            self._hold(meal, facing, pose, ground, turn, self._bites_taken(resident), about)
+        elif weapon is not None:
+            self._hold(weapon, facing, pose, ground, about=about)
+        elif tool is not None:
+            self._hold(tool, facing, pose, ground, about=about, clip=clip)
+        elif load is not None:
+            self._hold(load, facing, pose, ground, about=about)
 
     def _draw_held(self, target: pygame.Surface, origin: tuple[float, float], detail: float) -> None:
         """Draw what residents hold, and the crumbs of their meals, on a surface where a map pixel
         is `detail` of its own and the map's corner is at `origin`."""
         size = max(3, round(HELD_SIZE * detail))
-        for item_id, hand, left, bites, flying, mouth in self._held:
+        for held in self._held:
+            if isinstance(held, Gripped):
+                handle = self.poses.handles[held.item_id]
+                long = handle.long * held.share * detail
+                picture, point = self.icons.gripped(held.item_id, handle.start, handle.end, long, held.way, held.at, held.left)
+                at = (origin[0] + held.hand[0] * detail - point[0], origin[1] + held.hand[1] * detail - point[1])
+                target.blit(picture, (round(at[0]), round(at[1])))
+                continue
+            item_id, hand, left, bites, flying, mouth = held
             picture = self.icons.held(item_id, size, bites, left)
             centre = (round(origin[0] + hand[0] * detail), round(origin[1] + hand[1] * detail))
             target.blit(picture, picture.get_rect(center=centre))

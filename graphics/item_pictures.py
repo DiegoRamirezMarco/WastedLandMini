@@ -127,6 +127,13 @@ def _hoe(s: Sheet) -> None:
     s.stroke([(82, 18), (86, 36)], lighter(METAL, 0.4), 2.4)
 
 
+def _hammer(s: Sheet) -> None:
+    s.stroke([(22, 86), (60, 36)], LINE, 13)
+    s.stroke([(22, 86), (60, 36)], WOOD, 7)
+    s.poly([(85, 36), (74, 50), (43, 26), (54, 12)], DARK_METAL)
+    s.stroke([(56, 18), (79, 36)], lighter(DARK_METAL, 0.35), 2.4)
+
+
 def _scrap(s: Sheet) -> None:
     s.poly([(10, 82), (30, 40), (62, 30), (90, 62), (86, 84)], darker(METAL, 0.3))
     s.poly([(20, 80), (40, 44), (62, 62), (50, 82)], RUST)
@@ -196,6 +203,8 @@ PAINTERS: dict[str, Painter] = {
     "baton": _baton,
     "rusty_knife": _rusty_knife,
     "hoe": _hoe,
+    # No item of anybody's: what is seen in the hand of whoever builds.
+    "hammer": _hammer,
     "scrap": _scrap,
     "liquor": _liquor,
     "cigarette": _cigarette,
