@@ -2139,6 +2139,15 @@ Still open here:
   hand. Giving somebody something by hand is S59
 - Whether somebody should mind being carried about after all, once it has been played with.
   What the player is to a resident is already there (S27), one number away
+- **There is another of these, on the branch `feature/DragDrop`**, built the same day in
+  another session and not known of here until this one was done: it was asked for by the
+  user as a branch, is pushed, and is not merged. It was built to other answers on two
+  points: on a post somebody has, whoever was there is put out, where here the two change
+  posts; and time goes on while somebody is carried, where here it stops. It also picks up
+  things on the map and things in an inventory, which this does not, and does nothing
+  inside a building, which this does. What it calls S51 is its own simulation, not the
+  books of S51 here. **Which of the two stays is for the user to say**, and neither is to
+  be merged into the other before they do
 
 ### S30 — What a thing is for, and what is in it (needs S19 and S20) — planned
 Content comes in four milestones, S30 to S33, and a screen, P28. They are the user's brief: keep
