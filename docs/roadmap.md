@@ -4696,10 +4696,13 @@ What it comes to:
   thing of its own that whoever works the garden uses up to grow more
 - How far gone a thing is shows where things are shown (P60), as how worn one is does
 
-Still to settle as it is built, and to be said when it is reported:
-- Whether the chest is where food is kept ahead of the store (S53), or a thing apart that the
-  player fills
-- How much compost does for the garden, and whether it is carried there or taken by itself
+Asked again on 2026-10-08, with everything else that was still open in the layer:
+- **Food goes to the chest by itself, ahead of the store**: the chest is a store of food, what
+  is fresh goes to it first while there is room and it has current, and the rest to the
+  `Almacén`. With no current it goes off there as anywhere
+- **Compost is put on a bed by the player**: "Lo echas tú". It is kept in the store until it
+  is sent to a bed of the garden, which then gives more for some days. Not the
+  recommendation, which was that whoever works the garden take it unasked
 
 ### P60 — Stores, rarity and current on screen (needs S53 to S55, S64 and S65) — under way
 Done so far, the first of its parts:
@@ -4708,6 +4711,14 @@ Done so far, the first of its parts:
   what is common, then green, blue, red, purple and yellow, as the user gave them
 - **How worn a thing is was there already**, as a bar under whatever wears (S13): it is what
   the user asked for by `la barra de salud`, and is left as it was
+
+Answered on 2026-10-08:
+- **Things are switched on and off from the thing itself and from a board**: a click on the
+  thing opens what there is to say of it, with its switch, and a board called `Corriente`
+  lists everything that draws, what each draws and what the generator gives, with a switch
+  to each
+- **Of the two ways of picking somebody up, the one on `main` stays as it is** (P27). The
+  branch `feature/DragDrop` is left unmerged
 
 Still to do:
 - How much room there is, in the bar and on the store
@@ -4723,7 +4734,11 @@ Still to do:
 - **How worn a thing is, as a bar on its square in the inventory**, as the user said, and how
   far gone what goes off is
 
-### S56 — Errands, and the box (needs S51 and S39) — planned
+### S56 — Errands, and the box (needs S51 and S39) — planned, left out for now
+Asked on 2026-10-08, and the user answered every question about it the same way: "Dejamos
+fuera los pedidos de momento". It is not built with the rest of the layer, and nothing of it
+is settled.
+
 - **An errand is a thing to be brought about, as data**, measured against how the settlement
   stands and against what was written down of what comes in and goes out
 - **One that is done is paid with a box**, which waits at the gate to be carried in, as what
@@ -4739,15 +4754,23 @@ Still to settle, to be asked before it is built:
   does, and sooner
 - A resident is told to, from the wheel
 
-Still to settle, to be asked before it is built:
-- Which things
-- Whether anybody trains unasked
-- How fast it raises an attribute, and what it costs whoever does it
+Asked on 2026-10-08, and answered:
+- **Six things, one for each of the six**, three of the four that were offered and three in
+  the words of the user: weights for strength, a chess table for mind, a target for senses,
+  "destreza una comba, carisma un maniqui con cara pintada. Constitucion se hace dandole
+  cabezazos a un tronco de entrenamiento jaja"
+- **Nobody trains unasked**: "Solo tú". Not the recommendation, which had them go of their
+  own accord in spare time as well
+- **A thing trains as far as it is good**: a common one up to 6, and one more for each rarity
+  past it, so that making the thing better (S54) is what lets somebody go on
+- **It costs time and tiredness**: an hour of it tires and makes hungry and thirsty as work
+  does, a point takes weeks, and whoever trains is not at their post
 
-### P61 — Errands and training on screen (needs S56 and S57) — planned
-- The errands there are, and how far along each is
-- A box opened, and what was in it
-- Training, in the wheel
+### P61 — Training on screen (needs S57) — planned
+Errands and the box were to be shown here too. They went with S56, which the user left out
+for now on 2026-10-08.
+- Training, in the wheel and by putting somebody down on the thing (P27)
+- Whoever trains is seen to, and how far along the next point is
 
 ### S58 — Lines with holes in them (needs S2, S19 and S47) — planned
 The second layer: words and things. It is the first way of putting talk into words (S34): a
