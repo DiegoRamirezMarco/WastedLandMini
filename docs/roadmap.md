@@ -3759,7 +3759,7 @@ Decided without asking:
 - With no word from the player a discovery waits for ever: nothing names it for them
 
 Still open here:
-- None of it is on screen: P53. Until then a thing is named by command, and has no picture
+- It is on screen since P54: the screen on which a thing is drawn and named
 - Tools, weapons and remedies are made of nothing, and only the time they take holds them back
 - The shop, the water and the desk teach nothing: only the work is better at each level
 - A crop is grown in the bed its farmer has: no bed is given over to it, and no tree stands there
@@ -3839,6 +3839,42 @@ Still open here:
   speed
 - The step is low and flat now: nothing rolls from heel to toe
 - Nothing of this has been seen on a real window by whoever made it
+
+### P54 — Drawn and named (needs S47) — done
+The user's words: "dibujalo y ponle nombre a lo nuevo que sabe cultivar, asi el jugador si
+quiere que el nuevo cultivable sea un tomate lo es y si quiere un limon pues limon".
+
+- **Coming to something opens the screen for it**, as a birth opens the one to draw whoever
+  was born (P25), and time stands still meanwhile. It asks what the kind asks: "¿Qué ha
+  aprendido a cultivar?", and says who it was and at what level of what job
+- **The paper and the tools are the item editor's**, and beside them there is only what the
+  player says: a name, and a drop-down list for each thing its kind lets be picked, with a
+  line under it on what the pick does. A list opens under its box and shuts on a pick.
+  What the thing is like otherwise is the game's, and the screen says so
+- **`Guardar`, or Enter, names it**: the settlement has the thing from then on, and its
+  picture is kept in `custom_content/made/`, by the ID of the item. It needs a name, and one
+  nothing else has: what is wrong is said, and the screen stays open
+- **`Luego`, or Escape, leaves it waiting.** While anything waits there is a notice in the
+  corner of the map, lit and unlit, that says who knows something new, or how many things
+  wait. Pressing it opens the oldest
+- **A place is named and not drawn**: there is no paper for it
+- **What was drawn is what is seen** wherever the thing is: in a hand, in an inventory, in
+  the pantry
+- The folder of pictures is no pack: what a thing is belongs to the save of the settlement
+  that came to it, and a new settlement does not have it
+
+Decided without asking:
+- The picture of a thing is kept apart from its definition: the drawing in the folder of
+  drawings, which is the playthrough's (never committed), and what it is in the save
+- A thing that is saved with nothing drawn has the game's plain picture
+
+Still open here:
+- What was named cannot be named again, nor drawn again, from this screen: the item editor
+  redraws it, by its ID
+- A crop does not show in the bed it grows in: the bed looks as it did, whatever grows there
+- What a pick does is said in a line, and no figure is shown before it is saved
+- Two settlements kept on one machine share the folder of pictures, as they share the
+  drawings of their residents
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

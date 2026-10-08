@@ -539,6 +539,8 @@ looks and nothing of what happens.
     `max_stock` (how many of each the settlement keeps before no more are made).
 - A choice called `from` names what a thing is made of, which has to be in the hands of
   whoever makes it. One called `for` names the job a tool is for, and tags it `tool_<job>`.
+- The picture the player draws of a thing is kept in `custom_content/made/<item ID>/icon.png`.
+  That folder is no pack: nothing in it defines an item.
 - What a made item is good for is its data: `speed` on a tool, `dose` and `mends_<injury>` on
   a medicine, `armour`, and `damage` and `raid` on a weapon.
 

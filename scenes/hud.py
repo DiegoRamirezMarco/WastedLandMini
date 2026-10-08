@@ -105,6 +105,9 @@ JOBS_INTENT = ("jobs",)
 STORES_INTENT = ("stores",)
 RESEARCH_INTENT = ("research",)
 GOVERNMENT_INTENT = ("government",)
+DISCOVERY_INTENT = ("discovery",)
+DISCOVERY_ONE = "{name} sabe algo nuevo: ponle nombre"
+DISCOVERY_MANY = "{count} cosas nuevas por nombrar"
 FUND_INTENT = ("fund_board",)
 ROSTER_INTENT = ("roster",)
 MINIMAP_INTENT = ("minimap",)
@@ -334,6 +337,9 @@ class Hud:
         step_button = tutorial_button(self.font, guide, self.world) if guide is not None else None
         if step_button is not None:
             fixed.append(step_button)
+        waiting = self.discovery_button()
+        if waiting is not None:
+            fixed.append(waiting)
         if self.research_open:
             return fixed + study_buttons(self.font, self.research_rect(), self.world)
         if self.government_open:
@@ -534,6 +540,8 @@ class Hud:
         if not self.layout.map.collidepoint(position):
             return True
         panels = [self.minimap_rect, self.outlook_rect(), self.tutorial_rect(), self.dock_rect()]
+        waiting = self.discovery_button()
+        panels += [waiting.rect] if waiting is not None else []
         panels += [self.log_rect()] if self.log_open else []
         panels += [self.jobs_rect()] if self.jobs_open else []
         panels += [self.stores_rect()] if self.stores_open else []
@@ -594,6 +602,22 @@ class Hud:
         top = outlook.bottom + MARGIN if outlook is not None else area.y + MARGIN
         return pygame.Rect(area.x + MARGIN, top, TUTORIAL_WIDTH, height)
 
+    def discovery_button(self) -> Button | None:
+        """The notice that somebody has come to something that waits to be named, while any
+        does: under whatever else is in that corner of the map, to be pressed."""
+        waiting = self.world.crafts.waiting(self.world)
+        if not waiting:
+            return None
+        label = (
+            DISCOVERY_ONE.format(name=waiting[0].by_name)
+            if len(waiting) == 1
+            else DISCOVERY_MANY.format(count=len(waiting))
+        )
+        area = self.layout.map
+        above = self.tutorial_rect() or self.outlook_rect()
+        top = above.bottom + MARGIN if above is not None else area.y + MARGIN
+        return Button.at(self.font, area.x + MARGIN, top, label, DISCOVERY_INTENT)
+
     def card_rect(self) -> pygame.Rect | None:
         """Where the selected resident is shown in full, while one is selected."""
         return self.layout.panel if self.selected_id in self.world.residents else None
@@ -624,6 +648,10 @@ class Hud:
         guide = self.tutorial_rect()
         if guide is not None:
             draw_tutorial(self.canvas, self.font, guide, self.world, self.lit)
+        waiting = self.discovery_button()
+        if waiting is not None:
+            # It asks to be seen: lit, and unlit, as what the opening points at is.
+            waiting.draw(self.canvas, self.font, active=self.lit)
         if self.log_open:
             self.feed.draw_panel(self.canvas, self.font, self.log_rect())
         if self.jobs_open:

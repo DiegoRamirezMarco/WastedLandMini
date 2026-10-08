@@ -27,6 +27,7 @@ from scenes.doll_editor import DollEditor
 from scenes.family_view import FamilyView
 from scenes.global_view import GlobalView
 from scenes.interaction_view import InteractionView
+from scenes.discovery_editor import DiscoveryEditor
 from scenes.item_editor import ItemEditor
 from scenes.object_editor import ObjectEditor
 from scenes.main_menu import CONTINUE, DEMO, NEW_GAME, QUIT, MainMenu
@@ -67,6 +68,7 @@ EDITOR_SCENE, BUILDING_SCENE, ITEM_SCENE, VOICE_SCENE, URBANISM_SCENE = (
     "urbanism",
 )
 OBJECT_SCENE = "object_editor"
+DISCOVERY_SCENE = "discovery"
 COIN_SCENE = "coin_editor"
 FAMILY_SCENE = "family"
 MANNER_SCENE = "manners"
@@ -238,6 +240,15 @@ class Game:
             self.icons,
             self.layers,
         )
+        # What somebody has come to at their job is named and drawn there, and kept beside them.
+        self.discovery_editor = DiscoveryEditor(
+            self.canvas,
+            self.world,
+            self.font,
+            self.custom_content_dir,
+            self.icons,
+            self.layers,
+        )
         self.urbanism_editor = UrbanismEditor(
             self.canvas,
             self.world,
@@ -380,6 +391,8 @@ class Game:
             return self.coin_editor
         if self.scene_name == ITEM_SCENE:
             return self.item_editor
+        if self.scene_name == DISCOVERY_SCENE:
+            return self.discovery_editor
         if self.scene_name == URBANISM_SCENE:
             return self.urbanism_editor
         if self.scene_name == VOICE_SCENE and self.voice_editor is not None:
@@ -403,6 +416,7 @@ class Game:
             OBJECT_SCENE,
             COIN_SCENE,
             ITEM_SCENE,
+            DISCOVERY_SCENE,
             VOICE_SCENE,
             MANNER_SCENE,
             FAMILY_SCENE,
@@ -414,8 +428,8 @@ class Game:
             # Out of the settlement, not out of the game: the menu is where that is done.
             self.open_menu()
         elif key == pygame.K_TAB:
-            if self.scene_name == ITEM_SCENE:
-                # The item editor uses Tab to move between text fields.
+            if self.scene_name in (ITEM_SCENE, DISCOVERY_SCENE):
+                # The item editor uses Tab to move between text fields, and nothing is left by it.
                 return
             if self.scene_name == URBANISM_SCENE:
                 self.urbanism_editor.closed = True
@@ -498,6 +512,11 @@ class Game:
                 self.scene_name = OBJECT_SCENE
         elif self.scene_name == ITEM_SCENE and self.item_editor.closed:
             self.scene_name = "global"
+        elif self.scene_name == DISCOVERY_SCENE and self.discovery_editor.closed:
+            self.scene_name = "global"
+            made = self.discovery_editor.discovery
+            if made is not None and made.named:
+                self.global_view.hud.notify(f"Ya tiene nombre: {made.name}")
         elif self.scene_name == URBANISM_SCENE and self.urbanism_editor.requested_art_room is not None:
             room_id = self.urbanism_editor.requested_art_room
             if self.building_editor is None:
@@ -542,6 +561,10 @@ class Game:
         elif self.scene_name == "global" and self.global_view.requested_item_editor is not None:
             self.item_editor.open(self.global_view.requested_item_editor)
             self.scene_name = ITEM_SCENE
+        elif self.scene_name == "global" and self.global_view.requested_discovery is not None:
+            self.discovery_editor.open(self.global_view.requested_discovery)
+            if not self.discovery_editor.closed:
+                self.scene_name = DISCOVERY_SCENE
         elif self.scene_name == "global" and self.global_view.requested_save:
             self.save_game()
         elif self.scene_name == "global" and self.global_view.requested_urbanism:
@@ -580,6 +603,7 @@ class Game:
         self.global_view.requested_editor = None
         self.global_view.requested_building_editor = None
         self.global_view.requested_item_editor = None
+        self.global_view.requested_discovery = None
         self.global_view.requested_save = False
         self.global_view.requested_urbanism = False
         self.global_view.requested_creator = False

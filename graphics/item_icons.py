@@ -21,8 +21,9 @@ BITE_ACROSS = 0.34
 TEETH = 3
 # The edge of a thing is looked for on a copy of it no larger than this, however large it was drawn.
 SEARCHED = 48
-# Folders of `custom_content/` in which a pack may bring an `icon.png`.
-PACK_FOLDERS = ("items", "foods")
+# Folders of `custom_content/` in which a pack may bring an `icon.png`. The last is where the
+# pictures of what residents have come to at their jobs are kept (P54): it is no pack.
+PACK_FOLDERS = ("items", "foods", "made")
 # A thing held by its handle is kept turned in this many steps of a full turn, and so many
 # pictures of it are kept before the oldest are let go.
 GRIP_TURNS = 240

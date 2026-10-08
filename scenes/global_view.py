@@ -58,6 +58,7 @@ from scenes.hud import (
     BUILD_INTENT,
     FAMILY_INTENT,
     FUND_INTENT,
+    DISCOVERY_INTENT,
     GOVERNMENT_INTENT,
     VOICE_INTENT,
     DRAW_INTENT,
@@ -131,6 +132,7 @@ from simulation.tastes.taste_system import FOUND_OUT_EVENT, REACTION_EVENT
 from simulation.work.construction import BUILD_ACTION, FINISHED_EVENT
 from simulation.work.work_system import WORK_ACTION
 from simulation.politics.proposal import ENACT_LAW, REPEAL_LAW
+from simulation.work.craft_system import FOUND_EVENT
 from simulation.residents.activity import PROTEST_ACTION
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
@@ -354,6 +356,9 @@ class GlobalView:
         self.requested_building_editor: str | None = None
         # Item definition picked in a resident's or container's inventory.
         self.requested_item_editor: str | None = None
+        # The discovery there is to name and draw, by its ID, when one has just been come to
+        # or the notice of one is pressed.
+        self.requested_discovery: str | None = None
         # Infrastructure requests are picked up by the game shell after event handling.
         self.requested_save = False
         self.requested_urbanism = False
@@ -888,6 +893,11 @@ class GlobalView:
                 child_id = str(event.data.get("child_id") or "")
                 if child_id in self.world.bundles and self.dolls.get(child_id) is None:
                     self.requested_editor = child_id
+            elif event.event_type == FOUND_EVENT:
+                # Somebody has come to something new at their job: the next thing is to say what it is.
+                found = str(event.data.get("discovery") or "")
+                if found in self.world.discoveries and not self.world.discoveries[found].named:
+                    self.requested_discovery = found
             elif event.event_type == WEDDING_EVENT:
                 for resident_id in event.participants:
                     self._mark(resident_id, WEDDING_MARK, WEDDING_SECONDS)
@@ -1036,6 +1046,9 @@ class GlobalView:
             self._propose_sale(intent[1], intent[2])
         elif isinstance(intent, tuple) and intent[0] == "choose_government":
             self._choose_government(intent[1])
+        elif intent == DISCOVERY_INTENT:
+            waiting = self.world.crafts.waiting(self.world)
+            self.requested_discovery = waiting[0].discovery_id if waiting else None
         elif isinstance(intent, tuple) and intent[0] == "government_tab":
             self.hud.government_tab, self.hud.government_armed = intent[1], None
         elif isinstance(intent, tuple) and intent[0] in ("law_degree", "law_item", "law_enact", "law_repeal"):
