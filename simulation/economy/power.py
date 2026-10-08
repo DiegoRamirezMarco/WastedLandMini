@@ -159,7 +159,8 @@ class PowerSystem:
             ):
                 # What only gives light burns for the night it is about to light.
                 drawn += definition.draws * night if self._night_begins(world) else 0.0
-            elif placed.object_id in at_post or world.users_of(placed.object_id) > 0:
+            elif definition.chill < 1.0 or placed.object_id in at_post or world.users_of(placed.object_id) > 0:
+                # What chills runs for as long as it is on (S65).
                 drawn += definition.draws
         return drawn
 

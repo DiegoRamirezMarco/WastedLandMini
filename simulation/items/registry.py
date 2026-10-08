@@ -68,12 +68,15 @@ class ItemRegistry:
             effects={str(k): float(v) for k, v in data.get("effects", {}).items()},
             properties={str(k): float(v) for k, v in data.get("properties", {}).items()},
             preference_tags=taste_tags(data.get("preference_tags", [])),
+            spoils=float(data.get("spoils", 0.0)),
             substance=(
                 substance_from_data(f"item {data['id']}", data["substance"])
                 if data.get("substance") is not None
                 else None
             ),
         )
+        if definition.spoils < 0:
+            raise ValueError(f"Item {definition.item_id} in {source} goes off by less than nothing a day")
         if replace_existing:
             self.replace(definition)
         else:

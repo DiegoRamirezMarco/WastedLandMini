@@ -289,6 +289,27 @@ SCRAP = [
 SCRAP_LEGEND = {"o": "ink", "d": "dust", "s": "stone", "i": "iron", "r": "rust", "k": "rust_dark"}
 
 
+COMPOST = [
+    "................",
+    "......oo.oo.....",
+    ".....olloglo....",
+    "......oogoo.....",
+    ".......og.......",
+    ".......og.......",
+    "......ooooo.....",
+    "....ooeeeeeoo...",
+    "...oeeeseeeeeo..",
+    "..oeeekeeeeseeo.",
+    "..oekeeeeekeeeo.",
+    ".oeeeeseekeeeeeo",
+    ".oekeeeeeeeekeeo",
+    ".ooooooooooooooo",
+    "................",
+    "................",
+]
+COMPOST_LEGEND = {"o": "ink", "e": "earth", "k": "earth_dark", "s": "sand", "l": "lichen", "g": "moss"}
+
+
 LIQUOR = [
     "................",
     "......oooo......",
@@ -411,6 +432,7 @@ def build() -> dict[str, pygame.Surface]:
         builtin_icon_path("hoe"): _checked(paint(HOE, HOE_LEGEND), "hoe"),
         builtin_icon_path("hammer"): _checked(paint(HAMMER, HAMMER_LEGEND), "hammer"),
         builtin_icon_path("scrap"): _checked(paint(SCRAP, SCRAP_LEGEND), "scrap"),
+        builtin_icon_path("compost"): _checked(paint(COMPOST, COMPOST_LEGEND), "compost"),
         builtin_icon_path("liquor"): _checked(paint(LIQUOR, LIQUOR_LEGEND), "liquor"),
         builtin_icon_path("cigarette"): _checked(paint(CIGARETTE, CIGARETTE_LEGEND), "cigarette"),
         builtin_icon_path("sedative"): _checked(paint(SEDATIVE, SEDATIVE_LEGEND), "sedative"),

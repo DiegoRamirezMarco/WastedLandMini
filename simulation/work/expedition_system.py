@@ -252,7 +252,7 @@ class ExpeditionSystem:
             if self._goes_to(world, item) != placed.kind:
                 continue
             resident.inventory.remove(item.instance_id)
-            world.stock(container, item.definition_id, item.quantity, None, item.level)
+            world.stock(container, item.definition_id, item.quantity, None, item.level, item.freshness)
             units[item.definition_id] = units.get(item.definition_id, 0) + item.quantity
         if not units:
             return None

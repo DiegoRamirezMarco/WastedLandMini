@@ -17,9 +17,18 @@ MIN_FETCH_MINUTES = 30
 
 
 def carried(resident: Resident, item_id: str) -> int:
-    """Units of something a worker has on them that are nobody's in particular."""
-    stack = resident.inventory.stack_of(item_id, None)
-    return stack.quantity if stack is not None else 0
+    """Units of something a worker has on them that are nobody's in particular: every lot
+    of it, however rare and however fresh each is (S64, S65)."""
+    return sum(lot.quantity for lot in lots(resident.inventory, item_id))
+
+
+def lots(inventory: Inventory, item_id: str) -> list[ItemInstance]:
+    """The stacks of a thing in an inventory that are nobody's and kept for nobody."""
+    return [
+        item
+        for item in inventory.items
+        if item.definition_id == item_id and item.owner_id is None and item.meant_for is None
+    ]
 
 
 def made_items(world: "SimulationWorld", resident: Resident, rule: ProduceRule) -> tuple[str, ...]:
@@ -200,14 +209,14 @@ def supply_exchange(world: "SimulationWorld", resident: Resident, rule: SupplyRu
             return None
         level = on_them.level
         resident.inventory.take_units(on_them.instance_id, units)
-        world.stock(container, rule.item, units, None, level)
+        world.stock(container, rule.item, units, None, level, on_them.freshness)
         return f"lleva {units} de {name} a {where}"
     stack = container.stack_of(rule.item, None)
     if stack is None or on_them is not None:
         return None
     level = stack.level
     units = container.take_units(stack.instance_id, load(world, resident, rule))
-    world.stock(resident.inventory, rule.item, units, None, level)
+    world.stock(resident.inventory, rule.item, units, None, level, stack.freshness)
     return f"coge {units} de {name} de {where}"
 
 
@@ -224,14 +233,18 @@ def exchange(world: "SimulationWorld", resident: Resident, rule: ProduceRule, pl
     if placed.kind == rule.into:
         left = []
         for item_id in made_items(world, resident, rule):
-            on_them = resident.inventory.stack_of(item_id, None)
-            units = min(on_them.quantity, room(world, resident, rule, container)) if on_them is not None else 0
-            if units <= 0:
-                continue
-            level = on_them.level
-            resident.inventory.take_units(on_them.instance_id, units)
-            world.stock(container, item_id, units, None, level)
-            left.append(f"{units} de {world.registries.items.resolve(item_id).name}")
+            handed = 0
+            # Every lot of it they carry, the oldest first, while there is room.
+            for on_them in lots(resident.inventory, item_id):
+                units = min(on_them.quantity, room(world, resident, rule, container))
+                if units <= 0:
+                    continue
+                level = on_them.level
+                resident.inventory.take_units(on_them.instance_id, units)
+                world.stock(container, item_id, units, None, level, on_them.freshness)
+                handed += units
+            if handed:
+                left.append(f"{handed} de {world.registries.items.resolve(item_id).name}")
         if left:
             return f"lleva {' y '.join(left)} a {where}"
         if rule.source is None or placed.kind != rule.source:
@@ -245,6 +258,6 @@ def exchange(world: "SimulationWorld", resident: Resident, rule: ProduceRule, pl
             return None
         definition_id, level = stack.definition_id, stack.level
         units = container.take_units(stack.instance_id, load(world, resident, rule))
-        world.stock(resident.inventory, definition_id, units, None, level)
+        world.stock(resident.inventory, definition_id, units, None, level, stack.freshness)
         return f"coge {units} de {world.registries.items.resolve(definition_id).name} de {where}"
     return None

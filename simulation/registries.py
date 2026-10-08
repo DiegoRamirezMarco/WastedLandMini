@@ -40,6 +40,7 @@ from simulation.work.expedition import ExpeditionSettings, expedition_settings_f
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
 from simulation.work.research import EFFECTS, JOB_PACE, ResearchSettings, research_settings_from_data
 from simulation.economy.power_settings import PowerSettings, power_settings_from_data
+from simulation.economy.spoil_settings import SpoilSettings, spoil_settings_from_data
 from simulation.work.rush import RushSettings, rush_settings_from_data
 from simulation.work.upgrades import RaritySettings, rarity_settings_from_data
 from simulation.work.wear import WearSettings, wear_settings_from_data
@@ -178,6 +179,8 @@ class BuiltInRegistries:
     rarities: RaritySettings = field(default_factory=RaritySettings)
     power: PowerSettings = field(default_factory=PowerSettings)
     wear: WearSettings = field(default_factory=WearSettings)
+    # What going off comes to: what is left of it, and what compost does (S65).
+    spoilage: SpoilSettings = field(default_factory=SpoilSettings)
     bonds: BondSettings = field(default_factory=BondSettings)
     expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
     # How building is gone about. What each thing takes is in its own definition.
@@ -304,6 +307,9 @@ class BuiltInRegistries:
         power_path = root / "power.json"
         if power_path.is_file():
             registries.power = power_settings_from_data(_read_object(power_path))
+        spoilage_path = root / "spoilage.json"
+        if spoilage_path.is_file():
+            registries.spoilage = spoil_settings_from_data(_read_object(spoilage_path))
         rarities_path = root / "rarities.json"
         if rarities_path.is_file():
             registries.rarities = rarity_settings_from_data(_read_object(rarities_path))
@@ -373,6 +379,12 @@ class BuiltInRegistries:
             raise ValueError(f"What gives current burns an item there is not: {self.power.fuel}")
         if self.wear.job is not None and self.wear.job not in self.jobs:
             raise ValueError(f"What breaks down is mended by a job there is not: {self.wear.job}")
+        for item_id in (self.spoilage.becomes, self.spoilage.compost):
+            if item_id is not None and self.items.find(item_id) is None:
+                raise ValueError(f"What goes off is left as an item there is not: {item_id}")
+        unknown = sorted(set(self.spoilage.compost_on) - set(self.interactables.kinds()))
+        if unknown:
+            raise ValueError(f"Compost is put on kinds of object there are not: {unknown}")
         for rarity in self.rarities.tiers:
             if rarity.study is not None and rarity.study not in self.research.subjects:
                 raise ValueError(f"Rarity {rarity.rarity_id} is studied as a subject there is not: {rarity.study}")

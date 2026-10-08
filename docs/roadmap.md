@@ -4675,7 +4675,7 @@ Still open here, of wear:
   the bar on each thing in the inventory that the user asked for
 - **A broken workshop is mended like any other post**, by the mechanic whose post it is
 
-### S65 — What goes off (needs S51, S55 and S64) — planned
+### S65 — What goes off (needs S51, S55 and S64) — done
 From the answer of the user about how things break (S55): "algunas comida y algunos consumibles
 que se vaya pochando que tenga un valor de pocharse a x velocidad dia".
 
@@ -4704,7 +4704,75 @@ Asked again on 2026-10-08, with everything else that was still open in the layer
   is sent to a bed of the garden, which then gives more for some days. Not the
   recommendation, which was that whoever works the garden take it unasked
 
-### P60 — Stores, rarity and current on screen (needs S53 to S55, S64 and S65) — done but for what goes off (S65)
+What there is:
+- **`spoils` on a kind of item** is how much of its freshness, of a hundred, one loses in a
+  day: vegetables 20, which is five days; stew 34, a little under three; medicine 1, which is
+  fourteen weeks. Tins, water, fuel, scrap, drink and tools have none and keep. What residents
+  come to make (S47) goes off as its kind does: a crop, a dish and a remedy
+- **Every stack has its own freshness**, and loses it on the hour wherever it is: in a place
+  things are kept in or on somebody. With none left the stack has gone off: it is written
+  down as spoiled (S51) if it was the settlement's, it is said once for all that went that
+  hour (`went_off`), and each unit of it is one of compost
+- **Two lots of a thing that are not about as fresh are two stacks**, so that it is the
+  older that goes off, and not all of it at once. Put together when they are within twenty
+  points, they are as fresh as the two together. The older lot is eaten first, and comes
+  out of the store first. Moving a thing leaves it as fresh as it was
+- **The refrigerated chest** is built from `Urbanismo` for six of scrap and four hours of
+  work, takes two tiles, holds forty of food and draws one of current for as long as it is
+  on. What is in it goes off four times more slowly. What goes off is put in it ahead of the
+  `Almacén`, and on the hour whatever of it is in the `Almacén` is moved to it while there
+  is room. With no current, switched off or broken down it takes nothing in and keeps
+  nothing: what is in it goes off as anywhere. What keeps is never put in it
+- **Compost** is kept in the `Almacén`. `Abonar`, in what is said of a bed of the garden
+  (P60), puts two units on it at once, from wherever they are kept: the bed is worked 1.4
+  times as fast for three days. One dressing at a time, and nobody puts it on unasked
+- **On screen**: the bar under the square of a thing that goes off is how fresh it is, as
+  it is how worn for a tool; the list of what a place holds says how many days each lot has
+  left, kept there; the chest says whether it is keeping what is in it; and the item editor
+  has a field for how much a thing loses in a day, from 0 for what keeps
+
+Decided without asking:
+- **The figures**: 20, 34 and 1 a day, a chest that holds forty and keeps four times as
+  long for one of current, two of compost for 1.4 times the work over three days. All of it
+  is data: `spoils` on an item, `chill` on a kind of thing, and `data/spoilage.json`
+- **Medicine goes off too**, in weeks, as the option that was chosen said, but in many of
+  them: fourteen. At five weeks and at seven the settlement that comes ready made was left
+  with half and with two thirds of its medicine after ten, and in one run of the two that
+  `tests/test_sustenance.py` holds to it somebody went without. There is little of it and
+  it comes slowly, so it is the last thing that should be lost to keeping it
+- **Freshness changes nothing but when a thing goes**: half gone, it feeds as much and is
+  worth as much. It is fresh, or it is compost
+- **What is somebody's own goes off as well**, and is no loss in the books, which are of
+  what is the settlement's. What goes off on somebody is left as compost in the nearest
+  place things are kept in
+- **Nothing goes off outside**: what whoever is away carries is as it was when they come
+  back, and so is what waits at the gate to be carried in
+- **The chest needs no study, and anybody builds it**. The settlement that comes ready made
+  has none: it is what there is to do about food going off
+- **The chest runs all day**, lamps only by night and a post only while somebody is at it:
+  it is about four tenths of a unit of fuel a day
+- **Its room is room for food in the bar**, with that of the `Almacén`
+- **Compost is no resource**: it has no figure in the bar and the store holds any amount
+- **The pantries still keep a little of each thing at hand**, out of the chest as out of
+  the store: that little goes off at the pace of anywhere
+
+How it was measured: eighteen seeds of ten weeks each, with things going off and without. Nobody dies either way. Food at the end is 94 units on average against 112, and the least there was at any midnight 59 against 65: some thirty units of food a week become compost, three hundred in ten weeks, which is far more than the beds can take. In two of the eighteen the pantries were bare for some days of the last weeks, four in one and two in the other, where without the rule none was. The one of the two that was followed day by day came to it after a fortnight of storms, rats in the pantry and a raid, with the garden worked as ever and nothing gone off in those weeks; and with the figures tried before these it was none of eighteen, and one. So eighteen runs do not say whether things going off makes such a stretch likelier, and it is written here as not known. Medicine at the end is 12 against 10: none of it can go off in ten weeks. One run went two days without medicine, with none of it gone off. A week of the settlement takes a twelfth longer to work out.
+
+Still open here:
+- Nothing is said before a thing goes off: there is its bar, and the days it has left
+- With the `Almacén` full and room in the chest, the bar does not say that there is no room
+  for what keeps
+- Compost is good for nothing but the beds, and nothing limits how much of it there is
+- A worker who carried two lots of what they make, one older than the other, counted only
+  the first of them and so never thought their hands full: found while this was measured,
+  and mended. Things of two rarities (S64) had the same flaw
+- Nothing on the map says a bed has compost on it: it is said when the bed is pressed
+- A thing a resident learned to make before this was built keeps: only what is come to
+  from now on goes off as its kind does. The item editor changes either
+- The screen where a discovery is named and drawn has no field for it: it is the item
+  editor that has
+
+### P60 — Stores, rarity and current on screen (needs S53 to S55, S64 and S65) — done
 Done so far, the first of its parts:
 - **The border of the square of a thing is the colour of its rarity**, in what a resident
   carries, in a row of what somebody has on them and in what a container holds: white for
@@ -4720,7 +4788,7 @@ Answered on 2026-10-08:
 - **Of the two ways of picking somebody up, the one on `main` stays as it is** (P27). The
   branch `feature/DragDrop` is left unmerged
 
-Done after that, the rest of it but for what goes off, which waits for S65:
+Done after that, the rest of it. How far gone what goes off is came with S65:
 - **A press on a thing that stands shows what there is to say of it**, in the panel on the
   right: its name in the colour of its rarity, whose post it is, how worn, whether it has
   current and how much it draws, and for a store how full it is of each thing, as a measure
@@ -4772,7 +4840,6 @@ Decided without asking:
   stands beside, within six tiles: there are nine lamps and seven of them stand outside
 
 Still open here:
-- How far gone what goes off is, on its square: with S65
 - What stands under a roof shows its mark only from inside the building, or with the roofs
   off (`T`)
 - A row of the board of current does not take the map to the thing it is about

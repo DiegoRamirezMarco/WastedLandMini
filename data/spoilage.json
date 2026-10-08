@@ -1,0 +1,13 @@
+{
+  "becomes": "compost",
+  "apart": 20,
+  "compost": {
+    "item": "compost",
+    "on": [
+      "crop_bed"
+    ],
+    "units": 2,
+    "factor": 1.4,
+    "days": 3
+  }
+}

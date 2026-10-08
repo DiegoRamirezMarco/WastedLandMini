@@ -553,5 +553,22 @@
       "water": 20
     },
     "post_pace": 0.6
+  },
+  "refrigerated_chest": {
+    "name": "arcón refrigerado",
+    "article": "un",
+    "width": 2,
+    "container": true,
+    "store": {
+      "food": 40
+    },
+    "chill": 0.25,
+    "draws": 1,
+    "build": {
+      "cost": {
+        "scrap": 6
+      },
+      "minutes": 240
+    }
   }
 }

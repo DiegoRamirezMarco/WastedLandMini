@@ -433,7 +433,7 @@ class TradeSystem:
             hand_over(world, container, item, resident.inventory, resident.resident_id, SOLD)
         else:
             # A present is kept apart from what is theirs to use, until it is given.
-            kept = world.new_item(item.definition_id, 1, resident.resident_id, item.level)
+            kept = world.new_item(item.definition_id, 1, resident.resident_id, item.level, item.freshness)
             kept.condition, kept.meant_for = item.condition, gift[2].resident_id
             container.take_unit(item.instance_id)
             resident.inventory.add(kept)

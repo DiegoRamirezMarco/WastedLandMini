@@ -187,6 +187,13 @@ python -m simulation.headless --days 7 --seed 7
 - Lamps, the radio, the workshop, the laboratory and the tank run on current, which the
   generator gives while it has fuel: without it they stop, and whoever draws water goes to
   the well
+- Fresh food goes off: vegetables in five days, a stew in three, medicine in a few months. The bar
+  under its square is how fresh it is, and the list of what a place holds says how many
+  days it has left. What goes off becomes compost. A refrigerated chest, built from
+  `Urbanismo` under `Muebles`, keeps what is in it four times as long while it has
+  current, and what goes off is put in it by itself
+- Compost is kept in the `Almacén`. Click a bed of the garden and press `Abonar`: it gives
+  more for three days
 - The border of the square of a thing says how rare it is, and so how good: white, green,
   blue, red, purple and yellow, from common to mythic. The bar under one says how worn it is
 - Click a post, a bed, the store, the generator or anything that runs on current to see

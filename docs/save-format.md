@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `47` |
+| `version` | `48` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -61,7 +61,8 @@ the player told them to do).
 
 A resident's `expedition` is `null` or `returns_at`, `finds`, `danger`, `find_at` and `fetch`.
 
-An item is saved as `id`, `definition_id`, `owner_id`, `condition`, `quantity` and `given_by` (the
+An item is saved as `id`, `definition_id`, `owner_id`, `condition`, `quantity`, `freshness` (how much
+is left of a hundred in a thing that goes off) and `given_by` (the
 resident who made a present of it, or `null`), inside whichever
 inventory holds it. An activity's `item_id` names the item involved.
 
@@ -84,6 +85,10 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 48** added `freshness` on every item, of a hundred, and `dressed`: the game
+  minute until which each bed that has compost on it has, by object ID (S65). In a save from
+  before everything is quite fresh and no bed has any. A freshness that is no number is
+  whole, and an entry of `dressed` that is no whole number is left out.
 - **Version 47** added `condition` on whatever stands (S55). In a save from before everything
   is whole. A site may be of `kind` `repair`, and then `what` is the ID of the thing being mended.
 - **Version 46** added `on` and `switched_at` on whatever stands, and `power_burnt`: the part

@@ -26,6 +26,11 @@ BUTTON_GAP = 2
 UPGRADE_LABEL = "Mejorar"
 POWER_LABEL = "Corriente"
 DRAW_LABEL = "Dibujar"
+COMPOST_LABEL = "Abonar"
+CHILLS = "Enfría: lo que guarda dura {times} veces más"
+NOT_CHILLING = "No enfría: {why}"
+DRESSED = "Abonado: da más hasta el día {day}"
+COMPOST_READY = "Abono: hay {held}. Con {units}, da más durante {days}"
 FREE_POST = "libre"
 BROKEN_TEXT = "Averiado: no se puede usar"
 NOBODY_MENDS = "Nadie lo arregla: hace falta quien lleve {job}"
@@ -45,6 +50,10 @@ def upgrade_intent(object_id: str) -> tuple[str, str]:
 
 def redraw_intent(object_id: str) -> tuple[str, str]:
     return ("redraw", object_id)
+
+
+def compost_intent(object_id: str) -> tuple[str, str]:
+    return ("compost", object_id)
 
 
 @dataclass(frozen=True)
@@ -73,6 +82,8 @@ def speaks(world: SimulationWorld, placed: Interactable) -> bool:
     or gives it, it is a store, it wears, it can be made better, or it already is."""
     definition = world.definition_of(placed)
     if definition.draws > 0 or definition.gives > 0 or definition.store is not None or placed.level > 1:
+        return True
+    if definition.chill < 1.0 or world.spoilage.takes_compost(world, placed):
         return True
     return world.upgrades.can_be_bettered(world, placed) or world.wear.wears(world, placed)
 
@@ -136,6 +147,34 @@ def _current_lines(world: SimulationWorld, placed: Interactable) -> list[Line]:
     return lines
 
 
+def _chill_lines(world: SimulationWorld, placed: Interactable) -> list[Line]:
+    """What is said of a thing that keeps what is in it from going off (S65)."""
+    chill = world.definition_of(placed).chill
+    if chill >= 1.0:
+        return []
+    if world.spoilage.chills(world, placed):
+        return [Line(CHILLS.format(times=f"{1 / chill:g}".replace(".", ",")), PALETTE["lichen"])]
+    why = "está averiado" if world.wear.broken(world, placed.object_id) else "apagado" if not placed.on else "sin corriente"
+    return [Line(NOT_CHILLING.format(why=why), PALETTE["ember"])]
+
+
+def _compost_lines(world: SimulationWorld, placed: Interactable) -> tuple[list[Line], bool]:
+    """What is said of putting compost on a bed (S65), and whether it can be put on now."""
+    spoilage = world.spoilage
+    if not spoilage.takes_compost(world, placed):
+        return [], False
+    until = spoilage.dressed_until(world, placed.object_id)
+    if until is not None:
+        return [Line(DRESSED.format(day=until // (24 * 60) + 1), PALETTE["lichen"])], False
+    error = spoilage.obstacle(world, placed.object_id)
+    if error is not None:
+        return [Line(error, PALETTE["stone"])], False
+    settings = spoilage.settings(world)
+    days = "un día" if settings.compost_days == 1 else f"{settings.compost_days} días"
+    said = COMPOST_READY.format(held=spoilage.compost_held(world), units=settings.compost_units, days=days)
+    return [Line(said)], True
+
+
 def _store_lines(world: SimulationWorld, placed: Interactable) -> list[Line]:
     found = next((entry for entry in world.stores.stores(world) if entry[0] == placed.object_id), None)
     if found is None:
@@ -191,9 +230,11 @@ def object_view(
     definition = world.definition_of(placed)
     rarity = world.upgrades.rarity(world, placed)
     said = [Line(definition.name.capitalize(), rarity.color), Line(f"Calidad: {rarity.name.lower()}", rarity.color)]
-    said += _post_lines(world, placed) + _current_lines(world, placed) + _store_lines(world, placed)
+    said += _post_lines(world, placed) + _current_lines(world, placed) + _chill_lines(world, placed)
+    said += _store_lines(world, placed)
+    composting, can_compost = _compost_lines(world, placed)
     bettering, can_better = _upgrade_lines(world, placed)
-    said += bettering
+    said += composting + bettering
 
     inner = width - PADDING * 2
     lines: list[tuple[Line, int]] = []
@@ -204,6 +245,8 @@ def object_view(
             lines.append((Line(part, line.color, line.share, line.bar), y))
             y += LINE_HEIGHT
     labels = []
+    if can_compost:
+        labels.append((COMPOST_LABEL, compost_intent(placed.object_id)))
     if can_better:
         labels.append((UPGRADE_LABEL, upgrade_intent(placed.object_id)))
     if definition.draws > 0:

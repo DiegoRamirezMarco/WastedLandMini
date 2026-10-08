@@ -26,7 +26,8 @@
         "tags": ["food", "fresh", "crop"],
         "value": [6, 12],
         "effects": {"hunger": [-30, -22]},
-        "flavours": 1
+        "flavours": 1,
+        "spoils": 20
       },
       "choices": {
         "grows": {
@@ -62,7 +63,8 @@
         "tags": ["food", "cooked", "meal"],
         "value": [16, 26],
         "effects": {"hunger": [-65, -50], "stress": [-10, -4]},
-        "preference_tags": ["hot", "homemade"]
+        "preference_tags": ["hot", "homemade"],
+        "spoils": 34
       },
       "choices": {
         "from": {"name": "De qué se hace", "source": "raw_food"}
@@ -195,7 +197,8 @@
         "category": "medicine",
         "tags": ["medicine"],
         "value": [16, 26],
-        "properties": {"dose": [1.2, 1.6]}
+        "properties": {"dose": [1.2, 1.6]},
+        "spoils": 1
       },
       "choices": {
         "cures": {

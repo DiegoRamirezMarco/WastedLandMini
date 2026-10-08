@@ -82,8 +82,30 @@ class StoreSystem:
         for resource_id in world.ledger.resources_of(world, definition):
             if resource_id in keeps and resource_id in capacity:
                 lacking = max(0, keeps[resource_id] - inventory.count(definition_id))
-                return lacking + self.room(world)[resource_id]
+                return lacking + self.room_for(world, resource_id, definition_id)
         return NO_LIMIT
+
+    def takes(self, world: "SimulationWorld", object_id: str, definition_id: str) -> bool:
+        """Whether a thing is put in a store: in any, but for one that chills what is kept
+        in it (S65), which takes only what goes off, and only while it is chilling."""
+        placed = world.interactables.get(object_id)
+        if placed is None or world.definition_of(placed).chill >= 1.0:
+            return True
+        return world.spoilage.goes_off(world, definition_id) and world.spoilage.chills(world, placed)
+
+    def room_for(self, world: "SimulationWorld", resource_id: str, definition_id: str) -> int:
+        """How many more units of one kind of thing the stores would take: the room each
+        store it is put in has left for its resource."""
+        room = 0
+        for object_id, inventory, rule in self.stores(world):
+            if resource_id in rule and self.takes(world, object_id, definition_id):
+                there = sum(item.quantity for item in inventory.items if self._resource(world, item) == resource_id)
+                room += max(0, rule[resource_id] - there)
+        return room
+
+    def _chill_of(self, world: "SimulationWorld", object_id: str) -> float:
+        placed = world.interactables.get(object_id)
+        return world.definition_of(placed).chill if placed is not None else 1.0
 
     def feeds(self, world: "SimulationWorld", kind: str, definition_id: str | None = None) -> bool:
         """Whether what is kept at a kind of place comes to it from the stores by itself: a
@@ -126,6 +148,8 @@ class StoreSystem:
         if not stores:
             return
         capacity = self.capacity(world)
+        if world.clock.minute == 0:
+            self._chill(world, stores)
         held = self.held(world)
         for object_id, inventory in world.containers.items():
             placed = world.interactables.get(object_id)
@@ -158,18 +182,36 @@ class StoreSystem:
         """Move up to so many units of a stack into the stores, the first with room first.
         Returns how many went."""
         moved = 0
-        for _object_id, store, rule in stores:
+        # What goes off is put where it keeps longest, while there is room there (S65).
+        taking = [entry for entry in stores if self.takes(world, entry[0], item.definition_id)]
+        for _object_id, store, rule in sorted(taking, key=lambda entry: self._chill_of(world, entry[0])):
             if moved >= units:
                 break
+            if store is inventory:
+                continue
             there = sum(each.quantity for each in store.items if self._resource(world, each) == resource_id)
             going = min(units - moved, rule.get(resource_id, 0) - there)
             if going <= 0:
                 continue
-            definition_id, level = item.definition_id, item.level
+            definition_id, level, freshness = item.definition_id, item.level, item.freshness
             going = inventory.take_units(item.instance_id, going)
-            world.stock(store, definition_id, going, None, level)
+            world.stock(store, definition_id, going, None, level, freshness)
             moved += going
         return moved
+
+    def _chill(self, world: "SimulationWorld", stores: list[tuple[str, Inventory, dict[str, int]]]) -> None:
+        """On the hour: what goes off and is kept in a store that does not chill is put in
+        one that does, while there is room there (S65)."""
+        cold = [entry for entry in stores if self._chill_of(world, entry[0]) < 1.0]
+        if not cold:
+            return
+        for object_id, inventory, _rule in stores:
+            if self._chill_of(world, object_id) < 1.0:
+                continue
+            for item in list(inventory.items):
+                resource_id = self._resource(world, item)
+                if resource_id is not None and world.spoilage.goes_off(world, item.definition_id):
+                    self._put_away(world, cold, resource_id, inventory, item, item.quantity)
 
     def _bring_out(
         self,
@@ -183,16 +225,17 @@ class StoreSystem:
         """Bring back from the stores what a place lacks of what it keeps at hand: so many units
         of each kind of thing of that resource the stores have. Returns how many came."""
         moved = 0
-        for _object_id, store, _rule in stores:
+        # What is kept where it goes off soonest comes out first, and of that the oldest lot.
+        for _object_id, store, _rule in sorted(stores, key=lambda entry: -self._chill_of(world, entry[0])):
             for item in list(store.items):
                 if self._resource(world, item) != resource_id:
                     continue
                 lacking = kept - at_hand.get(item.definition_id, 0)
                 if lacking <= 0:
                     continue
-                definition_id, level = item.definition_id, item.level
+                definition_id, level, freshness = item.definition_id, item.level, item.freshness
                 coming = store.take_units(item.instance_id, lacking)
-                world.stock(inventory, definition_id, coming, None, level)
+                world.stock(inventory, definition_id, coming, None, level, freshness)
                 at_hand[definition_id] = at_hand.get(definition_id, 0) + coming
                 moved += coming
         return moved

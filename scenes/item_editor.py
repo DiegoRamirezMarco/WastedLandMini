@@ -39,6 +39,7 @@ FIELDS = (
     ("preference_tags", "Gustos: a qué sabe o qué tiene (por comas)"),
     ("effects", "Efectos (nombre=numero, ... )"),
     ("properties", "Propiedades (nombre=numero, ... )"),
+    ("spoils", "Se pocha: cuánto pierde al día, de 100 (0 si no se pocha)"),
 )
 
 
@@ -153,6 +154,7 @@ class ItemEditor:
             "preference_tags": ", ".join(definition.preference_tags),
             "effects": _number_text(definition.effects),
             "properties": _number_text(definition.properties),
+            "spoils": f"{definition.spoils:g}",
         }
         # As it was last drawn, not the small icon of it: what was drawn here is still here to go on with.
         drawn = self.icons.picture(item_id)
@@ -178,6 +180,12 @@ class ItemEditor:
             base_value = int(self.values["base_value"].strip())
         except ValueError as error:
             raise ValueError("El valor base debe ser un número entero") from error
+        try:
+            spoils = float(self.values["spoils"].strip().replace(",", ".") or 0)
+        except ValueError as error:
+            raise ValueError("Lo que se pocha al día debe ser un número") from error
+        if not 0 <= spoils <= 100:
+            raise ValueError("Lo que se pocha al día va de 0 a 100")
         return {
             "id": self.item_id,
             "name": self.values["name"].strip(),
@@ -188,6 +196,8 @@ class ItemEditor:
             "tags": [tag.strip() for tag in self.values["tags"].split(",") if tag.strip()],
             "effects": _parse_numbers(self.values["effects"]),
             "properties": _parse_numbers(self.values["properties"]),
+            # How much of its freshness, of a hundred, it loses in a day (S65).
+            "spoils": spoils,
             # Written as they are kept: lower case, underscores for spaces, each of them once.
             "preference_tags": list(
                 taste_tags([tag for tag in self.values["preference_tags"].split(",") if tag.strip()])

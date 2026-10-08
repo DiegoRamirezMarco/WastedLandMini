@@ -33,6 +33,7 @@ def _definition_data(definition: ItemDefinition) -> dict[str, Any]:
         "effects": dict(definition.effects),
         "properties": dict(definition.properties),
         "preference_tags": list(definition.preference_tags),
+        "spoils": definition.spoils,
     }
 
 
@@ -71,6 +72,8 @@ def validate_item_data(
         raise ValueError(f"'category' must be '{required_category}' in this folder")
     if not _is_number(merged.get("base_value", 0)) or merged.get("base_value", 0) < 0:
         raise ValueError("'base_value' must be a number that is not negative")
+    if not _is_number(merged.get("spoils", 0)) or merged.get("spoils", 0) < 0:
+        raise ValueError("'spoils' must be a number that is not negative")
     if not isinstance(merged.get("description", ""), str):
         raise ValueError("'description' must be a string")
     tags = merged.get("tags", [])

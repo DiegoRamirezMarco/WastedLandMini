@@ -991,6 +991,30 @@ def warehouse(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
     return stage.picture()
 
 
+def refrigerated_chest(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A long white chest with a heavy lid, the grille of its motor at one end and a light
+    that says it runs: what goes off keeps longer in it."""
+    stage = Stage((2, 1), 62, cell, depth)
+    s = stage.under
+    white: Color = (224, 230, 232)
+    stage.shadow(6, 188)
+    body = stage.solid(10, 180, 48, white, share=0.8, radius=6)
+    # The lid: a slab a little wider than the chest, with a handle along its front.
+    s.block(5, body.top - 9, 190, body.deep + 3, 9, lighter(white, 0.4), 5)
+    s.stroke([(74, body.face + 6), (126, body.face + 6)], LINE, 7)
+    s.stroke([(76, body.face + 5), (124, body.face + 5)], METAL, 3)
+    # The grille of the motor, and the lights.
+    s.box(138, body.face + 16, 44, 24, darker(white, 0.28), 3)
+    for y in (body.face + 22, body.face + 28, body.face + 34):
+        s.stroke([(144, y), (176, y)], DARK_METAL, 2)
+    s.oval(20, body.face + 18, 9, 9, GREEN, 255, outline=True)
+    s.oval(34, body.face + 18, 9, 9, BLUE, 255, outline=True)
+    # Frost under the lid.
+    for x in (58, 82, 106):
+        s.stroke([(x, body.face + 14), (x + 6, body.face + 24), (x + 2, body.face + 30)], (150, 200, 226), 2.4)
+    return stage.picture()
+
+
 PAINTERS: dict[str, Painter] = {
     "bed": bed,
     "pantry": pantry,
@@ -1032,12 +1056,13 @@ PAINTERS: dict[str, Painter] = {
     "plaza": plaza,
     "warehouse": warehouse,
     "well": well,
+    "refrigerated_chest": refrigerated_chest,
 }
 # The ground each is drawn for, in cells: a kind whose data says otherwise keeps the art there was.
 FOOTPRINTS: dict[str, tuple[int, int]] = {
     "bed": (1, 2), "clinic_bed": (1, 2), "table": (2, 1), "bar": (3, 1), "workbench": (2, 1), "shop_counter": (2, 1),
     "shelf": (2, 1), "scrap_pile": (2, 1), "water_tank": (2, 2), "generator": (2, 1), "lab_bench": (2, 1),
-    "wreck": (3, 2), "caravan_cart": (2, 1), "warehouse": (4, 3),
+    "wreck": (3, 2), "caravan_cart": (2, 1), "warehouse": (4, 3), "refrigerated_chest": (2, 1),
 }
 # How many turns the picture of a kind goes through, for what burns.
 FRAMES: dict[str, int] = {"campfire": 3, "barrel": 3, "study_desk": 3, "lab_bench": 3}

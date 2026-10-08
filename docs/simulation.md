@@ -317,6 +317,36 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
 - **A push that goes wrong** may break the post outright: `breakdown` among the mishaps.
 - With `per_hour` at nothing no post wears and none breaks.
 
+### What goes off
+
+- **A kind of item may go off** (`ItemDefinition.spoils`, `simulation/economy/spoilage.py`):
+  so much of its freshness, of a hundred, in a day. Most have none and keep.
+- **A stack has a freshness** (`ItemInstance.freshness`). On the hour every stack of a thing
+  that goes off loses an hour's worth, in every place things are kept in and on everybody
+  who is in the settlement. With none left it has gone off: the stack is no more, it is
+  written down as `spoiled` if it was the settlement's, and `went_off` is emitted once for
+  all that went that hour.
+- **What is left of it is compost**, a unit for a unit: the item `becomes` names in
+  `data/spoilage.json`. It is kept in the store, if one stands that does not chill; or else
+  where it went off; or else in the nearest place things are kept in.
+- **Lots are kept apart by how fresh they are**: `SimulationWorld.stock` puts what goes off
+  on the stack of the same thing, owner and rarity that is nearest to it in freshness, if
+  that is within `apart` points, and the stack is then as fresh as the two together. Further
+  apart it is a stack of its own. Whatever moves a stack passes its freshness on. The older
+  of two lots is the one eaten, and the one that comes out of a store, first.
+- **A kind of thing may chill** (`InteractableDefinition.chill`): what is kept in it goes
+  off that many times as fast, a quarter for the refrigerated chest, while it has current,
+  is switched on and has not broken down. It draws for as long as it is on.
+- **A store that chills is ahead of the others** (`StoreSystem.takes`): it takes only what
+  goes off, and only while it is chilling. What goes off is put there first, and on the
+  hour what of it is in a store that does not chill is moved to one that does, while there
+  is room. What a place keeps at hand comes out of the store that does not chill first.
+- **Compost goes on a bed at the player's word** (`CompostCommand`): so many units are
+  used up from wherever they are kept, with nobody carrying them, and the bed is worked
+  faster until a game minute kept in `SimulationWorld.dressed`. `WorkSystem.pace` takes
+  it in with what else tells on a post. Nobody puts it on unasked.
+- It draws no dice, and nothing goes off for whoever is outside the settlement.
+
 ## What comes from outside
 
 - **World events** are defined in `data/world_events.json`: how likely each is on a day it can

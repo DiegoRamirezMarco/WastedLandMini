@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from simulation.ai.affect import AffectResult
 from simulation.ai.placing import PlaceResult
 from simulation.economy.power import PowerResult
+from simulation.economy.spoilage import SpoilResult
 from simulation.economy.terms import TradeResult
 from simulation.housing.housing import HousingResult
 from simulation.justice.justice_system import JusticeResult
@@ -59,6 +60,9 @@ class CommandTarget(Protocol):
         ...
 
     def switch(self, object_id: str, on: bool) -> PowerResult:
+        ...
+
+    def compost(self, object_id: str) -> SpoilResult:
         ...
 
     def cancel_site(self, site_id: str) -> UrbanismResult:
@@ -320,6 +324,19 @@ class SwitchCommand:
 
     def apply(self, world: CommandTarget) -> PowerResult:
         return world.switch(self.object_id, self.on)
+
+
+@dataclass(frozen=True)
+class CompostCommand:
+    """The player has compost put on a bed of the garden (S65): what a dressing takes is
+    used up from wherever it is kept, at once and with nobody carrying it, and the bed is
+    worked faster for some days. The result says why not where it cannot be: no bed, one
+    that still has some on it, or not enough compost."""
+
+    object_id: str
+
+    def apply(self, world: CommandTarget) -> SpoilResult:
+        return world.compost(self.object_id)
 
 
 @dataclass(frozen=True)

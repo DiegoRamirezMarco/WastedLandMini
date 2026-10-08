@@ -110,6 +110,7 @@ from settings import SCALE, TILE_SIZE
 from simulation.commands import (
     AcknowledgeTutorialCommand,
     ChooseGovernmentCommand,
+    CompostCommand,
     DealWithMerchantCommand,
     DecorateCommand,
     GiveHouseCommand,
@@ -1166,6 +1167,9 @@ class GlobalView:
         elif isinstance(intent, tuple) and intent[0] == "upgrade":
             # Making a thing better is put to whoever keeps it, who says yes or no.
             self._say(self.world.apply_command(ProposeUpgradeCommand(intent[1])))
+        elif isinstance(intent, tuple) and intent[0] == "compost":
+            # Compost goes on a bed at the player's word, from wherever it is kept (S65).
+            self._say(self.world.apply_command(CompostCommand(intent[1])))
         elif isinstance(intent, tuple) and intent[0] == "redraw":
             placed = self.world.interactables.get(intent[1])
             if placed is not None and self.object_art.available:

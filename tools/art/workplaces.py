@@ -387,6 +387,22 @@ def _well() -> pygame.Surface:
     return surface
 
 
+def _refrigerated_chest() -> pygame.Surface:
+    """A long white chest with a lid, the grille of its motor and a light."""
+    surface = _blank(32, 16)
+    _box(surface, (2, 6, 28, 9), "paper")
+    fill(surface, "ink", (1, 3, 30, 1))
+    fill(surface, "mist", (1, 4, 30, 2))
+    fill(surface, "ink", (1, 6, 30, 1))
+    fill(surface, "iron", (12, 7, 8, 1))
+    fill(surface, "dust", (22, 9, 6, 4))
+    dots(surface, "iron", [(23, 10), (25, 10), (27, 10), (23, 12), (25, 12), (27, 12)])
+    dots(surface, "lichen", [(4, 9)])
+    dots(surface, "teal", [(6, 9)])
+    dots(surface, "mist", [(10, 10), (11, 11), (14, 10), (15, 12)])
+    return surface
+
+
 def _warehouse() -> pygame.Surface:
     """A shed of sheet metal, four tiles by three, seen from above and a little from its front."""
     surface = _blank(64, 48)
@@ -496,5 +512,6 @@ def build() -> dict[str, pygame.Surface]:
         "grave": _grave,
         "warehouse": _warehouse,
         "well": _well,
+        "refrigerated_chest": _refrigerated_chest,
     }
     return {f"sprites/objects/{kind}.png": painter() for kind, painter in painters.items()}

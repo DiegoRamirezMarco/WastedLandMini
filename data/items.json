@@ -54,7 +54,8 @@
     ],
     "effects": {
       "hunger": -20
-    }
+    },
+    "spoils": 20
   },
   {
     "id": "stew",
@@ -74,7 +75,8 @@
     "effects": {
       "hunger": -45,
       "stress": -4
-    }
+    },
+    "spoils": 34
   },
   {
     "id": "water",
@@ -108,7 +110,8 @@
     "base_value": 18,
     "tags": [
       "medicine"
-    ]
+    ],
+    "spoils": 1
   },
   {
     "id": "baton",
@@ -343,5 +346,16 @@
       "dependence": 0.35,
       "sign": "high"
     }
+  },
+  {
+    "id": "compost",
+    "name": "abono",
+    "article": "un",
+    "category": "material",
+    "base_value": 1,
+    "description": "Lo que queda de lo que se echó a perder. Echado en un bancal, da más durante unos días.",
+    "tags": [
+      "compost"
+    ]
   }
 ]

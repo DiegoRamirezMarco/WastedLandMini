@@ -144,6 +144,17 @@ def _scrap(s: Sheet) -> None:
         s.oval(x, y, 8, 8, lighter(METAL, 0.4), 255, outline=True)
 
 
+def _compost(s: Sheet) -> None:
+    earth = (112, 82, 58)
+    s.poly([(8, 86), (24, 56), (46, 42), (72, 52), (92, 86)], earth)
+    s.poly([(22, 86), (36, 64), (56, 60), (70, 86)], darker(earth, 0.22), outline=False)
+    for x, y in ((28, 72), (60, 74), (76, 66), (44, 52)):
+        s.oval(x, y, 7, 7, lighter(earth, 0.35))
+    s.stroke([(50, 44), (50, 24)], GREEN, 4)
+    s.oval(34, 12, 18, 14, GREEN, 255, outline=True)
+    s.oval(50, 8, 18, 14, GREEN, 255, outline=True)
+
+
 def _liquor(s: Sheet) -> None:
     s.box(42, 6, 16, 26, GREEN, 4)
     s.box(40, 4, 20, 9, (196, 150, 90), 3)
@@ -206,6 +217,7 @@ PAINTERS: dict[str, Painter] = {
     # No item of anybody's: what is seen in the hand of whoever builds.
     "hammer": _hammer,
     "scrap": _scrap,
+    "compost": _compost,
     "liquor": _liquor,
     "cigarette": _cigarette,
     "sedative": _sedative,

@@ -101,6 +101,9 @@ class InteractableDefinition:
     # kind of thing of a resource it keeps at hand. The rest is the store's. None for what
     # has nothing to do with a store.
     outlet: dict[str, int] | None = None
+    # By how much what is kept in it goes off more slowly than anywhere else, while it has
+    # current (S65): a quarter for what keeps four times as long. One for what does not chill.
+    chill: float = 1.0
 
 
 @dataclass
@@ -150,6 +153,7 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         post_pace=float(data.get("post_pace", 1.0)),
         store=_units_from_data(kind, "store", data.get("store")),
         outlet=_units_from_data(kind, "outlet", data.get("outlet")),
+        chill=float(data.get("chill", 1.0)),
     )
     if (definition.store is not None or definition.outlet is not None) and not definition.container:
         raise ValueError(f"Interactable {kind} holds what a store keeps, so it must be a container")
@@ -159,6 +163,8 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         raise ValueError(f"Interactable {kind} is a seat, so it takes up one tile and can be stood on")
     if definition.draws < 0 or definition.gives < 0 or (definition.gives and not definition.container):
         raise ValueError(f"Interactable {kind} draws and gives no less than nothing, and what gives current holds its fuel")
+    if not 0 < definition.chill <= 1 or (definition.chill < 1 and not definition.container):
+        raise ValueError(f"Interactable {kind} chills what is kept in it by a share above nothing, and so holds things")
     if definition.post_pace <= 0:
         raise ValueError(f"Interactable {kind} is worked at a pace above nothing")
     if definition.light < 0:

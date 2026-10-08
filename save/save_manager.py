@@ -164,7 +164,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 47
+    CURRENT_VERSION = 48
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -413,6 +413,7 @@ class SaveManager:
             "theft_cooldowns": dict(world.theft_cooldowns),
             "notices": dict(world.notices),
             "power_burnt": world.power_burnt,
+            "dressed": dict(world.dressed),
             "vacancies": dict(world.vacancies),
             "deaths": [vars(death) for death in world.deaths],
             "decisions": [_decision_to_data(decision) for decision in world.decisions.values()],
@@ -1118,6 +1119,12 @@ class SaveManager:
         world.notices = {str(name): int(day) for name, day in _object_or_empty(data.get("notices")).items()}
         burnt = data.get("power_burnt", 0.0)
         world.power_burnt = min(1.0, max(0.0, float(burnt))) if isinstance(burnt, (int, float)) else 0.0
+        # The beds that have compost on them, and until when. None in a save from before (S65).
+        world.dressed = {
+            str(object_id): int(until)
+            for object_id, until in _object_or_empty(data.get("dressed")).items()
+            if isinstance(until, int) and not isinstance(until, bool)
+        }
         world.vacancies = {
             str(job_id): int(minute)
             for job_id, minute in _object_or_empty(data.get("vacancies")).items()
@@ -1633,6 +1640,7 @@ def _inventory_to_data(inventory: Inventory) -> list[dict[str, Any]]:
             "condition": item.condition,
             "quantity": item.quantity,
             "level": item.level,
+            "freshness": item.freshness,
             "given_by": item.given_by,
             "meant_for": item.meant_for,
         }
@@ -1655,6 +1663,8 @@ def _inventory_from_data(data: Any) -> Inventory:
                 quantity=max(1, int(item.get("quantity", 1))),
                 # How rare it is. In a save from before everything is common (S64).
                 level=max(1, _level_of(item)),
+                # How fresh it is. In a save from before everything is quite fresh (S65).
+                freshness=_condition_of({"condition": item.get("freshness", 100.0)}),
                 given_by=_text_or_none(item.get("given_by")),
                 meant_for=_text_or_none(item.get("meant_for")),
             )

@@ -213,6 +213,8 @@ class ItemSystem:
                 * self.better(world, item),
                 -sum(resolve(item.definition_id).effects.values())
                 + world.tastes.liking(world, resident, resolve(item.definition_id)) * taste,
+                # Of two lots of the same thing, the one further gone is eaten first (S65).
+                -item.freshness,
                 item.instance_id,
             ),
         )
@@ -623,7 +625,9 @@ class ItemSystem:
         definition = resolve(item.definition_id)
         if item.quantity > 1:
             item.quantity -= 1
-            given = world.stock(receiver.inventory, item.definition_id, 1, receiver.resident_id, item.level)
+            given = world.stock(
+                receiver.inventory, item.definition_id, 1, receiver.resident_id, item.level, item.freshness
+            )
         else:
             giver.inventory.remove(item.instance_id)
             item.owner_id, item.meant_for = receiver.resident_id, None

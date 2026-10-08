@@ -809,7 +809,7 @@ class ConstructionSystem:
                 if room <= 0:
                     break
                 units = container.take_units(item.instance_id, room)
-                world.stock(resident.inventory, item.definition_id, units, None, item.level)
+                world.stock(resident.inventory, item.definition_id, units, None, item.level, item.freshness)
                 taken[item.definition_id] = taken.get(item.definition_id, 0) + units
                 room -= units
         if taken:
@@ -820,7 +820,7 @@ class ConstructionSystem:
                 continue
             for item in [item for item in resident.inventory.items if self._fits(world, item, tag)]:
                 resident.inventory.remove(item.instance_id)
-                world.stock(container, item.definition_id, item.quantity, None, item.level)
+                world.stock(container, item.definition_id, item.quantity, None, item.level, item.freshness)
                 left[item.definition_id] = left.get(item.definition_id, 0) + item.quantity
         return f"deja {self._listed(world, left)} en {where}" if left else None
 

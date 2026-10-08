@@ -63,6 +63,8 @@ Event types emitted so far:
 | `post_broke` | A post is worn out, or a push broke it: it stands idle until it is mended, with `object_id` and its `kind` in `data`. The site it is mended at gives `site_laid` and `site_finished`, with `kind` `repair` | 45 |
 | `post_mended` | A post that had broken down works again, with `object_id` and its `kind` in `data` | 30 |
 | `power_switched` | The player switches something that runs on current on or off, with `object_id` and `on` in `data` | 10 |
+| `went_off` | Things have gone off this hour and are compost, with `items` in `data`: units by item ID. Once for all of them | 30 |
+| `bed_dressed` | Compost has been put on a bed at the player's word, with `object_id` and `until`, the game minute it lasts to, in `data` | 20 |
 | `power_shed` | More current is asked for than there is, and what was switched on last is switched off, with `object_id` and the `supply` there is in `data` | 25 |
 | `store_full` | The stores have no room left for a resource (once a day for each), with `resource` and the `capacity` there is in `data` | 35 |
 | `resource_low` | The settlement's books say that what there is of a resource will last fewer days than `low_days`, or that there is none and it is being used (on the hour, once a day for each), with `resource`, `stock` and `days_left` in `data` | 35 |

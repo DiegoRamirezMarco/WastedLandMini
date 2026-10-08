@@ -284,6 +284,8 @@ class CraftSystem:
             "effects": effects,
             "properties": properties,
             "preference_tags": tastes,
+            # What is fresh goes off as fast as its kind does (S65).
+            "spoils": float(spec.get("spoils", 0.0)),
         }
         if spec.get("substance"):
             data["substance"] = spec["substance"]

@@ -17,7 +17,9 @@ from typing import Any
 RAW_FOOD, MAKING_JOBS = "raw_food", "making_jobs"
 SOURCES = (RAW_FOOD, MAKING_JOBS)
 # The parts of an item a kind or a pick may give. A pair of numbers is anywhere between them.
-ITEM_FIELDS = ("category", "tags", "value", "effects", "properties", "preference_tags", "flavours", "substance")
+ITEM_FIELDS = (
+    "category", "tags", "value", "effects", "properties", "preference_tags", "flavours", "substance", "spoils",
+)
 
 
 @dataclass(frozen=True)

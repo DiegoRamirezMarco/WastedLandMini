@@ -12,6 +12,7 @@ from simulation.events.event import DomainEvent, euphonic
 from simulation.events.event_manager import EventManager
 from simulation.economy.fund_system import FundSystem
 from simulation.economy.power import PowerResult, PowerSystem
+from simulation.economy.spoilage import FRESH, SpoilResult, SpoilSystem
 from simulation.economy.stores import StoreSystem
 from simulation.economy.ledger import LedgerState, LedgerSystem
 from simulation.economy.lending import LendingSystem
@@ -130,6 +131,10 @@ class SimulationWorld:
     # a unit of fuel that has been burnt since the last whole one.
     power: PowerSystem = field(default_factory=PowerSystem)
     power_burnt: float = 0.0
+    # What goes off, and what is left of it (S65). And the beds that have compost on them,
+    # each with the game minute it lasts until.
+    spoilage: SpoilSystem = field(default_factory=SpoilSystem)
+    dressed: dict[str, int] = field(default_factory=dict)
     accounts: LedgerState = field(default_factory=LedgerState)
     # Whoever has stopped by the gate to trade, while they are there.
     merchant: Merchant | None = None
@@ -233,6 +238,7 @@ class SimulationWorld:
         self.ledger.tick(self)
         self.stores.tick(self)
         self.power.tick(self)
+        self.spoilage.tick(self)
         self.interventions.tick(self)
         self.items.tick_world(self)
         self.staffing.tick(self)
@@ -390,6 +396,10 @@ class SimulationWorld:
     def switch(self, object_id: str, on: bool) -> PowerResult:
         """Switch something that runs on current on or off."""
         return self.power.switch(self, object_id, on)
+
+    def compost(self, object_id: str) -> SpoilResult:
+        """Put compost on a bed of the garden, which gives more for some days (S65)."""
+        return self.spoilage.dress(self, object_id)
 
     def set_free_will(self, resident_id: str, free: bool) -> AffectResult:
         """Say whether a resident does anything of their own accord, or only what they are told."""
@@ -572,17 +582,44 @@ class SimulationWorld:
         return fact
 
     def new_item(
-        self, definition_id: str, quantity: int = 1, owner_id: str | None = None, level: int = 1
+        self,
+        definition_id: str,
+        quantity: int = 1,
+        owner_id: str | None = None,
+        level: int = 1,
+        freshness: float = FRESH,
     ) -> ItemInstance:
-        """Create an item with a fresh stable ID, as rare as `level` says. It is not placed anywhere yet."""
+        """Create an item with a fresh stable ID, as rare as `level` says and, for what goes
+        off, as fresh as `freshness` says. It is not placed anywhere yet."""
         self.item_count += 1
-        return ItemInstance(f"item_{self.item_count}", definition_id, owner_id, quantity=quantity, level=level)
+        return ItemInstance(
+            f"item_{self.item_count}", definition_id, owner_id, quantity=quantity, level=level, freshness=freshness
+        )
 
     def stock(
-        self, inventory: Inventory, definition_id: str, count: int, owner_id: str | None, level: int = 1
+        self,
+        inventory: Inventory,
+        definition_id: str,
+        count: int,
+        owner_id: str | None,
+        level: int = 1,
+        freshness: float | None = None,
     ) -> ItemInstance:
         """Put `count` units in an inventory, on top of a matching stack if there is one:
-        one of the same rarity, which is common unless `level` says otherwise (S64)."""
+        one of the same rarity, which is common unless `level` says otherwise (S64).
+
+        What goes off (S65) comes as fresh as `freshness` says, and quite fresh if it says
+        nothing. It goes on a stack that is about as fresh, which is then as fresh as the
+        two together, or else is a stack of its own."""
+        if self.spoilage.goes_off(self, definition_id):
+            coming = FRESH if freshness is None else freshness
+            stack = self.spoilage.stack_for(self, inventory, definition_id, owner_id, level, coming)
+            if stack is not None:
+                self.spoilage.put_on(stack, count, coming)
+                return stack
+            item = self.new_item(definition_id, count, owner_id, level, coming)
+            inventory.add(item)
+            return item
         stack = inventory.stack_of(definition_id, owner_id, level)
         if stack is not None:
             stack.quantity += count

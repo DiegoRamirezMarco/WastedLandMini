@@ -46,6 +46,8 @@ class ItemDefinition:
     preference_tags: tuple[str, ...] = ()
     # What taking it does beyond its effects on the spot, for an item that is a substance.
     substance: SubstanceDefinition | None = None
+    # How much of its freshness, of a hundred, one loses in a day (S65). Nothing for what keeps.
+    spoils: float = 0.0
 
 
 @dataclass
@@ -63,6 +65,9 @@ class ItemInstance:
     # Who it is being kept for: the resident it was bought as a present for, or the settlement,
     # when it is something handed over or bought for the fund that is still on its way there.
     meant_for: str | None = None
+    # For what goes off (S65): how much of its freshness is left, of a hundred. With none
+    # left it has gone off. Two lots of a thing that are not about as fresh are two stacks.
+    freshness: float = 100.0
 
     @property
     def broken(self) -> bool:

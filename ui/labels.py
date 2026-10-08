@@ -104,9 +104,21 @@ def rarity_name(world: SimulationWorld, level: int) -> str:
 
 
 def condition_of(world: SimulationWorld, item: ItemInstance) -> float | None:
-    """The state of a thing that wears out, from 100 down to 0. None for things that never do."""
-    wears = world.registries.items.resolve(item.definition_id).properties.get("wear", 0.0) > 0
-    return max(0.0, item.condition) if wears else None
+    """How much is left in a thing, from 100 down to 0: of use, for what wears out, and of
+    freshness, for what goes off (S65). None for what does neither."""
+    definition = world.registries.items.resolve(item.definition_id)
+    if definition.properties.get("wear", 0.0) > 0:
+        return max(0.0, item.condition)
+    return max(0.0, item.freshness) if definition.spoils > 0 else None
+
+
+def days_left_label(world: SimulationWorld, item: ItemInstance, container_id: str | None = None) -> str | None:
+    """How long a thing that goes off has left, kept where it is, in as few letters as say
+    it. None for what keeps."""
+    days = world.spoilage.days_left(world, item, container_id)
+    if days is None:
+        return None
+    return "<1 d" if days < 1 else f"{int(days)} d"
 
 
 def selling_use(world: SimulationWorld, container_id: str):

@@ -7,7 +7,7 @@ from graphics.item_icons import ICON_SIZE, ItemIcons
 from graphics.palette import PALETTE
 from simulation.items.inventory import Inventory
 from simulation.world import SimulationWorld
-from ui.labels import condition_of, price_label, rarity_color, selling_use
+from ui.labels import condition_of, days_left_label, price_label, rarity_color, selling_use
 from ui.panel import draw_item, draw_panel
 
 ROW_HEIGHT = ICON_SIZE[1] + 2
@@ -146,6 +146,10 @@ def draw_container_panel(
         if condition is not None:
             draw_condition(target, (x, y), condition)
         text = f"{definition.name} x{item.quantity}"
+        left = days_left_label(world, item, container_id)
+        if left is not None:
+            # What goes off says how long it has, kept here (S65).
+            text += f" · {left}"
         room = rect.width - PADDING * 2 - ICON_SIZE[0] - 4
         price = price_label(world, container_id, item) if selling is not None and item.owner_id is None else None
         if price is not None:

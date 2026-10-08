@@ -1062,6 +1062,22 @@ kept:
 - `data/power.json` names the item that is `fuel`, and `fuel_lasts`: the minutes of one unit
   of current that a unit of it is good for.
 
+### What goes off
+
+- `"spoils": 20` on an item, in `data/items.json` or in a pack, is how much of its freshness,
+  of a hundred, one loses in a day: five days for that. Left out, the thing keeps. The item
+  editor has a field for it. `"spoils"` in the `item` of a kind of `data/crafts.json` does
+  the same for what residents come to make.
+- `"chill": 0.25` on a kind of object in `data/interactables.json` has what is kept in it go
+  off a quarter as fast while it has current, so it needs `"container": true` and wants
+  `"draws"`. With `"store"` as well it is a store that takes only what goes off, ahead of the
+  others.
+- `data/spoilage.json` says what a unit that has gone off `becomes`; how far `apart` in
+  freshness two lots may be and still be one stack; and under `compost` the `item` that is
+  one, the kinds of object it is put `on`, the `units` a dressing takes, the `factor` the
+  post is worked faster by and the `days` it lasts. With no such file nothing is left of what
+  goes off and nothing takes compost.
+
 ### Stores, and where what they hold is taken from
 
 Two keys of a kind of object in `data/interactables.json`, both of which need

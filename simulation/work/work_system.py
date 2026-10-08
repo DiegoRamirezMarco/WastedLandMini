@@ -492,6 +492,8 @@ class WorkSystem:
             speed *= world.upgrades.better(world, resident.post_id)
             post = world.interactables.get(resident.post_id or "")
             speed *= world.definition_of(post).post_pace if post is not None else 1.0
+            # And a bed with compost on it gives more for as long as that lasts (S65).
+            speed *= world.spoilage.bed_factor(world, resident.post_id)
         # Short of an arm the work still gets done, in more minutes.
         speed *= world.health.work_pace(world, resident)
         speed *= self.mood_pace(resident)
