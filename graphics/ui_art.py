@@ -186,6 +186,31 @@ def bar(size: Size, share: float, color: Color) -> pygame.Surface:
     return pygame.transform.smoothscale(picture, (width // k, height // k))
 
 
+def ring(size: int, share: float, color: Color, hot: bool = False) -> pygame.Surface:
+    """A round measure from nothing to full: a dark disc with a track round it, and that share
+    of the track filled, clockwise from the top. `hot` puts an ember in the middle of it."""
+    k = ICON_DETAIL
+    side = size * k
+    middle = side / 2
+    picture = pygame.Surface((side, side), pygame.SRCALPHA)
+    pygame.draw.circle(picture, (*darker(PALETTE["ink"], 0.3), 235), (middle, middle), middle)
+    width = max(k, round(side * 0.2))
+    outer = middle - max(k, round(side * 0.08))
+    inner = outer - width
+    pygame.draw.circle(picture, (*lighter(PALETTE["ink"], 0.24), 255), (middle, middle), outer, width)
+    share = max(0.0, min(1.0, share))
+    if share > 0:
+        steps = max(2, round(64 * share))
+        angles = [-math.pi / 2 + 2 * math.pi * share * step / steps for step in range(steps + 1)]
+        rim = [(middle + outer * math.cos(angle), middle + outer * math.sin(angle)) for angle in angles]
+        hub = [(middle + inner * math.cos(angle), middle + inner * math.sin(angle)) for angle in reversed(angles)]
+        pygame.draw.polygon(picture, (*color, 255), rim + hub)
+    if hot:
+        pygame.draw.circle(picture, (*PALETTE["ember"], 255), (middle, middle), max(k, inner * 0.5))
+        pygame.draw.circle(picture, (*PALETTE["glow"], 255), (middle, middle + inner * 0.12), max(1, inner * 0.24))
+    return pygame.transform.smoothscale(picture, (size, size))
+
+
 class Pen:
     """Draws an icon on a square of `UNITS` a side, whatever size the picture under it is."""
 
@@ -507,6 +532,13 @@ def _unlock(p: Pen) -> None:
     p.box(18.7, 30, 3.6, 8.5, 1, p.cut)
 
 
+def _flame(p: Pen) -> None:
+    p.poly([(25, 3), (37, 21), (40, 31), (34, 42), (24, 45.5), (14, 42), (8, 31), (12, 19), (18, 24)])
+    p.circle(24, 32, 13.4)
+    p.poly([(24.5, 21), (31, 32), (28.5, 40), (20, 40), (17.5, 32)], p.light)
+    p.circle(24.2, 35, 5.6, p.light)
+
+
 def _face(p: Pen) -> None:
     p.circle(24, 24, 20)
     p.circle(16.5, 19.5, 3.1, p.cut)
@@ -547,6 +579,7 @@ GLYPHS: dict[str, Glyph] = {
     "stop": _stop,
     "unlock": _unlock,
     "mood": _face,
+    "push": _flame,
 }
 # The colour each icon is, where it stands alone or on a tile of its own.
 HUES: dict[str, Color] = {
@@ -581,6 +614,7 @@ HUES: dict[str, Color] = {
     "stop": (206, 78, 84),
     "unlock": (108, 168, 96),
     "mood": (244, 198, 78),
+    "push": (236, 112, 48),
 }
 # What is cut into an icon that stands alone, where it is not simply dark.
 CUTS: dict[str, Color] = {"medicine": (206, 58, 54)}

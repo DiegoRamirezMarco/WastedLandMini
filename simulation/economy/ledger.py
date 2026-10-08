@@ -157,8 +157,10 @@ def resource_settings_from_data(data: dict[str, Any]) -> ResourceSettings:
 
 class LedgerSystem:
     def __init__(self) -> None:
-        # The last things written down, the newest last. They are for showing, and are not saved.
+        # The last things written down, the newest last, and how many have been written in
+        # all. They are for showing, and are not saved.
         self.recent: deque[LedgerEntry] = deque(maxlen=RECENT)
+        self.written = 0
 
     def settings(self, world: "SimulationWorld") -> ResourceSettings:
         return world.registries.resources
@@ -223,6 +225,7 @@ class LedgerSystem:
             flows = state.today.setdefault(resource_id, {})
             flows[why] = flows.get(why, 0.0) + units
         self.recent.append(LedgerEntry(world.clock.total_minutes, definition_id, units, why, counted, by, at))
+        self.written += 1
 
     def tick(self, world: "SimulationWorld") -> None:
         """Open the books the first time, close the day when another begins, and once an hour

@@ -164,6 +164,10 @@ class WindowSkin:
         face from another: whose it is, and how it looks right now."""
         return self._kept(("face", key, size, lit), lambda: ui_art.disc(size, ui_art.HUES["people"], face=face, lit=lit))
 
+    def ring(self, size: int, share: float, color: Color, hot: bool = False) -> pygame.Surface:
+        """A round measure with a share of it filled, at a size of the window."""
+        return self._kept(("ring", size, share, color, hot), lambda: ui_art.ring(size, share, color, hot))
+
     def has_own(self, name: str) -> bool:
         """Whether somebody has made a picture to take the place of an icon of that name."""
         return self.illustrations is not None and self.illustrations.find(f"{ICONS_DIR}/{name}.png") is not None

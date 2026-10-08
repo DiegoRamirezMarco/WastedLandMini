@@ -49,7 +49,7 @@ from ui.inventory_view import (
     draw_container_panel,
 )
 from ui.job_board import PANEL_WIDTH as BOARD_WIDTH
-from ui.job_board import draw_job_board, job_board_height, suggest_buttons
+from ui.job_board import board_buttons, draw_job_board, job_board_height
 from ui.labels import (
     COIN_ICON,
     FEELING_LABELS,
@@ -371,7 +371,7 @@ class Hud:
             )
         if not self.jobs_open:
             return fixed
-        return fixed + suggest_buttons(self.font, self.jobs_rect(), self.world, self.selected_id)
+        return fixed + board_buttons(self.font, self.jobs_rect(), self.world, self.selected_id)
 
     def _open_only(self, panel: str) -> None:
         """Open one of the panels that share a corner, or shut it if it is the one open, and shut the rest."""

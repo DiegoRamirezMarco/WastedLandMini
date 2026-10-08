@@ -478,8 +478,9 @@ class WorkSystem:
         speed *= world.research.factor(world, f"{JOB_PACE}{job.job_id}")
         # And so does every level whoever does it has at it.
         speed *= world.crafts.pace(world, resident, job)
-        # And being pushed, for as long as it lasts.
-        speed *= world.rush.pace(world, resident)
+        # And being pushed, for as long as it lasts: at the post that is theirs, and no other.
+        if resident.job_id == job.job_id:
+            speed *= world.rush.pace(world, resident)
         return speed
 
     def progress(self, world: "SimulationWorld", resident: Resident) -> float | None:
@@ -502,7 +503,8 @@ class WorkSystem:
             # What is worked out goes by the head, and by nothing that is made with the hands.
             pace = world.health.work_pace(world, resident) * self.mood_pace(resident)
             pace *= world.attributes.factor(world, resident, MIND, "study") * world.crafts.pace(world, resident, job)
-            pace *= world.rush.pace(world, resident)
+            if resident.job_id == job.job_id:
+                pace *= world.rush.pace(world, resident)
         per_day = None
         if job.produces is not None and pace > 0:
             shift = sum((end - start) % 24 * 60 for start, end in job.shifts)

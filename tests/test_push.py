@@ -289,6 +289,15 @@ class PushOrderTests(unittest.TestCase):
         self.assertTrue(raul.activity.ordered)
         self.assertEqual(world.rush.pace(world, raul), world.registries.rush.pace)
 
+    def test_what_they_would_make_of_another_post_is_none_the_more_for_pushing_theirs(self) -> None:
+        world = _settled()
+        raul, jobs = world.residents["raul"], world.registries.jobs
+        before = {job_id: world.work.expected(world, raul, jobs[job_id]).pace for job_id in ("farmer", "cook", "researcher")}
+        self.assertTrue(_push(world, "raul").ok)
+        pushed = {job_id: world.work.expected(world, raul, jobs[job_id]).pace for job_id in before}
+        self.assertEqual(pushed["farmer"], before["farmer"] * world.registries.rush.pace)
+        self.assertEqual((pushed["cook"], pushed["researcher"]), (before["cook"], before["researcher"]))
+
     def test_pushed_more_is_made_in_the_same_shift_and_it_takes_more_out_of_them(self) -> None:
         came = {}
         for pushed in (False, True):

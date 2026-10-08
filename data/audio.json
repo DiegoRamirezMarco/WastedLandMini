@@ -20,7 +20,7 @@
     "death": "toll",
     "work_started": "click",
     "item_bought": "coins",
-    "item_broke": "clank",
+    "item_broke": "clank", "work_accident": "crash",
     "job_offered": "alert",
     "job_changed": "resolve",
     "post_vacant": "missing",

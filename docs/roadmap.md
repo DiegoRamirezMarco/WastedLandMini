@@ -4303,13 +4303,43 @@ Still open here:
 - Whoever studies loses none of what was worked out: there is nothing of theirs to spoil
 - The figures are a first guess
 
-### P59 — Rings over posts, and a board that puts people to them (needs S52) — planned
-- **A ring over each post somebody is at** fills as the next unit comes, on the roof for one
-  under a roof
-- **A unit made is seen to come out**, with its picture, and says nothing in the log
-- **Whoever is pushed is seen to be**
-- **The board says what whoever is selected would make of each post**, with `Poner` beside
-  `Proponer`, and `Apretar` for whoever holds it. The wheel has `Apretar` under `Trabajo`
+### P59 — Rings over posts, and a board that puts people to them (needs S52) — done
+- **A ring over whoever is at a post that makes something** fills as the next unit comes
+  (`ui/work_marks.py`), and for whoever studies, as what is being worked out does. It is
+  beside the bar that says how much of the shift has gone (P32), which is as it was
+- **Over their face where a roof is over them, and from afar**, smaller, as the bar is
+- **A unit made is seen to come out**: its picture and `+1` beside the ring, rising and
+  gone in a moment. What is lost at a post is seen the same way, in red. They come of the
+  settlement's books (S51), and say nothing in the log
+- **Whoever is pushed is seen to be**: a flame over their head for as long as it lasts, and
+  their ring in red with an ember in the middle of it. When it goes wrong, a mark over them
+  and a crash
+- **The board says what whoever is selected would make of each post** (`ui/job_board.py`),
+  at the end of its line: `x1,6 · 30/día`, in green where that is more than a plain pair of
+  hands would and in red where it is less
+- **`Poner` beside `Proponer`** on a post that stands free: the first is an order, and they
+  have it at once; the second asks, as it did. On the post that is theirs, `Apretar` while
+  they have a shift ahead, `va apretando` once they are, and `Quitar`
+- **The wheel has `Apretar` under `Trabajo`**, with a flame of its own, and what they were
+  told is by their panel with the rest
+- Drawn by the game at the resolution of the window, and small where there is none, with
+  `illustrations/ui/icons/push.png` to take the place of the flame
+
+Decided without asking:
+- **The ring is over whoever works, and not over the thing they work at.** Over a bed of the
+  garden it fell on the head of whoever stood by it, and was thrown out
+- **The bar of the shift stays**, since it was asked for by name (P32)
+- **What they would make of another post takes no account of their pushing their own**
+- **Told to leave a post they are pushing, it waits its turn** as anything they are told does
+  (S50): `Dejarlo todo` first, for it to be done there and then
+- A post that is somebody's cannot be given to another from the board: they are taken off
+  it first
+
+Still open here:
+- Units that come out faster than they can be seen are over one another, with time at its
+  fastest
+- Nothing of this has been seen on a real window by whoever made it: the frames it was judged
+  by were drawn without one
 
 ### S53 — Room for things (needs S51) — planned
 - **A store holds so much, and is for some things and not others**, as data

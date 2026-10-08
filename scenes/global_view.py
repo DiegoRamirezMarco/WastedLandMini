@@ -152,6 +152,8 @@ from ui.labels import away_residents, has_birthday
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
 from ui.panel import draw_item, draw_panel
 from ui.task_bar import draw_task_bar, task_bar_rect, task_progress
+from ui.job_board import LEAVE_KIND, LEAVE_POST_INTENT, PUSH_KIND, PUSH_POST_INTENT, PUT_KIND
+from ui.work_marks import RING, SMALL_RING, WorkPops, draw_ring
 from ui.tutorial_panel import (
     ACKNOWLEDGE_INTENT,
     BUILDING_ART_FOCUS,
@@ -204,9 +206,13 @@ NOBODY_TO_MAKE_IT = "Elige antes a quien deba hacerlo, o di de quién es la casa
 NEWCOMER_EVENT = "newcomer_joined"
 NO_HOUSE_YET = "{name} no tiene casa y dormirá al raso: entra en un edificio y dásela en Casa"
 NOWHERE_TO_ENTER = "No hay ningún edificio ahí en el que entrar"
-BOBBING_ICONS = ("alert", "sleep")
+BOBBING_ICONS = ("alert", "sleep", "push")
 # What someone is doing is shown in a bubble over their head. These are not: they mark who it is.
-BARE_ICONS = ("selected", "heart", "friend", "birthday")
+BARE_ICONS = ("selected", "heart", "friend", "birthday", "push")
+# Over whoever is pushing their post, and over whoever it has just gone badly for.
+PUSH_ICON = "push"
+ACCIDENT_EVENT = "work_accident"
+ACCIDENT_MARK = "alert"
 BIRTHDAY_ICON = "birthday"
 # Two who marry wear it over their heads for this many seconds.
 WEDDING_EVENT = "couple_married"
@@ -434,6 +440,10 @@ class GlobalView:
         self.roofs_on = True
         # Canvas position of the mouse, as far as the scene has been told.
         self.pointer: tuple[int, int] | None = None
+        # What has just come out of a post, while it is seen to, and where the ring of each
+        # post somebody is at was last drawn, by who is at it.
+        self.pops = WorkPops()
+        self.work_rings: dict[str, pygame.Rect] = {}
         # Tiles under a roof that is on this frame: what stands there is not drawn.
         self._hidden: set[Tile] = set()
         # Buildings that stand closed this frame, by room ID.
@@ -799,6 +809,7 @@ class GlobalView:
             self.bodies.update(dt, self.world)
         self.hud.update(dt)
         self.hud.pointer = self.pointer
+        self.pops.take(self.world, self.time)
         self._keep_listening()
         pressed = pygame.key.get_pressed()
         for (dx, dy), keys in SCROLL_KEYS.items():
@@ -931,6 +942,8 @@ class GlobalView:
                 found = str(event.data.get("discovery") or "")
                 if found in self.world.discoveries and not self.world.discoveries[found].named:
                     self.requested_discovery = found
+            elif event.event_type == ACCIDENT_EVENT and event.participants:
+                self._mark(event.participants[0], ACCIDENT_MARK)
             elif event.event_type == WEDDING_EVENT:
                 for resident_id in event.participants:
                     self._mark(resident_id, WEDDING_MARK, WEDDING_SECONDS)
@@ -1167,6 +1180,13 @@ class GlobalView:
             self.requested_item_editor = intent[1]
         elif isinstance(intent, tuple) and intent[0] == "suggest":
             self._suggest_job(intent[1])
+        elif isinstance(intent, tuple) and intent[0] == "put":
+            # Putting somebody to a post from the board is an order, as it is from the wheel.
+            self._affect(PUT_KIND, intent[1])
+        elif intent == PUSH_POST_INTENT:
+            self._affect(PUSH_KIND, None)
+        elif intent == LEAVE_POST_INTENT:
+            self._affect(LEAVE_KIND, None)
         elif isinstance(intent, tuple) and intent[0] == "study":
             # What is studied is the player's to say. Whoever holds the post gets on with it.
             self.hud.notify(self.world.apply_command(SetResearchCommand(intent[1])).message)
@@ -1576,6 +1596,7 @@ class GlobalView:
         self.hitboxes = {}
         self.container_hitboxes = {}
         self.task_bars = {}
+        self.work_rings = {}
         self.placards = {}
         self._overlays = []
         self._doll_draws = []
@@ -1613,12 +1634,29 @@ class GlobalView:
         self._draw_at_gate()
         for overlay in self._overlays:
             overlay()
+        self._draw_work()
         self.canvas.set_clip(None)
 
         self._seat_wheel()
         self.hud.render()
         self._draw_minimap(region)
         self._draw_away()
+
+    def _draw_work(self) -> None:
+        """Each unit that has just come out of a post, for a moment, beside the ring of whoever
+        made it, or over them if they have since left it."""
+        for pop in self.pops.pops:
+            ring = self.work_rings.get(pop.by or "")
+            maker = self.hitboxes.get(pop.by or "")
+            if ring is not None:
+                # To the side the ring is on, clear of their name.
+                spot = (ring.left - 11, ring.bottom)
+            elif maker is not None:
+                spot = (maker.centerx, maker.top)
+            else:
+                continue
+            if self.viewport.collidepoint(spot):
+                self.pops.draw(self.canvas, self.font, pop, spot, self.time, self.icons.small(pop.definition_id))
 
     def _draw_zone_names(self) -> None:
         """A sign over each named place, on the wall at its back, so that the map can be read."""
@@ -2862,11 +2900,26 @@ class GlobalView:
         if not unseen and self.under_sign(resident) == SMOKE_SIGN:
             self._draw_smoke(resident, top_centre)
         done = task_progress(self.world, resident)
+        here = resident.resident_id in self.world.residents
+        coming = self.world.work.progress(self.world, resident) if here else None
+        top = y
         if done is not None:
             bar = task_bar_rect((x, y), small=self.overview)
             draw_task_bar(self.canvas, bar, done)
             self.task_bars[resident.resident_id] = bar
-            y = bar.top - 1
+            top = bar.top - 1
+        if coming is not None:
+            # At a post that makes something: beside how much of the shift has gone, a ring
+            # that fills as the next unit comes.
+            side = SMALL_RING if self.overview else RING
+            beside = task_bar_rect((x, y), small=self.overview)
+            # Its foot level with the bar's, and a little room between the two.
+            centre = (beside.left - (side + 1) // 2 - 2, beside.bottom - (side + 1) // 2)
+            pushed = self.world.rush.pushed(self.world, resident)
+            ring = draw_ring(self.canvas, self.hud.skin, centre, coming, pushed, side)
+            self.work_rings[resident.resident_id] = ring
+            top = min(top, ring.top - 1)
+        y = top
         if with_name:
             y -= CELL_SIZE[1]
             name = self.font.render(resident.name, PALETTE["paper"])
@@ -2875,6 +2928,9 @@ class GlobalView:
         if resident.resident_id in self.world.residents and has_birthday(self.world, resident):
             # A year more today: it is worn all day.
             icons.append(BIRTHDAY_ICON)
+        if resident.resident_id in self.world.residents and self.world.rush.pushed(self.world, resident):
+            # Pushing their post: it is over their head for as long as it lasts.
+            icons.append(PUSH_ICON)
         if resident.resident_id == self.hud.selected_id:
             icons.append("selected")
         else:

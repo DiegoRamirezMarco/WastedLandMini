@@ -154,8 +154,16 @@ python -m simulation.headless --days 7 --seed 7
 - `1` `2` `3`: game speed x1, x4, x16
 - `L`: open or close the event log
 - `J`: open or close the job board: who holds each post and which stand empty. With a resident
-  selected, `Proponer` beside a post puts it to them. They may say no, and cannot be pressed
-  again for a while
+  selected, each post says at the end of its line what they would make of it: how many times
+  as fast as a plain pair of hands, and how many units a day. `Poner` beside a post that
+  stands free gives it to them there and then; `Proponer` puts it to them, and they may say
+  no, and cannot be pressed again for a while. On the post that is theirs, `Apretar` has
+  them work it harder for what is left of their shift, and `Quitar` takes them off it
+- Whoever is at a post that makes something has a ring over them, beside the bar of their
+  shift, that fills as the next unit comes; each unit is seen to come out. Pushed, they make
+  half as much again, tire faster, and have a flame over them and their ring in red: any
+  unit may end with them hurt, their tool broken or what they made lost, the likelier the
+  more tired they are and the less the better they are at it
 - With nobody selected the panel on the right lists everybody: click a name to go to them. So
   does a click on anyone listed under a resident's relationships
 - While whoever is selected is talking with someone, the dock under the map shows the two of them
