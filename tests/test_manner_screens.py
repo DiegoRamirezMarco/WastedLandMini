@@ -5,11 +5,17 @@ from pathlib import Path
 
 import pygame
 
+from graphics.bolts import BOLTS, CORE, HIGHEST
+from scenes.global_view import Sparks
 from scenes.hud import MANNERS_INTENT
 from settings import SCALE
 from simulation.commands import SetMannerCommand
 from simulation.residents.activity import Activity
 from ui.resident_panel import TASTES_TAB, manners_hitbox
+
+
+# How near a colour a pixel has to be to count as of it: the very same.
+EXACT = (1, 1, 1, 255)
 
 
 class _Shell(unittest.TestCase):
@@ -110,6 +116,58 @@ class MannersOnTheMapTests(_Shell):
             self.world.apply_command(SetMannerCommand("raul", "fight", manner.manner_id))
             self.assertEqual(self._clip_shown(), manner.clip)
         self.assertEqual(self.view._held, [], "bare hands hold nothing")
+
+    def _count(self, color) -> int:
+        self.view.render()
+        self.game.present()
+        return pygame.mask.from_threshold(self.game.screen, (*color[:3], 255), EXACT).count()
+
+    def _sparks(self) -> list[Sparks]:
+        """What flies from heads in the frame last drawn, from left to right: Raúl's first."""
+        return sorted((entry for entry in self.view._held if isinstance(entry, Sparks)), key=lambda entry: entry.at[0])
+
+    def test_they_have_words_their_own_way_and_bolts_fly_over_their_heads(self) -> None:
+        view, raul, tomas = self.view, self.raul, self.tomas
+        raul.facing, tomas.facing = "right", "left"
+        raul.activity = Activity("chat", partner_id="tomas", using=True)
+        tomas.activity = Activity("chat", partner_id="raul", using=True)
+        view.time = 0.0
+        quiet = self._count(CORE)
+        self.assertEqual(self._sparks(), [], "nothing flies from those who merely talk")
+        raul.activity = Activity("argument", partner_id="tomas", using=True)
+        tomas.activity = Activity("argument", partner_id="raul", using=True)
+        for manner in self.world.registries.manners.of_kind("argue"):
+            self.world.apply_command(SetMannerCommand("raul", "argue", manner.manner_id))
+            self.assertEqual(view._bearing(raul), (manner.clip, manner.rate, None))
+            self.assertEqual(self._clip_shown(), manner.clip)
+        self.assertEqual(len(self._sparks()), 2, "each of the two lets theirs fly")
+        # Lot after lot of them, with nothing in the air between one and the next.
+        most, flown = 0, set()
+        for step in range(40):
+            view.time = step * 0.05
+            shown = self._count(CORE)
+            mine, theirs = self._sparks()
+            flown.add(len(mine.bolts))
+            if mine.bolts:
+                most = max(most, shown)
+                # From their own head, and over it: none across their face.
+                head = view.bodies.plan.anchor("mouth", "right", view.bodies.characters["raul"].pose())
+                self.assertAlmostEqual(mine.at[0], head[0], delta=0.01)
+                self.assertAlmostEqual(mine.at[1], head[1], delta=0.01)
+                self.assertTrue(all(y < 0 for bolt in mine.bolts for _, y in bolt.points))
+                # The lowest of them points at the other, who is to the right; and theirs, back.
+                self.assertGreater(mine.bolts[0].points[3][0], 0.0)
+            if theirs.bolts:
+                self.assertLess(theirs.bolts[0].points[3][0], 0.0)
+        self.assertEqual(flown, {0, BOLTS})
+        self.assertGreater(most, quiet, "and they are seen")
+        # Their name is written above where the bolts fly, not among them.
+        mine = self._sparks()[0]
+        self.assertAlmostEqual(view._top_of(mine)[1], mine.at[1] - HIGHEST)
+        # Come to blows, they fight their way, and the bolts are over.
+        self._fight()
+        self.assertEqual(self._clip_shown(), self.world.manner_of(raul, "fight").clip)
+        self.assertEqual(self._sparks(), [])
 
     def test_they_sit_their_own_way_by_the_fire_at_the_radio_eating_and_drinking(self) -> None:
         view, raul = self.view, self.raul
@@ -226,8 +284,8 @@ class MannerEditorTests(_Shell):
         for index, box in enumerate(boxes):
             self.assertTrue(self.game.canvas.get_rect().contains(box), box)
             self.assertEqual(box.collidelist(boxes[index + 1 :]), -1, box)
-        self.assertEqual(len(editor.picker.rows), 6)
-        self.assertEqual([len(buttons) for _, _, buttons in editor.picker.rows], [3, 3, 3, 3, 3, 4])
+        self.assertEqual(len(editor.picker.rows), 7)
+        self.assertEqual([len(buttons) for _, _, buttons in editor.picker.rows], [3, 3, 3, 3, 3, 3, 4])
         # Before anything is picked, what is lit is what is theirs by default.
         self.assertEqual(editor.chosen()["walk"], world.manner_of(raul, "walk").manner_id)
         for manner_id, manner in world.registries.manners.manners.items():
@@ -263,6 +321,26 @@ class MannerEditorTests(_Shell):
         self.assertEqual(knife, "rusty_knife")
         self.assertIsNone(editor.preview.prop(self.game.world.registries.manners.manners["shoot_hip"]))
         self.assertIsNone(editor.preview.prop(self.game.world.registries.manners.manners["walk_steady"]))
+
+    def test_a_way_of_having_words_is_tried_out_with_its_bolts_and_room_for_them(self) -> None:
+        editor = self._open("raul")
+        preview = editor.preview
+        manners = self.game.world.registries.manners.manners
+        size = (240, 240)
+
+        def lit(manner_id: str, seconds: float) -> list[int]:
+            """The rows of the picture of a manner being tried out that the bolts in it go from and to."""
+            preview.time = seconds
+            picture = preview.picture(size, None, manners[manner_id])
+            boxes = pygame.mask.from_threshold(picture, (*CORE[:3], 255), EXACT).get_bounding_rects()
+            return [min(box.top for box in boxes), max(box.bottom for box in boxes)] if boxes else []
+
+        seen = {manner_id: [lit(manner_id, step * 0.05) for step in range(20)] for manner_id in ("argue_stomp", "walk_steady")}
+        self.assertTrue(all(not rows for rows in seen["walk_steady"]), "nothing flies from somebody walking")
+        flying = [rows for rows in seen["argue_stomp"] if rows]
+        self.assertTrue(flying, "bolts fly while they have words")
+        self.assertLess(len(flying), 20, "lot after lot, not all the time")
+        self.assertGreater(min(rows[0] for rows in flying), 0, "none of them is cut off by the top of the place")
 
     def test_with_nobody_living_there_it_does_not_open(self) -> None:
         self.game.new_game(seed=7)

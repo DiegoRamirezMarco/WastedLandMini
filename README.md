@@ -173,8 +173,9 @@ python -m simulation.headless --days 7 --seed 7
   settlement on one screen, the dead and whoever never came included. Drag it or use the
   arrows to move over it. A click on somebody who lives here goes back to the map with
   them selected; `Esc` goes back as it was
-- `Maneras` in a resident's panel, or `F6`: choose how they walk, eat, fight, shoot and use a
-  knife, three ways of each, with the one picked seen moving beside them. It changes how they
+- `Maneras` in a resident's panel, or `F6`: choose how they walk, eat, fight, shoot, use a
+  knife and have words with somebody, three ways of each, and how they sit, with the one
+  picked seen moving beside them. It changes how they
   look doing it and nothing else, and is theirs as soon as it is picked. `Esc` goes back
 - `Dibujar` in the menu, or `F2`: draw the selected resident. Paint their body and their head
   over the guide, watch them move as you go, and save: from then on that is how they look, in the

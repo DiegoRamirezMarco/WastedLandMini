@@ -329,7 +329,7 @@ between the feet, with `y` growing downwards. Angles are in degrees.
 - `clips`: for each view, a list of keyframes that are run through in a loop. A keyframe gives
   bones an angle from rest, or `[angle, scale]` to make one look shorter as well, and may shift
   the whole body with `root`. A positive angle swings a hanging limb to the right of the screen.
-  The game uses `idle` and `argue`; walking, eating and fighting use whichever clip the
+  The game uses `idle`; walking, eating, fighting and having words use whichever clip the
   resident's manner names (see Manners below), and work whichever `data/poses.json` names
   for it (see Work, as it is shown, below). A clip that is missing stands still. `carry`,
   arms held out for a load, is there for whoever wants it: the game lays it over nobody now.
@@ -468,13 +468,16 @@ A resident's look is `assets/sprites/bodies/<resident_id>.png`, laid out as in
 
 ## Manners
 
-`data/manners.json` says in what ways a resident can walk, eat, fight and sit. Each resident has one
+`data/manners.json` says in what ways a resident can walk, eat, fight, have words with
+somebody and sit. Each resident has one
 of each kind: chosen by the player where the first resident is made or under `Maneras`, and
 otherwise one that is always the same for the same resident ID. A manner changes how a thing
 looks and nothing of what happens.
 
-- `kinds`: each with a `name` and the `occasion` on which it shows: `walk`, `eat`, `fight` or
-  `sit`. Sitting is no doing of its own: a kind of it lists under `actions` what a resident has
+- `kinds`: each with a `name` and the `occasion` on which it shows: `walk`, `eat`, `fight`,
+  `argue` or `sit`. `argue` is any exchange with another resident that is `hostile` and does
+  no `damage` (`data/social.json`): while it lasts bolts fly over the heads of both, whatever
+  their manner of it. Sitting is no doing of its own: a kind of it lists under `actions` what a resident has
   to be at for it to show, such as `relax`, `listen`, `eat` or `drink`, the actions of the
   objects used. While they eat sitting, the clip of their way of sitting is the body's and
   that of their way of eating is laid over it: the bones an eating clip moves do as it says.

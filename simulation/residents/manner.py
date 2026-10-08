@@ -1,4 +1,5 @@
-"""The ways a resident has of doing what everybody does: walking, eating, fighting, sitting. All of it data.
+"""The ways a resident has of doing what everybody does: walking, eating, fighting, having
+words, sitting. All of it data.
 
 Which way is theirs changes nothing of what happens: it is how it looks, and it is kept with them.
 """
@@ -9,8 +10,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 # What a body is doing when a kind of manner shows.
-WALK, EAT, FIGHT, SIT = "walk", "eat", "fight", "sit"
-OCCASIONS = (WALK, EAT, FIGHT, SIT)
+WALK, EAT, FIGHT, ARGUE, SIT = "walk", "eat", "fight", "argue", "sit"
+OCCASIONS = (WALK, EAT, FIGHT, ARGUE, SIT)
 IDLE_CLIP = "idle"
 
 

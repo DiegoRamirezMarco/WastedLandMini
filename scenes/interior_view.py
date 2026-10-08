@@ -856,10 +856,13 @@ class InteriorView:
                 self._show_held(target, held, (corner[0] + foot[0], corner[1] + foot[1]), detail)
 
         hitbox = pygame.Rect(self._to_canvas(box.topleft), (max(4, box.width // SCALE), max(4, box.height // SCALE)))
+        # As on the map, their name is not written over what flies from their head.
+        tops = [foot[1] + round(top[1] * detail) for top in map(view._top_of, held) if top is not None]
+        over = min(hitbox.top, self._to_canvas((box.left, min([box.top, *tops])))[1])
 
         def label() -> None:
             view.hitboxes[resident.resident_id] = hitbox
-            view._draw_overhead(resident, hitbox.midtop, with_name=True)
+            view._draw_overhead(resident, (hitbox.centerx, over), with_name=True)
 
         return (foot[1], draw, label)
 

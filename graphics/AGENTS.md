@@ -8,5 +8,6 @@
 - The doll's paper is told by its size. Laying it out anew means a new size, the layout of today put at the head of `doll.former`, every part moved by whole pixels and left with all that was its own; drawings already made are never edited, they are laid out anew each time they are read.
 - Bending needs numpy and must stay optional: without it, or with a bone of the limb gone, the jointed parts are drawn. Bent limbs are kept and shown again; only so many new ones are bent in a frame.
 - How what residents do is shown (`graphics/poses.py`, `data/poses.json`) is data and changes nothing of what happens: which clip a kind of work has, with its tool and without, and where the handle is on the picture of what is held. Whether somebody has the tool is the simulation's to say.
+- What flies about a body for an instant (crumbs from a bite, bolts from a quarrel: `graphics/bolts.py`) is worked out anew each frame from whose it is and the scene's own time. Nothing of it is kept, none of it uses the simulation's randomness, and none of it is saved.
 - Missing custom assets must have a safe fallback.
 - Follow the style contract in `docs/visual-style.md`: draw on the internal canvas, take colours from `graphics/palette.py`, load images through `AssetStore`.

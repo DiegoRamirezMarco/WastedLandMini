@@ -5,6 +5,7 @@
     "fight": {"name": "Pelear", "occasion": "fight"},
     "shoot": {"name": "Disparar", "occasion": "fight", "weapon_tag": "firearm"},
     "knife": {"name": "Cuchillo", "occasion": "fight", "weapon_tag": "blade"},
+    "argue": {"name": "Discutir", "occasion": "argue"},
     "sit": {"name": "Sentarse", "occasion": "sit", "actions": ["relax", "listen", "eat", "drink"]}
   },
   "manners": {
@@ -67,6 +68,18 @@
     "knife_overhand": {
       "kind": "knife", "name": "Puñalada", "clip": "knife_overhand", "rate": 1.0,
       "description": "El cuchillo en alto, y lo clava hacia abajo."
+    },
+    "argue_lean": {
+      "kind": "argue", "name": "Encarado", "clip": "argue", "rate": 1.2,
+      "description": "Se le echa encima al otro, con el puño por delante."
+    },
+    "argue_stomp": {
+      "kind": "argue", "name": "Pataleta", "clip": "argue_stomp", "rate": 1.1,
+      "description": "Los puños atrás, el cuerpo echado encima del otro y pisotones contra el suelo."
+    },
+    "argue_arms": {
+      "kind": "argue", "name": "Aspavientos", "clip": "argue_arms", "rate": 1.0,
+      "description": "Los brazos al cielo, contra los muslos y otra vez arriba."
     },
     "sit_cross": {
       "kind": "sit", "name": "Piernas cruzadas", "clip": "sit_cross", "rate": 0.2,

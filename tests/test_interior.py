@@ -369,6 +369,32 @@ class InsideABuildingTests(unittest.TestCase):
         self.view.render()
         self.assertTrue(layout.cell > 0)
 
+    def test_whoever_has_words_in_there_has_bolts_over_their_head_as_on_the_map(self) -> None:
+        self._indoors("ines", "south_house")
+        self._indoors("raul", "south_house")
+        ines, raul = self.world.residents["ines"], self.world.residents["raul"]
+        raul.x, raul.y = ines.x + 1, ines.y
+        plan = self.view.bodies.plan
+        pose = plan.pose("right", "idle", 0.0)
+        ines.activity = Activity("chat", partner_id="raul", using=True)
+        self.assertEqual(self.view.interior.in_hand(ines, "right", pose, 0.0, None), [])
+        ines.activity = Activity("argument", partner_id="raul", using=True)
+        raul.activity = Activity("argument", partner_id="ines", using=True)
+        held = self.view.interior.in_hand(ines, "right", pose, 0.0, None)
+        self.assertEqual([type(entry).__name__ for entry in held], ["Sparks"])
+        self.assertEqual(held[0].at, plan.anchor("mouth", "right", pose), "from their head, by where their feet are")
+        self.assertEqual(self.view._held, [], "what is held on the map is left as it was")
+        # Their name is written above where the bolts fly, in here as out there.
+        self.assertLess(self.view._top_of(held[0])[1], held[0].at[1] - 8)
+        self.view.enter("south_house")
+        seen = set()
+        for step in range(12):
+            self.view.time = step * 0.05
+            self.view.render()
+            self.assertIn("ines", self.view.hitboxes)
+            seen.add(bool(self.view.interior.in_hand(ines, "right", pose, 0.0, None)[0].bolts))
+        self.assertEqual(seen, {True, False}, "lot after lot of them")
+
     def test_over_a_face_on_a_roof_is_what_they_are_doing_in_there(self) -> None:
         view, world = self.view, self.world
         self._indoors("ines", "south_house")

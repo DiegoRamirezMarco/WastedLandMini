@@ -2,6 +2,7 @@
 
 import pygame
 
+from graphics.bolts import HIGHEST, BoltArt, bolts
 from graphics.doll import DOLL_FACINGS, Doll, DollStore, draw_doll
 from graphics.doll_guide import reference
 from graphics.item_icons import ItemIcons
@@ -9,7 +10,7 @@ from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from scenes.global_view import HELD_AHEAD, HELD_SIZE
 from simulation.registries import BuiltInRegistries
-from simulation.residents.manner import WALK, MannerDefinition
+from simulation.residents.manner import ARGUE, WALK, MannerDefinition
 from skeleton.character import Character
 from skeleton.plan import SkeletonPlan
 from skeleton.rig import Skeleton
@@ -21,6 +22,10 @@ GROUND = 0.13
 # Turns of the walking clip a second at one turn to the stride: slower than on the map, to be looked at.
 WALK_RATE = 1.1
 HAND_ANCHOR = "held_item"
+# Whoever has words lets bolts fly from here, and is shown smaller by as much as leaves them
+# room over the head: how much of their flight the place has room for as it is.
+HEAD_ANCHOR = "mouth"
+ROOM_OVER = 4.0
 # Bodies kept moving, one for each doll and manner on show. Past this many they are all let go.
 MOST_BODIES = 16
 
@@ -46,6 +51,7 @@ class MannerPreview:
         self.icons = icons
         self.time = 0.0
         self._example: Doll | None = None
+        self._bolt_art = BoltArt()
         # The body each doll is shown on for each manner, moving on its springs as on the map.
         self._bodies: dict[tuple[str | None, str], Character] = {}
 
@@ -83,11 +89,13 @@ class MannerPreview:
         items = self.registries.items
         return next((item_id for item_id in items.ids() if kind.prop_tag in items.get(item_id).tags), None)
 
+    def _occasion(self, manner: MannerDefinition) -> str | None:
+        kind = self.registries.manners.kinds.get(manner.kind)
+        return kind.occasion if kind is not None else None
+
     def phase(self, manner: MannerDefinition) -> float:
         """How far through its clip the body is right now, in turns."""
-        kind = self.registries.manners.kinds.get(manner.kind)
-        walking = kind is not None and kind.occasion == WALK
-        return self.time * manner.rate * (WALK_RATE if walking else 1.0)
+        return self.time * manner.rate * (WALK_RATE if self._occasion(manner) == WALK else 1.0)
 
     def picture(self, size: tuple[int, int], body_id: str | None, manner: MannerDefinition) -> pygame.Surface:
         """The body part-way through the manner, on a picture of its own with the ground under its feet."""
@@ -103,7 +111,8 @@ class MannerPreview:
         pose = body.local_pose()
         skeleton = Skeleton(plan, facing)
         skeleton.set_pose(pose)
-        detail = size[1] / PLACE_HEIGHT
+        arguing = self._occasion(manner) == ARGUE
+        detail = size[1] / (PLACE_HEIGHT + (max(0.0, HIGHEST - ROOM_OVER) if arguing else 0.0))
         origin = (size[0] / 2 - detail * 2, float(ground))
         draw_doll(picture, doll, plan, skeleton, origin, detail)
         held = self.prop(manner)
@@ -112,6 +121,11 @@ class MannerPreview:
             thing = self.icons.held(held, max(3, round(HELD_SIZE * detail)))
             centre = (round(origin[0] + (hand[0] + HELD_AHEAD) * detail), round(origin[1] + hand[1] * detail))
             picture.blit(thing, thing.get_rect(center=centre))
+        head = plan.anchor(HEAD_ANCHOR, facing, pose)
+        if arguing and head is not None:
+            # Having words, bolts fly at whoever it is with: here, at nobody, the way they face.
+            at = (origin[0] + head[0] * detail, origin[1] + head[1] * detail)
+            self._bolt_art.draw(picture, bolts(self.time, 1.0), at, detail)
         return picture
 
     def draw(self, rect: pygame.Rect, body_id: str | None, manner: MannerDefinition | None) -> None:

@@ -216,7 +216,10 @@ class SolesTests(unittest.TestCase):
         self.assertGreater(footing.level, 0.0)
         self.assertGreater(footing.hold, 0.0)
         turned = 0
-        for clip in ("walk", "walk_shuffle", "walk_swagger", "work", "hoe", "weed", "hammer", "argue", "fight", "eat", "stand"):
+        for clip in (
+            "walk", "walk_shuffle", "walk_swagger", "work", "hoe", "weed", "hammer", "argue", "argue_stomp", "argue_arms",
+            "fight", "eat", "stand",
+        ):
             for step in range(24):
                 phase = step / 24
                 bones = self.plan.every_bone(self.plan.turned("doll", clip, phase))

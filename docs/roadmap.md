@@ -3895,6 +3895,46 @@ Still open here:
 - A tree stands in its bed from the day it is learned: it does not grow before it gives
 - One bed shows one way of growing, the last learned, whatever else its farmer grows there
 
+### P56 — Words had each their own way, with bolts over their heads (needs P50) — done
+The user: "la animacion de discutir debe ser tambien 3 animaciones elegibles en maneras, y
+cuando discuten salen rayos". Until now everybody who had words with somebody did it the one
+way, and nothing but a red bubble over their heads said they were at it.
+- **Having words is a kind of manner**: `Discutir`, under `Maneras` and where the first
+  resident is made, with three ways to pick from like the rest. `Encarado` is how everybody
+  did it: at the other all the time, leaning in with a hand in their face. `Pataleta`: fists
+  behind them, the body thrown at the other from the waist, and a foot brought down hard,
+  twice. `Aspavientos`: both arms thrown up over their head, down against their thighs,
+  held out, and up again
+- Whoever was never given one has one of the three for good, by who they are, as with the
+  other kinds: a settlement no longer argues all alike
+- **Bolts fly while they have words**, as in a strip: jagged, bright, with the dark line of
+  everything else round them. Three at a time and a couple of lots a second, from over the
+  head of each of the two, in a fan that leans towards the other: out fast, then slower, and
+  gone before the next lot. No two heads let theirs fly in step
+- **They are over heads and never across a face**, and a name is written above where they
+  fly for as long as the quarrel lasts, instead of among them
+- On the map, inside buildings and where a manner is tried out, which shows the body a
+  little smaller to leave them room. The small bodies shown without a window have them too
+- Once it comes to blows they fight their own way, as before, and there are no bolts
+- Nothing of a bolt is kept: which there are and where follows from whose head it is and
+  the scene's own time. It is presentation: real time, none of the simulation's randomness,
+  nothing saved
+
+Decided without asking:
+- A way of pointing a finger at the other was made first and thrown out. With arms as short
+  as these it could not be told from the first way, side by side. The tantrum took its place
+- The bolts go up from each head and not from one face to the other: one tile apart, bolts
+  between the two hid both faces, the arms and the names
+- How many bolts, how often and of what shape is in `graphics/bolts.py`, not in data
+
+Still open here:
+- A quarrel makes no sound of its own
+- Seen from the front, the small bodies shown without a window tell the three ways apart
+  by little: their keys from the front are few
+- Two who quarrel one above the other on the map both look where they last walked, and
+  their bolts lean that way
+- Nothing of this has been seen on a real window by whoever made it
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

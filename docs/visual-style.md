@@ -348,6 +348,12 @@ gradients and any colour.
   the mouth. Each bite throws a dozen crumbs: chips of the food's own colours, lit from the upper
   left, with no line round them, which are tossed up, fall to the eater's feet, hop once and fade
   there before the next bite. From afar a crumb is a square of a pixel or two.
+- **Bolts fly from whoever has words with somebody**, as in a strip: jagged, with a broad tail,
+  a step half-way and a point, `glow` with the dark line of everything else round them. Three
+  at a time and a couple of lots a second, in a fan over the head that leans towards the
+  other: out fast and then slower, and gone before the next lot. They are over heads and
+  never across a face, and no two heads let theirs fly in step. A name is written above
+  where they fly for as long as the quarrel lasts. Once it comes to blows there are none.
 - An object that displays a container's contents, such as a shop's shelf, is drawn bare and the
   game puts the stock on it, one half-size icon per unit, a little of everything. Its sprite
   leaves room for them: on the 32×32 shelf, three 8×8 places on each of two boards.
@@ -470,11 +476,15 @@ each bone, and the game draws it in whatever pose it is in.
 - Poses are clips of keyframes in the same file: how far each bone is turned from rest and,
   seen from the front, how much shorter it looks when it points at the viewer. Standing, walking,
   working, arguing, fighting and carrying are clips. Walking keeps step with the ground covered.
-- **Walking, eating, fighting and sitting are done each resident's own way.** There are three
-  clips for each of the first three, three more for fighting with a knife and with a gun, and
-  four ways of sitting: which one a body goes through is its resident's manner
-  (`data/manners.json`). A weapon is seen in the hand while its owner
-  fights with it.
+- **Walking, eating, fighting, having words and sitting are done each resident's own way.**
+  There are three clips for each of the first three, three more for fighting with a knife
+  and with a gun, three for having words and four ways of sitting: which one a body goes
+  through is its resident's manner (`data/manners.json`). A weapon is seen in the hand while
+  its owner fights with it.
+- **Nobody would take one way of having words for another.** One is at the other all the
+  time, leaning in with a hand in their face. One has their fists behind them, throws their
+  body at the other from the waist and stamps the ground. One throws both arms up over
+  their head, brings them down against their thighs and holds them out.
 - **Work looks like the work it is** (`data/poses.json`). In the garden whoever has a hoe
   takes it by the handle in both hands, raises it over their head, holds it there an instant
   and brings it down into the ground ahead, then drags it back; whoever has none, or a broken

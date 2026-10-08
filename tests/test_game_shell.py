@@ -1676,7 +1676,7 @@ class GameShellTests(unittest.TestCase):
         raul.activity = Activity("fight", partner_id="tomas", using=True)
         self.assertEqual(clip(), world.manner_of(raul, "fight").clip)
         raul.activity = Activity("argument", partner_id="tomas", using=True)
-        self.assertEqual(clip(), "argue")
+        self.assertEqual(clip(), world.manner_of(raul, "argue").clip)
         raul.activity = Activity("chat", partner_id="tomas", using=True)
         self.assertEqual(clip(), "idle")
         raul.activity = None

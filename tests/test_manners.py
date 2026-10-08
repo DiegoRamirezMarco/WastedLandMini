@@ -4,11 +4,11 @@ import unittest
 from save.save_manager import SaveManager
 from simulation.commands import FoundResidentCommand, SetMannerCommand
 from simulation.registries import builtin_registries
-from simulation.residents.manner import EAT, FIGHT, SIT, WALK, manner_settings_from_data
+from simulation.residents.manner import ARGUE, EAT, FIGHT, SIT, WALK, manner_settings_from_data
 from simulation.world import SimulationWorld
 from skeleton.plan import VIEWS, builtin_plan
 
-KINDS = ("walk", "eat", "fight", "shoot", "knife", "sit")
+KINDS = ("walk", "eat", "fight", "shoot", "knife", "argue", "sit")
 # How many ways there are of each: three of everything, and four of sitting.
 WAYS = {"sit": 4}
 
@@ -17,7 +17,7 @@ class MannerDataTests(unittest.TestCase):
     def setUp(self) -> None:
         self.manners = builtin_registries().manners
 
-    def test_there_are_three_ways_of_walking_eating_fighting_shooting_and_using_a_knife_and_four_of_sitting(self) -> None:
+    def test_there_are_three_ways_of_walking_eating_fighting_shooting_using_a_knife_and_having_words_and_four_of_sitting(self) -> None:
         self.assertEqual(tuple(self.manners.kinds), KINDS)
         for kind_id in KINDS:
             choices = self.manners.of_kind(kind_id)
@@ -51,6 +51,31 @@ class MannerDataTests(unittest.TestCase):
             self.assertLess(pose["head"][1], pose["pelvis"][1], "the head is still up")
             seen.append(tuple(round(value, 1) for joint in ("head", "knee_right", "hand_right") for value in pose[joint]))
         self.assertEqual(len(set(seen)), len(seen), "no two are the same to look at")
+
+    def test_having_words_is_done_three_ways_that_nobody_would_take_for_one_another(self) -> None:
+        self.assertEqual(self.manners.kind_for(ARGUE).kind_id, "argue")
+        self.assertEqual(self.manners.kind_for(ARGUE, ("blade", "firearm")).kind_id, "argue", "whatever they carry")
+        plan = builtin_plan()
+        standing = plan.pose("doll_right")
+        ahead, high, stamped = {}, {}, {}
+        for manner in self.manners.of_kind("argue"):
+            poses = [plan.pose("doll_right", manner.clip, step / 24) for step in range(24)]
+            # How far ahead of its shoulder the hand that is furthest ahead is, all the way round.
+            ahead[manner.manner_id] = [
+                max(pose[f"hand_{side}"][0] - pose[f"shoulder_{side}"][0] for side in ("left", "right")) for pose in poses
+            ]
+            # How high both hands ever are at once, and how far a foot ever comes off the ground.
+            high[manner.manner_id] = max(-max(pose["hand_right"][1], pose["hand_left"][1]) for pose in poses)
+            stamped[manner.manner_id] = max(standing["foot_right"][1] - pose["foot_right"][1] for pose in poses)
+        head = -standing["head"][1]
+        self.assertGreater(min(ahead["argue_lean"]), 3.0, "one is at the other all the time, a hand in their face")
+        self.assertLess(max(ahead["argue_stomp"]), 0.0, "one has their fists behind them")
+        self.assertGreater(stamped["argue_stomp"], 3.0, "and stamps")
+        self.assertGreater(high["argue_arms"], head, "and one throws both arms up over their head")
+        for manner_id in ("argue_lean", "argue_stomp"):
+            self.assertLess(high[manner_id], head * 0.7, manner_id)
+        for manner_id in ("argue_lean", "argue_arms"):
+            self.assertLess(stamped[manner_id], 0.5, f"{manner_id}: on both feet")
 
     def test_sitting_shows_while_they_are_at_something_done_sitting_down(self) -> None:
         self.assertEqual(self.manners.kind_for(SIT).kind_id, "sit")

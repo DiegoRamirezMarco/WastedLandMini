@@ -8,6 +8,7 @@ from graphics.assets import AssetStore
 from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE, BodyRenderer
 from graphics import building_pictures, ground_pictures
 from graphics.building_art import BuildingArtStore, door_columns
+from graphics.bolts import HIGHEST, Bolt, BoltArt, bolts
 from graphics.building_renderer import FACADE_ROWS, BuildingRenderer, building_area
 from graphics.bundle import bundle_height, bundle_picture, ground_blanket
 from graphics.crumbs import Crumb, CrumbArt, crumbs
@@ -126,7 +127,7 @@ from simulation.family.children import Bundle
 from simulation.ai.navigation import seat_at
 from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item_system import USE_ITEM_ACTION
-from simulation.residents.manner import EAT, FIGHT, SIT, WALK
+from simulation.residents.manner import ARGUE, EAT, FIGHT, SIT, WALK
 from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
 from simulation.tastes.taste_system import FOUND_OUT_EVENT, REACTION_EVENT
 from simulation.work.construction import BUILD_ACTION, FINISHED_EVENT
@@ -167,7 +168,8 @@ TILES_PER_STRIDE = 2
 # How far across a step has to take someone, in tiles, for a doll to turn to that side.
 LEAN = 0.05
 # What a body does besides standing and walking, and how many times a second its clip goes round.
-# Walking, eating and fighting are done each resident's own way, and those go by their manner.
+# Walking, eating, fighting and having words are done each resident's own way, and those go
+# by their manner.
 # Work is shown by what the work is (`graphics.poses`).
 WALK_CLIP = "walk"
 ARGUE_CLIP = "argue"
@@ -176,7 +178,7 @@ EAT_CLIP = "eat"
 EAT_ACTION = "eat"
 CLIP_RATES = {ARGUE_CLIP: 1.2, FIGHT_CLIP: 1.5, EAT_CLIP: 1.15}
 # The clip and the rate of whoever has no manner to go by, as on a game with none defined.
-PLAIN_CLIPS = {WALK: WALK_CLIP, EAT: EAT_CLIP, FIGHT: FIGHT_CLIP}
+PLAIN_CLIPS = {WALK: WALK_CLIP, EAT: EAT_CLIP, FIGHT: FIGHT_CLIP, ARGUE: ARGUE_CLIP}
 # The semantic anchors live in the body plan; these only place the mouth a little below and in
 # front of the head joint for each view.
 MOUTH_OFFSETS = {
@@ -303,7 +305,18 @@ class Gripped:
     left: bool
 
 
-Held = InHand | Gripped
+@dataclass(frozen=True)
+class Sparks:
+    """The bolts that fly this frame from somebody who is having words with another: the middle
+    of the head they fly from, in map pixels, the bolts, and how much of its size their body is
+    shown at."""
+
+    at: tuple[float, float]
+    bolts: tuple[Bolt, ...]
+    share: float
+
+
+Held = InHand | Gripped | Sparks
 # A paper doll to put on the window this frame: how far down the map it stands, the doll, and either
 # the skeleton it is laid over or, for someone lying under a blanket, where their neck is. Then
 # how much of its drawn size the body is shown at, and the spot between its feet that it is
@@ -345,6 +358,7 @@ class GlobalView:
         self._doll_draws: list[DollDraw] = []
         self._held: list[Held] = []
         self._crumb_art = CrumbArt()
+        self._bolt_art = BoltArt()
         self._posed: dict[tuple, Skeleton] = {}
         # The game's own small bodies brought down for whoever is not grown, and children in
         # their blankets, each kept at the size it was last shown.
@@ -2124,9 +2138,8 @@ class GlobalView:
                 self._hold_all(resident, facing, character.pose(), spot[1], turn, stride, (grown, sole), clip)
             # What is held up higher than their head, as a meal is by somebody sitting, is not
             # written over: their name goes above it.
-            over = min(
-                [hitbox.top, *(self._canvas_point(thing[1][0], thing[1][1] - HELD_SIZE / 2)[1] for thing in self._held[held:] if not isinstance(thing, Gripped))]
-            )
+            tops = [top for top in map(self._top_of, self._held[held:]) if top is not None]
+            over = min([hitbox.top, *(self._canvas_point(*top)[1] for top in tops)])
             self._overlays.append(
                 lambda: self._draw_overhead(resident, (hitbox.centerx, over), with_name=not asleep, resting=asleep)
             )
@@ -2271,6 +2284,14 @@ class GlobalView:
         interaction = self.world.registries.interactions.get(activity.action)
         return interaction is not None and interaction.hostile and interaction.damage is not None
 
+    def _arguing(self, resident: Resident) -> bool:
+        """Whether a resident is having words with someone right now, and it has not come to blows."""
+        activity = resident.activity
+        if activity is None or not activity.using or activity.partner_id is None:
+            return False
+        interaction = self.world.registries.interactions.get(activity.action)
+        return interaction is not None and interaction.hostile and interaction.damage is None
+
     def _clip_of(self, resident: Resident) -> tuple[str, float]:
         """What the body of someone who is not walking is doing, and how many times a second its clip goes round."""
         return self._bearing(resident)[:2]
@@ -2285,10 +2306,9 @@ class GlobalView:
         if activity.partner_id is not None:
             if self._fighting(resident):
                 return (*self._way_of(resident, FIGHT), None)
-            interaction = self.world.registries.interactions.get(activity.action)
-            if interaction is None or not interaction.hostile:
-                return (IDLE_CLIP, 0.0, None)
-            return (ARGUE_CLIP, CLIP_RATES[ARGUE_CLIP], None)
+            if self._arguing(resident):
+                return (*self._way_of(resident, ARGUE), None)
+            return (IDLE_CLIP, 0.0, None)
         seat = self._seat_of(resident)
         if activity.action == EAT_ACTION:
             clip, rate = self._way_of(resident, EAT)
@@ -2434,6 +2454,8 @@ class GlobalView:
         """Have whatever a resident has in hand shown: the meal they are at, with the bites gone
         from it, what they fight with, or the tool of the work they are at. Nothing for empty
         hands, and what they merely carry is not in them. `stride` is None for somebody standing still."""
+        if self._arguing(resident):
+            self._spark(resident, facing, pose, about)
         meal = self._meal_in_hand(resident)
         weapon = self._weapon_in_hand(resident) if stride is None else None
         tool = self._tool_in_hand(resident) if stride is None else None
@@ -2443,6 +2465,34 @@ class GlobalView:
             self._hold(weapon, facing, pose, ground, about=about)
         elif tool is not None:
             self._hold(tool, facing, pose, ground, about=about, clip=clip)
+
+    def _spark(
+        self, resident: Resident, facing: str, pose: dict[str, tuple[float, float]], about: tuple[float, tuple[float, float]]
+    ) -> None:
+        """Have bolts fly from the head of a resident who is having words with somebody, at them."""
+        head = self.bodies.plan.anchor("mouth", facing, pose)
+        if head is None:
+            return
+        share, (foot_x, foot_y) = about
+        if share < 1.0:
+            head = (foot_x + (head[0] - foot_x) * share, foot_y + (head[1] - foot_y) * share)
+        other = self.world.residents.get(resident.activity.partner_id or "") if resident.activity is not None else None
+        towards = float(other.x - resident.x) if other is not None else 0.0
+        if towards == 0.0:
+            # One above the other on the map: at whichever side they are turned to.
+            towards = -1.0 if facing.endswith("left") else 1.0
+        seed = sum(map(ord, resident.resident_id))
+        self._held.append(Sparks(head, tuple(bolts(self.time, towards, seed)), share))
+
+    def _top_of(self, held: Held) -> tuple[float, float] | None:
+        """The top, in map pixels, of something shown with a resident that their name is to be
+        written above: the meal in their hand, or as high as their bolts ever fly. None for
+        what is held by its handle, which their name is written over as it was."""
+        if isinstance(held, Sparks):
+            return (held.at[0], held.at[1] - HIGHEST * held.share)
+        if isinstance(held, Gripped):
+            return None
+        return (held[1][0], held[1][1] - HELD_SIZE / 2)
 
     def _pocketing(self, resident: Resident, character) -> None:
         """Have a body put a hand to its pocket when its resident has taken something up or
@@ -2456,6 +2506,10 @@ class GlobalView:
         is `detail` of its own and the map's corner is at `origin`."""
         size = max(3, round(HELD_SIZE * detail))
         for held in self._held:
+            if isinstance(held, Sparks):
+                head = (origin[0] + held.at[0] * detail, origin[1] + held.at[1] * detail)
+                self._bolt_art.draw(target, list(held.bolts), head, detail * held.share)
+                continue
             if isinstance(held, Gripped):
                 handle = self.poses.handles[held.item_id]
                 long = handle.long * held.share * detail
