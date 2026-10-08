@@ -103,6 +103,12 @@ Event types emitted so far:
 | `election_called`, `election_held` | A vote for a seat is called, with when it is held (`at`), and held, with the `winner`, whether they `kept` the seat, the `tally` as given out, whether it was `open`, and their `backers` after a show of hands | 50, 60 |
 | `resident_held` | The player stops a resident, who stands and listens | 10 |
 | `order_given` | The player tells a resident to do something, with the `kind` of thing and its `target` in `data` | 25 |
+| `order_queued`, `order_cancelled` | The same, told to somebody who is at something else they were told, so that it waits its turn; and one of them taken back. Each with `kind` and `target` in `data` | 10 |
+| `order_dropped` | Something a resident was told cannot be done when its turn comes, and is let go, with `kind` and `target` in `data` | 15 |
+| `will_changed` | A resident is told to do nothing of their own accord, or given their will back, with `free` in `data` | 20 |
+| `leisure_started` | A resident sets about a pastime alone, with the `pastime` and how they take it (`reaction`, or nothing) in `data` | 6 |
+| `leisure_declined` | Somebody asked to go on somewhere with another does not care to | 12 |
+| `joke_started`, `hug_started`, `flirt_started`, `kiss_started`, `insult_started`, `cards_started`, `stories_started`, `dance_started`, `invite_drink_started` | Two residents start that exchange, as with any other in `data/social.json` | as the data says |
 | `material_wanted` | Whoever sees to a site sits by it with nothing to build with, with `site_id`, what is `wanted` and what could be taken apart for it (`salvageable`) in `data`. Once a day for each site | 45 |
 | `salvage_ordered`, `salvage_started` | A resident is told to take something apart, and gets to it, with `object_id` in `data` | 20, 5 |
 | `object_salvaged` | It is taken apart and gone, with `object_id`, `kind`, `tile`, `item_id` and `units` in `data` | 30 |

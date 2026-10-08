@@ -2,7 +2,8 @@ from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 
 from simulation.ai.activity_system import ActivitySystem
-from simulation.ai.affect import AffectOption, AffectResult, AffectSystem
+from simulation.ai.affect import AffectOption, AffectResult, AffectSystem, QueuedOrder
+from simulation.ai.leisure import LeisureSystem
 from simulation.clock import SimulationClock
 from simulation.commands import SimulationCommand
 from simulation.events.decision import Decision
@@ -99,6 +100,7 @@ class SimulationWorld:
     discovery_count: int = 0
     interventions: InterventionSystem = field(default_factory=InterventionSystem)
     affect: AffectSystem = field(default_factory=AffectSystem)
+    leisure: LeisureSystem = field(default_factory=LeisureSystem)
     # Open chances for the player to advise a resident, by decision ID.
     decisions: dict[str, Decision] = field(default_factory=dict)
     decision_count: int = 0
@@ -288,8 +290,29 @@ class SimulationWorld:
         return self.affect.options(self, resident_id)
 
     def affect_resident(self, resident_id: str, kind: str, target_id: str | None) -> AffectResult:
-        """Tell a resident to do something. It is an order: they do it, as far as it can be done."""
+        """Tell a resident to do something. It is an order: they do it, as far as it can be
+        done, at once or when what they were told before it is done."""
         return self.affect.order(self, resident_id, kind, target_id)
+
+    def affect_people(self, resident_id: str) -> tuple[tuple[str, str], ...]:
+        """Everybody a resident could be told to do something with right now, the nearest first."""
+        return self.affect.people(self, resident_id)
+
+    def affect_with(self, resident_id: str, other_id: str) -> list[AffectOption]:
+        """What a resident can be told to do with one person, by what they feel for them."""
+        return self.affect.with_whom(self, resident_id, other_id)
+
+    def orders_of(self, resident_id: str) -> list[QueuedOrder]:
+        """What a resident has been told to do and has not done, what they are at first."""
+        return self.affect.queue(self, resident_id)
+
+    def cancel_order(self, resident_id: str, index: int) -> AffectResult:
+        """Take back one of the things a resident has been told to do, counted as `orders_of` gives them."""
+        return self.affect.cancel(self, resident_id, index)
+
+    def set_free_will(self, resident_id: str, free: bool) -> AffectResult:
+        """Say whether a resident does anything of their own accord, or only what they are told."""
+        return self.affect.set_will(self, resident_id, free)
 
     def order_salvage(self, resident_id: str, object_id: str) -> UrbanismResult:
         """Tell a resident to take something apart for what it is made of. It is their task until it is done."""

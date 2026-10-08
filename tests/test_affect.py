@@ -1,4 +1,5 @@
 import subprocess
+from dataclasses import replace
 import sys
 import unittest
 from pathlib import Path
@@ -45,14 +46,17 @@ def _kinds(world: SimulationWorld, resident_id: str) -> dict[str, list[str]]:
 
 
 class AffectDataTests(unittest.TestCase):
-    def test_what_can_be_said_is_data_in_five_groups(self) -> None:
+    def test_what_can_be_said_is_data_in_groups(self) -> None:
         world = _settled()
         settings = world.registries.affect
-        self.assertTrue(settings.needs and settings.exchanges and settings.incitements and settings.words and settings.tasks)
+        self.assertTrue(settings.needs and settings.exchanges and settings.pastimes and settings.words and settings.tasks)
         groups = {option.group for option in world.affect_options("raul")}
         self.assertTrue(groups <= set(GROUPS))
-        self.assertTrue({"need", "with", "task", "words"} <= groups)
-        self.assertTrue(all(order.feeling is not None for order in settings.incitements.values()))
+        self.assertTrue({"need", "with", "leisure", "task", "words"} <= groups)
+        # Everything has a short name to go by where there is no room for what it says.
+        self.assertTrue(all(option.name for option in world.affect_options("raul")))
+        unfelt = [name for name, order in settings.exchanges.items() if not order.feels and order.who == "anybody"]
+        self.assertEqual(unfelt, ["talk"], "past talk, everything goes by what is felt or by who they are to each other")
 
     def test_what_makes_no_sense_is_refused(self) -> None:
         affect_settings_from_data({"needs": {"eat": {"label": "Come", "need": "hunger"}}})
@@ -65,6 +69,13 @@ class AffectDataTests(unittest.TestCase):
             {"with": {"talk": {"label": "Habla", "interaction": "chat", "who": "strangers"}}},
             {"incite": {"strike": {"label": "A por", "interaction": "fight"}}},
             {"incite": {"strike": {"label": "A por", "interaction": "fight", "feeling": "envy"}}},
+            {"with": {"joke": {"label": "Ríe", "interaction": "joke", "feels": {"envy": 10}}}},
+            {"with": {"joke": {"label": "Ríe", "interaction": "joke", "feels": {"affection": 140}}}},
+            {"with": {"joke": {"label": "Ríe", "interaction": "joke", "feels": {"resentment": [-5, 10]}}}},
+            {"with": {"joke": {"label": "Ríe", "interaction": "joke", "feels": []}}},
+            {"with": {"joke": {"label": "Ríe", "interaction": "joke", "tone": "odd"}}},
+            {"tasks": {"stop": {"name": "Para"}}},
+            {"most_orders": 0},
             {"words": {"calm": {"needs": {"stress": -5}}}},
             {"words": {"calm": {"label": "Ya", "needs": {"luck": -5}}}},
             {"tasks": {"fly": "Que vuele"}},
@@ -152,32 +163,87 @@ class OptionsTests(unittest.TestCase):
         world.clock.hour = 22
         self.assertNotIn("task:to_post", _kinds(world, "raul"), "nor is anybody sent to a post out of hours")
 
-    def test_a_resident_can_be_set_on_only_to_what_they_feel_strongly(self) -> None:
+    def test_past_talk_only_what_they_feel_for_somebody_is_on_offer(self) -> None:
         world = _settled()
-        self.assertFalse([kind for kind in _kinds(world, "raul") if kind.startswith("incite:")])
-        strong = world.registries.affect.strong_feeling
-        world.relationship("raul", "marta").resentment = strong - 1
-        self.assertNotIn("incite:strike", _kinds(world, "raul"))
-        world.relationship("raul", "marta").resentment = strong
+        felt = [kind for kind in _kinds(world, "raul") if kind.startswith("with:")]
+        self.assertEqual(felt, ["with:talk"], "feeling nothing for anybody, there is talk and no more")
+        world.relationship("raul", "marta").resentment = 49
         kinds = _kinds(world, "raul")
-        self.assertEqual(kinds["incite:strike"], ["marta"])
-        self.assertEqual(kinds["incite:have_it_out"], ["marta"])
-        self.assertNotIn("incite:seek_out", kinds)
+        self.assertEqual(kinds["with:confront"], ["marta"])
+        self.assertEqual(kinds["with:insult"], ["marta"])
+        self.assertNotIn("with:strike", kinds, "he does not hate her enough to go for her")
+        world.relationship("raul", "marta").resentment = 50
+        self.assertEqual(_kinds(world, "raul")["with:strike"], ["marta"])
+        self.assertNotIn("with:hug", _kinds(world, "raul"))
         world.relationship("raul", "ines").affection = 80
         world.relationship("raul", "ines").attraction = 70
         kinds = _kinds(world, "raul")
-        self.assertEqual(kinds["incite:seek_out"], ["ines"])
-        self.assertEqual(kinds["incite:woo"], ["ines"])
-        self.assertNotIn("incite:strike", _kinds(world, "marta"), "what one feels the other need not")
+        for kind in ("with:joke", "with:hug", "with:flirt", "with:confess", "with:slip_away"):
+            self.assertEqual(kinds[kind], ["ines"], kind)
+        self.assertEqual(sorted(kinds["with:open_up"]), ["ines", "marta"], "with one for fondness, with the other to clear the air")
+        self.assertNotIn("with:strike", _kinds(world, "marta"), "what one feels the other need not")
+        self.assertNotIn("with:hug", _kinds(world, "ines"))
+
+    def test_what_there_is_with_one_person_is_what_is_felt_for_them(self) -> None:
+        world = _settled()
+        names = lambda other: [option.kind for option in world.affect_with("raul", other)]
+        self.assertEqual(names("marta"), ["with:talk", "leisure:cards"])
+        world.relationship("raul", "marta").affection = 45
+        self.assertEqual(
+            names("marta"),
+            ["with:talk", "with:joke", "with:open_up", "with:hug", "leisure:cards", "leisure:stories", "leisure:dance"],
+        )
+        world.relationship("raul", "marta").affection = -30
+        world.relationship("raul", "marta").resentment = 60
+        self.assertEqual(
+            names("marta"), ["with:talk", "with:open_up", "with:confront", "with:insult", "with:strike"],
+            "nobody sits down to cards with somebody they cannot stand",
+        )
+        tones = {option.kind: option.tone for option in world.affect_with("raul", "marta")}
+        self.assertEqual((tones["with:talk"], tones["with:strike"]), ("friendly", "hostile"))
+        self.assertEqual(world.affect_with("raul", "raul"), [])
+        self.assertEqual(world.affect_with("raul", "nobody"), [])
+        self.assertNotIn("raul", [each for each, _name in world.affect_people("raul")])
+        self.assertEqual(len(world.affect_people("raul")), len(world.residents) - 1, "everybody there is, the nearest first")
+
+    def test_somebody_out_of_the_few_offered_can_still_be_named(self) -> None:
+        world = _settled()
+        # The registries are shared by every settlement made here: put back what was there.
+        settings = world.registries.affect
+        self.addCleanup(setattr, world.registries, "affect", settings)
+        world.registries.affect = replace(settings, most_targets=3)
+        offered = _kinds(world, "raul")["with:talk"]
+        self.assertEqual(len(offered), 3)
+        far = next(each for each, _name in reversed(world.affect_people("raul")) if each not in offered)
+        self.assertTrue(world.apply_command(AffectCommand("raul", "with:talk", far)).ok)
+
+    def test_romance_is_between_adults_who_could_be_drawn_to_each_other(self) -> None:
+        world = _settled()
+        feelings = world.relationship("raul", "marta")
+        feelings.attraction, feelings.affection = 80, 80
+        self.assertIn("with:flirt", [option.kind for option in world.affect_with("raul", "marta")])
+        world.residents["marta"].age = 15
+        kinds = [option.kind for option in world.affect_with("raul", "marta")]
+        self.assertNotIn("with:flirt", kinds)
+        self.assertNotIn("with:confess", kinds)
+        self.assertNotIn("with:slip_away", kinds)
+        self.assertIn("with:hug", kinds)
 
     def test_what_is_for_a_partner_is_offered_only_with_theirs(self) -> None:
         world = _settled()
         tomas, ines = world.residents["tomas"], world.residents["ines"]
         tomas.couple_with, ines.couple_with = "ines", "tomas"
+        world.relationship("tomas", "ines").affection = 60
+        world.relationship("tomas", "ines").attraction = 60
         kinds = _kinds(world, "tomas")
+        self.assertEqual(kinds["with:kiss"], ["ines"])
         self.assertEqual(kinds["with:propose"], ["ines"])
+        self.assertNotIn("with:part", kinds, "there is nothing wrong between them")
+        self.assertNotIn("with:confess", kinds, "there is nothing left to tell her")
+        world.relationship("tomas", "ines").affection = 5
+        kinds = _kinds(world, "tomas")
         self.assertEqual(kinds["with:part"], ["ines"])
-        self.assertNotIn("ines", kinds["with:confess"])
+        self.assertNotIn("with:propose", kinds)
 
     def test_a_site_or_a_free_post_or_something_to_take_apart_can_be_put_in_their_hands(self) -> None:
         world = _settled()
@@ -216,6 +282,8 @@ class OrderTests(unittest.TestCase):
     def test_told_to_go_to_somebody_they_have_that_exchange_with_them(self) -> None:
         world = _settled()
         world.step(60)
+        self.assertFalse(world.apply_command(AffectCommand("vera", "with:open_up", "paco")).ok, "she feels nothing for him")
+        world.relationship("vera", "paco").affection = 30
         self.assertTrue(world.apply_command(AffectCommand("vera", "with:open_up", "paco")).ok)
         self.assertTrue(_run(world, 90, lambda: "heart_to_heart_started" in _types(world)), "they never talked")
         line = next(line for line in world.event_log if "heart_to_heart_started" in line)
@@ -227,7 +295,7 @@ class OrderTests(unittest.TestCase):
         world.step(60)
         world.relationship("raul", "marta").resentment = 80
         self.assertTrue(world.apply_command(HoldResidentCommand("raul")).ok)
-        result = world.apply_command(AffectCommand("raul", "incite:strike", "marta"))
+        result = world.apply_command(AffectCommand("raul", "with:strike", "marta"))
         self.assertTrue(result.ok, result.message)
         self.assertFalse(world.affect.is_held(world, "raul"))
         self.assertEqual(world.decisions, {}, "it is an order: nothing is put to him to decide")
@@ -301,7 +369,9 @@ class OrderTests(unittest.TestCase):
             ("with:talk", None),
             ("with:talk", "nobody"),
             ("with:talk", "raul"),
-            ("incite:strike", "marta"),
+            ("with:strike", "marta"),
+            ("leisure:fly", None),
+            ("leisure:dance", "marta"),
             ("task:take_charge", "site_9"),
             ("task:salvage", "bed_1"),
             ("words:sing", None),
@@ -316,8 +386,10 @@ class OrderTests(unittest.TestCase):
             world = SimulationWorld.demo_world(seed=5)
             world.step(90)
             world.apply_command(HoldResidentCommand("raul"))
-            world.apply_command(AffectCommand("raul", "with:confront", "marta"))
+            world.apply_command(AffectCommand("raul", "with:talk", "marta"))
+            world.apply_command(AffectCommand("raul", "leisure:stroll"))
             world.apply_command(AffectCommand("ines", "need:unwind"))
+            world.apply_command(AffectCommand("ines", "leisure:cards", "paco"))
             world.step(600)
             return world.event_log
 

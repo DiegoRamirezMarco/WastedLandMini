@@ -22,7 +22,7 @@ from simulation.items.theft import TheftAttempt
 from simulation.knowledge.fact import Belief, Fact
 from simulation.memory.memory import Memory
 from simulation.registries import DEFAULT_MAP_ID, BuiltInRegistries, builtin_registries
-from simulation.residents.activity import Activity
+from simulation.residents.activity import Activity, Order
 from simulation.residents.needs import Needs
 from simulation.politics.government import MEASURES
 from simulation.politics.political_event import PoliticalEvent
@@ -152,7 +152,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 37
+    CURRENT_VERSION = 38
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -315,6 +315,9 @@ class SaveManager:
                     "mood": resident.mood,
                     "current_action": resident.current_action,
                     "activity": _activity_to_data(resident.activity),
+                    "doing": _order_to_data(resident.doing),
+                    "orders": [_order_to_data(order) for order in resident.orders],
+                    "free_will": resident.free_will,
                     "traits": list(resident.traits),
                     "manners": dict(resident.manners),
                     "job_id": resident.job_id,
@@ -494,6 +497,15 @@ class SaveManager:
                 current_action=str(resident_data.get("current_action", "idle")),
                 facing=facing if facing in FACINGS else "down",
                 activity=activity,
+                # What they were at for having been told goes with being at it: one without the other is dropped.
+                doing=_order_from_data(resident_data.get("doing")) if activity is not None and activity.ordered else None,
+                orders=[
+                    order
+                    for order in map(_order_from_data, _list_or_empty(resident_data.get("orders")))
+                    if order is not None
+                ],
+                # In a save from before, everybody does as they like.
+                free_will=bool(resident_data.get("free_will", True)),
                 traits=[str(trait) for trait in resident_data.get("traits", [])],
                 # A manner that is no longer defined is forgotten: they go by their own by default.
                 manners=world.registries.manners.tidy(_object_or_empty(resident_data.get("manners"))),
@@ -1457,6 +1469,7 @@ def _activity_to_data(activity: Activity | None) -> dict[str, Any] | None:
         "intent": activity.intent,
         "item_id": activity.item_id,
         "held_up": activity.held_up,
+        "ordered": activity.ordered,
     }
 
 
@@ -1477,7 +1490,19 @@ def _activity_from_data(data: Any) -> Activity | None:
         intent=str(intent) if intent is not None else None,
         item_id=str(item_id) if item_id is not None else None,
         held_up=int(data.get("held_up", 0)),
+        ordered=bool(data.get("ordered", False)),
     )
+
+
+def _order_to_data(order: Order | None) -> dict[str, Any] | None:
+    return {"kind": order.kind, "target_id": order.target_id} if order is not None else None
+
+
+def _order_from_data(data: Any) -> Order | None:
+    if not isinstance(data, dict) or "kind" not in data:
+        return None
+    target_id = data.get("target_id")
+    return Order(str(data["kind"]), str(target_id) if target_id is not None else None)
 
 
 def _inventory_to_data(inventory: Inventory) -> list[dict[str, Any]]:

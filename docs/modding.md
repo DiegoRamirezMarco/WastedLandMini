@@ -753,22 +753,57 @@ settlement is created, in `SimulationWorld.demo_world`.
 
 ## Affecting a resident
 
-`data/affect.json` holds what the player can tell a resident they have stopped.
+`data/affect.json` holds what the player can tell a resident. Everything in it has a `label`,
+which is what telling it says, and may have a `name`, which is what it is called for short in
+the wheel, and an `icon`: one of the game's icons, or a file of that name in
+`illustrations/ui/icons/`.
 
-- `needs` lists what they can be told to see to, each with a `label` and the `need` it lowers,
-  or `"heals": true` for being mended. `"asleep": true` is for what is done lying down.
+- `needs` lists what they can be told to see to, each with the `need` it lowers, or
+  `"heals": true` for being mended. `"asleep": true` is for what is done lying down.
 - `with` lists what they can go to somebody for: a `label` with `{target}` for who, the
   `interaction` from `data/social.json`, and `who` it can be with (`anybody`, `single` for
   somebody they are no couple with, `partner`).
-- `incite` is the same, with the `feeling` (`resentment`, `attraction`, `affection`, `trust`,
-  `fear`) that has to be `strong_feeling` or more for it to be on offer.
-- `words` lists what is simply said to them: a `label`, the `needs` it changes and what it
-  does to their `mood`.
-- `tasks` gives a label to each thing they can be told to get on with: `to_post`,
-  `take_charge`, `salvage`, `take_job`, `leave_job`, `treat` and `stop`. What each does is
-  code; one left out is not on offer.
+  - `feels` is what they have to feel for the other for it to be on offer, and with none it
+    always is: `{"affection": 40}` is forty or more of it, `{"affection": [-100, 15]}` is
+    between those, several feelings in one have all to hold, and a list of them
+    (`[{"resentment": 30}, {"affection": [-100, 15]}]`) is any one of them holding. The
+    feelings are `affection`, `trust`, `attraction`, `fear` and `resentment`: what the one
+    who is told feels, never the other.
+  - `tone` is `friendly`, `romance` or `hostile`: the colour and icon it is shown with. What
+    is `romance` is only between adults, towards somebody they could be drawn to.
+- `leisure` lists what they can pass the time with somebody at, the same way as `with`.
+- `incite` is the same again, for content from before: a `feeling` that has to be
+  `strong_feeling` or more. The game's own no longer has any.
+- `words` lists what is simply said to them: the `needs` it changes and what it does to
+  their `mood`.
+- `tasks` lists each thing they can be told to get on with, as a label or as an object with
+  one: `to_post`, `take_charge`, `salvage`, `take_job`, `leave_job`, `treat` and `stop`.
+  What each does is code; one left out is not on offer.
 - `hold_minutes` is how long somebody who is stopped stands listening, and `most_targets` how
   many people or things are offered to choose among, the nearest first.
+- `most_orders` is how many things can wait for a resident to get to them. `wait_minutes` is
+  how often somebody who does nothing unasked looks again at whether there is anything they
+  have to see to, and `desperate_need` how high a need of the body gets before they see to it
+  unasked: over 100 they never do.
+
+## Leisure
+
+`data/leisure.json` holds what a resident does alone to pass the time.
+
+- `alone` lists the pastimes, each with a `name`, a `label`, the `text` of the event with
+  `{name}` for who, what is said of somebody `doing` it, how many `minutes` it takes at the
+  least and at the most, and what it does to their needs `per_minute`.
+  - `taste` is the taste it is liked or loathed by: a tag, as an item has
+    (`data/tastes.json` gives it a name under `names.tag`). Without one it is the same to all.
+  - `strolls`, `sits` or `lies` says how it is done: walking about, sitting down as they
+    sit, or lying on the ground. Otherwise on their feet.
+- `relief` is how much of the good a pastime does comes of it, by how it is taken (`hated`,
+  `disliked`, `neutral`, `liked`, `loved`), and `taken` what is added to what is told of it.
+- `accept_affection` is how fond of whoever asks somebody has to be to go on somewhere with
+  them.
+
+A pastime with somebody is an exchange in `data/social.json` with a `pastime`, offered from
+`leisure` in `data/affect.json`. The two may not share a name.
 
 ## Taking things apart
 
@@ -1063,6 +1098,12 @@ line that is reworded is simply spoken anew. `python -m tools.make_voices` has e
 
 `dialogue` names a list of lines in `data/dialogue.json`; one is picked for the event text.
 `relationship` holds base changes that are scaled by both residents' personalities.
+
+`doing` is what is said of somebody who is at it, with `{other}` for the other one: without it
+they are said to talk, or to argue. `pastime` is the taste it is liked or loathed by, for
+something done for the sake of it: how fond of the other each comes away goes by how they took
+it. `then_use` is the use both go on to once it is over, each for themselves: `drink` sends
+them to the bar. Whoever was asked goes only if they care for whoever asked.
 
 An exchange is part of a romance with `"romance"`: `confession` (at its end the one told answers
 from what they feel), `tryst` (two residents alone: it needs the other to want it and nobody

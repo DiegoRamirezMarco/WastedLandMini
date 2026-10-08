@@ -2,84 +2,217 @@
   "hold_minutes": 30,
   "strong_feeling": 50,
   "most_targets": 8,
+  "most_orders": 6,
+  "wait_minutes": 10,
+  "desperate_need": 90,
   "needs": {
     "eat": {
+      "name": "Comer",
       "label": "Que coma algo",
-      "need": "hunger"
+      "need": "hunger",
+      "icon": "food"
     },
     "drink": {
+      "name": "Beber",
       "label": "Que beba",
-      "need": "thirst"
+      "need": "thirst",
+      "icon": "water"
     },
     "sleep": {
+      "name": "Dormir",
       "label": "Que se acueste",
       "need": "tiredness",
-      "asleep": true
+      "asleep": true,
+      "icon": "moon"
     },
     "unwind": {
+      "name": "Un respiro",
       "label": "Que se dé un respiro",
-      "need": "stress"
+      "need": "stress",
+      "icon": "leisure"
     },
     "heal": {
+      "name": "Curarse",
       "label": "Que vaya a que le curen",
-      "heals": true
+      "heals": true,
+      "icon": "medicine"
     }
   },
   "with": {
     "talk": {
+      "name": "Charlar",
       "label": "Que charle con {target}",
       "interaction": "chat"
     },
-    "open_up": {
-      "label": "Que hable las cosas con {target}",
-      "interaction": "heart_to_heart"
+    "joke": {
+      "name": "Bromear",
+      "label": "Que bromee con {target}",
+      "interaction": "joke",
+      "feels": {
+        "affection": 10
+      }
     },
-    "confront": {
-      "label": "Que le plante cara a {target}",
-      "interaction": "argument"
+    "open_up": {
+      "name": "Hablar las cosas",
+      "label": "Que hable las cosas con {target}",
+      "interaction": "heart_to_heart",
+      "feels": [
+        {
+          "affection": 20
+        },
+        {
+          "resentment": 15
+        }
+      ]
+    },
+    "hug": {
+      "name": "Un abrazo",
+      "label": "Que le dé un abrazo a {target}",
+      "interaction": "hug",
+      "feels": {
+        "affection": 40
+      }
+    },
+    "flirt": {
+      "name": "Coquetear",
+      "label": "Que coquetee con {target}",
+      "interaction": "flirt",
+      "tone": "romance",
+      "feels": {
+        "attraction": 20
+      }
     },
     "confess": {
+      "name": "Declararse",
       "label": "Que le diga a {target} lo que siente",
       "interaction": "confession",
-      "who": "single"
-    },
-    "propose": {
-      "label": "Que le pida a {target} que se casen",
-      "interaction": "proposal",
-      "who": "partner"
-    },
-    "part": {
-      "label": "Que lo deje con {target}",
-      "interaction": "breakup",
-      "who": "partner"
-    }
-  },
-  "incite": {
-    "strike": {
-      "label": "Que vaya a por {target}",
-      "interaction": "fight",
-      "feeling": "resentment"
-    },
-    "have_it_out": {
-      "label": "Que le suelte a {target} todo lo que le guarda",
-      "interaction": "argument",
-      "feeling": "resentment"
-    },
-    "woo": {
-      "label": "Que se lance con {target}",
-      "interaction": "confession",
-      "feeling": "attraction",
-      "who": "single"
+      "who": "single",
+      "tone": "romance",
+      "feels": {
+        "attraction": 45,
+        "affection": 35
+      }
     },
     "slip_away": {
+      "name": "Perderse un rato",
       "label": "Que se pierda un rato con {target}",
       "interaction": "tryst",
-      "feeling": "attraction"
+      "tone": "romance",
+      "feels": {
+        "attraction": 40
+      }
     },
-    "seek_out": {
-      "label": "Que busque a {target}, que tanto quiere",
-      "interaction": "heart_to_heart",
-      "feeling": "affection"
+    "kiss": {
+      "name": "Un beso",
+      "label": "Que bese a {target}",
+      "interaction": "kiss",
+      "who": "partner",
+      "tone": "romance"
+    },
+    "propose": {
+      "name": "Pedir matrimonio",
+      "label": "Que le pida a {target} que se casen",
+      "interaction": "proposal",
+      "who": "partner",
+      "tone": "romance",
+      "feels": {
+        "affection": 50
+      }
+    },
+    "part": {
+      "name": "Dejarlo",
+      "label": "Que lo deje con {target}",
+      "interaction": "breakup",
+      "who": "partner",
+      "tone": "hostile",
+      "feels": [
+        {
+          "resentment": 30
+        },
+        {
+          "affection": [
+            -100,
+            15
+          ]
+        }
+      ]
+    },
+    "confront": {
+      "name": "Plantarle cara",
+      "label": "Que le plante cara a {target}",
+      "interaction": "argument",
+      "tone": "hostile",
+      "feels": {
+        "resentment": 15
+      }
+    },
+    "insult": {
+      "name": "Insultar",
+      "label": "Que le diga a {target} cuatro cosas",
+      "interaction": "insult",
+      "tone": "hostile",
+      "feels": {
+        "resentment": 30
+      }
+    },
+    "strike": {
+      "name": "Darse de hostias",
+      "label": "Que vaya a por {target}",
+      "interaction": "fight",
+      "tone": "hostile",
+      "feels": {
+        "resentment": 50
+      }
+    }
+  },
+  "leisure": {
+    "cards": {
+      "name": "Unas cartas",
+      "label": "Que eche unas cartas con {target}",
+      "interaction": "cards",
+      "feels": {
+        "affection": [
+          0,
+          100
+        ],
+        "resentment": [
+          0,
+          29
+        ]
+      }
+    },
+    "stories": {
+      "name": "Contar historias",
+      "label": "Que se cuente historias con {target}",
+      "interaction": "stories",
+      "feels": {
+        "affection": 10,
+        "resentment": [
+          0,
+          29
+        ]
+      }
+    },
+    "dance": {
+      "name": "Bailar",
+      "label": "Que baile con {target}",
+      "interaction": "dance",
+      "feels": [
+        {
+          "affection": 25
+        },
+        {
+          "attraction": 25
+        }
+      ]
+    },
+    "invite_drink": {
+      "name": "Un trago",
+      "label": "Que invite a {target} a un trago",
+      "interaction": "invite_drink",
+      "feels": {
+        "affection": 10
+      }
     }
   },
   "words": {
@@ -106,12 +239,36 @@
     }
   },
   "tasks": {
-    "to_post": "Que vaya a su puesto",
-    "take_charge": "Que se haga cargo de la obra: {target}",
-    "salvage": "Que desguace {target}",
-    "take_job": "Que se ocupe de un puesto: {target}",
-    "leave_job": "Que deje su puesto",
-    "treat": "Que se dé un gusto: {target}",
-    "stop": "Que deje lo que está haciendo"
+    "to_post": {
+      "name": "A su puesto",
+      "label": "Que vaya a su puesto"
+    },
+    "take_charge": {
+      "name": "Llevar una obra",
+      "label": "Que se haga cargo de la obra: {target}"
+    },
+    "salvage": {
+      "name": "Desguazar",
+      "label": "Que desguace {target}",
+      "icon": "scrap"
+    },
+    "take_job": {
+      "name": "Coger un puesto",
+      "label": "Que se ocupe de un puesto: {target}"
+    },
+    "leave_job": {
+      "name": "Dejar su puesto",
+      "label": "Que deje su puesto"
+    },
+    "treat": {
+      "name": "Darse un gusto",
+      "label": "Que se dé un gusto: {target}",
+      "icon": "food"
+    },
+    "stop": {
+      "name": "Dejarlo todo",
+      "label": "Que deje lo que está haciendo, y lo que tenía por delante",
+      "icon": "stop"
+    }
   }
 }

@@ -28,6 +28,15 @@ class InteractionDefinition:
     damage: tuple[int, int] | None = None
     # What the exchange is to a romance: `confession`, `tryst`, `breakup` or `proposal`. None for any other.
     romance: str | None = None
+    # What is said of somebody who is at it, with `{other}` where the other one goes. None
+    # for one that is told like any other talk, or any other quarrel.
+    doing: str | None = None
+    # The taste it is liked or loathed by, as a tag of `data/tastes.json`, where it is done
+    # for the sake of it: cards, a dance. What comes of it goes by how each of them takes it.
+    pastime: str | None = None
+    # The use both go on to once it is over, each for themselves: `drink`, for having asked
+    # somebody for one. Whoever was asked goes only if they care to.
+    then_use: str | None = None
 
 
 ROMANCE_KINDS = ("confession", "tryst", "breakup", "proposal")
@@ -70,4 +79,7 @@ def interaction_definition_from_data(interaction_id: str, data: dict[str, Any]) 
         returns_stolen=bool(data.get("returns_stolen", False)),
         damage=damage,
         romance=romance,
+        doing=str(data["doing"]) if data.get("doing") else None,
+        pastime=str(data["pastime"]) if data.get("pastime") else None,
+        then_use=str(data["then_use"]) if data.get("then_use") else None,
     )

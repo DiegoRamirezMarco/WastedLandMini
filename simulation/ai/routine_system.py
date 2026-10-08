@@ -150,6 +150,22 @@ class RoutineSystem:
         """The walk to an object and the use of it. None if there is no getting to it."""
         return self._use(world, resident, placed)
 
+    def stroll(self, world: "SimulationWorld", resident: Resident) -> list[Tile]:
+        """The way to somewhere near, picked at random, for whoever is out for a walk."""
+        return self._wander(world, resident).path
+
+    def open_for(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> bool:
+        """Whether a resident could use an object as things stand: open, theirs to use, within
+        their means and, where it serves something, not empty."""
+        use = world.definition_of(placed).use
+        if use is None or not world.work.open_to(world, resident, use):
+            return False
+        if not world.housing.may_use(world, resident, placed, use) and not world.housing.pressed(world, resident, placed, use):
+            return False
+        if not world.trade.can_afford(world, resident, use, placed.object_id):
+            return False
+        return use.consumes is None or self.items.best_food(world, resident, placed.object_id, use.consumes) is not None
+
     def _offers(
         self, world: "SimulationWorld", resident: Resident, placed: Interactable, use: UseDefinition, need: str
     ) -> bool:

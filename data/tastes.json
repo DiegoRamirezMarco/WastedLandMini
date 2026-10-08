@@ -74,7 +74,13 @@
       "violent": "lo violento",
       "practical": "lo práctico",
       "romantic": "lo romántico",
-      "luxurious": "el lujo"
+      "luxurious": "el lujo",
+      "strolling": "los paseos",
+      "idling": "estarse mirando",
+      "napping": "las cabezadas",
+      "cards": "las cartas",
+      "stories": "las historias",
+      "dancing": "el baile"
     }
   },
   "lines": {

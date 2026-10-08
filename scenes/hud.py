@@ -25,8 +25,18 @@ from simulation.world import SimulationWorld
 from ui.button import Button
 from ui.dock import draw_scene
 from ui.event_log import EventFeed
-from ui.affect_board import AFFECT_INTENT, affect_board_height, affect_rows, draw_affect_board
-from ui.affect_board import PANEL_WIDTH as AFFECT_WIDTH
+from ui.affect_wheel import (
+    AFFECT_INTENT,
+    QueueEntry,
+    WheelEntry,
+    WheelState,
+    WheelView,
+    draw_queue,
+    draw_wheel,
+    queue_entries,
+    wheel_entries,
+    wheel_view,
+)
 from ui.fund_board import PANEL_WIDTH as FUND_WIDTH
 from ui.fund_board import FundEntry, draw_fund_board, field_intent, field_rects, fund_board_height, fund_buttons
 from ui.government_board import PANEL_WIDTH as GOVERNMENT_WIDTH
@@ -244,11 +254,9 @@ class Hud:
         self.government_tab = KINDS_TAB
         self.law_degrees: dict[str, int] = {}
         self.law_items: dict[str, str] = {}
-        # What the player can tell whoever is selected, while they stand stopped to be told: the
-        # kind of thing chosen so far, and the thing, on the way to who or what it is about.
-        self.affect_open = False
-        self.affect_group: str | None = None
-        self.affect_kind: str | None = None
+        # The wheel of what the player can tell whoever is selected, while it is open about
+        # them: what has been chosen in it so far, and where on the map they stand.
+        self.wheel = WheelState()
         # Where the pointer is, for what lights up under it.
         self.pointer: tuple[int, int] | None = None
         # At most one of these is set: the resident or the container whose panel is showing.
@@ -330,9 +338,13 @@ class Hud:
         self.research_button = next(button for button in self.menu if button.intent == RESEARCH_INTENT)
 
     @property
-    def buttons(self) -> list[Button | MenuButton]:
+    def buttons(self) -> list[Button | MenuButton | WheelEntry | QueueEntry]:
         """Every button on show, the ones of an open panel included."""
-        fixed = [self.pause_button, *self.speed_buttons, *self.zoom_buttons, *self.menu]
+        # The wheel is over everything else, and so is pressed before anything under it.
+        fixed = [
+            *self.wheel_entries(), *self.queue_entries(),
+            self.pause_button, *self.speed_buttons, *self.zoom_buttons, *self.menu,
+        ]
         guide = self.tutorial_rect()
         step_button = tutorial_button(self.font, guide, self.world) if guide is not None else None
         if step_button is not None:
@@ -353,10 +365,6 @@ class Hud:
             return fixed + trade_buttons(
                 self.font, self.trade_rect(), self.world, self.trade_buy, self.trade_sell, self.drawable
             )
-        if self.affect_open and self.selected_id in self.world.residents:
-            return fixed + affect_rows(
-                self.affect_rect(), self.world, self.selected_id or "", self.affect_group, self.affect_kind
-            )
         if not self.jobs_open:
             return fixed
         return fixed + suggest_buttons(self.font, self.jobs_rect(), self.world, self.selected_id)
@@ -365,11 +373,9 @@ class Hud:
         """Open one of the panels that share a corner, or shut it if it is the one open, and shut the rest."""
         for name in (
             "log_open", "jobs_open", "stores_open", "research_open", "government_open", "fund_open", "trade_open",
-            "affect_open",
         ):
             setattr(self, name, name == panel and not getattr(self, name))
         self.fund_entry = None
-        self.affect_group = self.affect_kind = None
         self.government_armed = None
         self.trade_buy, self.trade_sell = {}, {}
 
@@ -420,14 +426,25 @@ class Hud:
         brought, held = goods_rows(self.world, self.trade_buy, self.trade_sell)
         return chosen(held), chosen(brought)
 
-    def open_affect(self, group: str | None = None, kind: str | None = None) -> None:
-        """Show what whoever is selected can be told, in place of whatever else was open there."""
-        self.affect_open = False
-        self._open_only("affect_open")
-        self.affect_group, self.affect_kind = group, kind
+    def wheel_area(self) -> pygame.Rect:
+        """The part of the map the wheel is kept within: all of it, short of the dock while that is open."""
+        area, dock = self.layout.map, self.dock_rect()
+        return pygame.Rect(area.x, area.y, area.width, (dock.top if dock is not None else area.bottom) - area.y)
 
-    def close_affect(self) -> None:
-        self.affect_open, self.affect_group, self.affect_kind = False, None, None
+    def wheel_shown(self) -> WheelView | None:
+        """What the wheel shows right now, while it is open about somebody who is there."""
+        if not self.wheel.open or self.wheel.about != self.selected_id or self.selected_id not in self.world.residents:
+            return None
+        return wheel_view(self.world, self.selected_id or "", self.wheel)
+
+    def wheel_entries(self) -> list[WheelEntry]:
+        """The buttons of the wheel, where they are, while it is open."""
+        view = self.wheel_shown()
+        return wheel_entries(self.wheel.centre, self.wheel_area(), view) if view is not None else []
+
+    def queue_entries(self) -> list[QueueEntry]:
+        """What whoever is selected has been told to do and has not done, each to be taken back with a press."""
+        return queue_entries(self.wheel_area(), self.world, self.selected_id)
 
     def on_events(self, events: Iterable[DomainEvent]) -> None:
         self.feed.add(events)
@@ -549,8 +566,9 @@ class Hud:
         panels += [self.government_rect()] if self.government_open else []
         panels += [self.fund_rect()] if self.fund_open else []
         panels += [self.trade_rect()] if self.trading else []
-        panels += [self.affect_rect()] if self.affect_open else []
-        return any(rect is not None and rect.collidepoint(position) for rect in panels)
+        if any(rect is not None and rect.collidepoint(position) for rect in panels):
+            return True
+        return any(entry.contains(position) for entry in [*self.wheel_entries(), *self.queue_entries()])
 
     def _float(self, width: int, height: int) -> pygame.Rect:
         """A panel that opens over the top right corner of the map, and stops short of the dock while that is open."""
@@ -575,10 +593,6 @@ class Hud:
 
     def trade_rect(self) -> pygame.Rect:
         return self._float(TRADE_WIDTH, trade_board_height(self.world))
-
-    def affect_rect(self) -> pygame.Rect:
-        height = affect_board_height(self.world, self.selected_id or "", self.affect_group, self.affect_kind)
-        return self._float(AFFECT_WIDTH, height)
 
     def stores_rect(self) -> pygame.Rect:
         rows = max(1, len(settlement_stock(self.world)))
@@ -678,11 +692,11 @@ class Hud:
                 self.canvas, self.font, self.icons, self.trade_rect(), self.world, self.trade_buy, self.trade_sell,
                 self.drawable, band_hue("stores"), self.faces,
             )
-        if self.affect_open and self.selected_id in self.world.residents:
-            draw_affect_board(
-                self.canvas, self.font, self.affect_rect(), self.world, self.selected_id or "",
-                self.affect_group, self.affect_kind, self.pointer,
-            )
+        draw_queue(self.canvas, self.font, self.skin, self.queue_entries(), self.pointer)
+        view = self.wheel_shown()
+        if view is not None:
+            entries = wheel_entries(self.wheel.centre, self.wheel_area(), view)
+            draw_wheel(self.canvas, self.font, self.skin, self.faces, self.world, view, entries, self.pointer)
         self.skin.pointer = None
 
     def _render_menu(self) -> None:

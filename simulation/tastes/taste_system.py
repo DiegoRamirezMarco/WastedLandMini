@@ -258,6 +258,22 @@ class TasteSystem:
         self._learn_from(world, resident, definition, reaction, first_time, moment.fondness if how == GIVEN else 0.0)
         return reaction
 
+    def takes(self, world: "SimulationWorld", resident: Resident, tag: str) -> str:
+        """How a resident takes something they do, by the taste for it they have: one of the
+        five reactions. The taste is made if they had none. Nothing shows, and nothing moves."""
+        taste = self.taste(world, resident, TAG, tag)
+        return reaction_to(taste.value if taste is not None else 0.0, world.registries.tastes)
+
+    def pastime(self, world: "SimulationWorld", resident: Resident, tag: str, onlookers: Iterable[str] = ()) -> str:
+        """Have a resident set about something they do for the sake of it, and take it as their
+        taste for it has them: it moves their mood, and shows something of that taste to the
+        player and to whoever is with them. Returns the reaction."""
+        reaction = self.takes(world, resident, tag)
+        effects = world.registries.tastes.effects_of(reaction)
+        resident.adjust_mood(effects.mood)
+        self._shown(world, resident, key_of(TAG, tag), effects.shows, onlookers)
+        return reaction
+
     # ----- what living does to a taste -----
 
     def learn(

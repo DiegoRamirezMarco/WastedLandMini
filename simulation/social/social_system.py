@@ -8,7 +8,7 @@ from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency
 from simulation.events.event import DomainEvent
 from simulation.knowledge.knowledge_system import share_rumor
 from simulation.memory.memory import Memory
-from simulation.residents.activity import MOVE_TILES_PER_MINUTE, SHELTER_ACTION, WANDER_ACTION, Activity
+from simulation.residents.activity import MOVE_TILES_PER_MINUTE, SHELTER_ACTION, WAIT_ACTION, WANDER_ACTION, Activity
 from simulation.residents.resident import Resident
 from simulation.social.bonds import AFFAIR_EVENT, AFFAIR_IMPORTANCE, TRYST
 from simulation.social.interaction import InteractionDefinition
@@ -77,11 +77,13 @@ def feeling_changes(
     partner: Resident,
     feelings: Relationship,
     attraction_rate: float = 0.0,
+    relish: float = 1.0,
 ) -> dict[str, float]:
     """How `resident`'s feelings about `partner` change. Depends on both personalities,
     so the two sides of one exchange come out different. Affection, trust and attraction grow
     more slowly the higher they already are, and attraction only grows at `attraction_rate`:
-    not at all where there is nothing to grow from."""
+    not at all where there is nothing to grow from. `relish` is how much of the good of it
+    comes to them, where it was something done for the sake of it and they took it their way."""
     mine, theirs = resident.personality, partner.personality
     if definition.hostile:
         other = 0.5 + theirs.aggression / 100.0
@@ -95,7 +97,7 @@ def feeling_changes(
         if feeling == "attraction" and base > 0:
             delta = base * attraction_rate
         if delta > 0 and feeling in (*SIGNED_FEELINGS, "attraction"):
-            delta *= max(0.0, 1.0 - getattr(feelings, feeling) / 100.0)
+            delta *= max(0.0, 1.0 - getattr(feelings, feeling) / 100.0) * relish
         changes[feeling] = delta
     return changes
 
@@ -211,8 +213,8 @@ class SocialSystem:
             job = world.work.job_of(world, partner)
             return job is not None and job.interruptible
         if activity.target_id is None:
-            # Strolling, or waiting out the weather: either way, free to talk.
-            return activity.action in (WANDER_ACTION, SHELTER_ACTION)
+            # Strolling, waiting out the weather or waiting to be told what to do: free to talk.
+            return activity.action in (WANDER_ACTION, SHELTER_ACTION, WAIT_ACTION)
         placed = world.interactables.get(activity.target_id)
         use = world.definition_of(placed).use if placed is not None else None
         return use is not None and use.interruptible
@@ -258,6 +260,8 @@ class SocialSystem:
         order = list(world.residents)
         partner_already_ticked = order.index(partner.resident_id) < order.index(resident.resident_id)
 
+        # Whatever the partner had been told to do, they are told again once this is over.
+        world.affect.interrupted(world, partner)
         for one, other in ((resident, partner), (partner, resident)):
             one.activity = Activity(
                 definition.interaction_id,
@@ -266,6 +270,7 @@ class SocialSystem:
                 partner_id=other.resident_id,
                 # Whoever came for this exchange keeps it as their intent, so its end is theirs to settle.
                 intent=approach.intent if one is resident else None,
+                ordered=approach.ordered and one is resident,
             )
             one.current_action = definition.interaction_id
             dx, dy = other.x - one.x, other.y - one.y
@@ -345,7 +350,12 @@ class SocialSystem:
         if partner is not None:
             feelings = world.relationship(resident.resident_id, partner.resident_id)
             drawn = world.bonds.attraction_rate(world, resident, partner)
-            for feeling, delta in feeling_changes(definition, resident, partner, feelings, drawn).items():
+            relish = 1.0
+            if definition.pastime is not None:
+                # Done for the sake of it: each takes it as their taste for it has them.
+                taken = world.tastes.pastime(world, resident, definition.pastime, [partner.resident_id])
+                relish = world.registries.leisure.relief_of(taken)
+            for feeling, delta in feeling_changes(definition, resident, partner, feelings, drawn, relish).items():
                 feelings.adjust(feeling, delta)
             if definition.hostile:
                 feelings.last_argued = world.clock.total_minutes
@@ -373,6 +383,14 @@ class SocialSystem:
                 world.tastes.after_exchange(world, resident, partner)
         resident.activity = None
         resident.current_action = "idle"
+        if partner is not None and definition.then_use is not None:
+            # It leads somewhere: each goes on there for themselves, whoever was asked if they care to.
+            came_for_it = activity.intent == definition.interaction_id
+            onward = world.leisure.go_on(world, resident, partner, definition.then_use, asked=not came_for_it)
+            if onward is not None:
+                onward.ordered = activity.ordered
+                resident.activity = onward
+                resident.current_action = "walking"
         if partner is None or not definition.hostile:
             return
         if definition.damage is not None:

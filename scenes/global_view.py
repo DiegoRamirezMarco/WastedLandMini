@@ -112,12 +112,14 @@ from simulation.commands import (
     SetResearchCommand,
     SetSpeedCommand,
     AffectCommand,
+    CancelOrderCommand,
     HoldResidentCommand,
     ReleaseResidentCommand,
+    SetFreeWillCommand,
     ScrapItemCommand,
     SuggestJobCommand,
 )
-from simulation.ai.affect import SALVAGE, TASK
+from simulation.ai.affect import SALVAGE, SHARED, TASK
 from simulation.events.event import DomainEvent
 from simulation.events.world_event_system import GATE_DECISIONS
 from simulation.family.children import BED as BUNDLE_IN_BED
@@ -139,7 +141,7 @@ from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
 from skeleton.plan import IDLE_CLIP, builtin_plan
 from skeleton.rig import Skeleton
-from ui.affect_board import AFFECT_INTENT, BACK_INTENT, CLOSE_INTENT
+from ui.affect_wheel import AFFECT_INTENT, BACK_INTENT, CLOSE_INTENT, SOCIAL, TASKS, WILL_INTENT
 from ui.fund_board import BARTER_BACK, CURRENCY, RENAME, FundEntry
 from ui.trade_board import CART_INTENT as TRADE_CART_INTENT
 from ui.trade_board import DEAL_INTENT as TRADE_DEAL_INTENT
@@ -242,6 +244,7 @@ HURT_HEALTH = 70.0
 # Where a load is drawn on a body frame, by the way the resident faces: in their arms, or on their back.
 SUGGESTION_REFUSED = "Ahora no se le puede proponer ese puesto"
 NOBODY_NEEDS_ATTENTION = "Nadie necesita atención ahora"
+NOTHING_WITH = "Con {name} no hay nada que decirle ahora"
 ROOFS_ON = "Tejados puestos: se quitan al mirar dentro"
 ROOFS_OFF = "Tejados quitados"
 MINIMAP_ON = "Minimapa a la vista"
@@ -457,7 +460,8 @@ class GlobalView:
         self.placards: dict[str, pygame.Rect] = {}
         # What sounds the player's own clicks, if anything does: given the name of what was done.
         self.sound: Callable[[str], object] | None = None
-        # Whoever the player has stopped to tell something, while they are choosing what.
+        # Whoever the player has stopped to tell something, while they are choosing what. Nobody
+        # while the wheel is open about somebody who goes on with what they were told.
         self._affected: str | None = None
         # The building being looked at from inside, by room ID, and what draws it. None out on the map.
         self.inside: str | None = None
@@ -548,6 +552,10 @@ class GlobalView:
             # The wheel zooms towards whatever is under the mouse, one step per notch.
             steps = (event.y > 0) - (event.y < 0)
             self.set_zoom(self.zoom + steps, canvas_position(pygame.mouse.get_pos()))
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and self.hud.wheel.open:
+            # The other button goes a step back in the wheel, and out of it from its first step.
+            self._sound("click")
+            self._affect_back(close=False)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self.pointer = canvas_position(event.pos)
             if self._on_map(self.pointer):
@@ -627,6 +635,10 @@ class GlobalView:
             self.pointer = canvas_position(event.pos)
             self.click(self.pointer)
             return True
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and self.hud.wheel.open:
+            self._sound("click")
+            self._affect_back(close=False)
+            return True
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
             # The other button puts down whatever is in hand.
             self.interior.decor_held, self.interior.decor_removing = None, False
@@ -658,6 +670,12 @@ class GlobalView:
         elif not self.hud.covers(position) and self.viewport.collidepoint(position):
             picked = [rid for rid, rect in self.hitboxes.items() if rect.collidepoint(position)]
             kept = [cid for cid, rect in self.container_hitboxes.items() if rect.collidepoint(position)]
+            if self.hud.wheel.open:
+                self._click_past_wheel(picked[-1] if picked else None)
+                return
+            if picked and self._asks_for_wheel(picked[-1]):
+                self._toggle_affect()
+                return
             if picked:
                 self._sound("select")
                 self.hud.select_resident(picked[-1])
@@ -772,6 +790,7 @@ class GlobalView:
         self.placards = {}
         self.sign_boxes = {}
         self.interior.render(room)
+        self._seat_wheel()
         self.hud.render()
 
     def update(self, dt: float) -> None:
@@ -1008,6 +1027,10 @@ class GlobalView:
         elif not self.hud.covers(position) and self.viewport.collidepoint(position):
             # The resident drawn last is in front, so it is the one picked.
             picked = [rid for rid, rect in self.hitboxes.items() if rect.collidepoint(position)]
+            if self.hud.wheel.open:
+                # With the wheel open, a click on somebody else says who, and on anything else shuts it.
+                self._click_past_wheel(picked[-1] if picked else None)
+                return
             visitor = self.visitor()
             sign = next((room_id for room_id, box in self.sign_boxes.items() if box.collidepoint(position)), None)
             if sign is not None and self.enter(sign):
@@ -1022,6 +1045,10 @@ class GlobalView:
                 # Nor is whoever knocks at the gate: a click on them is to hear whoever answers it.
                 self._sound("open")
                 self.requested_decision = self.gate_decision()
+                return
+            elif picked and self._asks_for_wheel(picked[-1]):
+                # A second click on whoever is selected opens the wheel about them.
+                self._toggle_affect()
                 return
             elif picked:
                 self._sound("select")
@@ -1106,8 +1133,15 @@ class GlobalView:
             self._toggle_affect()
         elif intent in (CLOSE_INTENT, BACK_INTENT):
             self._affect_back(intent == CLOSE_INTENT)
-        elif isinstance(intent, tuple) and intent[0] == "affect_group":
-            self.hud.affect_group, self.hud.affect_kind = intent[1], None
+        elif intent == WILL_INTENT:
+            self._toggle_will()
+        elif isinstance(intent, tuple) and intent[0] == "affect_branch":
+            wheel = self.hud.wheel
+            wheel.branch, wheel.kind, wheel.person = intent[1], None, None
+        elif isinstance(intent, tuple) and intent[0] == "affect_person":
+            self._affect_person(intent[1])
+        elif isinstance(intent, tuple) and intent[0] == "order_cancel":
+            self._cancel_order(intent[1])
         elif isinstance(intent, tuple) and intent[0] == "affect":
             self._affect(intent[1], None)
         elif isinstance(intent, tuple) and intent[0] == "affect_target":
@@ -1190,40 +1224,81 @@ class GlobalView:
         if self.sound is not None:
             self.sound(what)
 
+    def _asks_for_wheel(self, resident_id: str) -> bool:
+        """Whether a click on a resident on the map is the second one on them, which opens the
+        wheel: they are who is selected, and have nothing waiting on the player to be heard first."""
+        return resident_id == self.hud.selected_id and self._decision_of(resident_id) is None
+
+    def _seat_wheel(self) -> None:
+        """Tell the wheel where whoever is selected stands on the screen, to be laid out about them."""
+        box = self.hitboxes.get(self.hud.selected_id or "")
+        self.hud.wheel.centre = box.center if box is not None else self.viewport.center
+
     def _toggle_affect(self) -> None:
-        """Stop whoever is selected so that they can be told something, or let them go."""
+        """Open the wheel about whoever is selected, or shut it and let them go. It stops them
+        to be told something, unless they are at something they were told: then they go on
+        with it, and what is said waits its turn."""
         resident_id = self.hud.selected_id
         if resident_id is None:
             return
-        if self.hud.affect_open:
-            self._affect_back(close=True)
+        if self.hud.wheel.open:
+            self._close_wheel()
             return
         waiting = self.world.construction.waiting_for_material(self.world, self.world.residents[resident_id])
-        result = self.world.apply_command(HoldResidentCommand(resident_id))
-        if not result.ok:
+        error = self.world.affect.obstacle(self.world, resident_id)
+        held = error is None and not self.world.affect.busy(self.world, resident_id)
+        if held:
+            result = self.world.apply_command(HoldResidentCommand(resident_id))
+            error = None if result.ok else result.message
+        if error is not None:
             self._sound("refuse")
-            self.hud.notify(result.message)
+            self.hud.notify(error)
             return
         self._sound("open")
-        self._affected = resident_id
+        self._affected = resident_id if held else None
         salvage = f"{TASK}:{SALVAGE}"
         if waiting is not None and any(option.kind == salvage for option in self.world.affect_options(resident_id)):
             # Somebody waiting for material is asked first what they may take apart for it.
-            self.hud.open_affect(TASK, salvage)
+            self.hud.wheel.show(resident_id, TASKS, salvage)
         else:
-            self.hud.open_affect()
+            self.hud.wheel.show(resident_id)
+
+    def _close_wheel(self) -> None:
+        """Shut the wheel. Whoever was stopped for it goes about their day, or on to what they were told."""
+        if self._affected is not None:
+            self.world.apply_command(ReleaseResidentCommand(self._affected))
+        self._affected = None
+        self.hud.wheel.shut()
 
     def _affect_back(self, close: bool) -> None:
         """Go a step back in what is being said, or with nothing chosen yet let them go."""
-        if not close and self.hud.affect_kind is not None:
-            self.hud.affect_kind = None
-        elif not close and self.hud.affect_group is not None:
-            self.hud.affect_group = None
-        else:
-            if self._affected is not None:
-                self.world.apply_command(ReleaseResidentCommand(self._affected))
-            self._affected = None
-            self.hud.close_affect()
+        if close or not self.hud.wheel.back():
+            self._close_wheel()
+
+    def _affect_person(self, other_id: str) -> None:
+        """Turn the wheel to what whoever is selected can be told to do with one person."""
+        resident_id = self.hud.selected_id
+        other = self.world.residents.get(other_id)
+        if resident_id is None or other is None:
+            return
+        if not self.world.affect_with(resident_id, other_id):
+            self._sound("refuse")
+            self.hud.notify(NOTHING_WITH.format(name=other.name))
+            return
+        wheel = self.hud.wheel
+        wheel.branch, wheel.kind, wheel.person = SOCIAL, None, other_id
+
+    def _click_past_wheel(self, other_id: str | None) -> None:
+        """A click on the map while the wheel is open: on somebody else, it says who what is
+        being chosen is with; on whoever it is about, or on nobody, it shuts it."""
+        self._sound("click")
+        wheel = self.hud.wheel
+        if other_id is None or other_id == self.hud.selected_id or other_id not in self.world.residents:
+            self._close_wheel()
+        elif wheel.kind is not None and wheel.kind.partition(":")[0] in SHARED:
+            self._affect(wheel.kind, other_id)
+        elif wheel.kind is None:
+            self._affect_person(other_id)
 
     def _affect(self, kind: str, target_id: str | None) -> None:
         """Tell whoever is selected what was chosen, or go on to who or what it is about."""
@@ -1232,29 +1307,48 @@ class GlobalView:
             return
         option = next((each for each in self.world.affect_options(resident_id) if each.kind == kind), None)
         if option is not None and option.targets and target_id is None:
-            self.hud.affect_kind = kind
+            self.hud.wheel.kind = kind
             return
         result = self.world.apply_command(AffectCommand(resident_id, kind, target_id))
         self.hud.notify(result.message)
         self._sound("order" if result.ok else "refuse")
         if result.ok:
-            self._affected = None
-            self.hud.close_affect()
+            self._close_wheel()
+
+    def _toggle_will(self) -> None:
+        """Have whoever is selected do nothing of their own accord, or give them their will back."""
+        resident = self.world.residents.get(self.hud.selected_id or "")
+        if resident is None:
+            return
+        result = self.world.apply_command(SetFreeWillCommand(resident.resident_id, not resident.free_will))
+        self.hud.notify(result.message)
+        self._sound("order" if result.ok else "refuse")
+
+    def _cancel_order(self, index: int) -> None:
+        """Take back one of the things whoever is selected has been told to do."""
+        resident_id = self.hud.selected_id
+        if resident_id is None:
+            return
+        result = self.world.apply_command(CancelOrderCommand(resident_id, index))
+        self.hud.notify(result.message)
+        self._sound("click" if result.ok else "refuse")
 
     def _keep_listening(self) -> None:
         """While the player is choosing what to say, whoever was stopped goes on standing there.
-        With somebody else selected, or them gone, they are let go."""
-        if not self.hud.affect_open:
+        With somebody else selected, or them gone or no longer to be told anything, the wheel
+        shuts and they are let go."""
+        wheel = self.hud.wheel
+        if not wheel.open:
             if self._affected is not None:
                 self.world.apply_command(ReleaseResidentCommand(self._affected))
                 self._affected = None
             return
         resident_id = self.hud.selected_id
-        if resident_id != self._affected or resident_id not in self.world.residents:
-            self._affect_back(close=True)
-        elif not self.world.affect.is_held(self.world, resident_id):
+        if resident_id != wheel.about or self.world.affect.obstacle(self.world, resident_id or "") is not None:
+            self._close_wheel()
+        elif self._affected is not None and not self.world.affect.is_held(self.world, resident_id):
             if not self.world.apply_command(HoldResidentCommand(resident_id)).ok:
-                self._affect_back(close=True)
+                self._close_wheel()
 
     def _law(self, intent: tuple) -> None:
         """Something pressed beside a law on the government's panel: how far it would go, what
@@ -1521,6 +1615,7 @@ class GlobalView:
             overlay()
         self.canvas.set_clip(None)
 
+        self._seat_wheel()
         self.hud.render()
         self._draw_minimap(region)
         self._draw_away()
@@ -2308,7 +2403,9 @@ class GlobalView:
                 return (*self._way_of(resident, FIGHT), None)
             if self._arguing(resident):
                 return (*self._way_of(resident, ARGUE), None)
-            return (IDLE_CLIP, 0.0, None)
+            # What two sit down to, they sit down to: cards, a story.
+            together = self._seat_of(resident)
+            return (*together, None) if together is not None else (IDLE_CLIP, 0.0, None)
         seat = self._seat_of(resident)
         if activity.action == EAT_ACTION:
             clip, rate = self._way_of(resident, EAT)
@@ -2329,10 +2426,11 @@ class GlobalView:
 
     def _seat_of(self, resident: Resident) -> tuple[str, float] | None:
         """The clip a resident sits in, and how many turns of it a second, if what they are at
-        is done sitting down: by a fire, at the radio, eating, drinking. On a seat it is the
-        way anybody sits on one, and on the ground their own. None for whoever is on their feet."""
+        is done sitting down: by a fire, at the radio, eating, drinking, or passing the time that
+        way, alone or with somebody. On a seat it is the way anybody sits on one, and on the
+        ground their own. None for whoever is on their feet."""
         activity = resident.activity
-        if activity is None or not activity.using or activity.partner_id is not None:
+        if activity is None or not activity.using:
             return None
         kind = self.world.registries.manners.during(SIT, activity.action)
         if kind is None:
@@ -2629,9 +2727,12 @@ class GlobalView:
         return (bed.bottom, 1, draw)
 
     def sleeps_rough(self, resident: Resident) -> bool:
-        """Whether a resident is asleep on the ground, for want of a bed."""
+        """Whether a resident is lying on the ground: asleep there for want of a bed, or dozing where they were."""
         activity = resident.activity
-        return activity is not None and activity.using and activity.action == SLEEP_ROUGH_ACTION
+        if activity is None or not activity.using:
+            return False
+        pastime = self.world.leisure.pastime_of(self.world, activity)
+        return activity.action == SLEEP_ROUGH_ACTION or (pastime is not None and pastime.lies)
 
     def _rough_pose(self, resident: Resident, stride: float | None) -> tuple[str, float] | None:
         """The clip somebody who sleeps on the ground is at, and how far through it: lying down

@@ -304,8 +304,18 @@ room. An argument's importance rises with the resentment between the two.
 - **The one place where the player gives orders.** A resident who is stopped leaves off what
   they were doing and stands listening for a while. Told to see to a need, go to somebody, get
   on with something or simply hear a few words, they do it, as far as it can be done.
-- **What they feel strongly they can be set on to act on**: to go for somebody they resent, to
-  make a move on somebody they are drawn to, to seek out somebody they are fond of.
+- **With somebody, only what they feel for them is on offer.** There is always talk. Past
+  it, each thing has what it takes: a joke, a hug, a kiss, an insult, coming to blows. What one
+  feels the other need not, and it is the one who is told whose feelings count.
+- **Leisure**: a stroll, a sit, a doze or a tune alone; cards, stories, a dance or a drink
+  with somebody. Each goes by a taste of theirs, which shows when they are at it: what they
+  like does them more good.
+- **One thing after another.** What is said while they are at something they were told
+  waits its turn, and is done when the one before is over. What can no longer be done by then
+  is let go. Any of it can be taken back.
+- **Nothing unasked.** A resident can be told to do nothing of their own accord: they do what
+  they are told, see to what was put in their hands, and otherwise stand by. A body that can
+  wait no longer is seen to all the same.
 - **It costs nothing**, and what is on offer follows from how things stand.
 
 ### Tasks, and taking things apart

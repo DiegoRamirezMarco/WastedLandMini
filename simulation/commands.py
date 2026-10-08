@@ -68,6 +68,12 @@ class CommandTarget(Protocol):
     def affect_resident(self, resident_id: str, kind: str, target_id: str | None) -> AffectResult:
         ...
 
+    def cancel_order(self, resident_id: str, index: int) -> AffectResult:
+        ...
+
+    def set_free_will(self, resident_id: str, free: bool) -> AffectResult:
+        ...
+
     def scrap_item(self, item_id: str, option_id: str) -> UrbanismResult:
         ...
 
@@ -355,6 +361,30 @@ class AffectCommand:
 
     def apply(self, world: CommandTarget) -> AffectResult:
         return world.affect_resident(self.resident_id, self.kind, self.target_id)
+
+
+@dataclass(frozen=True)
+class CancelOrderCommand:
+    """The player takes back one of the things they told a resident to do: what they are at
+    for having been told, which is the first, or one of those that wait after it."""
+
+    resident_id: str
+    index: int
+
+    def apply(self, world: CommandTarget) -> AffectResult:
+        return world.cancel_order(self.resident_id, self.index)
+
+
+@dataclass(frozen=True)
+class SetFreeWillCommand:
+    """The player says whether a resident does anything of their own accord. One who does
+    not does what they are told, and waits to be told the rest."""
+
+    resident_id: str
+    free: bool
+
+    def apply(self, world: CommandTarget) -> AffectResult:
+        return world.set_free_will(self.resident_id, self.free)
 
 
 @dataclass(frozen=True)

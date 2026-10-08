@@ -454,6 +454,59 @@ def _purse(p: Pen) -> None:
     p.circle(24, 30, 4.8, p.light)
 
 
+def _talk(p: Pen) -> None:
+    p.box(5, 7, 38, 26, 10)
+    p.poly([(13, 29), (10.5, 43), (25, 31)])
+    for x in (15.5, 24, 32.5):
+        p.circle(x, 20, 2.8, p.cut)
+
+
+def _heart(p: Pen) -> None:
+    p.circle(15.5, 18, 10.5)
+    p.circle(32.5, 18, 10.5)
+    p.poly([(6.2, 23), (41.8, 23), (24, 43.5)])
+    p.arc(15.5, 18, 6, 190, 260, 2.8, p.light)
+
+
+def _clash(p: Pen) -> None:
+    points = []
+    for step in range(16):
+        radius = 21.5 if step % 2 == 0 else 10.5
+        angle = math.radians(step * 22.5 - 90)
+        points.append((24 + radius * math.cos(angle), 24 + radius * math.sin(angle)))
+    p.poly(points)
+    p.box(21.6, 13.5, 4.8, 13, 1.5, p.cut)
+    p.circle(24, 32, 2.8, p.cut)
+
+
+def _die(p: Pen) -> None:
+    p.box(7, 7, 34, 34, 8)
+    for x, y in ((16, 16), (32, 32), (24, 24), (32, 16), (16, 32)):
+        p.circle(x, y, 3.3, p.cut)
+    p.arc(15, 15, 6, 185, 265, 2.2, p.light)
+
+
+def _back(p: Pen) -> None:
+    p.poly([(5, 24), (22, 7.5), (22, 17.5), (43, 17.5), (43, 30.5), (22, 30.5), (22, 40.5)])
+
+
+def _close(p: Pen) -> None:
+    p.line([(12, 12), (36, 36)], 8.5)
+    p.line([(36, 12), (12, 36)], 8.5)
+
+
+def _stop(p: Pen) -> None:
+    p.circle(24, 24, 20)
+    p.box(11.5, 19.8, 25, 8.4, 2, p.cut)
+
+
+def _unlock(p: Pen) -> None:
+    p.arc(33.5, 19, 9.5, 180, 360, 5.5, p.soft)
+    p.box(4.5, 20, 32, 24, 5)
+    p.circle(20.5, 29.5, 4, p.cut)
+    p.box(18.7, 30, 3.6, 8.5, 1, p.cut)
+
+
 GLYPHS: dict[str, Glyph] = {
     "people": _people,
     "work": _hammer,
@@ -477,6 +530,14 @@ GLYPHS: dict[str, Glyph] = {
     "lock": _lock,
     "coin": _coin,
     "fund": _purse,
+    "talk": _talk,
+    "heart": _heart,
+    "clash": _clash,
+    "leisure": _die,
+    "back": _back,
+    "close": _close,
+    "stop": _stop,
+    "unlock": _unlock,
 }
 # The colour each icon is, where it stands alone or on a tile of its own.
 HUES: dict[str, Color] = {
@@ -502,6 +563,14 @@ HUES: dict[str, Color] = {
     "lock": (226, 186, 84),
     "coin": (240, 190, 70),
     "fund": (206, 156, 62),
+    "talk": (72, 168, 190),
+    "heart": (226, 92, 128),
+    "clash": (222, 88, 62),
+    "leisure": (146, 108, 196),
+    "back": (128, 138, 142),
+    "close": (128, 138, 142),
+    "stop": (206, 78, 84),
+    "unlock": (108, 168, 96),
 }
 # What is cut into an icon that stands alone, where it is not simply dark.
 CUTS: dict[str, Color] = {"medicine": (206, 58, 54)}
@@ -529,6 +598,56 @@ def icon(name: str, size: int) -> pygame.Surface:
         picture.blit(shape, (margin + round(margin * math.cos(angle)), margin + round(margin * math.sin(angle))))
     picture.blit(drawn, (margin, margin))
     return pygame.transform.smoothscale(picture, (size, size))
+
+
+def disc(
+    size: int,
+    hue: Color,
+    name: str | None = None,
+    face: pygame.Surface | None = None,
+    lit: bool = False,
+    badge: str | None = None,
+) -> pygame.Surface:
+    """A round button of a colour, as the ones laid out in a ring are: with an icon on it in
+    pale, or with a face in it, lighter while it is pointed at. `badge` is another icon, small
+    and in its own colour, at its upper right."""
+    k = ICON_DETAIL
+    hue = lighter(hue, 0.16) if lit else hue
+    side = size * k
+    picture = pygame.Surface((side, side), pygame.SRCALPHA)
+    middle = side / 2
+    # A dark rim, a paler one inside it while it is pointed at, and the face of the button.
+    pygame.draw.circle(picture, (*darker(hue, 0.78), 255), (middle, middle), middle)
+    edge = max(k, round(side * 0.045))
+    if lit:
+        pygame.draw.circle(picture, (*lighter(hue, 0.55), 255), (middle, middle), middle - edge)
+        edge *= 2
+    inner = side - edge * 2
+    plate = _gradient((inner, inner), lighter(hue, 0.3), darker(hue, 0.24))
+    gloss = pygame.Surface((inner, inner), pygame.SRCALPHA)
+    pygame.draw.ellipse(gloss, (255, 255, 255, 36), (-inner // 4, -inner // 2, inner * 3 // 2, inner))
+    plate.blit(gloss, (0, 0))
+    picture.blit(_rounded(plate, inner // 2), (edge, edge))
+    if face is not None:
+        within = round(inner * 0.86)
+        shown = pygame.transform.smoothscale(face.convert_alpha(), (within, within))
+        corner = (side - within) // 2
+        picture.blit(_rounded(shown, within // 2), (corner, corner))
+    elif name is not None:
+        glyph_side = round(side * 0.62)
+        corner = (side - glyph_side) // 2
+        dark = darker(hue, 0.6)
+        shade = pygame.Surface((glyph_side, glyph_side), pygame.SRCALPHA)
+        GLYPHS[name](Pen(shade, dark, dark, dark, dark))
+        picture.blit(shade, (corner, corner + max(1, round(side * 0.03))))
+        drawn = pygame.Surface((glyph_side, glyph_side), pygame.SRCALPHA)
+        GLYPHS[name](Pen(drawn, CREAM, darker(hue, 0.42), mix(CREAM, hue, 0.5), WHITE))
+        picture.blit(drawn, (corner, corner))
+    picture = pygame.transform.smoothscale(picture, (size, size))
+    if badge is not None:
+        small = icon(badge, max(6, round(size * 0.42)))
+        picture.blit(small, (size - small.get_width(), 0))
+    return picture
 
 
 def tile(name: str, size: int, lit: bool = False) -> pygame.Surface:

@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `37` |
+| `version` | `38` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -32,7 +32,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `interactables` | Placed objects: `id`, `kind`, tile `x` and `y` |
 | `sites`, `site_count` | What is being built: `id`, `kind` (`object` or `building`), `what` (the object kind or blueprint ID), tile `x` and `y`, `in_charge` (the resident who agreed to it), `delivered` (units brought so far, per item definition), `progress` (minutes of work done) and `started_at`; and the counter behind site IDs |
 | `salvage` | What somebody has been told to take apart: `object_id`, `resident_id` and `progress` (minutes of work done) |
-| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `attributes` (`strength`, `constitution`, `dexterity`, `mind` and `senses` from 1 to 10, or `null` for somebody not asked yet), `trade` (minutes at each job, by job ID), `makes` (the day each thing they know how to make was learned, by discovery ID), `lessons` (minutes of being shown each thing they are learning), `dosed_with`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them) |
+| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `attributes` (`strength`, `constitution`, `dexterity`, `mind` and `senses` from 1 to 10, or `null` for somebody not asked yet), `trade` (minutes at each job, by job ID), `makes` (the day each thing they know how to make was learned, by discovery ID), `lessons` (minutes of being shown each thing they are learning), `dosed_with`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them), `doing` (what they are at for having been told, as `kind` and `target_id`, or `null`), `orders` (what they were told and have not got to, the next first, each the same way) and `free_will` (false for somebody who does nothing unasked) |
 | `containers` | Per container object ID, the items inside |
 | `item_count` | Counter behind item IDs |
 | `thefts`, `theft_cooldowns`, `notices` | Record of every theft, with the `amount` of credit taken when it was not an item and `@fund` for a `victim_id` when it was the settlement's; last theft per resident; once-a-day notices already given |
@@ -54,8 +54,9 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 A resident's `activity` is `null` or `action`, `target_id` (an object ID, or a site ID), `partner_id` (a resident
 ID, when talking or walking over to talk), `intent` (the exchange they are set on having), the
-remaining `path` as tiles, `minutes_left`, `using` and `held_up` (minutes running that somebody
-in the way has kept them from a step along that path).
+remaining `path` as tiles, `minutes_left`, `using`, `held_up` (minutes running that somebody
+in the way has kept them from a step along that path) and `ordered` (whether it is something
+the player told them to do).
 
 A resident's `expedition` is `null` or `returns_at`, `finds`, `danger`, `find_at` and `fetch`.
 
@@ -82,6 +83,9 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 38** added `doing`, `orders` and `free_will` on a resident, and `ordered` on their
+  `activity` (S50). In an older save nobody has been told anything, and everybody does as
+  they like.
 - **Version 37** added `discoveries` (each with `discovery_id`, `kind`, `job_id`, who it is `by`
   and their `by_name`, the `level` and `day` it was come to, the `name` and `choices` the
   player gave it, and the `item_id` and whole `item` definition it made) and

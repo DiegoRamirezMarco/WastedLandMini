@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 
 from simulation.health.injury import Injury
 from simulation.items.inventory import Inventory
-from simulation.residents.activity import Activity
+from simulation.residents.activity import Activity, Order
 from simulation.residents.attributes import Attributes
 from simulation.residents.needs import Needs
 from simulation.residents.personality import Personality
@@ -32,6 +32,12 @@ class Resident:
     current_action: str = "idle"
     facing: str = "down"
     activity: Activity | None = None
+    # What the player has told them to do: what they are at now for having been told, if
+    # anything, and what waits for after it, the next first (S50).
+    doing: Order | None = None
+    orders: list[Order] = field(default_factory=list)
+    # Whether they do anything of their own accord. Without it they wait to be told.
+    free_will: bool = True
     # IDs of traits from the trait registry.
     traits: list[str] = field(default_factory=list)
     # Their way of walking, eating and so on: a manner from the manner registry for each kind

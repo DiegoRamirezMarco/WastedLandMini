@@ -150,6 +150,20 @@ class WindowSkin:
         """An icon standing alone, at a size of the window."""
         return self._own(name, size) or self._kept(("icon", name, size), lambda: ui_art.icon(name, size))
 
+    def disc(self, name: str, size: int, lit: bool = False, badge: str | None = None) -> pygame.Surface:
+        """A round button with an icon on it, at a size of the window."""
+        own = self._own(name, size)
+        if own is not None:
+            return own
+        return self._kept(
+            ("disc", name, size, lit, badge), lambda: ui_art.disc(size, ui_art.HUES[name], name, lit=lit, badge=badge)
+        )
+
+    def face_disc(self, key: Hashable, face: pygame.Surface, size: int, lit: bool = False) -> pygame.Surface:
+        """A round button with somebody's face in it, at a size of the window. `key` tells one
+        face from another: whose it is, and how it looks right now."""
+        return self._kept(("face", key, size, lit), lambda: ui_art.disc(size, ui_art.HUES["people"], face=face, lit=lit))
+
     def _own(self, name: str, size: int) -> pygame.Surface | None:
         if self.illustrations is None:
             return None

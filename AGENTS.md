@@ -15,8 +15,8 @@
 ## Resident agency
 - Residents act autonomously.
 - Player choices influence decisions but do not normally force outcomes. There are three
-  exceptions: affecting a resident the player has stopped (S37), where what is said to them
-  is an order; the kind of government (S38), which the player chooses and the settlement
+  exceptions: affecting a resident (S37, S50), where what is said to them is an order, done
+  one thing after another, and who can be told to do nothing unasked; the kind of government (S38), which the player chooses and the settlement
   has; and its laws, its punishments and what it trades with (S28, S45), which the player
   runs, by a vote where the government in force has one. Who leads, how each resident votes
   and what they make of it stay the residents' own.

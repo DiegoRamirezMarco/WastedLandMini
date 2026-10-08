@@ -1,0 +1,79 @@
+{
+  "accept_affection": 0,
+  "relief": {
+    "hated": 0.2,
+    "disliked": 0.6,
+    "neutral": 1.0,
+    "liked": 1.4,
+    "loved": 1.8
+  },
+  "taken": {
+    "hated": ", y lo aborrece",
+    "disliked": ", sin ganas",
+    "liked": ", a gusto",
+    "loved": ", y lo disfruta de lo lindo"
+  },
+  "alone": {
+    "stroll": {
+      "name": "Pasear",
+      "label": "Que dé un paseo",
+      "text": "{name} sale a dar un paseo",
+      "doing": "da un paseo",
+      "minutes": [
+        20,
+        40
+      ],
+      "per_minute": {
+        "stress": -0.22
+      },
+      "taste": "strolling",
+      "strolls": true
+    },
+    "sit": {
+      "name": "Sentarse a mirar",
+      "label": "Que se siente a mirar pasar el día",
+      "text": "{name} se sienta a mirar pasar el día",
+      "doing": "mira pasar el día",
+      "minutes": [
+        20,
+        45
+      ],
+      "per_minute": {
+        "stress": -0.2,
+        "tiredness": -0.03
+      },
+      "taste": "idling",
+      "sits": true
+    },
+    "nap": {
+      "name": "Una cabezada",
+      "label": "Que eche una cabezada",
+      "text": "{name} se echa una cabezada allí mismo",
+      "doing": "echa una cabezada",
+      "minutes": [
+        20,
+        40
+      ],
+      "per_minute": {
+        "tiredness": -0.12,
+        "stress": -0.12
+      },
+      "taste": "napping",
+      "lies": true
+    },
+    "hum": {
+      "name": "Tararear",
+      "label": "Que tararee algo",
+      "text": "{name} se pone a tararear",
+      "doing": "tararea algo",
+      "minutes": [
+        10,
+        20
+      ],
+      "per_minute": {
+        "stress": -0.25
+      },
+      "taste": "music"
+    }
+  }
+}

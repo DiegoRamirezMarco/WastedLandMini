@@ -2552,6 +2552,7 @@ Still open here:
   something, or to work out of hours
 
 ### P30 — Affecting, and breaking things up, on screen (needs S36 and S37) — done
+The list that opened over the map is gone: P57 put a wheel about the resident in its place.
 - **A way to affect whoever is selected**, in their panel beside their face. It stops them,
   and what they are about reads `se queda pensando...`
 - **What can be said opens over the map**, a step at a time: the kind of thing, the thing, and
@@ -3934,6 +3935,185 @@ Still open here:
 - Two who quarrel one above the other on the map both look where they last walked, and
   their bolts lean that way
 - Nothing of this has been seen on a real window by whoever made it
+
+### S48 — With somebody, only what is felt for them (needs S37) — done
+The user, on 2026-10-08: "Afectar lo vamos a cambiar, cuando cliquemos a un pj lo seguimos, si
+le clicamos de nuevo se abrirá el menú afectar, este será similar al de los sims, circula
+alrededor del personaje, tendremos varias opciones, desde hablar, a ocio etc, también se
+desplegará el cómo se hace esa opción; si es con personas habrá más opciones según el afecto y
+dependiendo de ese cambiarán, desde charlar a romance o a darse de hostias. Esto nos dará
+mayor control sobre los pj y lo llevaremos un poco más al ámbito sims fallout shelter."
+
+Asked first, and answered, for all of what follows (S48 to S50 and P57):
+- **Who something is done with** is chosen by their faces in the wheel, and by a click on
+  them on the map as well
+- **What they do not feel is not there.** Shown greyed out with what is missing had been
+  recommended, and was not taken: "Solo sale lo que siente"
+- **Leisure** is what is done alone with nothing, what is done with somebody, and each by how
+  they like it. Choosing which fire, bar or radio to go to was offered and left out
+- **Orders pile up, and a resident can be told to do nothing of their own**: "Cola y además
+  libre albedrío", over a queue alone, which had been recommended
+
+- **What can be done with somebody is what is felt for them**, one way: what Raúl can be
+  told to do with Marta is what Raúl feels for Marta, whatever she feels. There is always
+  talk. Past it, each thing has what it takes written beside it in `data/affect.json`, as
+  the least and the most of each feeling, with more than one way of feeling that will do
+  where there is more than one
+- **Thirteen things between two**: talk; a joke, talking things over and a hug as fondness
+  grows; flirting, saying what they feel and slipping away as attraction does; a kiss, asking
+  to marry and leaving, with a partner; standing up to them, insults and going for them as
+  resentment does
+- **Each is friendly, romantic or hostile**, which is how it is shown and nothing else
+- **Romance is between adults, towards somebody they could be drawn to**, as everything of
+  the kind already was
+- **Five exchanges that were not there**: a joke, a hug, flirting, a kiss and an insult, each
+  with what it does to both. An insult may come to blows as an argument may
+- **Anybody it can be had with can be named**, not only the few nearest that are offered
+- What had been "setting somebody on" (S37) is the same thing now: being set on somebody
+  they hate is what there is to do with somebody they hate that much
+
+Done when: with nothing felt there is talk and no more; each thing appears at what it takes
+and not a point before; what one feels the other need not; a partner's are with a partner
+only; nothing of romance is offered with a minor; and what is not on offer cannot be ordered.
+
+Decided without asking:
+- What each thing takes: a joke at 10 of affection, talking things over at 20 of it or 15 of
+  resentment, a hug at 40; flirting at 20 of attraction, slipping away at 40, saying what they
+  feel at 45 with 35 of affection, as a resident does of their own accord; asking to marry at
+  50 of affection; leaving at 30 of resentment or no more than 15 of affection; standing up to
+  somebody at 15 of resentment, insults at 30, blows at 50
+- Whoever is asked is not: as with every order that sends one resident to another, what is
+  asked of them is theirs to answer where it already was (a confession, a proposal, going off
+  alone), and anything else simply happens to them
+- `incite` is still read from the data, for content that has it. The game's own has none
+
+Still open here:
+- The player is not shown what is missing for something to appear, which is as it was asked
+- Fear and trust open nothing yet
+
+### S49 — Leisure (needs S48 and S22) — done
+- **Four ways of passing the time alone, with nothing** (`data/leisure.json`): a stroll, a
+  sit, a doze and a tune. Each is done where they stand, or from there, and takes a little off
+  their nerves a minute at a time
+- **Four with somebody**: cards, stories, a dance, and asking them for a drink. They are
+  exchanges between two (`data/social.json`) and go by what is felt like the rest: cards with
+  anybody they do not resent, stories with a little fondness, a dance with more or with
+  attraction
+- **Asking for a drink leads somewhere**: once it is said, each goes to the bar for
+  themselves, and pays, and drinks as anybody does there. Whoever was asked goes only if they
+  care for whoever asked. With nobody behind the bar it is not on offer
+- **Each by how they like it**: a pastime goes by a taste (S19 to S22) like any other, that
+  they come with and that shows. What they like does them more good, and what they loathe
+  hardly any: from a fifth to nearly twice. With somebody, it is how much fonder of the
+  other each comes away
+- **The player learns it by seeing them at it**, as with what they eat, and from then on it is
+  marked where it is offered. Whoever is with them learns it too
+
+Done when: a pastime lowers what it says it lowers; one they love does more than one they
+loathe; having seen it, the option says so; a stroll is walked; two sit down to cards and
+come away fonder by how each took it; and asked for a drink, both go on to the bar unless the
+one asked does not care for the other.
+
+Decided without asking:
+- How long each lasts and what it gives, in the data: a stroll of twenty to forty minutes,
+  a tune of ten to twenty
+- A doze is on the ground where they are, awake enough to be spoken to
+
+Still open here:
+- **Nobody does any of it unless told.** Residents with time on their hands still stroll
+  about as they did: giving them leisure of their own changes how every day of the settlement
+  goes, and wants weighing over many seeds first
+- A taste for a pastime does not grow with doing it
+- Whoever is asked to cards, a story or a dance is not asked: they sit down to it
+- A dance has no movement of its own, and a tune no sound
+
+### S50 — One thing after another, and nothing unasked (needs S37) — done
+- **What is said while they are at something they were told waits its turn.** The first
+  thing is done at once, as it was. The rest are done in the order they were said, each when
+  the one before is over, up to six ahead
+- **What can no longer be done when its turn comes is let go**, and it is said: somebody who
+  has stopped hating whoever they were to go for does not go
+- **Any of them can be taken back**: what they are at, which they leave off, or one that waits
+- **Told to drop everything**, they drop what waits as well
+- **A few words are said there and then**, whatever they are at, and take them from nothing
+- **Taken from what they were told** by being stopped, or by somebody coming to have words
+  with them, they take it up again after
+- **A resident can be told to do nothing of their own accord.** They finish what they are
+  at. From then on they do what they are told, and with nothing told they stand by: no work,
+  no talk, no making up their mind about anything
+- **What was put in their hands is still theirs to do**: something to take apart, a site in
+  their charge
+- **A body that can wait no longer is seen to unasked**: at ninety of hunger, thirst or
+  tiredness they eat, drink or lie down, will or no will
+- Others may still come and talk to whoever stands by
+- **It is saved**: what they are at for having been told, what waits, and whether they do
+  anything unasked. A save from before has nobody told anything
+
+This is the fourth place where the player's word is done and not weighed, after S37, S38 and
+S45, and the one that goes furthest: a resident with nothing of their own left to do is the
+player's to run.
+
+Done when: three things said are done in the order said; one taken back is not done and the
+rest are; a resident who does nothing unasked stands where they are for a morning; told
+something, they do it and stand by again; left hungry they eat at ninety and not before; a
+save and a load go on the same; and the same orders on the same seed come out the same.
+
+Decided without asking:
+- **Opening the wheel does not stop somebody who is at something they were told.** It stops
+  whoever is at something of their own, as before
+- **The safety of a body that can wait no longer.** In the game this is taken after, somebody
+  left alone dies of it. Here nobody dies of the player having looked away: the number is
+  `desperate_need` in `data/affect.json`, and at 101 there is no such safety
+- Telling somebody to do nothing unasked does not take them from what they are at
+
+Still open here:
+- Nothing is done about a whole settlement told to do nothing: every one of them stands by
+- Whoever stands by with a decision of theirs open still has it: it was opened before
+- What waits cannot be moved up or down, only taken back
+
+### P57 — The wheel (needs S48 to S50, P35) — done
+- **A click on somebody follows them, and a second opens the wheel about them**: round
+  buttons in a ring, with them in the middle. It takes the place of the list that opened in
+  the corner (P30). The way in from their panel opens the same wheel
+- **It opens on the kinds of thing there are to say**: `Social`, `Ocio`, `Necesidades`,
+  `Trabajo`, `Unas palabras`, and the switch for doing nothing unasked
+- **Each opens on what there is of it**, and what is about somebody or something opens on
+  who or what. `Social` is the other way about: first who, as their faces in the ring, the
+  nearest first, and then what there is to do with them
+- **A click on somebody on the map says who**, at any step, with the wheel still about
+  whoever it was opened for
+- **The way back is at the foot of the ring**, and out of it from its first step. The other
+  button of the mouse does the same; a click on nothing, or on them again, shuts it
+- **What it is, at a glance**: blue for what is friendly, pink for romance, red for what is
+  hostile, purple for passing the time, each with its icon; a small heart or cross on a
+  pastime they are known to like or not to
+- **What each is called is beside it**, outwards, and what telling it says is under the ring
+  while the pointer is on it
+- **Kept whole on the screen**: near an edge of the map the ring is moved in
+- **What they have been told is by their panel**, at the foot of the map: a small button for
+  each, what they are at first and lit, and what it is when pointed at. A click takes it
+  back. A lock before them while they do nothing unasked, which a click undoes
+- **What they are at is said for what it is**: a stroll, a doze, cards with somebody,
+  standing by to be told
+- **Sitting and lying**: whoever sits to watch the day, to cards or to a story sits as they
+  sit; whoever dozes lies on the ground as whoever has no bed does
+- Drawn by the game at the resolution of the window, as the rest of the interface (P35),
+  eight new icons among them, each to be replaced by a file in `illustrations/ui/icons/`
+
+Decided without asking:
+- The names: `Social` and not `Hablar`, since it is where blows are too
+- The wheel shuts once something is said. To say another thing it is opened again, which
+  does not stop them now
+- Their name is not written over the wheel at its first step: it is over their head already
+- No more than fourteen things in a ring
+
+Still open here:
+- The wheel has no keys
+- What two are doing at cards, at a story or at a dance looks like sitting or standing and no more
+- Somebody dozing is under the same blanket as whoever sleeps rough
+- The faces offered are the eight nearest: anybody further is to be clicked on the map
+- Nothing of this has been seen on a real window by whoever made it: the frames it was
+  judged by were drawn without one
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

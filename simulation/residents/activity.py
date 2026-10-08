@@ -16,12 +16,22 @@ LEAVE_ACTION = "leave"
 PROTEST_ACTION = "protest"
 # Standing where they were stopped, listening for what the player has to say.
 HEED_ACTION = "heed"
+# Standing by with nothing of their own to do, for having been told to do nothing unasked (S50).
+WAIT_ACTION = "await_orders"
 # Being where a sentence is served: locked up, or in the stocks.
 SERVE_ACTION = "serve_sentence"
 # What a resident who knows of something makes up their mind about: whether to accuse. And
 # what whoever is at the gate decides when somebody who was exiled asks to come back.
 ACCUSE_DECISION = "accuse"
 EXILE_BACK_DECISION = "exile_back"
+
+
+@dataclass(frozen=True)
+class Order:
+    """Something the player has told a resident to do, and who or what it is about (S50)."""
+
+    kind: str
+    target_id: str | None = None
 
 
 @dataclass
@@ -32,7 +42,8 @@ class Activity:
     `intent` is the exchange a resident has made up their mind to have with that partner.
     `item_id` is the item involved: the kind of food while eating from a container, otherwise
     the one item instance being used or taken. `held_up` is how many minutes running they have
-    not got a step further along `path`, for somebody being in the way.
+    not got a step further along `path`, for somebody being in the way. `ordered` says that it
+    is what the player told them to do, and not something of their own.
     """
 
     action: str
@@ -44,3 +55,4 @@ class Activity:
     intent: str | None = None
     item_id: str | None = None
     held_up: int = 0
+    ordered: bool = False

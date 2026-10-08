@@ -8,6 +8,7 @@ from simulation.residents.activity import (
     ATTEND_ACTION,
     PROTEST_ACTION,
     HEED_ACTION,
+    WAIT_ACTION,
     LEAVE_ACTION,
     RETIRE_ACTION,
     SERVE_ACTION,
@@ -242,6 +243,8 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
         interaction = world.registries.interactions.get(activity.action)
         if interaction is not None and interaction.romance == "tryst":
             return f"a solas con {partner.name}"
+        if interaction is not None and interaction.doing is not None:
+            return interaction.doing.replace("{other}", partner.name)
         verb = "discute" if interaction is not None and interaction.hostile else "charla"
         return f"{verb} con {partner.name}"
     if activity.action == WORK_ACTION:
@@ -291,6 +294,11 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
         return "cumple su condena" if not activity.path else "va a cumplir su condena"
     if activity.action == HEED_ACTION:
         return "se queda pensando..."
+    if activity.action == WAIT_ACTION:
+        return "espera a que le digan qué hacer"
+    pastime = world.leisure.pastime_of(world, activity)
+    if pastime is not None:
+        return pastime.doing
     if placed is None:
         if any(decision.resident_id == resident.resident_id for decision in world.decisions.values()):
             return "le da vueltas a algo"

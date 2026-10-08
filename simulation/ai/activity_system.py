@@ -12,7 +12,14 @@ from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.events.event import DomainEvent
 from simulation.health.health_system import RECOVERED_HEALTH
 from simulation.items.item_system import ITEM_ACTIONS
-from simulation.residents.activity import MOVE_TILES_PER_MINUTE, SERVE_ACTION, SHELTER_ACTION, WANDER_ACTION, Activity
+from simulation.residents.activity import (
+    MOVE_TILES_PER_MINUTE,
+    SERVE_ACTION,
+    SHELTER_ACTION,
+    WAIT_ACTION,
+    WANDER_ACTION,
+    Activity,
+)
 from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
 from simulation.residents.resident import Resident
 from simulation.social.social_system import SocialSystem
@@ -101,6 +108,10 @@ class ActivitySystem:
                 world.items.report_nothing_for(world, resident, need)
         if resident.activity is None:
             world.items.notice_missing(world, resident)
+            # What they were told to do comes before anything of their own, and whoever does
+            # nothing unasked has nothing of their own to come to.
+            resident.activity = world.affect.next(world, resident)
+        if resident.activity is None:
             crisis = (
                 world.interventions.maybe_open(world, resident)
                 or world.interventions.maybe_offer_job(world, resident)
@@ -125,6 +136,9 @@ class ActivitySystem:
                 if activity.minutes_left <= 0 or self.urgent_needs(world, resident):
                     resident.activity = None
                     resident.current_action = "idle"
+            elif world.leisure.pastime_of(world, activity) is not None:
+                # Out for a walk, the walk is the thing.
+                world.leisure.tick(world, resident, activity)
             return
         if activity.action == SERVE_ACTION:
             # Kept where their sentence is served: whoever keeps them there says when it is over.
@@ -164,6 +178,12 @@ class ActivitySystem:
             return
         if activity.action == SALVAGE_ACTION:
             world.salvaging.tick(world, resident, activity)
+            return
+        if world.leisure.pastime_of(world, activity) is not None:
+            world.leisure.tick(world, resident, activity)
+            return
+        if activity.action == WAIT_ACTION:
+            world.affect.wait_tick(world, resident, activity)
             return
         use = self._use_of(world, activity)
         if not activity.using:
