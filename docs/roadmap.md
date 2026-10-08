@@ -3668,7 +3668,7 @@ Decided without asking:
 - Somebody exiled who comes back is as capable as they left
 
 Still open here:
-- None of it is on screen: P52. Until then the first resident is given theirs by command
+- It is on screen since P52
 - Children under ten have none until they walk (S25): what they will have is settled then
 - Nobody is turned down for a job, or put to one, for what they are capable of: staffing
   (S8) does not look at it
@@ -3795,6 +3795,24 @@ Still open here:
   is still a command (P26)
 - The currency is still put from `Fondo`, as it was, and comes in as a law does (S45)
 - The square has the game's plain sprite on the canvas, and its picture on the window
+
+### P52 — What each is capable of, on screen (needs S46 and S47) — done
+- **A resident's panel has two rows more under their bars**: what they work at, the level
+  they have at it and a bar to the next; and their six attributes, three letters and a
+  figure each, green above the middle and red below it. What somebody can do today is what
+  is shown: hurt or old, the figure is lower
+- **`Puestos` says the level of whoever holds a post** past the first: `Raúl nv3`
+- **Where the first resident is made there is a third face, `Qué puede`**: a row to each of
+  the six, with what it is for, a figure and a bar, and a button either side. Everybody
+  starts in the middle with three points to share out; what is taken from one is there to
+  give to another, and nothing goes under 1 or over 10
+
+Still open here:
+- What an attribute does is said in a line where the first resident is made, and nowhere
+  on the map: nothing says how much faster somebody works for it
+- Nothing is shown when somebody comes to a point more, or to a level, but the line in the
+  log of events
+- The attributes of whoever is at the gate are not shown before they are let in
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

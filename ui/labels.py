@@ -59,9 +59,12 @@ def describe_job(world: SimulationWorld, resident: Resident) -> str:
     job = world.work.job_of(world, resident)
     if job is None:
         return "Sin trabajo"
+    level = world.crafts.level(world, resident, job.job_id)
+    # Past the first level it is worth saying: everybody starts at the first.
+    called = f"{job.name}, nivel {level}" if level > 1 else job.name
     if world.work.is_day_off(world, resident):
-        return f"Trabajo: {job.name} (hoy libra)"
-    return f"Trabajo: {job.name} ({describe_shifts(job)})"
+        return f"Trabajo: {called} (hoy libra)"
+    return f"Trabajo: {called} ({describe_shifts(job)})"
 
 
 def describe_shifts(job: JobDefinition) -> str:
@@ -71,10 +74,11 @@ def describe_shifts(job: JobDefinition) -> str:
 
 def describe_holders(world: SimulationWorld, job_id: str) -> str:
     """Who does a job, such as `Raúl, Inés (libra)`, or `nadie`."""
-    names = [
-        f"{resident.name} (libra)" if world.work.is_day_off(world, resident) else resident.name
-        for resident in world.staffing.workers(world, job_id)
-    ]
+    names = []
+    for resident in world.staffing.workers(world, job_id):
+        level = world.crafts.level(world, resident, job_id)
+        name = f"{resident.name} nv{level}" if level > 1 else resident.name
+        names.append(f"{name} (libra)" if world.work.is_day_off(world, resident) else name)
     return ", ".join(names) if names else "nadie"
 
 

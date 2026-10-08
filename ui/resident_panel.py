@@ -52,6 +52,12 @@ MOOD_LABEL = "Ánimo"
 MOOD_COLOR = "lamp"
 # Health above the needs and mood below them.
 OTHER_BARS = 2
+# The two rows under the bars: their trade and how far along they are to its next level, and
+# what they are capable of.
+ATTRIBUTE_ROW = LINE_HEIGHT * 2 + 3
+TRADE_BAR = 56
+TRADE_COLOR = "copper"
+NO_TRADE = "Sin oficio"
 MAX_RELATIONSHIPS = 5
 RELATIONSHIP_ROW = MARKER_SIZE[1] + 2
 # The inventory as a grid: an icon at twice its size, how many, and its name underneath.
@@ -101,6 +107,47 @@ DEBUG_WIDTH = 34
 DEBUG_TITLE = "Gustos: valores"
 DEBUG_HEADINGS = ("base", "apr.", "total")
 DEBUG_COLUMN = 26
+
+
+def _under_bars(panel: pygame.Rect) -> int:
+    """Where what comes under a resident's bars and their attributes starts."""
+    return panel.y + PADDING + FACE_SIZE[1] + 6 + BAR_ROW * (len(NEED_NAMES) + OTHER_BARS) + 4 + ATTRIBUTE_ROW
+
+
+def attribute_cells(panel: pygame.Rect, world: SimulationWorld) -> list[tuple[pygame.Rect, str]]:
+    """Where each of the six attributes is shown, in a row under the bars, and which it is."""
+    names = list(world.registries.attributes.attributes)
+    if not names:
+        return []
+    top = _under_bars(panel) - LINE_HEIGHT - 2
+    width = (panel.width - PADDING * 2) // len(names)
+    return [
+        (pygame.Rect(panel.x + PADDING + index * width, top, width, LINE_HEIGHT), name)
+        for index, name in enumerate(names)
+    ]
+
+
+def _draw_attributes(target: pygame.Surface, font: BitmapFont, panel: pygame.Rect, world: SimulationWorld, resident: Resident) -> None:
+    """Their strength, constitution, dexterity, mind, senses and charisma: three letters and a figure each."""
+    x, y = panel.x + PADDING, _under_bars(panel) - ATTRIBUTE_ROW
+    job = world.work.job_of(world, resident)
+    if job is None:
+        font.draw(target, NO_TRADE, (x, y), PALETTE["stone"])
+    else:
+        # What they work at, the level they have at it, and how near the next is.
+        level = world.crafts.level(world, resident, job.job_id)
+        bar = pygame.Rect(panel.right - PADDING - TRADE_BAR, y + 4, TRADE_BAR, 4)
+        said = font.truncate(f"{job.name} · nivel {level}", bar.left - 4 - x)
+        font.draw(target, said, (x, y), PALETTE["bone"])
+        draw_bar(target, bar, world.crafts.progress(world, resident, job.job_id), TRADE_COLOR)
+    definitions = world.registries.attributes.attributes
+    middle = world.registries.attributes.middle
+    for cell, name in attribute_cells(panel, world):
+        level = world.attributes.level(world, resident, name)
+        short = definitions[name].short
+        font.draw(target, short, (cell.x, cell.y), PALETTE["dust"])
+        colour = "lichen" if level > middle else ("ember" if level < middle else "paper")
+        font.draw(target, str(level), (cell.x + font.width(short) + 1, cell.y), PALETTE[colour])
 
 
 def _title(target: pygame.Surface, font: BitmapFont, text: str, x: int, y: int, width: int) -> int:
@@ -162,7 +209,7 @@ def roster_tree_hitbox(panel: pygame.Rect) -> pygame.Rect:
 
 def _kin_top(panel: pygame.Rect) -> int:
     """Where the list of somebody's kin starts, on the face of the panel that says who they are."""
-    top = panel.y + PADDING + FACE_SIZE[1] + 6 + BAR_ROW * (len(NEED_NAMES) + OTHER_BARS) + 4
+    top = _under_bars(panel)
     return top + LINE_HEIGHT + 3 + LINE_HEIGHT * (2 + KIN_NOTES) + 4 + LINE_HEIGHT + 3
 
 
@@ -227,7 +274,7 @@ def _draw_kin(
 def tab_hitbox(panel: pygame.Rect) -> pygame.Rect:
     """Where the panel is switched between how a resident lives and what they like: at the right
     end of the first heading under their bars."""
-    top = panel.y + PADDING + FACE_SIZE[1] + 6 + BAR_ROW * (len(NEED_NAMES) + OTHER_BARS) + 4
+    top = _under_bars(panel)
     return pygame.Rect(panel.right - PADDING - TAB_WIDTH, top - 1, TAB_WIDTH, LINE_HEIGHT)
 
 
@@ -360,7 +407,7 @@ def inventory_hitboxes(panel: pygame.Rect, world: SimulationWorld, resident: Res
 
 
 def _relationships_top(panel: pygame.Rect, world: SimulationWorld, resident: Resident) -> int:
-    top = panel.y + PADDING + FACE_SIZE[1] + 6 + BAR_ROW * (len(NEED_NAMES) + OTHER_BARS) + 4
+    top = _under_bars(panel)
     if resident.traits:
         top += LINE_HEIGHT + 3 + LINE_HEIGHT + 6
     return top + LINE_HEIGHT + 3
@@ -433,6 +480,8 @@ def draw_resident_panel(
         font.draw(target, number, (panel.right - PADDING - font.width(number), y - 1), PALETTE["dust"])
         y += BAR_ROW
     y += 4
+    _draw_attributes(target, font, panel, world, resident)
+    y += ATTRIBUTE_ROW
 
     if tab == TASTES_TAB:
         _draw_tastes(target, font, assets, panel, (x, y), world, resident, debug)

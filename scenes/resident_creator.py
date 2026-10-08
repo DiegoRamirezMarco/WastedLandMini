@@ -59,9 +59,19 @@ IDENTITY_WORDS = {
 }
 IDENTITY_CHOICES = {SEX: SEXES, GENDER: GENDERS, DRAWN: DRAWN_TO}
 DEFAULT_SEX = "f"
-# The two faces of the screen: who they are, and how they go about what everybody does.
-PERSON_PAGE, MANNERS_PAGE = "person", "manners"
-PAGE_LABELS = {PERSON_PAGE: "Quién es", MANNERS_PAGE: "Cómo se mueve"}
+# The three faces of the screen: who they are, what they are capable of, and how they go about
+# what everybody does.
+PERSON_PAGE, ABLE_PAGE, MANNERS_PAGE = "person", "able", "manners"
+PAGE_LABELS = {PERSON_PAGE: "Quién es", MANNERS_PAGE: "Cómo se mueve", ABLE_PAGE: "Qué puede"}
+ABLE_AT = (LEFT + 8, 96)
+ABLE_ROW = 30
+ABLE_HEADING = "Lo que puede: reparte los puntos"
+ABLE_LEFT = "Puntos por repartir: {points}"
+ABLE_NOTES = (
+    "Del 1 al 10. En el 5 está cualquiera.",
+    "Cada trabajo va por una de ellas, y hacerlo la sube poco a poco.",
+    "Los que lleguen después traerán las suyas, y los hijos saldrán a sus padres.",
+)
 PAGES_AT = (470, 16)
 PICKER_AT = (LEFT + 8, 84)
 PICKER_WIDTH = 400
@@ -110,9 +120,16 @@ class ResidentCreator:
         # Their sex, what they take themselves to be, and who they are drawn to, as IDs.
         self.identity: dict[str, str] = {SEX: DEFAULT_SEX, GENDER: DEFAULT_SEX, DRAWN: BOTH}
         self.traits: list[str] = []
+        # Their strength, constitution, dexterity, mind, senses and charisma, in whole points.
+        self.attributes: dict[str, int] = {}
         self.notice = ""
         self._held: str | None = None
         self._blink = 0.0
+        self.able_buttons: list[Button] = []
+        for row, name in enumerate(world.registries.attributes.attributes):
+            y = ABLE_AT[1] + row * ABLE_ROW
+            self.able_buttons.append(Button.at(font, ABLE_AT[0] + 96, y, "-", ("attribute", name, -1)))
+            self.able_buttons.append(Button.at(font, ABLE_AT[0] + 140, y, "+", ("attribute", name, 1)))
 
         self.sliders: dict[str, Slider] = {}
         y = SLIDERS_Y
@@ -159,6 +176,8 @@ class ResidentCreator:
         shared = [*self.page_buttons, self.create_button, self.close_button]
         if self.page == MANNERS_PAGE:
             return [*shared, *self.picker.buttons]
+        if self.page == ABLE_PAGE:
+            return [*shared, *self.able_buttons]
         return [*self.age_buttons, *self.identity_buttons, *self.trait_buttons, *shared]
 
     def open(self) -> None:
@@ -168,6 +187,8 @@ class ResidentCreator:
         self.name, self.age, self.traits = "", DEFAULT_AGE, []
         self.personality = {trait: 50.0 for trait in self.sliders}
         self.identity = {SEX: DEFAULT_SEX, GENDER: DEFAULT_SEX, DRAWN: BOTH}
+        settings = self.world.registries.attributes
+        self.attributes = {name: round(settings.middle) for name in settings.attributes}
         self.notice = ""
         self._held = None
         self.page = PERSON_PAGE
@@ -191,6 +212,18 @@ class ResidentCreator:
         if what == SEX and follows:
             self.identity[GENDER] = choice
 
+    def points_left(self) -> int:
+        """How many points there still are to share out among what they are capable of."""
+        return round(self.world.registries.attributes.founder_points) - sum(self.attributes.values())
+
+    def set_attribute(self, name: str, value: int) -> None:
+        """Have them be so much of one thing, as far as the scale and the points there are allow."""
+        settings = self.world.registries.attributes
+        if name not in self.attributes:
+            return
+        value = int(min(max(value, settings.lowest), settings.highest))
+        self.attributes[name] = min(value, self.attributes[name] + max(0, self.points_left()))
+
     def toggle_trait(self, trait_id: str) -> None:
         if trait_id in self.traits:
             self.traits.remove(trait_id)
@@ -211,7 +244,8 @@ class ResidentCreator:
             return None
         created = self.world.apply_command(
             FoundResidentCommand(
-                self.name, self.age, dict(self.personality), tuple(self.traits), dict(self.manners), dict(self.identity)
+                self.name, self.age, dict(self.personality), tuple(self.traits), dict(self.manners), dict(self.identity),
+                {name: float(value) for name, value in self.attributes.items()} or None,
             )
         )
         if not isinstance(created, str):
@@ -227,6 +261,8 @@ class ResidentCreator:
             self.toggle_trait(intent[1])
         elif intent[0] == "identity":
             self.set_identity(intent[1], intent[2])
+        elif intent[0] == "attribute":
+            self.set_attribute(intent[1], self.attributes.get(intent[1], 0) + intent[2])
         elif intent[0] == "page":
             self.page, self._held = intent[1], None
         elif intent[0] == "manner":
@@ -281,6 +317,8 @@ class ResidentCreator:
             button.draw(canvas, font, active=button.intent[1] == self.page)
         if self.page == MANNERS_PAGE:
             self._render_manners()
+        elif self.page == ABLE_PAGE:
+            self._render_able()
         else:
             self._render_person()
         self.create_button.draw(canvas, font, active=bool(tidy_name(self.name)))
@@ -304,6 +342,38 @@ class ResidentCreator:
             y += 3
         if self.preview is not None:
             self.preview.draw(PREVIEW, None, self.world.registries.manners.manners.get(shown or ""))
+
+    def _render_able(self) -> None:
+        """What they are capable of: a row to each of the six, and the points still to share out."""
+        font, canvas = self.font, self.canvas
+        settings = self.world.registries.attributes
+        name = tidy_name(self.name) or NO_NAME_YET
+        font.draw(canvas, f"{ABLE_HEADING} ({name})", (LEFT, ABLE_AT[1] - LINE_HEIGHT * 2 - 8), PALETTE["sand"])
+        left = self.points_left()
+        font.draw(
+            canvas, ABLE_LEFT.format(points=left), (LEFT, ABLE_AT[1] - LINE_HEIGHT - 5), PALETTE["glow" if left else "dust"]
+        )
+        for row, (attribute_id, definition) in enumerate(settings.attributes.items()):
+            y = ABLE_AT[1] + row * ABLE_ROW
+            value = self.attributes.get(attribute_id, round(settings.middle))
+            font.draw(canvas, definition.name, (ABLE_AT[0], y + 2), PALETTE["bone"])
+            figure = str(value)
+            colour = "lichen" if value > settings.middle else ("ember" if value < settings.middle else "paper")
+            font.draw(canvas, figure, (ABLE_AT[0] + 124 - font.width(figure) // 2, y + 2), PALETTE[colour])
+            font.draw(canvas, definition.text, (ABLE_AT[0] + 164, y + 2), PALETTE["dust"])
+            track = pygame.Rect(ABLE_AT[0], y + LINE_HEIGHT + 5, 150, 4)
+            pygame.draw.rect(canvas, PALETTE["shadow"], track)
+            span = max(1.0, settings.highest - settings.lowest)
+            filled = round(track.width * (value - settings.lowest) / span)
+            pygame.draw.rect(canvas, PALETTE[colour if colour != "paper" else "lamp"], (track.x, track.y, filled, track.height))
+        for button in self.able_buttons:
+            button.draw(canvas, font)
+        y = ABLE_AT[1] + len(settings.attributes) * ABLE_ROW + 8
+        for text in ABLE_NOTES:
+            for line in font.wrap(text, 560):
+                font.draw(canvas, line, (LEFT, y), PALETTE["dust"])
+                y += LINE_HEIGHT
+            y += 2
 
     def _render_person(self) -> None:
         font, canvas = self.font, self.canvas
