@@ -4589,6 +4589,21 @@ What it comes to:
   (S52), and stands idle until the mechanic has mended it with scrap
 - A better generator gives more current (S54)
 
+How it is to be built, worked out on 2026-10-08 and not yet done:
+- **In three parts, each its own commit**: the well; current and switches; wear and mending
+- **The well is one more kind of post for the job of drawing water**, slower than the tank: a
+  job may have more than one kind of post, and a kind of post says how fast it is worked
+  against any other. So a second hand can draw water, which one tank never allowed (S53). The
+  opening of a new settlement has a well drawn where it had a tank, since there is no
+  generator yet. In a save from before, a tank in a settlement with no generator is a well
+- **What a kind of thing draws and what a generator gives are whole numbers in its data**, and
+  a better generator gives more by its rarity in place of burning less (S54). Whatever stands
+  is switched on or off, and when it was last switched on is kept, to know what goes off first
+- **Fuel is burnt by how much is drawn and for how long**: a lamp by night, a post while it is
+  worked. What is burnt is kept as a part of a unit until it comes to a whole one
+- **A post has a condition**, as an item has, and mending one that has broken down is a site
+  on it for the mechanic, with scrap, laid by itself when it breaks
+
 ### S65 — What goes off (needs S51 and S64) — planned
 From the user's answer about how things break (S55): "algunas comida y algunos consumibles que
 se vaya pochando que tenga un valor de pocharse a x velocidad dia".
