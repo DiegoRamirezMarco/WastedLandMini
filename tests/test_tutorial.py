@@ -596,6 +596,26 @@ class MenuAndCreatorTests(unittest.TestCase):
         self.assertEqual(self.game.scene_name, "global")
         self.assertIn("ada", self.game.world.residents)
 
+    def test_a_settlement_being_played_is_saved_from_the_menu_and_the_menu_stays(self) -> None:
+        self.assertNotIn("save", [entry.choice for entry in self.game.main_menu.entries], "nothing to save yet")
+        self._start_new_game()
+        self._key(pygame.K_ESCAPE)
+        self.assertEqual([entry.choice for entry in self.game.main_menu.entries][:2], ["continue", "save"])
+        self.assertFalse(self.save_path.exists())
+        self.game.main_menu.choose("save")
+        self.game.sync_scenes()
+        self.assertTrue(self.save_path.is_file())
+        self.assertEqual(self.game.scene_name, "menu")
+        self.assertEqual(self.game.main_menu.notice, "Partida guardada")
+        self.assertEqual(self.game.main_menu.entries[self.game.main_menu.selected].choice, "save")
+        self._frame()
+        self.assertTrue(
+            self.game.canvas.get_rect().contains(self.game.main_menu.entry_rects()[-1]), "five entries fit"
+        )
+        self._key(pygame.K_ESCAPE)
+        self.assertEqual(self.game.scene_name, "global")
+        self.assertIn("ada", self.game.world.residents)
+
     def test_a_game_being_played_is_only_thrown_away_when_asked_twice(self) -> None:
         self._start_new_game()
         self._key(pygame.K_ESCAPE)

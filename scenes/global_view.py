@@ -87,7 +87,6 @@ from scenes.hud import (
     PANEL_TAB_INTENT,
     PAUSE_INTENT,
     ROSTER_INTENT,
-    SAVE_INTENT,
     STORES_INTENT,
     TASTE_DEBUG_INTENT,
     URBANISM_INTENT,
@@ -108,6 +107,7 @@ from ui.house_board import next_use
 from scenes.scene import canvas_position
 from settings import SCALE, TILE_SIZE
 from simulation.commands import (
+    AccuseCommand,
     AcknowledgeTutorialCommand,
     ChooseGovernmentCommand,
     CompostCommand,
@@ -127,7 +127,9 @@ from simulation.commands import (
     UndecorateCommand,
     PutBundleCommand,
     PutDownCommand,
+    SentenceCommand,
     SetPausedCommand,
+    SetPrisonRationCommand,
     SetResearchCommand,
     SetSpeedCommand,
     AffectCommand,
@@ -173,6 +175,11 @@ from ui.labels import away_residents, has_birthday, rarity_color
 from ui.object_marks import draw_gem, draw_object_mark, marks_of
 from ui.object_panel import speaks
 from ui.power_board import POWER_INTENT
+from ui.punish_board import DRINK as RATION_DRINK
+from ui.punish_board import DRINKS as RATION_DRINKS
+from ui.punish_board import FOOD as RATION_FOOD
+from ui.punish_board import MEALS as RATION_MEALS
+from ui.punish_board import next_ration_item
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
 from ui.panel import draw_item, draw_panel
 from ui.task_bar import draw_task_bar, task_bar_rect, task_progress
@@ -273,6 +280,7 @@ SMOKE_SECONDS = 2.4
 HURT_HEALTH = 70.0
 # Where a load is drawn on a body frame, by the way the resident faces: in their arms, or on their back.
 SUGGESTION_REFUSED = "Ahora no se le puede proponer ese puesto"
+HARSH_SENTENCE = "Un castigo así no tiene vuelta atrás ({name}): pulsa otra vez para darlo"
 NOBODY_NEEDS_ATTENTION = "Nadie necesita atención ahora"
 NOTHING_WITH = "Con {name} no hay nada que decirle ahora"
 ROOFS_ON = "Tejados puestos: se quitan al mirar dentro"
@@ -406,7 +414,6 @@ class GlobalView:
         # or the notice of one is pressed.
         self.requested_discovery: str | None = None
         # Infrastructure requests are picked up by the game shell after event handling.
-        self.requested_save = False
         self.requested_urbanism = False
         # The opening of a new settlement asks for the screen where its first resident is made.
         self.requested_creator = False
@@ -1191,7 +1198,14 @@ class GlobalView:
             waiting = self.world.crafts.waiting(self.world)
             self.requested_discovery = waiting[0].discovery_id if waiting else None
         elif isinstance(intent, tuple) and intent[0] == "government_tab":
-            self.hud.government_tab, self.hud.government_armed = intent[1], None
+            self.hud.government_tab, self.hud.government_armed, self.hud.sentence_armed = intent[1], None, None
+        elif isinstance(intent, tuple) and intent[0] == "sentence":
+            self._sentence(intent[1], intent[2])
+        elif isinstance(intent, tuple) and intent[0] == "accuse":
+            # The player accuses of what is known of somebody, as anybody who knows it may (S28).
+            self._say(self.world.apply_command(AccuseCommand(intent[1], intent[2])))
+        elif isinstance(intent, tuple) and intent[0] in ("ration", "ration_item"):
+            self._ration(intent)
         elif isinstance(intent, tuple) and intent[0] in ("law_degree", "law_item", "law_enact", "law_repeal"):
             self._law(intent)
         elif isinstance(intent, tuple) and intent[0] == "trade_step":
@@ -1204,8 +1218,6 @@ class GlobalView:
         elif intent == TRADE_CART_INTENT and self.illustrations is not None and self.illustrations.root is not None:
             definition = self.world.merchants.definition(self.world)
             self.requested_object_editor = definition.cart if definition is not None else None
-        elif intent == SAVE_INTENT:
-            self.requested_save = True
         elif intent == URBANISM_INTENT:
             self.requested_urbanism = True
         elif intent == CREATOR_INTENT:
@@ -1769,6 +1781,32 @@ class GlobalView:
             hud.law_degrees.pop(law.law_id, None)
         else:
             self._sound("refuse")
+
+    def _sentence(self, trial_id: str, punishment_id: str) -> None:
+        """Say what somebody found guilty is given (S28). A harsh one is pressed for twice:
+        there is no taking it back."""
+        hud = self.hud
+        definition = self.world.registries.justice.punishments.get(punishment_id)
+        if definition is not None and definition.harsh and hud.sentence_armed != (trial_id, punishment_id):
+            hud.sentence_armed = (trial_id, punishment_id)
+            hud.notify(HARSH_SENTENCE.format(name=definition.name))
+            return
+        hud.sentence_armed = None
+        self._say(self.world.apply_command(SentenceCommand(trial_id, punishment_id)))
+
+    def _ration(self, intent: tuple) -> None:
+        """Change what prisoners are given each day: one more or fewer of a thing, or another
+        thing of that kind."""
+        ration = self.world.justice.ration(self.world)
+        meals, drinks, food, drink = ration.meals, ration.drinks, ration.food, ration.drink
+        if intent[0] == "ration":
+            meals += int(intent[2]) if intent[1] == RATION_MEALS else 0
+            drinks += int(intent[2]) if intent[1] == RATION_DRINKS else 0
+        elif intent[1] == RATION_FOOD:
+            food = next_ration_item(self.world, RATION_FOOD)
+        else:
+            drink = next_ration_item(self.world, RATION_DRINK)
+        self._say(self.world.apply_command(SetPrisonRationCommand(meals, drinks, food, drink)))
 
     def _choose_government(self, government_id: str) -> None:
         """Give the settlement a kind of government. It is asked for twice: once to say which, and once to mean it."""

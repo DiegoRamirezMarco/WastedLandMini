@@ -1954,7 +1954,7 @@ Built:
 - **Nothing gory is shown**: what is kept is what happened and what came of it
 - Trials, sentences, the history of punishments and what prisoners are given are saved, with
   nothing of it in an older save. Each thing the player does is a command: `AccuseCommand`,
-  `SentenceCommand` and `SetPrisonRationCommand`. None has a screen until P26
+  `SentenceCommand` and `SetPrisonRationCommand`. None had a screen until P64
 
 Decided without asking:
 - With no word from the player in a day, somebody found guilty is given a warning
@@ -2037,8 +2037,8 @@ The entry in the menu, the kind, the seats, the measures and the laws in force a
 - A leader making up their mind about the count of a vote, and what is advised
 - An election, a trial and a public punishment seen as they happen, with nothing gory
 - Accusing somebody of what is known of them, saying what somebody found guilty is given out
-  of what there is a place for, and what prisoners are given to eat and drink. Until then
-  the three are commands (S28)
+  of what there is a place for, and what prisoners are given to eat and drink: done as P64,
+  a tab of the government's panel
 - Somebody exiled seen at the gate when they come back, as a stranger is (P25)
 - Trouble on the map: who has stopped work, who is out protesting
 
@@ -4945,6 +4945,57 @@ for now on 2026-10-08.
 Still open here:
 - The names in the wheel are cut short where there are many: how far each thing is does not fit
 - Nowhere lists who has trained what, or how far each could still go
+
+### P64 — Current in the menu, saving behind Escape, and punishments beside the laws (needs S28, P34 and P60) — done
+Asked for by the user on 2026-10-09, with the layer of resources just built: "agrega corriente
+al menu , y guardar lo metes en el menu de escape. ya que estas añade tambien castigos en
+leyes".
+
+What there is:
+- **`Corriente` is an entry of the menu**, between `Almacén` and `Gobierno`. `K` and the
+  figure of fuel in the bar still open the board (P60)
+- **`Guardar` left that menu for the one `Esc` opens**, where it is the second entry while a
+  settlement is being played: it saves, says so, and leaves the player in the menu. `F5`
+  saves without leaving the map, as before. The last step of the opening says where it is
+  now, and no longer points at the entry there was
+- **`Castigos` is a fourth tab of the government's panel**, beside `Leyes` and `Leyes raras`.
+  It is the screen that accusing, sentencing and what prisoners are given had been waiting
+  for since S28, where each was a command and nothing else:
+  - the trial in hand, who is tried for what and the step it has reached
+  - **when somebody has been found guilty, every punishment there is**, with how much it
+    weighs beside how much what they did weighs, whether it is done in sight of everybody
+    and whether it is one of the harsh ones. `Dar` beside each that the settlement has a
+    place for, and what is missing beside each it has not: stocks, a jail, a gallows
+  - **what is known of whom** that nobody has been tried for, with `Acusar` beside each,
+    while no trial is going on
+  - who is serving what, and until when
+  - **what prisoners are given each day**: how many meals and drinks, one more or fewer at
+    a press, and of what, or of whatever there is most of
+  - the last three punishments given
+- **The game says when somebody waits to be sentenced**: in the line under the bar, and by
+  the entry of `Gobierno` lighting up while its panel is shut. There is a day to say it in,
+  as there was (S28)
+
+Read without asking:
+- **`castigos en leyes` is the screen for punishing, put where the laws are**, since there
+  was none. It is not a punishment written into each law: what somebody is given is the
+  player's to say each time (S28), and whether a law may narrow that is still S43's to ask
+
+Decided without asking:
+- **A harsh punishment is pressed for twice**: a beating, exile, death. There is no taking
+  one back
+- **What can be brought is what somebody here other than whoever did it knows of**, as the
+  command already had it: the five latest, by name, with what it was and the day
+- **Saving from the menu leaves the player in the menu**, with `Guardar` still in hand
+- **The line in the menu of the map** is now drawn over `Urbanismo` and the drawing of
+  things, which are of the game more than of the settlement
+
+Still open here:
+- The rest of P26: a trial and a punishment are not seen as they happen, only told
+- What is known of whom is read off a panel by the player, who finds out a resident's
+  tastes little by little and not this
+- A sentence cannot be changed once given, nor a prisoner let out early (S28)
+- The last step of the opening points at nothing on the screen now: it only says where saving is
 
 ### S58 — Lines with holes in them (needs S2, S19 and S47) — planned
 The second layer: words and things. It is the first way of putting talk into words (S34): a

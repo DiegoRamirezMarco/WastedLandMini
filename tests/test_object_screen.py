@@ -150,9 +150,16 @@ class ObjectScreenTests(unittest.TestCase):
         self._press(switch_intent("lamp_shop", False))
         self.assertFalse(lamp.on)
         self.assertIn("Corriente: gasta 1. Apagado", self._said())
-        # The key and the button of anything that runs on current open the board.
+        # The key, its entry in the menu and the button of anything that runs on current open the board.
         self.view.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_k))
         self.assertTrue(self.hud.power_open)
+        entry = next(button for button in self.hud.menu if button.intent == POWER_INTENT)
+        self.assertEqual(entry.label, "Corriente")
+        self.view.click(entry.rect.center)
+        self.assertFalse(self.hud.power_open)
+        self.view.click(entry.rect.center)
+        self.assertTrue(self.hud.power_open)
+        self.view.render()
         self._press(POWER_INTENT)
         self.assertFalse(self.hud.power_open)
         self._press(POWER_INTENT)

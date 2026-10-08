@@ -43,7 +43,8 @@ from ui.fund_board import PANEL_WIDTH as FUND_WIDTH
 from ui.fund_board import FundEntry, draw_fund_board, field_intent, field_rects, fund_board_height, fund_buttons
 from ui.government_board import PANEL_WIDTH as GOVERNMENT_WIDTH
 from ui.government_board import draw_government_board, government_board_height, government_buttons
-from ui.law_board import KINDS_TAB
+from ui.law_board import KINDS_TAB, PUNISH_TAB
+from ui.punish_board import awaiting
 from ui.inventory_view import (
     container_item_hitboxes,
     container_panel_height,
@@ -68,7 +69,7 @@ from ui.labels import (
 from ui.layout import Layout, layout_for
 from ui.object_panel import STORE_HEADING, ObjectView, draw_object_view, object_view
 from ui.power_board import PANEL_WIDTH as POWER_WIDTH
-from ui.power_board import draw_power_board, power_board_height, power_buttons
+from ui.power_board import POWER_INTENT, draw_power_board, power_board_height, power_buttons
 from ui.research_board import PANEL_WIDTH as RESEARCH_WIDTH
 from ui.research_board import draw_research_board, research_board_height, study_buttons
 from ui.panel import draw_item, draw_panel, set_skin
@@ -130,7 +131,6 @@ DISCOVERY_MANY = "{count} cosas nuevas por nombrar"
 FUND_INTENT = ("fund_board",)
 ROSTER_INTENT = ("roster",)
 MINIMAP_INTENT = ("minimap",)
-SAVE_INTENT = ("save",)
 URBANISM_INTENT = ("urbanism",)
 DRAW_INTENT = ("draw",)
 BUILD_INTENT = ("draw_building",)
@@ -143,10 +143,11 @@ NOTICE_SECONDS = 3.0
 BLINK_SECONDS = 0.5
 # What a step of the opening is about, when it is about one of the entries of the menu.
 FOCUS_INTENTS = {
-    "urbanism": URBANISM_INTENT, "jobs": JOBS_INTENT, "save": SAVE_INTENT, "research": RESEARCH_INTENT,
+    "urbanism": URBANISM_INTENT, "jobs": JOBS_INTENT, "research": RESEARCH_INTENT,
 }
 CLOCK_FOCUS = "clock"
 STORES_TITLE = "Almacén: lo que es de todos"
+SENTENCE_HINT = "! {name}, culpable: di qué se le da en Gobierno, Castigos"
 AWAY_LABEL = "Fuera"
 STORES_EMPTY = "No queda nada"
 STORES_BAND = MARGIN + LINE_HEIGHT - 1
@@ -284,6 +285,9 @@ class Hud:
         self.government_tab = KINDS_TAB
         self.law_degrees: dict[str, int] = {}
         self.law_items: dict[str, str] = {}
+        # The harsh punishment that has been pressed for once, as a trial and a punishment,
+        # and has to be pressed for again (P64).
+        self.sentence_armed: tuple[str, str] | None = None
         # The wheel of what the player can tell whoever is selected, while it is open about
         # them: what has been chosen in it so far, and where on the map they stand.
         self.wheel = WheelState()
@@ -343,11 +347,11 @@ class Hud:
             ("work", "Puestos", JOBS_INTENT),
             ("study", "Estudio", RESEARCH_INTENT),
             ("stores", "Almacén", STORES_INTENT),
+            ("energy", "Corriente", POWER_INTENT),
             ("government", "Gobierno", GOVERNMENT_INTENT),
             ("fund", "Fondo", FUND_INTENT),
             ("events", "Eventos", LOG_INTENT),
             ("map", "Mapa", MINIMAP_INTENT),
-            ("save", "Guardar", SAVE_INTENT),
             ("urbanism", "Urbanismo", URBANISM_INTENT),
         ]
         if drawable:
@@ -362,7 +366,7 @@ class Hud:
         self.menu_rule = 0
         y = sidebar.y + MENU_TOP
         for icon, label, intent in entries:
-            if intent == SAVE_INTENT:
+            if intent == URBANISM_INTENT:
                 self.menu_rule = y + MENU_GAP // 2
                 y += MENU_GAP
             self.menu.append(MenuButton(pygame.Rect(sidebar.x, y, sidebar.width, MENU_ROW), icon, label, intent))
@@ -394,7 +398,7 @@ class Hud:
         if self.government_open:
             return fixed + government_buttons(
                 self.font, self.government_rect(), self.world, self.government_armed, self.government_tab,
-                self.law_degrees, self.law_items,
+                self.law_degrees, self.law_items, self.sentence_armed,
             )
         if self.fund_open:
             return fixed + fund_buttons(self.font, self.fund_rect(), self.world, self.fund_entry, self.drawable)
@@ -415,6 +419,7 @@ class Hud:
             setattr(self, name, name == panel and not getattr(self, name))
         self.fund_entry = None
         self.government_armed = None
+        self.sentence_armed = None
         self.trade_buy, self.trade_sell = {}, {}
 
     def toggle_log(self) -> None:
@@ -434,6 +439,12 @@ class Hud:
 
     def toggle_fund(self) -> None:
         self._open_only("fund_open")
+
+    def open_punishments(self) -> None:
+        """Show the government's panel on what is done with whoever is tried (P64)."""
+        if not self.government_open:
+            self._open_only("government_open")
+        self.government_tab = PUNISH_TAB
 
     def toggle_power(self) -> None:
         self._open_only("power_open")
@@ -818,7 +829,7 @@ class Hud:
         if self.government_open:
             draw_government_board(
                 self.canvas, self.font, self.government_rect(), self.world, self.government_armed, band_hue("government"),
-                self.government_tab, self.law_degrees, self.law_items,
+                self.government_tab, self.law_degrees, self.law_items, self.sentence_armed,
             )
         if self.fund_open:
             draw_fund_board(
@@ -852,7 +863,9 @@ class Hud:
         for button in self.menu:
             pointed = self.pointer is not None and button.contains(self.pointer)
             button.draw(self.canvas, self.font, self.skin, self._menu_active(button.intent), pointed)
-            if button.intent == focused and self.lit:
+            waits = button.intent == GOVERNMENT_INTENT and not self.government_open and awaiting(self.world) is not None
+            if (button.intent == focused or waits) and self.lit:
+                # What the opening points at, and the way to somebody waiting to be sentenced.
                 pygame.draw.rect(self.canvas, PALETTE["glow"], button.rect, 2)
 
     def _top_icon(self, name: str, x: int) -> None:
@@ -903,6 +916,7 @@ class Hud:
             RESEARCH_INTENT: self.research_open,
             GOVERNMENT_INTENT: self.government_open,
             FUND_INTENT: self.fund_open,
+            POWER_INTENT: self.power_open,
         }
         return open_panels.get(intent, False)
 
@@ -946,8 +960,14 @@ class Hud:
             ),
             None,
         )
+        guilty = awaiting(self.world)
         if self._notice_left > 0:
             self.font.draw(self.canvas, self.font.truncate(self._notice, width), (self.clock_left, 14), PALETTE["glow"])
+        elif asker is None and guilty is not None:
+            # Somebody found guilty waits for the player to say what they are given (S28).
+            name = self.world.residents[guilty.accused].name
+            hint = self.font.truncate(SENTENCE_HINT.format(name=name), width)
+            self.font.draw(self.canvas, hint, (self.clock_left, 14), PALETTE["lamp"])
         elif asker is None and builder is not None:
             # Somebody sits by a site with nothing to build with: they can be told what to take apart.
             hint = self.font.truncate(f"! {builder.name} pide material: selecciónale y pulsa Afectar", width)

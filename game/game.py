@@ -30,7 +30,7 @@ from scenes.interaction_view import InteractionView
 from scenes.discovery_editor import DiscoveryEditor
 from scenes.item_editor import ItemEditor
 from scenes.object_editor import ObjectEditor
-from scenes.main_menu import CONTINUE, DEMO, NEW_GAME, QUIT, MainMenu
+from scenes.main_menu import CONTINUE, DEMO, NEW_GAME, QUIT, SAVE, SAVE_FAILED, SAVED, MainMenu
 from scenes.manner_editor import MannerEditor
 from scenes.manner_preview import MannerPreview
 from scenes.resident_creator import ResidentCreator
@@ -468,6 +468,11 @@ class Game:
         choice, self.main_menu.requested = self.main_menu.requested, None
         if choice == CONTINUE:
             self.continue_game()
+        elif choice == SAVE:
+            # Saved from the menu, the menu is still where the player is.
+            saved = self.save_game()
+            self.open_menu(SAVED if saved else SAVE_FAILED)
+            self.main_menu.select(SAVE)
         elif choice == NEW_GAME:
             self.new_game()
         elif choice == DEMO:
@@ -568,8 +573,6 @@ class Game:
             self.discovery_editor.open(self.global_view.requested_discovery)
             if not self.discovery_editor.closed:
                 self.scene_name = DISCOVERY_SCENE
-        elif self.scene_name == "global" and self.global_view.requested_save:
-            self.save_game()
         elif self.scene_name == "global" and self.global_view.requested_urbanism:
             self.urbanism_editor.open()
             self.scene_name = URBANISM_SCENE
@@ -607,7 +610,6 @@ class Game:
         self.global_view.requested_building_editor = None
         self.global_view.requested_item_editor = None
         self.global_view.requested_discovery = None
-        self.global_view.requested_save = False
         self.global_view.requested_urbanism = False
         self.global_view.requested_creator = False
         self.global_view.requested_object_editor = None

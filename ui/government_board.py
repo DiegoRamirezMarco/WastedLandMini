@@ -12,7 +12,8 @@ from simulation.politics.government import COUNCIL, EVERYONE, LEADER, NOBODY, SE
 from simulation.world import SimulationWorld
 from ui.button import HEIGHT as BUTTON_HEIGHT
 from ui.button import Button
-from ui.law_board import KINDS_TAB, LAW_TABS, TABS, draw_laws, law_buttons, laws_height, tab_intent
+from ui.law_board import KINDS_TAB, LAW_TABS, PUNISH_TAB, TABS, draw_laws, law_buttons, laws_height, tab_intent
+from ui.punish_board import draw_punishments, punish_buttons, punish_height
 from ui.panel import draw_bar, draw_panel
 
 PANEL_WIDTH = 330
@@ -145,6 +146,8 @@ def _parts(font: BitmapFont, world: SimulationWorld) -> Parts:
 def government_board_height(font: BitmapFont, world: SimulationWorld, tab: str = KINDS_TAB) -> int:
     if tab in LAW_TABS:
         return BAND + 3 + TAB_ROW + laws_height(font, world, tab, PANEL_WIDTH - PADDING * 2)
+    if tab == PUNISH_TAB:
+        return BAND + 3 + TAB_ROW + punish_height(font, world, PANEL_WIDTH)
     return _parts(font, world).bottom
 
 
@@ -167,12 +170,16 @@ def government_buttons(
     tab: str = KINDS_TAB,
     degrees: dict[str, int] | None = None,
     items: dict[str, str] | None = None,
+    sentence_armed: tuple[str, str] | None = None,
 ) -> list[Button]:
-    """Every button of the panel as it stands: its tabs, and those of the tab that is open."""
+    """Every button of the panel as it stands: its tabs, and those of the tab that is open.
+    `sentence_armed` is the harsh punishment that has been pressed for once, and has to be again."""
     tabs = tab_buttons(font, rect)
     if tab in LAW_TABS:
         top = rect.y + BAND + 3 + TAB_ROW
         return tabs + law_buttons(font, rect, top, world, tab, degrees or {}, items or {})
+    if tab == PUNISH_TAB:
+        return tabs + punish_buttons(font, rect, rect.y + BAND + 3 + TAB_ROW, world, sentence_armed)
     return tabs + choose_buttons(font, rect, world, armed)
 
 
@@ -209,6 +216,7 @@ def draw_government_board(
     tab: str = KINDS_TAB,
     degrees: dict[str, int] | None = None,
     items: dict[str, str] | None = None,
+    sentence_armed: tuple[str, str] | None = None,
 ) -> None:
     draw_panel(target, rect, band=BAND, band_color=band_color)
     x, width = rect.x + PADDING, rect.width - PADDING * 2
@@ -217,6 +225,9 @@ def draw_government_board(
         button.draw(target, font, active=button.intent == tab_intent(tab))
     if tab in LAW_TABS:
         draw_laws(target, font, rect, rect.y + BAND + 3 + TAB_ROW, world, tab, degrees or {}, items or {})
+        return
+    if tab == PUNISH_TAB:
+        draw_punishments(target, font, rect, rect.y + BAND + 3 + TAB_ROW, world, sentence_armed)
         return
     parts = _parts(font, world)
     floor = rect.bottom - PADDING

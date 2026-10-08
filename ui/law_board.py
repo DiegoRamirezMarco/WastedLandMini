@@ -20,8 +20,9 @@ from ui.button import Button
 PADDING = 6
 ROW_HEIGHT = BUTTON_HEIGHT + 2
 # The tabs of the government's panel: how they are governed, and the laws there are, in two lots.
-KINDS_TAB, LAWS_TAB, ODD_TAB = "kinds", "laws", "odd"
-TABS = ((KINDS_TAB, "Gobierno"), (LAWS_TAB, "Leyes"), (ODD_TAB, "Leyes raras"))
+KINDS_TAB, LAWS_TAB, ODD_TAB, PUNISH_TAB = "kinds", "laws", "odd", "punishments"
+# The last is no list of laws: it is what is done with whoever breaks one, or does worse (P64).
+TABS = ((KINDS_TAB, "Gobierno"), (LAWS_TAB, "Leyes"), (ODD_TAB, "Leyes raras"), (PUNISH_TAB, "Castigos"))
 LAW_TABS = (LAWS_TAB, ODD_TAB)
 NAME_WIDTH = 98
 DEGREE_WIDTH = 92

@@ -262,7 +262,11 @@ python -m simulation.headless --days 7 --seed 7
   propose it to. They may say no, and somebody else can be asked. Whoever agrees builds it in
   their spare time, with scrap carried to the site, and others lend a hand. A site shows how
   far along it is; click it to see what it waits for, or to give it up
-- `K`, or a click on the figure of fuel in the bar: `Corriente`, the board of what the
+- `Gobierno` in the menu, or `P`, and its tab `Castigos`: the trial in hand, what is known of
+  whom, with `Acusar`, what prisoners are given each day, and, when somebody has been found
+  guilty, what to give them. The game says so under the bar when somebody is waiting; a harsh
+  punishment is pressed for twice
+- `Corriente` in the menu, `K`, or a click on the figure of fuel in the bar: the board of what the
   generator gives and what is asked of it, with every thing that runs on current, where
   it stands and a switch to it. A click on any other figure of the bar opens what the
   settlement holds
@@ -287,7 +291,8 @@ python -m simulation.headless --days 7 --seed 7
 - While a caravaneer is at the gate, the deal also lists what is a resident's own that he
   would pay for. `Proponérselo` puts it to its owner, who sells it or does not, and keeps
   what it fetches. Under barter, what they get is the first thing of his put in the deal
-- `Guardar` in the menu, or `F5`, saves the game to `saves/quicksave.json`; `F9` loads it
+- `Esc` opens the menu, where `Guardar` saves the game to `saves/quicksave.json`; `F5` does it
+  without leaving the settlement, and `F9` loads it
 - `M`: sound on / off, voices and all
 - `Esc`: back to the menu, where the settlement waits; `Salir` there leaves the game
 

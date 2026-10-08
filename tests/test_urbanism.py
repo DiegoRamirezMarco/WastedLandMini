@@ -8,7 +8,7 @@ import pygame
 
 from graphics.palette import PALETTE
 from save.save_manager import SaveManager
-from scenes.hud import SAVE_INTENT, URBANISM_INTENT
+from scenes.hud import URBANISM_INTENT
 from settings import SCALE
 from simulation.commands import (
     MoveBuildingCommand,
@@ -430,17 +430,23 @@ class UrbanismShellTests(unittest.TestCase):
         self.assertEqual(len(seen), everything, "all of it can be reached")
         editor.render()
 
-    def test_visible_buttons_save_and_open_urbanism_while_time_stands_still(self) -> None:
+    def test_the_menu_opens_urbanism_while_time_stands_still_and_saving_is_in_the_menu_of_escape(self) -> None:
         view = self.game.global_view
         intents = [button.intent for button in view.hud.menu]
-        self.assertIn(SAVE_INTENT, intents)
         self.assertIn(URBANISM_INTENT, intents)
+        self.assertNotIn("Guardar", [button.label for button in view.hud.menu])
 
+        # Saving is done from the menu Escape opens, and leaves the player there.
         saved: list[bool] = []
         self.game.save_game = lambda path=None: saved.append(True) or True
-        view._apply(SAVE_INTENT)
+        self.game.open_menu()
+        self.game.main_menu.choose("save")
         self.game.sync_scenes()
         self.assertEqual(saved, [True])
+        self.assertEqual(self.game.scene_name, "menu")
+        self.game.main_menu.choose("continue")
+        self.game.sync_scenes()
+        self.assertEqual(self.game.scene_name, "global")
 
         view._apply(URBANISM_INTENT)
         self.game.sync_scenes()

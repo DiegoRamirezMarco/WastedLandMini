@@ -10,7 +10,7 @@ from graphics.screen_layers import ScreenLayers
 from scenes.scene import canvas_position
 from ui.panel import draw_panel
 
-CONTINUE, NEW_GAME, DEMO, QUIT = "continue", "new", "demo", "quit"
+CONTINUE, SAVE, NEW_GAME, DEMO, QUIT = "continue", "save", "new", "demo", "quit"
 TITLE = "WASTELAND MINIS"
 TITLE_SCALE = 4
 SUBTITLE = "Un asentamiento en el yermo, y la gente que lo levanta"
@@ -22,7 +22,10 @@ NO_SAVE_NOTE = "No hay partida guardada"
 RESUME_NOTE = "La partida en curso sigue donde la dejaste"
 NEW_NOTE = "Un solar vacío, y un tutorial que lo llena paso a paso"
 DEMO_NOTE = "Un asentamiento ya en marcha, con nueve habitantes"
-QUIT_NOTE = "Lo que no se haya guardado con F5 se pierde"
+QUIT_NOTE = "Lo que no se haya guardado se pierde"
+SAVE_NOTE = "Guarda la partida en curso. F5 lo hace sin salir de ella"
+SAVED = "Partida guardada"
+SAVE_FAILED = "No se pudo guardar"
 OVERWRITE_NOTE = "Hay una partida en curso sin guardar: pulsa otra vez para dejarla"
 HINT = "Flechas y Enter, o el ratón"
 
@@ -63,6 +66,8 @@ class MainMenu:
             first = Entry(CONTINUE, "Continuar", self.saved or NO_SAVE_NOTE, enabled=self.saved is not None)
         return [
             first,
+            # A settlement being played is saved from here.
+            *([Entry(SAVE, "Guardar", SAVE_NOTE)] if self.in_session else []),
             Entry(NEW_GAME, "Partida nueva", NEW_NOTE),
             Entry(DEMO, "Asentamiento de ejemplo", DEMO_NOTE),
             Entry(QUIT, "Salir", QUIT_NOTE),
@@ -74,6 +79,13 @@ class MainMenu:
             pygame.Rect(left, ENTRIES_TOP + index * (ENTRY_SIZE[1] + ENTRY_GAP), *ENTRY_SIZE)
             for index in range(len(self.entries))
         ]
+
+    def select(self, choice: str) -> None:
+        """Have one of the entries be the one in hand, as after it has done what it does."""
+        self.selected = next(
+            (index for index, entry in enumerate(self.entries) if entry.choice == choice and entry.enabled),
+            self.selected,
+        )
 
     def choose(self, choice: str) -> None:
         """Ask for one of the entries, as a click or Enter on it does."""
