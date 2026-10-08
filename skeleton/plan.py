@@ -216,6 +216,13 @@ class Footing:
     free: float = 1.0
     # How many times its length a leg may be drawn out before its foot leaves the ground.
     stretch: float = 1.12
+    # How far off the ground a clip may hold a foot and it is still on it: a foot is not left
+    # hanging a hair above the ground by a leg that has not quite settled.
+    hold: float = 0.0
+    # How far off the ground a foot is kept level, its sole flat to the ground whichever way
+    # its clip turns it. Twice as far up it is wholly as its clip has it, as in a kick or a
+    # jump. At 0 no foot is ever levelled.
+    level: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -306,6 +313,7 @@ class SkeletonPlan:
     # The bone each bone hangs from, from the root outwards. None for one that hangs from the root.
     hangs_from: dict[str, str | None] = field(init=False, repr=False, compare=False)
     _beyond: dict[str, tuple[str, ...]] = field(init=False, repr=False, compare=False)
+    _soles: dict[str, tuple[tuple[str, str, tuple[str, ...]], ...]] = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         ends = {bone.end: bone.name for bone in self.bones.values()}
@@ -313,6 +321,16 @@ class SkeletonPlan:
         # For each leg a body stands on: its foot, and every joint that hangs from that.
         beyond = {shin: tuple(self.bones[name].end for name in self.bones_beyond(shin)) for _, shin in self.footing.legs}
         object.__setattr__(self, "_beyond", beyond)
+        # For each such leg: the bones that hang from its foot, each with every joint beyond it.
+        soles = {
+            shin: tuple(
+                (bone.start, bone.end, tuple(self.bones[name].end for name in self.bones_beyond(bone.name)))
+                for bone in self.bones.values()
+                if bone.start == self.bones[shin].end
+            )
+            for _, shin in self.footing.legs
+        }
+        object.__setattr__(self, "_soles", soles)
         at_rest: dict[str, dict[str, tuple[float, float]]] = {}
         for view, rest in self.rests.items():
             at_rest[view] = {}
@@ -514,19 +532,25 @@ class SkeletonPlan:
         on the ground without that is put back where it would be, and the knee goes where it
         must, bending to the front. A leg too short to reach is drawn out, so far and no further.
         A foot the pose holds well off the ground is left to go with the body, and no foot is
-        ever put under the ground.
+        ever put under the ground. One that is on the ground is on it: not a hair above it.
+        And a foot on the ground, or near it, has its sole level with it.
+
+        A pose that lifts the body higher than its legs reach does not lift it off its feet:
+        it is brought down until the feet it stands on are on the ground.
         """
         footing = self.footing
-        for thigh, shin in footing.legs:
+        feet = self._footfalls(positions, moved, rest)
+        if footing.hold > 0.0:
+            hang = max((self._hanging(positions, thigh, to) * (1.0 - lifted) for thigh, _, _, to, lifted in feet), default=0.0)
+            if hang > 0.0:
+                for joint, (x, y) in positions.items():
+                    positions[joint] = (x, y + hang)
+                feet = self._footfalls(positions, (moved[0], moved[1] + hang), rest)
+        for thigh, shin, ground, (to_x, to_y), _ in feet:
             hip, knee, foot = self.bones[thigh].start, self.bones[thigh].end, self.bones[shin].end
             (hip_x, hip_y), (foot_x, foot_y) = positions[hip], positions[foot]
-            ground = rest[foot][1]
-            still_x, still_y = foot_x - moved[0], foot_y - moved[1]
-            lifted = min(1.0, max(0.0, ground - still_y) / footing.free) if footing.free > 0 else 1.0
-            lifted = lifted * lifted * (3.0 - 2.0 * lifted)
-            to_x = still_x + (foot_x - still_x) * lifted
-            to_y = min(ground, still_y + (foot_y - still_y) * lifted)
             if abs(to_x - foot_x) < 1e-9 and abs(to_y - foot_y) < 1e-9:
+                self._level(positions, shin, ground)
                 continue
             upper, lower = math.dist(positions[hip], positions[knee]), math.dist(positions[knee], positions[foot])
             reach_x, reach_y = to_x - hip_x, to_y - hip_y
@@ -546,6 +570,69 @@ class SkeletonPlan:
             positions[knee] = (hip_x + way_x * along + way_y * aside, hip_y + way_y * along - way_x * aside)
             shift = (hip_x + reach_x - foot_x, hip_y + reach_y - foot_y)
             for joint in self._beyond[shin]:
+                x, y = positions[joint]
+                positions[joint] = (x + shift[0], y + shift[1])
+            self._level(positions, shin, ground)
+
+    def _footfalls(
+        self, positions: dict[str, Point], moved: Point, rest: dict[str, Point]
+    ) -> list[tuple[str, str, float, Point, float]]:
+        """For each leg a body stands on: its two bones, how high the ground is under its foot,
+        where that foot is to go, and how much of that is the pose's own doing, from none of it
+        for a foot on the ground to all of it for one held well off it."""
+        footing = self.footing
+        room = footing.free - footing.hold
+        found = []
+        for thigh, shin in footing.legs:
+            foot_x, foot_y = positions[self.bones[shin].end]
+            ground = rest[self.bones[shin].end][1]
+            still_x, still_y = foot_x - moved[0], foot_y - moved[1]
+            lifted = min(1.0, max(0.0, ground - still_y - footing.hold) / room) if room > 0 else 1.0
+            lifted = lifted * lifted * (3.0 - 2.0 * lifted)
+            to_x = still_x + (foot_x - still_x) * lifted
+            if footing.hold > 0.0:
+                # From the ground itself up to where the pose has it, and never under.
+                to_y = min(ground, ground + (foot_y - ground) * lifted)
+            else:
+                to_y = min(ground, still_y + (foot_y - still_y) * lifted)
+            found.append((thigh, shin, ground, (to_x, to_y), lifted))
+        return found
+
+    def _hanging(self, positions: dict[str, Point], thigh: str, to: Point) -> float:
+        """How far a body would have to come down for a leg, drawn out as far as it goes, to
+        reach where its foot is to be. Nothing for a leg that reaches, or that never would."""
+        hip, knee = self.bones[thigh].start, self.bones[thigh].end
+        shin = next(lower for upper, lower in self.footing.legs if upper == thigh)
+        long = (math.dist(positions[hip], positions[knee]) + math.dist(positions[knee], positions[self.bones[shin].end])) * self.footing.stretch
+        across, down = to[0] - positions[hip][0], to[1] - positions[hip][1]
+        if math.hypot(across, down) <= long or abs(across) >= long:
+            return 0.0
+        return max(0.0, down - math.sqrt(long * long - across * across))
+
+    def _level(self, positions: dict[str, Point], shin: str, ground: float) -> None:
+        """Lay flat to the ground the sole of a foot that is on it or near it.
+
+        Whatever hangs from the foot of a leg is turned about it until it lies along the
+        ground, the way it already points: ahead for a foot that stands, behind for one that
+        kneels. The nearer the ground the foot is, the more: on it, wholly; from as high as
+        `level` up, less and less, and twice as high not at all.
+        """
+        reach = self.footing.level
+        if reach <= 0.0:
+            return
+        for start, end, beyond in self._soles[shin]:
+            (heel_x, heel_y), (toe_x, toe_y) = positions[start], positions[end]
+            high = max(0.0, ground - heel_y)
+            flat = 1.0 - min(1.0, max(0.0, high - reach) / reach)
+            flat = flat * flat * (3.0 - 2.0 * flat)
+            long = math.hypot(toe_x - heel_x, toe_y - heel_y)
+            if flat <= 0.0 or long <= 0.0:
+                continue
+            turned = math.atan2(toe_y - heel_y, toe_x - heel_x)
+            along = 0.0 if toe_x >= heel_x else math.pi
+            turned += wrapped(along - turned) * flat
+            shift = (heel_x + math.cos(turned) * long - toe_x, heel_y + math.sin(turned) * long - toe_y)
+            for joint in beyond:
                 x, y = positions[joint]
                 positions[joint] = (x + shift[0], y + shift[1])
 
@@ -615,7 +702,10 @@ def _footing(data: Any, bones: dict[str, BoneSpec], views: Any) -> Footing:
     free, stretch = float(data.get("free", known.free)), float(data.get("stretch", known.stretch))
     if free < 0.0 or stretch < 1.0:
         raise ValueError("Footing needs a `free` of 0 or more and a `stretch` of 1 or more")
-    return Footing(seen, legs, free, stretch)
+    hold, level = float(data.get("hold", known.hold)), float(data.get("level", known.level))
+    if not 0.0 <= hold <= free or level < 0.0:
+        raise ValueError("Footing needs a `hold` from 0 to its `free`, and a `level` of 0 or more")
+    return Footing(seen, legs, free, stretch, hold, level)
 
 
 def _life(data: Any, clips: Any) -> LifeSettings:

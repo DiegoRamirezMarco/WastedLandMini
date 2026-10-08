@@ -801,7 +801,9 @@
     "views": ["doll"],
     "legs": [["thigh_left", "shin_left"], ["thigh_right", "shin_right"]],
     "free": 1.0,
-    "stretch": 1.12
+    "stretch": 1.12,
+    "hold": 0.35,
+    "level": 2.5
   },
   "motion": {
     "spring": {"speed": 20, "bounce": 0.45},

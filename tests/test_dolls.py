@@ -96,7 +96,9 @@ class DollTemplateTests(unittest.TestCase):
         self.assertNotEqual(walking["foot_right"], still["foot_right"])
         left_foot = lambda pose: (pose["toe_left"][0] - pose["foot_left"][0], pose["toe_left"][1] - pose["foot_left"][1])
         self.assertAlmostEqual(foot_of(walking)[1], foot_of(still)[1], 5, "the planted foot is level")
-        self.assertGreater(abs(left_foot(walking)[1]), 0.5, "the lifted foot flexes with the leg")
+        # So is the other one, though the stride turns it: a sole near the ground is flat to it.
+        self.assertAlmostEqual(left_foot(walking)[1], 0.0, 5, "the foot that steps is level too")
+        self.assertGreater(left_foot(walking)[0], 0.5, "and points ahead")
 
     def test_the_near_arm_hangs_from_further_back_and_the_near_leg_goes_over_the_body(self) -> None:
         rest = self.plan.rests["doll"]

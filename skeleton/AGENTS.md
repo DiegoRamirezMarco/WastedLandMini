@@ -4,6 +4,7 @@
 - Physics runs on real time and is never saved. It must not touch the simulation's RNG or clock.
 - The body plan, its limits and its clips are data in `data/skeleton.json`. Code never names a particular joint or bone.
 - How a thing with a handle is held is the clip's to say (`grip`), and where the hands are is the body plan's (`anchors`). `SkeletonPlan.handle` gives a point and a way; what is held, and its picture, is nobody's business here.
+- A doll's soles are flat to the ground while they are on it or near it, and the foot it stands on is on the ground: `footing` (`hold`, `level`) says how near. A clip turns a foot freely only by lifting it well clear, with its legs and not with `root`.
 - `SkeletonPlan.place` never leaves a joint under the ground: of a doll, lower than the spot between its feet; of a body whose legs do not bend, lower than it stands. Poses are written for one build and shown on many.
 - A gesture (`Character.gesture`) is a clip gone through once over whatever else a lively body is doing: only the bones it names. It runs on real time at the pace of the body and is never saved. Whoever shows the body decides when.
 - A body that is merely posed runs no physics. A limp one that lies still goes to sleep.

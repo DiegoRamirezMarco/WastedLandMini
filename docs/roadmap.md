@@ -3814,6 +3814,32 @@ Still open here:
   log of events
 - The attributes of whoever is at the gate are not shown before they are let in
 
+### P53 — Soles flat on the ground (needs P43) — done
+The user: "la planta de los pies se mueve, deberia estar siempre horizontal al suelo y pegada
+al suelo a menos que salten o similar". Walking, a shoe turned on its ankle to forty-five
+degrees and its toe went under the ground: the stride rolled the foot from heel to toe (P43),
+the foot had a spring of its own, and since P45 it turns whole about the ankle.
+- **A sole on the ground, or near it, is level with it**, whichever way its clip and its
+  spring would turn it. It lies the way it points: ahead for a foot that stands, behind for
+  one that kneels, as when curled up on the ground
+- **A foot that is down is down.** A leg that had not quite settled on its springs left its
+  foot a hair above the ground. Within a little of the ground (`footing.hold`) a foot is on it
+- **A body does not bounce off its feet.** The stride threw the body higher than its legs
+  reach, drawn out and all, and both feet left the ground at every step: more with the
+  longer legs most dolls are drawn with. The body is brought down until the foot it stands
+  on is on the ground. A clip that means to leave the ground has to lift its feet, by
+  turning its legs
+- **Only a foot held well up is turned as its leg is**: a kick. How high that is, is data
+  (`footing.level`): from there to twice as high a foot comes level little by little
+- The small bodies shown without a window are left as they were
+
+Still open here:
+- Feet still slide along the ground when walking: a stride covers two tiles, and legs this
+  short cover less than half of that. Not sliding would mean twice the steps, or half the
+  speed
+- The step is low and flat now: nothing rolls from heel to toe
+- Nothing of this has been seen on a real window by whoever made it
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

@@ -1,13 +1,15 @@
 import itertools
+import json
 import math
 import random
 import unittest
 from dataclasses import replace
 from types import SimpleNamespace
 
+from graphics.poses import builtin_poses
 from skeleton.character import Character
 from skeleton.motion import Life, Motion
-from skeleton.plan import FACINGS, Keyframe, MotionSettings, Spring, added, builtin_plan, plan_from_data
+from skeleton.plan import PLAN_PATH, FACINGS, Keyframe, MotionSettings, Spring, added, builtin_plan, plan_from_data
 
 
 def _still(plan, clip: str = "idle", phase: float = 0.0) -> Keyframe:
@@ -127,9 +129,24 @@ class FootingTests(unittest.TestCase):
         self.assertAlmostEqual(risen["foot_right"][1], self.ground, 6, "the foot is still down")
         self.assertGreater(self._leg(risen), self._leg(self.rest) + 0.4)
         self.assertLessEqual(self._leg(risen), self._leg(self.rest) * stretch + 1e-6)
+        # Risen further than its legs go, it is not lifted off its feet: it is as high as they let it.
         leapt = self.plan.place("doll_right", Keyframe((0.0, -3.0), {}))
-        self.assertLess(leapt["foot_right"][1], self.ground - 1.0, "risen too far, the feet leave the ground")
+        self.assertAlmostEqual(leapt["foot_right"][1], self.ground, 6)
+        self.assertAlmostEqual(leapt["foot_left"][1], self.ground, 6)
         self.assertAlmostEqual(self._leg(leapt), self._leg(self.rest) * stretch, 6)
+        self.assertLess(leapt["pelvis"][1], risen["pelvis"][1], "which is higher than it stood")
+        self.assertGreater(leapt["pelvis"][1], self.rest["pelvis"][1] - 3.0 + 1.0, "and a good deal short of where the pose had it")
+        # To leave the ground a pose has to lift its feet: then they go up with the body, all the way.
+        tucked = {
+            f"{bone}_{side}": (math.radians(turn), 1.0)
+            for side in ("left", "right")
+            for bone, turn in (("thigh", 50), ("shin", -60))
+        }
+        jumped = self.plan.place("doll_right", Keyframe((0.0, -3.0), tucked))
+        standing = self.plan.place("doll_right", Keyframe((0.0, 0.0), tucked))
+        for side in ("left", "right"):
+            self.assertAlmostEqual(jumped[f"foot_{side}"][1], standing[f"foot_{side}"][1] - 3.0, 6, side)
+        self.assertAlmostEqual(jumped["pelvis"][1], self.rest["pelvis"][1] - 3.0, 6)
         lunged = self.plan.place("doll_right", Keyframe((1.5, 0.6), {}))
         self.assertAlmostEqual(lunged["pelvis"][0], self.rest["pelvis"][0] + 1.5, 6)
         self.assertAlmostEqual(lunged["foot_right"][0], self.rest["foot_right"][0], 6, "the body goes forward over its feet")
@@ -179,6 +196,122 @@ class FootingTests(unittest.TestCase):
         ):
             with self.assertRaises(ValueError, msg=footing):
                 plan_from_data({**data, "footing": footing})
+
+
+class SolesTests(unittest.TestCase):
+    """Feet that stand flat on the ground, whatever their clip and their springs would turn them to."""
+
+    def setUp(self) -> None:
+        self.plan = builtin_plan()
+        self.ground = self.plan.rests["doll"]["foot_right"][1]
+        self.long = self.plan.length("doll", "foot_right")
+
+    def _sole(self, pose: dict, side: str) -> tuple[float, float, float]:
+        """How far a foot is off the ground, and how far its toe is ahead of its heel and under it."""
+        heel, toe = pose[f"foot_{side}"], pose[f"toe_{side}"]
+        return (self.ground - heel[1], toe[0] - heel[0], toe[1] - heel[1])
+
+    def test_a_sole_on_the_ground_or_near_it_is_flat_to_it_all_the_way_round_a_stride(self) -> None:
+        footing = self.plan.footing
+        self.assertGreater(footing.level, 0.0)
+        self.assertGreater(footing.hold, 0.0)
+        turned = 0
+        for clip in ("walk", "walk_shuffle", "walk_swagger", "work", "hoe", "weed", "hammer", "argue", "fight", "eat", "stand"):
+            for step in range(24):
+                phase = step / 24
+                bones = self.plan.every_bone(self.plan.turned("doll", clip, phase))
+                pose = self.plan.pose("doll_right", clip, phase)
+                for side in ("left", "right"):
+                    high, ahead, under = self._sole(pose, side)
+                    turned += abs(bones[f"foot_{side}"][0]) > 0.2
+                    if high <= footing.level:
+                        self.assertAlmostEqual(under, 0.0, 6, f"{clip} {phase:.2f} {side}: the sole is level")
+                        self.assertAlmostEqual(ahead, self.long, 6, f"{clip} {phase:.2f} {side}: and points ahead")
+                    self.assertGreaterEqual(high, -1e-6, "and no foot is under the ground")
+        self.assertGreater(turned, 20, "though the clips turn their feet a good deal, heel and toe")
+        # Facing the other way it is the same in a mirror.
+        left = self.plan.pose("doll_left", "walk", 0.3)
+        self.assertAlmostEqual(left["toe_left"][1], left["foot_left"][1], 6)
+        self.assertLess(left["toe_left"][0], left["foot_left"][0])
+
+    def test_a_foot_held_well_up_is_as_its_clip_has_it(self) -> None:
+        footing = self.plan.footing
+        kicked = max(
+            (self.plan.pose("doll_right", "fight_kick", step / 40) for step in range(40)),
+            key=lambda pose: max(self._sole(pose, side)[0] for side in ("left", "right")),
+        )
+        side = max(("left", "right"), key=lambda each: self._sole(kicked, each)[0])
+        high, ahead, under = self._sole(kicked, side)
+        self.assertGreater(high, footing.level * 2, "a kick takes the foot well off the ground")
+        self.assertLess(under, -0.3)
+        other = "left" if side == "right" else "right"
+        self.assertAlmostEqual(self._sole(kicked, other)[2], 0.0, 6, "while the one they stand on is flat")
+        # Between the two heights a foot comes level little by little, and not at a stroke.
+        full = abs(math.cos(math.radians(50))) * self.long
+        seen = []
+        for step in range(90):
+            bend = step * 0.03
+            bones = {"foot_right": (math.radians(-40), 1.0), "thigh_right": (bend, 1.0), "shin_right": (bend * 0.5, 1.0)}
+            high, _, under = self._sole(self.plan.place("doll_right", Keyframe((0.0, 0.0), bones)), "right")
+            seen.append((high, abs(under)))
+        self.assertGreater(max(high for high, _ in seen), footing.level * 2)
+        between = [slope for high, slope in seen if footing.level < high < footing.level * 2]
+        self.assertGreater(len(between), 3)
+        for high, slope in seen:
+            if high <= footing.level:
+                self.assertAlmostEqual(slope, 0.0, 6, msg=f"at {high:.2f} it is level")
+            elif high >= footing.level * 2:
+                self.assertAlmostEqual(slope, full, 6, msg=f"at {high:.2f} it is all the clip's")
+            else:
+                self.assertTrue(0.0 < slope < full, (high, slope))
+        self.assertEqual(between, sorted(between), "the higher, the more it is as the clip has it")
+
+    def test_a_foot_that_is_on_the_ground_is_on_it_and_not_a_hair_above(self) -> None:
+        footing = self.plan.footing
+        # A leg that has not quite settled, as on its springs: its foot a little off where it stands.
+        for bend in (0.0, 0.05, 0.1):
+            bones = {"thigh_right": (bend, 1.0), "shin_right": (-bend * 0.5, 1.0)}
+            pose = self.plan.place("doll_right", Keyframe((0.0, 0.4), bones))
+            lift = self.ground - self.plan.place("doll_right", Keyframe((0.0, 0.0), bones))["foot_right"][1]
+            self.assertLess(lift, footing.hold)
+            self.assertAlmostEqual(pose["foot_right"][1], self.ground, 6, f"bent by {bend}")
+        # A body lively on its springs, walking: whichever foot is down is down.
+        body = Character(self.plan)
+        body.lively = True
+        seen = []
+        for frame in range(180):
+            body.stand(0, 0, "doll_right", "walk", frame / 60 % 1.0)
+            body.update(1 / 60)
+            pose = body.local_pose()
+            lows = sorted(self._sole(pose, side) for side in ("left", "right"))
+            seen.append(lows[0][0])
+            for high, ahead, under in lows:
+                if high <= footing.level:
+                    self.assertAlmostEqual(under, 0.0, 6, f"frame {frame}")
+        self.assertLess(sum(1 for high in seen if high > 0.05), len(seen) * 0.35, "one foot or the other is on the ground")
+
+    def test_a_foot_that_kneels_lies_flat_the_way_it_points_and_the_small_bodies_are_left_alone(self) -> None:
+        curled = self.plan.pose("doll_right", builtin_poses().rough.asleep.clip)
+        for side in ("left", "right"):
+            high, ahead, under = self._sole(curled, side)
+            self.assertAlmostEqual(under, 0.0, 6, "level")
+            self.assertLess(ahead, 0.0, "and behind them, where a kneeling foot points")
+        # Only the views whose legs stand are levelled: the game's own small bodies roll their feet as they did.
+        rolled = [
+            abs(pose["toe_left"][1] - pose["foot_left"][1])
+            for pose in (self.plan.pose("right", "walk", step / 16) for step in range(16))
+        ]
+        self.assertGreater(max(rolled), 0.3)
+
+    def test_how_near_the_ground_is_data_and_data_that_cannot_be_is_refused(self) -> None:
+        data = json.loads(PLAN_PATH.read_text(encoding="utf-8"))
+        bare = plan_from_data({**data, "footing": {key: value for key, value in data["footing"].items() if key not in ("hold", "level")}})
+        self.assertEqual((bare.footing.hold, bare.footing.level), (0.0, 0.0))
+        rolled = bare.pose("doll_right", "walk", 0.0)
+        self.assertGreater(abs(rolled["toe_left"][1] - rolled["foot_left"][1]), 0.5, "with no level given, feet turn as before")
+        for wrong in ({"hold": -0.1}, {"hold": 5.0}, {"level": -1.0}):
+            with self.assertRaises(ValueError, msg=wrong):
+                plan_from_data({**data, "footing": {**data["footing"], **wrong}})
 
 
 class MotionTests(unittest.TestCase):

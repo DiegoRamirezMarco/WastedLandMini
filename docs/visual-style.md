@@ -207,6 +207,12 @@ cut apart where the body bends, each part laid along its bone and turned as the 
   and gives the body a small drop and a bounce. Its feet stay on the ground while the body
   sinks, rises and lunges over them, the knees bending and the legs drawn out to let it. A
   trunk or a head squashed by its clip is wider, and thinner when drawn out.
+- **Soles are flat on the ground.** A foot on the ground or near it lies level with it,
+  whatever its clip and its spring would turn it to, and a foot that is down is down: not a
+  hair above the ground. The foot that steps is carried level and low. A body does not bounce
+  off its feet either: however high a stride throws it, the foot it stands on stays on the
+  ground and the body is as high as that leg, drawn out, lets it be. Only a foot held well
+  up, as in a kick, is turned as the leg is.
 - **At rest.** A doll breathes, whatever it is doing, each to a beat of their own. With
   nothing to do and nothing in hand it does not stand stock still: its weight goes over one
   foot and then the other, and every few seconds it does something small: a long look down

@@ -394,9 +394,16 @@ between the feet, with `y` growing downwards. Angles are in degrees.
 - `footing` keeps feet on the ground. A clip moves the whole body with `root`; in the `views`
   listed, a foot of one of the `legs` (a bone and the one that hangs from it) that the clip
   has on the ground stays where it stands, and the knee bends to let the body go. A leg too
-  short to reach is drawn out up to `stretch` times its length, and past that the foot comes
-  off the ground. A foot the clip holds `free` pixels or more above the ground goes with the
-  body. Only the `doll` view is posed so: the small bodies of the game bob whole.
+  short to reach is drawn out up to `stretch` times its length, and past that it is the body
+  that comes down: a `root` that lifts it higher than its legs go does not take it off its
+  feet. A foot the clip holds `free` pixels or more above the ground goes with the body, so
+  a clip that means to leave the ground, as a jump does, lifts its feet by turning its legs.
+  One held less than `hold` above the ground is on it, and not a hair over it. `level` is how
+  far off the ground a foot has its sole kept flat to it, whichever way the clip turns the
+  foot: ahead for one that stands, behind for one that kneels. From there up it is more and
+  more as the clip has it, and twice as high wholly, as in a kick. Leave `hold` and `level`
+  out and feet turn as their clips say. Only the `doll` view is posed so: the small bodies
+  of the game bob whole.
 - `doll`: how a body is drawn by hand. `unit` is the pixels of a drawing to one of the skeleton's;
   `canvases` gives the size of the body's and the head's in those units; and each entry of `parts`
   is a bone with the canvas it is drawn on and the two points it runs `from` and `to`. `radius`
