@@ -43,6 +43,7 @@ from ui.labels import (
     COIN_ICON,
     FEELING_LABELS,
     describe_action,
+    describe_date,
     describe_weather,
     expression_of,
     known_forecasts,
@@ -55,8 +56,12 @@ from ui.research_board import PANEL_WIDTH as RESEARCH_WIDTH
 from ui.research_board import draw_research_board, research_board_height, study_buttons
 from ui.panel import draw_item, draw_panel, set_skin
 from ui.resident_panel import (
+    KIN_TAB,
     LIFE_TAB,
     TASTES_TAB,
+    kin_hitbox,
+    kin_hitboxes,
+    roster_tree_hitbox,
     draw_resident_panel,
     draw_roster,
     inventory_hitboxes,
@@ -87,6 +92,8 @@ MENU_TILE = 18
 MENU_GAP = 4
 # How large the icons of the bar on top are shown.
 TOP_ICON = 11
+# The longest a date is in the plaque at the head of the bar, which is made wide enough for it.
+WIDEST_DATE = "28 sep 2226"
 # The plate behind the entry of the menu that is open, and behind the one the pointer is on.
 MENU_OPEN = ((58, 74, 90), PALETTE["lamp"])
 MENU_POINTED = ((46, 59, 72), (96, 120, 132))
@@ -127,6 +134,10 @@ def speed_intent(speed: int) -> tuple[str, int]:
 
 # Switches the lower part of a resident's panel between how they live and what they like.
 PANEL_TAB_INTENT = "panel_tab"
+# Turns a resident's panel to who they are and whose, and back.
+PANEL_KIN_INTENT = "panel_kin"
+# Asks for the families of the whole settlement, on a screen of their own.
+FAMILY_INTENT = ("family",)
 # Shows the figures behind a resident's tastes, which the game otherwise keeps to itself. Not for play.
 TASTE_DEBUG_INTENT = "taste_debug"
 
@@ -254,7 +265,10 @@ class Hud:
         )
 
         top, sidebar = self.layout.top, self.layout.sidebar
-        self.clock_left = sidebar.right + MARGIN
+        # At the head of the bar, a plaque with the day the settlement is on and its date.
+        width = max(sidebar.width - 4, font.width(WIDEST_DATE) + 8)
+        self.plaque = pygame.Rect(top.x + 2, top.y + 2, width, top.height - 4)
+        self.clock_left = max(sidebar.right, self.plaque.right) + MARGIN
         self.pause_button = Button.at(font, self.clock_left + TOP_ICON + 40, 1, "II", PAUSE_INTENT)
         self.speed_buttons: list[Button] = []
         x = self.pause_button.rect.right + 4
@@ -435,7 +449,11 @@ class Hud:
         self.selected_id, self.selected_container = None, container_id
 
     def toggle_panel_tab(self) -> None:
-        self.panel_tab = LIFE_TAB if self.panel_tab == TASTES_TAB else TASTES_TAB
+        """From how they live to what they like, and from any other face back to how they live."""
+        self.panel_tab = TASTES_TAB if self.panel_tab == LIFE_TAB else LIFE_TAB
+
+    def toggle_panel_kin(self) -> None:
+        self.panel_tab = LIFE_TAB if self.panel_tab == KIN_TAB else KIN_TAB
 
     def click(self, position: tuple[int, int]) -> Hashable | None:
         """Return the intent of the button, item or resident under `position`."""
@@ -449,6 +467,11 @@ class Hud:
                     return field_intent(field)
         if self.selected_id in self.world.residents and affect_hitbox(self.layout.panel).collidepoint(position):
             return AFFECT_INTENT
+        if self.selected_id in self.world.residents and kin_hitbox(self.layout.panel).collidepoint(position):
+            return PANEL_KIN_INTENT
+        if self.card_rect() is None and self.container_rect() is None:
+            if roster_tree_hitbox(self.layout.panel).collidepoint(position):
+                return FAMILY_INTENT
         if self.selected_container in self.world.containers:
             marks = container_scrap_hitboxes(
                 self.layout.panel.topleft, self.world, self.selected_container or "", self.layout.panel.width
@@ -489,6 +512,8 @@ class Hud:
     def _listed(self) -> list[tuple[pygame.Rect, str]]:
         """Residents named in the panel on the right, each of whom a click there selects."""
         resident = self.world.residents.get(self.selected_id or "")
+        if resident is not None and self.panel_tab == KIN_TAB:
+            return kin_hitboxes(self.layout.panel, self.world, resident)
         if resident is not None:
             return relationship_hitboxes(self.layout.panel, self.world, resident) if self.panel_tab == LIFE_TAB else []
         if self.selected_container in self.world.containers:
@@ -674,10 +699,11 @@ class Hud:
     def _render_top(self) -> None:
         top, clock = self.layout.top, self.world.clock
         draw_panel(self.canvas, top, border="ink")
-        plaque = pygame.Rect(top.x + 2, top.y + 2, self.layout.sidebar.width - 4, top.height - 4)
+        plaque = self.plaque
         draw_panel(self.canvas, plaque, fill="shadow", border="copper")
-        day = f"Día {clock.day}"
-        self.font.draw(self.canvas, day, (plaque.centerx - self.font.width(day) // 2, plaque.y + 5), PALETTE["lamp"])
+        day, date = f"Día {clock.day}", describe_date(self.world)
+        self.font.draw(self.canvas, day, (plaque.centerx - self.font.width(day) // 2, plaque.y), PALETTE["lamp"])
+        self.font.draw(self.canvas, date, (plaque.centerx - self.font.width(date) // 2, plaque.y + 10), PALETTE["bone"])
 
         self._top_icon("moon" if self.world.is_dark() else "sun", self.clock_left)
         hour = f"{clock.hour:02d}:{clock.minute:02d}"

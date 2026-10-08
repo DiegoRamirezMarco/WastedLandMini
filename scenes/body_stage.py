@@ -50,6 +50,29 @@ HEAD_BONE = "skull"
 LYING_NECK = (7.5, 10.0)
 
 
+# How much of its drawn size the body of somebody just old enough to walk is shown at. It
+# comes up to all of it, a little at each birthday, by the age at which they are grown.
+SMALLEST_BODY = 0.6
+# How much of a doll's height is its head, which stays as it was drawn while the body is small.
+HEAD_OF_HEIGHT = 0.3
+# A child under ten, in its blanket: how wide it is in map pixels, how far behind whoever carries
+# it and how high on their back, and how far off the ground a bed or a table has it.
+BUNDLE_WIDTH = 10.0
+BUNDLE_BEHIND = 4.0
+BUNDLE_UP = 9.0
+BUNDLE_RAISED = 5.0
+
+
+def grown_share(world: SimulationWorld, resident: Resident) -> float:
+    """How much of its drawn size a resident's body is shown at: all of it once they are grown."""
+    grown = world.bonds.settings(world).adult_age
+    walking = world.children.settings(world).grown_at
+    if resident.age >= grown or grown <= walking:
+        return 1.0
+    years = max(0, resident.age - walking)
+    return min(1.0, SMALLEST_BODY + (1.0 - SMALLEST_BODY) * years / (grown - walking))
+
+
 def ground_spot(x: float, y: float) -> tuple[int, int]:
     """The map pixel between the feet of someone standing on a tile, given in tiles."""
     return (

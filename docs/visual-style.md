@@ -401,6 +401,12 @@ art any more (P41). It draws everything by code, in one hand, at the size it is 
 - **Whoever nobody has drawn** (`graphics/stand_ins.py`) is the plain figure of the guide in a
   colour of their own, that of what their body wears on its trunk, with the thick dark line
   the rest has. It has no clothes and no face: who they are is for whoever draws them to say.
+- **A child nobody has drawn** has one look, the same for all of them: the same figure in
+  one colour of its own (`CHILD_COLOR`). Whoever is not yet grown is drawn with their body
+  brought down about the ground they stand on, and their head as it was drawn
+  (`draw_doll(..., grown, foot)`): six tenths at ten, and all of it at eighteen.
+- **A child still carried** (`graphics/bundle.py`) is a blanket in the game's hand with
+  the child's own head over it. The same blanket, longer, is over whoever sleeps on the ground.
 - **Order**: floors first, then everything that stands, people among it, by how far down the
   map its foot is.
 - **A drawing of the player's own** takes the place of the game's on the map, file by file, as

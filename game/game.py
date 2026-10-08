@@ -24,6 +24,7 @@ from save.save_manager import SaveManager
 from scenes.building_editor import BuildingEditor
 from scenes.coin_editor import CoinEditor
 from scenes.doll_editor import DollEditor
+from scenes.family_view import FamilyView
 from scenes.global_view import GlobalView
 from scenes.interaction_view import InteractionView
 from scenes.item_editor import ItemEditor
@@ -67,6 +68,7 @@ EDITOR_SCENE, BUILDING_SCENE, ITEM_SCENE, VOICE_SCENE, URBANISM_SCENE = (
 )
 OBJECT_SCENE = "object_editor"
 COIN_SCENE = "coin_editor"
+FAMILY_SCENE = "family"
 MANNER_SCENE = "manners"
 NO_DRAWINGS = "No hay carpeta de ilustraciones disponible"
 # Screens that read the keyboard themselves: the way in, and where the first resident is made.
@@ -245,6 +247,8 @@ class Game:
             self.layers,
             self.global_view.object_art,
         )
+        # The families of the whole settlement, on a screen of their own.
+        self.family_view = FamilyView(self.canvas, self.world, self.font, self.faces, self.layers)
         # Whoever tries a manner out is seen doing it: in the screen that makes the first resident,
         # and in the one where anybody's manners are changed.
         preview = MannerPreview(self.canvas, self.layers, builtin_plan(), self.dolls, self.world.registries, self.icons)
@@ -382,6 +386,8 @@ class Game:
             return self.voice_editor
         if self.scene_name == MANNER_SCENE:
             return self.manner_editor
+        if self.scene_name == FAMILY_SCENE:
+            return self.family_view
         return self.global_view if self.scene_name == "global" else self.interaction_view
 
     def handle_key(self, key: int) -> None:
@@ -399,6 +405,7 @@ class Game:
             ITEM_SCENE,
             VOICE_SCENE,
             MANNER_SCENE,
+            FAMILY_SCENE,
             URBANISM_SCENE,
         ):
             # Out of the drawing or the voice, not out of the game. The editor closes itself on the same key.
@@ -512,6 +519,16 @@ class Game:
             self.scene_name = "global"
         elif self.scene_name == MANNER_SCENE and self.manner_editor.closed:
             self.scene_name = "global"
+        elif self.scene_name == FAMILY_SCENE and self.family_view.closed:
+            self.scene_name = "global"
+            picked = self.family_view.picked
+            if picked in self.world.residents:
+                # Whoever was picked on the tree is who there is to look at.
+                self.global_view.hud.select_resident(picked)
+                self.global_view.centre_on_resident(picked)
+        elif self.scene_name == "global" and self.global_view.requested_family:
+            self.family_view.open(self.global_view.hud.selected_id)
+            self.scene_name = FAMILY_SCENE
         elif self.scene_name == "global" and self.global_view.requested_editor is not None and self.doll_editor is not None:
             self.doll_editor.open(self.global_view.requested_editor)
             self.scene_name = EDITOR_SCENE
@@ -568,6 +585,7 @@ class Game:
         self.global_view.requested_creator = False
         self.global_view.requested_object_editor = None
         self.global_view.requested_coin_editor = None
+        self.global_view.requested_family = False
         self.global_view.requested_voice = None
         self.global_view.requested_manners = None
 

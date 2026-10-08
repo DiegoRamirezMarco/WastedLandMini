@@ -11,9 +11,10 @@ from graphics.screen_layers import ScreenLayers
 from scenes.scene import canvas_position
 from simulation.commands import ChooseOptionCommand
 from simulation.events.decision import Decision
+from simulation.events.world_event_system import GATE_DECISIONS
 from simulation.world import SimulationWorld
 from ui.button import Button
-from ui.dock import dock_areas, draw_scene
+from ui.dock import dock_areas, draw_face, draw_scene
 from ui.labels import FEELING_LABELS
 from ui.panel import draw_panel
 
@@ -24,6 +25,10 @@ CONTINUE_KEYS = (pygame.K_SPACE, pygame.K_RETURN)
 NOBODY_TITLE = "Nadie necesita consejo"
 NOBODY_TEXT = "Cuando alguien esté al límite verás un ! sobre su cabeza. ESPACIO o TAB para volver."
 CONTINUE_TEXT = "ESPACIO para continuar"
+# Two who knock together: what is said of them under what is being said, and how much of the
+# face of the first the face of the second takes, at its corner.
+TOGETHER = "Llaman juntos: {first} y {second}"
+SECOND_FACE = 0.42
 # Face each resident shows once they have made up their mind, by outcome ID.
 OUTCOME_EXPRESSIONS = {
     "confront": "angry", "talk_it_out": "neutral", "cool_off": "sad", "fight": "angry", "walk_away": "sad",
@@ -33,7 +38,7 @@ OUTCOME_EXPRESSIONS = {
 }
 # Face a resident wears while they make up their mind, by kind of decision. Anger for any other.
 DECISION_EXPRESSIONS = {"job_offer": "neutral", "confession": "neutral", "breakup": "sad", "risky_find": "neutral",
-                        "stranger": "neutral"}
+                        "stranger": "neutral", "strangers": "neutral"}
 
 
 class InteractionView:
@@ -144,6 +149,10 @@ class InteractionView:
         crisis = decision.crisis
         target = self.world.residents.get(crisis.target_id) if crisis and crisis.target_id else None
         across = (target.resident_id, "neutral", target.name) if target is not None else None
+        # Whoever is at the gate is who it is about: they are seen across from whoever answers it.
+        knocking = self.world.happenings.visitors(self.world) if decision.kind in GATE_DECISIONS and self.result is None else []
+        if knocking:
+            across = (knocking[0].newcomer_id, "neutral", knocking[0].name)
         text = decision.prompt if self.result is None else self.result
         areas = draw_scene(
             self.canvas,
@@ -159,6 +168,8 @@ class InteractionView:
         # A frame in the colour of an alert: this is waiting on the player.
         pygame.draw.rect(self.canvas, PALETTE["lamp"], dock, 1)
         self._render_under_speech(areas.speech, resident.resident_id, target)
+        if len(knocking) > 1:
+            self._render_second(areas, knocking[0].name, knocking[1].newcomer_id, knocking[1].name)
         side = areas.side
         if self.result is not None:
             self.font.draw(self.canvas, CONTINUE_TEXT, side.topleft, PALETTE["lamp"])
@@ -190,6 +201,21 @@ class InteractionView:
         line = self.font.truncate(f"Por {target.name}: {felt}", speech.width)
         left = speech.centerx - self.font.width(line) // 2
         self.font.draw(self.canvas, line, (left, speech.bottom + 6), PALETTE["bone"])
+
+    def second_face_rect(self) -> pygame.Rect:
+        """Where the face of the second of two who knock together is shown: in a corner of the first's."""
+        right = dock_areas(self.dock).right
+        side = round(right.width * SECOND_FACE)
+        return pygame.Rect(right.right - side - 2, right.top + 2, side, side)
+
+    def _render_second(self, areas, first: str, second_id: str, second: str) -> None:
+        """Two knocked together: the second of them is seen too, and it is said that they came as one."""
+        place = self.second_face_rect()
+        draw_face(self.canvas, self.faces, place, second_id, "neutral", self.layers)
+        pygame.draw.rect(self.canvas, PALETTE["lamp"], place, 1)
+        line = self.font.truncate(TOGETHER.format(first=first, second=second), areas.speech.width)
+        left = areas.speech.centerx - self.font.width(line) // 2
+        self.font.draw(self.canvas, line, (left, areas.speech.bottom + 6), PALETTE["bone"])
 
     def _leaning_text(self, decision: Decision, name: str, target_name: str) -> str:
         """What the resident will probably do if the player says nothing."""

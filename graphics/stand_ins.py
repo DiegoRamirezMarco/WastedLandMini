@@ -22,6 +22,8 @@ EDGE = 0.34
 # line round the figure and the shade on it have to show.
 DARKEST = 200
 LIGHTER = 0.3
+# The one look the game comes with for a child nobody has drawn: the same for all of them.
+CHILD_COLOR: Color = (240, 196, 112)
 
 
 def figure_color(skin: BodySkin) -> Color:
@@ -29,6 +31,11 @@ def figure_color(skin: BodySkin) -> Color:
     sprite = skin.sprites[("side", "torso", False)]
     color: Color = tuple(sprite.image.get_at(sprite.anchor))[:3]  # type: ignore[assignment]
     return lighter(color, LIGHTER) if sum(color) < DARKEST else color
+
+
+def child_stand_in(template: DollTemplate) -> dict[str, pygame.Surface]:
+    """The drawings of the doll every child nobody has drawn is shown as, by canvas."""
+    return figures(template, tones_of(CHILD_COLOR, LINE), max(2, round(template.unit * EDGE)))
 
 
 def stand_in(template: DollTemplate, skin: BodySkin) -> dict[str, pygame.Surface]:

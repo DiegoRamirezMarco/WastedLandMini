@@ -1,4 +1,4 @@
-"""Where the player makes the settlement's first resident: a name, an age, a way of being and a way of moving.
+"""Where the player makes the settlement's first resident: a name, an age, who they are, a way of being and a way of moving.
 
 The scene only gathers what was chosen. Whether anyone comes of it is the simulation's to say.
 """
@@ -11,6 +11,7 @@ from graphics.screen_layers import ScreenLayers
 from scenes.manner_preview import MannerPreview
 from scenes.scene import canvas_position
 from simulation.commands import FoundResidentCommand
+from simulation.family.kin import BOTH, DRAWN_TO, GENDERS, SEXES
 from simulation.residents.founding import AGE_RANGE, MAX_TRAITS, NAME_LENGTH, tidy_name
 from simulation.residents.personality import Personality
 from simulation.world import SimulationWorld
@@ -22,8 +23,11 @@ from ui.slider import Slider
 LEFT = 24
 NAME_FIELD = pygame.Rect(LEFT, 70, 200, 16)
 AGE_Y = 104
-SLIDERS_Y = 150
-SLIDER_ROW = 24
+# Under the age, who they are: a row to each of the three things said of it.
+IDENTITY_Y = 122
+IDENTITY_ROW = 16
+SLIDERS_Y = 190
+SLIDER_ROW = 20
 SLIDER_LEFT = LEFT + 78
 SLIDER_SIZE = (200, 8)
 WHO_AT = (470, 48)
@@ -43,7 +47,18 @@ PERSONALITY_LABELS = {
     "aggression": ("Mal genio", "discute y pelea con más facilidad"),
     "impulsiveness": ("Impulso", "actúa antes de pensarlo"),
     "greed": ("Codicia", "mira por lo suyo antes que por lo de todos"),
+    "libido": ("Deseo", "busca con más ganas a quien le atrae"),
 }
+# What is said of who somebody is, and the words for each thing it can be.
+SEX, GENDER, DRAWN = "sex", "gender", "drawn_to"
+IDENTITY_LABELS = {SEX: "Cuerpo", GENDER: "Se siente", DRAWN: "Le atraen"}
+IDENTITY_WORDS = {
+    SEX: {"m": "De hombre", "f": "De mujer"},
+    GENDER: {"m": "Hombre", "f": "Mujer", "nb": "No binario", "bi": "Bigénero"},
+    DRAWN: {"m": "Hombres", "f": "Mujeres", BOTH: "Ambos"},
+}
+IDENTITY_CHOICES = {SEX: SEXES, GENDER: GENDERS, DRAWN: DRAWN_TO}
+DEFAULT_SEX = "f"
 # The two faces of the screen: who they are, and how they go about what everybody does.
 PERSON_PAGE, MANNERS_PAGE = "person", "manners"
 PAGE_LABELS = {PERSON_PAGE: "Quién es", MANNERS_PAGE: "Cómo se mueve"}
@@ -92,6 +107,8 @@ class ResidentCreator:
         self.name = ""
         self.age = DEFAULT_AGE
         self.personality: dict[str, float] = {}
+        # Their sex, what they take themselves to be, and who they are drawn to, as IDs.
+        self.identity: dict[str, str] = {SEX: DEFAULT_SEX, GENDER: DEFAULT_SEX, DRAWN: BOTH}
         self.traits: list[str] = []
         self.notice = ""
         self._held: str | None = None
@@ -103,7 +120,14 @@ class ResidentCreator:
             if trait in vars(Personality()):
                 self.sliders[trait] = Slider(pygame.Rect(SLIDER_LEFT, y + 2, *SLIDER_SIZE), 0.0, 100.0)
                 y += SLIDER_ROW
-        self.traits_y = y + 12
+        self.traits_y = y + 8
+        self.identity_buttons: list[Button] = []
+        for row, what in enumerate(IDENTITY_LABELS):
+            x = LEFT + 78
+            for choice in IDENTITY_CHOICES[what]:
+                button = Button.at(font, x, IDENTITY_Y + row * IDENTITY_ROW, IDENTITY_WORDS[what][choice], ("identity", what, choice))
+                self.identity_buttons.append(button)
+                x = button.rect.right + 3
         self.age_buttons = [
             Button.at(font, LEFT + 78, AGE_Y, "-", ("age", -1)),
             Button.at(font, LEFT + 122, AGE_Y, "+", ("age", 1)),
@@ -135,7 +159,7 @@ class ResidentCreator:
         shared = [*self.page_buttons, self.create_button, self.close_button]
         if self.page == MANNERS_PAGE:
             return [*shared, *self.picker.buttons]
-        return [*self.age_buttons, *self.trait_buttons, *shared]
+        return [*self.age_buttons, *self.identity_buttons, *self.trait_buttons, *shared]
 
     def open(self) -> None:
         """Start from a blank: nobody in particular, of middling everything."""
@@ -143,6 +167,7 @@ class ResidentCreator:
         self.created = None
         self.name, self.age, self.traits = "", DEFAULT_AGE, []
         self.personality = {trait: 50.0 for trait in self.sliders}
+        self.identity = {SEX: DEFAULT_SEX, GENDER: DEFAULT_SEX, DRAWN: BOTH}
         self.notice = ""
         self._held = None
         self.page = PERSON_PAGE
@@ -156,6 +181,15 @@ class ResidentCreator:
 
     def set_age(self, age: int) -> None:
         self.age = min(max(age, AGE_RANGE[0]), AGE_RANGE[1])
+
+    def set_identity(self, what: str, choice: str) -> None:
+        """Say one thing of who they are. Until it is said otherwise, they take themselves to be what their body is."""
+        if what not in IDENTITY_CHOICES or choice not in IDENTITY_CHOICES[what]:
+            return
+        follows = self.identity[GENDER] == self.identity[SEX]
+        self.identity[what] = choice
+        if what == SEX and follows:
+            self.identity[GENDER] = choice
 
     def toggle_trait(self, trait_id: str) -> None:
         if trait_id in self.traits:
@@ -176,7 +210,9 @@ class ResidentCreator:
             self.notice = NAMELESS
             return None
         created = self.world.apply_command(
-            FoundResidentCommand(self.name, self.age, dict(self.personality), tuple(self.traits), dict(self.manners))
+            FoundResidentCommand(
+                self.name, self.age, dict(self.personality), tuple(self.traits), dict(self.manners), dict(self.identity)
+            )
         )
         if not isinstance(created, str):
             self.notice = REFUSED
@@ -189,6 +225,8 @@ class ResidentCreator:
             self.set_age(self.age + intent[1])
         elif intent[0] == "trait":
             self.toggle_trait(intent[1])
+        elif intent[0] == "identity":
+            self.set_identity(intent[1], intent[2])
         elif intent[0] == "page":
             self.page, self._held = intent[1], None
         elif intent[0] == "manner":
@@ -281,7 +319,12 @@ class ResidentCreator:
         middle = (self.age_buttons[0].rect.right + self.age_buttons[1].rect.left) // 2
         font.draw(canvas, years, (middle - font.width(years) // 2, AGE_Y + 2), PALETTE["paper"])
 
-        font.draw(canvas, "Forma de ser", (LEFT, SLIDERS_Y - LINE_HEIGHT - 6), PALETTE["sand"])
+        for row, (what, label) in enumerate(IDENTITY_LABELS.items()):
+            font.draw(canvas, label, (LEFT, IDENTITY_Y + row * IDENTITY_ROW + 2), PALETTE["sand"])
+        for button in self.identity_buttons:
+            button.draw(canvas, font, active=self.identity.get(button.intent[1]) == button.intent[2])
+
+        font.draw(canvas, "Forma de ser", (LEFT, SLIDERS_Y - LINE_HEIGHT - 4), PALETTE["sand"])
         for trait, slider in self.sliders.items():
             value = self.personality.get(trait, 50.0)
             font.draw(canvas, PERSONALITY_LABELS[trait][0], (LEFT, slider.rect.y - 2), PALETTE["bone"])
@@ -300,7 +343,8 @@ class ResidentCreator:
         font, canvas = self.font, self.canvas
         name = tidy_name(self.name)
         font.draw(canvas, name or NO_NAME_YET, (WHO_AT[0], WHO_AT[1]), PALETTE["paper" if name else "stone"], scale=2)
-        font.draw(canvas, f"{self.age} años", (WHO_AT[0], WHO_AT[1] + LINE_HEIGHT * 2 + 4), PALETTE["bone"])
+        who = f"{self.age} años · {IDENTITY_WORDS[GENDER][self.identity[GENDER]].lower()}"
+        font.draw(canvas, who, (WHO_AT[0], WHO_AT[1] + LINE_HEIGHT * 2 + 4), PALETTE["bone"])
         blank = pygame.Rect(WHO_AT[0], WHO_AT[1] + LINE_HEIGHT * 4, NOTES.width, LINE_HEIGHT * 3 + 8)
         draw_panel(canvas, blank, fill="shadow", border="lamp")
         for index, line in enumerate(font.wrap(DRAWN_NEXT, blank.width - 10)):

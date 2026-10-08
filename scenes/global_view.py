@@ -8,6 +8,7 @@ from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE, BodyRenderer
 from graphics import building_pictures, ground_pictures
 from graphics.building_art import BuildingArtStore, door_columns
 from graphics.building_renderer import FACADE_ROWS, BuildingRenderer, building_area
+from graphics.bundle import bundle_height, bundle_picture, ground_blanket
 from graphics.crumbs import Crumb, CrumbArt, crumbs
 from graphics.doll import DOLL_FACINGS, Doll, DollStore, draw_doll
 from graphics.face_renderer import FaceRenderer
@@ -22,7 +23,7 @@ from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from graphics.object_art import ObjectArtStore
 from graphics.object_pictures import ObjectPicture, ObjectPictures
 from graphics.shelf_display import GOODS_SIZE
-from graphics.stand_ins import stand_in
+from graphics.stand_ins import child_stand_in, stand_in
 from graphics.map_renderer import GROUND_TILES, render_roofs, render_terrain, roof_names
 from graphics.palette import PALETTE
 from graphics.shelf_display import SLOTS, displayed_goods
@@ -36,17 +37,24 @@ from graphics.tileset import (
     Tileset,
 )
 from scenes.body_stage import (
+    BUNDLE_BEHIND,
+    BUNDLE_RAISED,
+    BUNDLE_UP,
+    BUNDLE_WIDTH,
     HEAD_BONE,
+    HEAD_OF_HEIGHT,
     LYING_HEAD_OFFSET,
     LYING_HEAD_ROWS,
     LYING_NECK,
     BodyStage,
     Remains,
     ground_spot,
+    grown_share,
 )
 from audio.voice_player import VoicePlayer
 from scenes.hud import (
     BUILD_INTENT,
+    FAMILY_INTENT,
     FUND_INTENT,
     GOVERNMENT_INTENT,
     VOICE_INTENT,
@@ -56,6 +64,7 @@ from scenes.hud import (
     MANNERS_INTENT,
     LOG_INTENT,
     MINIMAP_INTENT,
+    PANEL_KIN_INTENT,
     PANEL_TAB_INTENT,
     PAUSE_INTENT,
     ROSTER_INTENT,
@@ -105,6 +114,12 @@ from simulation.commands import (
 )
 from simulation.ai.affect import SALVAGE, TASK
 from simulation.events.event import DomainEvent
+from simulation.events.world_event_system import GATE_DECISIONS
+from simulation.family.children import BED as BUNDLE_IN_BED
+from simulation.family.children import CARRIED as BUNDLE_CARRIED
+from simulation.family.children import SURFACE as BUNDLE_ON_SURFACE
+from simulation.family.children import Bundle
+from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item_system import USE_ITEM_ACTION
 from simulation.residents.manner import EAT, FIGHT, WALK
 from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
@@ -121,7 +136,7 @@ from ui.trade_board import CART_INTENT as TRADE_CART_INTENT
 from ui.trade_board import DEAL_INTENT as TRADE_DEAL_INTENT
 from ui.trade_board import DRAW_INTENT as TRADE_DRAW_INTENT
 from ui.bubble import MARK_SIZE, MARK_TAIL, draw_mark
-from ui.labels import away_residents
+from ui.labels import away_residents, has_birthday
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
 from ui.panel import draw_item, draw_panel
 from ui.task_bar import draw_task_bar, task_bar_rect, task_progress
@@ -179,13 +194,39 @@ NO_HOUSE_YET = "{name} no tiene casa y dormirá al raso: entra en un edificio y 
 NOWHERE_TO_ENTER = "No hay ningún edificio ahí en el que entrar"
 BOBBING_ICONS = ("alert", "sleep")
 # What someone is doing is shown in a bubble over their head. These are not: they mark who it is.
-BARE_ICONS = ("selected", "heart", "friend")
+BARE_ICONS = ("selected", "heart", "friend", "birthday")
+BIRTHDAY_ICON = "birthday"
+# Two who marry wear it over their heads for this many seconds.
+WEDDING_EVENT = "couple_married"
+WEDDING_MARK = "rings"
+WEDDING_SECONDS = 10.0
+# Somebody asleep on the ground, under a blanket: how wide and how tall the heap of them is in
+# map pixels, and where their neck is on it, from its left end and from the ground.
+ROUGH_SIZE = (20.0, 9.0)
+ROUGH_NECK = (3.5, 3.0)
 # How something was taken, and that something was learned of whoever took it, shown over their
 # head for this many seconds each, one after the other.
 TASTE_MARKS = {LOVED: "relish", LIKED: "relish", DISLIKED: "disgust", HATED: "disgust"}
 FOUND_OUT_MARK = "insight"
 MARK_SECONDS = 2.5
 MARKS_WAITING = 3
+# How something is seen to be taken, by the way it is taken, and by any other way.
+TAKEN_EVENT = "substance_taken"
+ROUTE_MARKS = {"swallowed": "swallow", "sniffed": "sniff", "injected": "inject", "smoked": "smoke"}
+TAKEN_MARK = "swallow"
+# How whoever is under something goes about, by what it looks like on them: how far to either
+# side they sway, in tiles, and how many times a second. Any other sign sways as the last does.
+SWAYS = {"drunk": (0.2, 0.9), "high": (0.07, 3.6)}
+STEADY_SIGNS = ("smoke",)
+OTHER_SWAY = (0.1, 1.6)
+UNDER_ICON = "dizzy"
+# The sign that has smoke hang round whoever wears it: how many puffs, how high they rise over
+# their head in canvas pixels, how far to either side they drift, and how long each takes, in seconds.
+SMOKE_SIGN = "smoke"
+SMOKE_PUFFS = 4
+SMOKE_RISE = 18
+SMOKE_DRIFT = 5
+SMOKE_SECONDS = 2.4
 # Health below which a resident is shown as hurt.
 HURT_HEALTH = 70.0
 # Where a load is drawn on a body frame, by the way the resident faces: in their arms, or on their back.
@@ -240,8 +281,13 @@ Draw = tuple[float, int, Callable[[], None]]
 # many bites are gone from it, and the crumbs flying from their mouth with where that is.
 Held = tuple[str, tuple[float, float], bool, int, list[Crumb], tuple[float, float]]
 # A paper doll to put on the window this frame: how far down the map it stands, the doll, and either
-# the skeleton it is laid over or, for someone lying under a blanket, where their neck is.
-DollDraw = tuple[float, Doll, Skeleton | None, tuple[float, float] | None]
+# the skeleton it is laid over or, for someone lying under a blanket, where their neck is. Then
+# how much of its drawn size the body is shown at, and the spot between its feet that it is
+# brought down about.
+DollDraw = tuple[float, Doll, Skeleton | None, tuple[float, float] | None, float, tuple[float, float]]
+# The body every child nobody has drawn is shown with.
+CHILD_BODY = "child"
+BORN_EVENT = "child_born"
 # Which way a doll faces until its resident has walked to one side or the other.
 DOLL_FACING = DOLL_FACINGS["right"]
 
@@ -276,6 +322,10 @@ class GlobalView:
         self._held: list[Held] = []
         self._crumb_art = CrumbArt()
         self._posed: dict[tuple, Skeleton] = {}
+        # The game's own small bodies brought down for whoever is not grown, and children in
+        # their blankets, each kept at the size it was last shown.
+        self._small_frames: dict[tuple, tuple[pygame.Surface, tuple[int, int]]] = {}
+        self._bundle_pictures: dict[tuple, pygame.Surface] = {}
         # Resident the player asked to draw. The game shell picks it up.
         self.requested_editor: str | None = None
         # Building the player asked to draw. Kept separate from resident drawings.
@@ -291,6 +341,8 @@ class GlobalView:
         self.requested_object_editor: str | None = None
         # Currency whose coin the player asked to draw, by its ID.
         self.requested_coin_editor: str | None = None
+        # Whether the player asked for the families of the whole settlement.
+        self.requested_family = False
         # Pictures made outside the game, and where they are put to go straight on the window.
         self.illustrations = illustrations if layers is not None else None
         self.layers = layers
@@ -370,6 +422,9 @@ class GlobalView:
         # Whoever has come to trade, as a body to draw. They are no resident: the settlement keeps
         # no more of them than where they stand.
         self._visitor_body: Resident | None = None
+        # Whoever stands at the gate asking to be let in, as bodies to draw, by their ID. They
+        # are no residents yet, and may never be.
+        self._gate_bodies: dict[str, Resident] = {}
         # Where on the canvas the left button went down on the map and where the mouse last was
         # with it held, and whether it has moved far enough since to be dragging.
         self._press: tuple[int, int] | None = None
@@ -438,6 +493,8 @@ class GlobalView:
             self._apply(VOICE_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_F6:
             self._apply(MANNERS_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_F7:
+            self._apply(FAMILY_INTENT)
         elif event.type == pygame.KEYDOWN and event.key in ZOOM_KEYS:
             self.set_zoom(self.zoom + ZOOM_KEYS[event.key])
         elif event.type == pygame.MOUSEWHEEL:
@@ -797,6 +854,17 @@ class GlobalView:
                 self._mark(str(event.data.get("resident_id")), TASTE_MARKS.get(str(event.data.get("reaction"))))
             elif event.event_type == FOUND_OUT_EVENT:
                 self._mark(str(event.data.get("resident_id")), FOUND_OUT_MARK)
+            elif event.event_type == BORN_EVENT and self.hud.drawable and self.dolls is not None:
+                # Somebody has been born: the next thing is to draw them, as the adult they will be.
+                child_id = str(event.data.get("child_id") or "")
+                if child_id in self.world.bundles and self.dolls.get(child_id) is None:
+                    self.requested_editor = child_id
+            elif event.event_type == WEDDING_EVENT:
+                for resident_id in event.participants:
+                    self._mark(resident_id, WEDDING_MARK, WEDDING_SECONDS)
+            elif event.event_type == TAKEN_EVENT and event.participants:
+                # How it was taken is seen over their head: swallowed, sniffed, injected or smoked.
+                self._mark(event.participants[0], ROUTE_MARKS.get(str(event.data.get("route")), TAKEN_MARK))
             elif event.event_type == NEWCOMER_EVENT and event.participants and self.world.housing.applies(self.world):
                 # Whoever comes to stay has no house until they are given one (S41).
                 newcomer = self.world.residents.get(event.participants[0])
@@ -809,7 +877,7 @@ class GlobalView:
                 self.centre_on_resident(decision.resident_id)
                 break
 
-    def _mark(self, resident_id: str, icon: str | None) -> None:
+    def _mark(self, resident_id: str, icon: str | None, seconds: float = MARK_SECONDS) -> None:
         """Have a mark shown over a resident for a moment, after any that is waiting to be."""
         if icon is None:
             return
@@ -817,7 +885,7 @@ class GlobalView:
         if len(waiting) >= MARKS_WAITING or any(mark[0] == icon for mark in waiting):
             return
         start = max([self.time, *(mark[2] for mark in waiting)])
-        self._marks[resident_id] = [*waiting, (icon, start, start + MARK_SECONDS)]
+        self._marks[resident_id] = [*waiting, (icon, start, start + seconds)]
 
     def mark_over(self, resident_id: str) -> str | None:
         """The mark showing over a resident right now, if any."""
@@ -897,6 +965,11 @@ class GlobalView:
                 # Whoever has come to trade is nobody to select: a click on them is to deal with them.
                 self._sound("open")
                 self.hud.open_trade()
+            elif picked and picked[-1] in self._gate_bodies:
+                # Nor is whoever knocks at the gate: a click on them is to hear whoever answers it.
+                self._sound("open")
+                self.requested_decision = self.gate_decision()
+                return
             elif picked:
                 self._sound("select")
                 self.hud.select_resident(picked[-1])
@@ -965,6 +1038,10 @@ class GlobalView:
             self.requested_manners = self.hud.selected_id or next(iter(self.world.residents), None)
         elif intent == PANEL_TAB_INTENT:
             self.hud.toggle_panel_tab()
+        elif intent == PANEL_KIN_INTENT:
+            self.hud.toggle_panel_kin()
+        elif intent == FAMILY_INTENT:
+            self.requested_family = True
         elif intent == AFFECT_INTENT:
             self._toggle_affect()
         elif intent in (CLOSE_INTENT, BACK_INTENT):
@@ -1248,6 +1325,8 @@ class GlobalView:
         standing: list[Standing] = self._object_pictures(region)
         # Objects, residents and buildings share one list so that whatever stands lower on screen is in front.
         draws: list[Draw] = []
+        self._bundle_names: list[tuple[pygame.Surface, tuple[int, int]]] = []
+        self._rough: list[Standing] = []
         for room_id in self._closed:
             room = self.world.rooms[room_id]
             area = building_area(room)
@@ -1298,6 +1377,13 @@ class GlobalView:
         visitor = self.visitor()
         if visitor is not None:
             draws.append(self._marker_draw(visitor) if self.overview else self._resident_draw(visitor))
+        for stranger in self.strangers():
+            # Whoever knocks is seen at the gate, and two who came together are seen together.
+            draws.append(self._marker_draw(stranger) if self.overview else self._resident_draw(stranger))
+        for bundle in self.world.bundles.values():
+            # A child still carried is a head and a blanket, on a back or where it was put down.
+            if not self.overview and bundle.tile not in self._hidden:
+                self._show_bundle(bundle, standing, draws)
         for remains in self.bodies.remains:
             # The dead are not picked out from afar, and a roof hides them like anything else.
             if not self.overview and remains.tile not in self._hidden:
@@ -1308,8 +1394,13 @@ class GlobalView:
         self._overlays = []
         self._doll_draws = []
         self._held = []
+        self._rough = []
         for _, _, draw in sorted(draws, key=lambda entry: entry[:2]):
             draw()
+        # The blanket of whoever sleeps on the ground goes on the window with everything else that stands there.
+        standing.extend(self._rough)
+        for name, place in self._bundle_names:
+            self._overlays.append(lambda name=name, place=place: self.canvas.blit(name, place))
         stormy = self._storm(region)
         light = self._light(region)
 
@@ -1529,9 +1620,9 @@ class GlobalView:
                 if kind == 0:
                     show(entry[1], entry[2])
                     continue
-                _, doll, skeleton, neck = entry
+                _, doll, skeleton, neck, grown, foot = entry
                 if skeleton is not None:
-                    draw_doll(screen, doll, plan, skeleton, origin, detail, allowance)
+                    draw_doll(screen, doll, plan, skeleton, origin, detail, allowance, grown, foot)
                     continue
                 # Lying under a blanket: only the head, upright on the pillow.
                 head = doll.placed(HEAD_BONE, False, detail, math.pi)
@@ -1617,6 +1708,8 @@ class GlobalView:
         if merchant is not None and merchant.tile is not None:
             # Whoever has come to trade is found on it too, in a colour of their own.
             dots[merchant.tile] = "copper"
+        for stranger in self._gate_bodies.values():
+            dots[(stranger.x, stranger.y)] = "glow"
         view = pygame.Rect(
             region.x * TILE_PIXELS // TILE_SIZE,
             region.y * TILE_PIXELS // TILE_SIZE,
@@ -1748,6 +1841,30 @@ class GlobalView:
         body.facing = "left" if merchant.cart is not None and merchant.cart[0] < merchant.tile[0] else "right"
         return body
 
+    def strangers(self) -> list[Resident]:
+        """Whoever stands at the gate waiting for an answer, as somebody to draw and to click on:
+        side by side by the way in, if they came together. Empty with nobody there."""
+        waiting = self.world.happenings.visitors(self.world)
+        gate = next(iter(self.world.entry_tiles()), None)
+        if not waiting or gate is None:
+            self._gate_bodies = {}
+            return []
+        bodies = {}
+        for index, newcomer in enumerate(waiting):
+            body = self._gate_bodies.get(newcomer.newcomer_id)
+            if body is None:
+                body = Resident(newcomer.newcomer_id, newcomer.name, age=newcomer.age)
+            body.x, body.y = gate[0] + index, gate[1]
+            bodies[newcomer.newcomer_id] = body
+        self._gate_bodies = bodies
+        return list(bodies.values())
+
+    def gate_decision(self) -> str | None:
+        """ID of the decision of whoever is answering the gate, while somebody waits there."""
+        return next(
+            (decision.decision_id for decision in self.world.decisions.values() if decision.kind in GATE_DECISIONS), None
+        )
+
     def _standing(self) -> list[Interactable]:
         """Everything that stands on the map: what has been placed, and the cart of whoever has come to trade."""
         placed = list(self.world.interactables.values())
@@ -1810,21 +1927,52 @@ class GlobalView:
         # Flat on the ground: whatever stands on the same row is drawn over it.
         return (area.top, -1, draw)
 
+    def under_sign(self, resident: Resident) -> str | None:
+        """What a resident is under looks like on them right now, as their data names it. None
+        for somebody who is under nothing."""
+        now = self.world.clock.total_minutes
+        return next((intake.sign for intake in resident.under if intake.until > now), None)
+
+    def sway(self, resident: Resident) -> float:
+        """How far to one side whoever is under something is from where they stand, in tiles:
+        they reel as they go. Nothing for somebody steady on their feet."""
+        sign = self.under_sign(resident)
+        if sign is None or sign in STEADY_SIGNS:
+            return 0.0
+        reach, rate = SWAYS.get(sign, OTHER_SWAY)
+        # Nobody reels in step with anybody else.
+        offset = sum(map(ord, resident.resident_id)) % 7
+        return reach * math.sin((self.time * rate + offset / 7.0) * math.tau)
+
     def _resident_draw(self, resident: Resident) -> Draw:
         lying_in = self._lying_in(resident)
         if lying_in is not None:
             return self._lying_draw(resident, lying_in)
+        if self.sleeps_rough(resident):
+            return self._rough_draw(resident)
         x, y, facing, stride = self._walk_state(resident)
-        doll = self._doll_of(resident.resident_id)
+        x += self.sway(resident)
+        doll = self._doll_for(resident)
+        # Somebody not yet grown has a smaller body under the head they were drawn with.
+        grown = grown_share(self.world, resident)
         if doll is not None:
             facing = self._side_facing(resident.resident_id, self._lean(resident) or facing)
         top = round(y * TILE_SIZE)
         spot = ground_spot(x, y)
         # Where a body stands at rest, which is what is picked with the mouse whatever it is doing.
         body = pygame.Rect(spot[0] - FRAME_ORIGIN[0], spot[1] - FRAME_ORIGIN[1], *FRAME_SIZE)
+        sole = (float(spot[0]), float(spot[1]))
+        if grown < 1.0:
+            body = pygame.Rect(
+                spot[0] - round(FRAME_ORIGIN[0] * grown), spot[1] - round(FRAME_ORIGIN[1] * grown),
+                max(1, round(FRAME_SIZE[0] * grown)), max(1, round(FRAME_SIZE[1] * grown)),
+            )
         if doll is not None:
             # A doll is as tall and as wide as it was drawn: its name goes over its own head.
             left, high, right, low = doll.standing(doll.plan or self.bodies.plan)
+            high *= HEAD_OF_HEIGHT + (1.0 - HEAD_OF_HEIGHT) * grown
+            # A smaller body is brought down about the ground its soles are on, so that it stands on it.
+            sole = (float(spot[0]), float(spot[1]) + low)
             body = pygame.Rect(
                 spot[0] + math.floor(left), spot[1] + math.floor(high), math.ceil(right - left), math.ceil(low) - math.floor(high)
             )
@@ -1857,7 +2005,7 @@ class GlobalView:
         def draw() -> None:
             if doll is not None:
                 skeleton = character.skeleton if character.physical else self._posed_skeleton(resident.resident_id, character)
-                self._doll_draws.append((spot[1], doll, skeleton, None))
+                self._doll_draws.append((spot[1], doll, skeleton, None, grown, sole))
             elif character.physical:
                 # Reeling from a blow or knocked down: drawn joint by joint, wherever physics has them.
                 renderer.draw_limp(
@@ -1867,6 +2015,9 @@ class GlobalView:
                 picture, origin = renderer.frame(
                     resident.resident_id, facing, clip, index, tuple(character.lost), overlay
                 )
+                if grown < 1.0:
+                    # The game's own small body is brought down whole, head and all.
+                    picture, origin = self._small_frame(picture, origin, grown)
                 self._blit(picture, (spot[0] - origin[0], spot[1] - origin[1]))
             if load is not None and doll is None:
                 dx, dy = LOAD_OFFSETS[facing]
@@ -1875,13 +2026,14 @@ class GlobalView:
             self.hitboxes[resident.resident_id] = hitbox
             meal = self._meal_in_hand(resident)
             weapon = self._weapon_in_hand(resident) if stride is None else None
+            about = (grown, sole)
             if meal is not None and not character.physical:
-                self._hold(meal, facing, character.pose(), spot[1], turn, self._bites_taken(resident))
+                self._hold(meal, facing, character.pose(), spot[1], turn, self._bites_taken(resident), about)
             elif weapon is not None and not character.physical:
-                self._hold(weapon, facing, character.pose(), spot[1])
+                self._hold(weapon, facing, character.pose(), spot[1], about=about)
             elif load is not None and doll is not None and not character.physical:
                 # A doll carries its load in its hands, where the carrying clip holds them out.
-                self._hold(load, facing, character.pose(), spot[1])
+                self._hold(load, facing, character.pose(), spot[1], about=about)
             self._overlays.append(lambda: self._draw_overhead(resident, hitbox.midtop, with_name=True))
 
         return (top + TILE_SIZE, 1, draw)
@@ -1896,16 +2048,33 @@ class GlobalView:
 
         return (area.bottom, 0, draw)
 
-    def _doll_of(self, body_id: str) -> Doll | None:
-        """The paper doll of a body, if its body has been drawn and there is a window to show it on."""
+    def _doll_of(self, body_id: str, young: bool = False) -> Doll | None:
+        """The paper doll of a body, if its body has been drawn and there is a window to show it on.
+        `young` says they are a child, who has the one look children have until somebody draws them."""
         if self.dolls is None:
             return None
         doll = self.dolls.get(body_id)
-        if doll is None and self.windowed:
+        if doll is None and self.windowed and young:
+            doll = self.dolls.stand_in(CHILD_BODY, child_stand_in)
+        elif doll is None and self.windowed:
             # Nobody has drawn them: on the window they are a plain figure in their own colours.
             skin = self.bodies.renderer.skin(body_id)
             doll = self.dolls.stand_in(body_id, lambda template: stand_in(template, skin))
         return doll
+
+    def _doll_for(self, resident: Resident) -> Doll | None:
+        """The paper doll a resident is shown as."""
+        return self._doll_of(resident.resident_id, self.world.children.is_child(self.world, resident))
+
+    def _small_frame(
+        self, picture: pygame.Surface, origin: tuple[int, int], grown: float
+    ) -> tuple[pygame.Surface, tuple[int, int]]:
+        """One of the game's own small bodies at a share of its size, and where the spot between its feet is on it."""
+        key = (id(picture), round(grown * 100))
+        if key not in self._small_frames:
+            size = (max(1, round(picture.get_width() * grown)), max(1, round(picture.get_height() * grown)))
+            self._small_frames[key] = (pygame.transform.scale(picture, size), (round(origin[0] * grown), round(origin[1] * grown)))
+        return self._small_frames[key]
 
     def _side_facing(self, resident_id: str, facing: str) -> str:
         """Which way a doll faces: it is drawn from the side, so walking up or down it keeps the side it last had."""
@@ -1923,13 +2092,64 @@ class GlobalView:
         skeleton.set_pose(character.local_pose(), character.x, character.y)
         return skeleton
 
+    def bundle_spot(self, bundle: Bundle) -> tuple[float, float, float]:
+        """Where a child in its blanket is shown: the middle of its foot in map pixels, and how
+        far down the map it counts as standing, for what goes in front of what.
+
+        Carried, it is on the back of whoever has it: a little behind them and well up from the
+        ground. Put down, it is on its tile, off the ground where that is a bed or a table.
+        """
+        carrier = self.world.residents.get(bundle.carried_by or "") if bundle.place == BUNDLE_CARRIED else None
+        if carrier is not None and not carrier.away:
+            x, y, facing, _ = self._walk_state(carrier)
+            foot = ground_spot(x + self.sway(carrier), y)
+            turned = self._doll_facing.get(carrier.resident_id, DOLL_FACINGS.get(facing, DOLL_FACING))
+            back = BUNDLE_BEHIND if turned == DOLL_FACINGS["left"] or facing == "left" else -BUNDLE_BEHIND
+            share = grown_share(self.world, carrier)
+            # Just behind whoever carries it, so that they are in front of it.
+            return (foot[0] + back * share, foot[1] - BUNDLE_UP * share, foot[1] - 0.1)
+        raised = BUNDLE_RAISED if bundle.place in (BUNDLE_IN_BED, BUNDLE_ON_SURFACE) else 0.0
+        bottom = (bundle.y + 1) * TILE_SIZE
+        return ((bundle.x + 0.5) * TILE_SIZE, bottom - 2 - raised, bottom + 0.7)
+
+    def bundle_shown(self, bundle: Bundle, side: int) -> pygame.Surface:
+        """A child in its blanket, `side` pixels across, made once and kept: with their own head
+        if somebody has drawn them as the adult they will be, or else the face the game has for them."""
+        doll = self.dolls.get(bundle.child_id) if self.dolls is not None else None
+        placed = doll.placed(HEAD_BONE, False, 8.0, math.pi) if doll is not None else None
+        head = placed[0] if placed is not None else self.faces.face(bundle.child_id)
+        # A head drawn anew is another picture, and so is the bundle made with it.
+        key = (bundle.child_id, id(head), side)
+        if key not in self._bundle_pictures:
+            if len(self._bundle_pictures) > 64:
+                self._bundle_pictures.clear()
+            self._bundle_pictures[key] = bundle_picture(head.subsurface(head.get_bounding_rect()), side)
+        return self._bundle_pictures[key]
+
+    def _show_bundle(self, bundle: Bundle, standing: list[Standing], draws: list[Draw]) -> None:
+        """Have a child in its blanket drawn: on the window where there is one, or else small on the map's own art."""
+        x, bottom, depth = self.bundle_spot(bundle)
+        height = BUNDLE_WIDTH * bundle_height(100) / 100
+        area = (x - BUNDLE_WIDTH / 2, bottom - height, BUNDLE_WIDTH, height)
+        if self.windowed:
+            side = max(4, round(BUNDLE_WIDTH * self._cell / TILE_SIZE))
+            standing.append((depth, area, self.bundle_shown(bundle, side)))
+        else:
+            small = self.bundle_shown(bundle, round(BUNDLE_WIDTH))
+            draws.append((depth, 1, lambda: self._blit(small, (round(area[0]), round(area[1])))))
+        if bundle.place != BUNDLE_CARRIED:
+            # Put down, it has its name over it: there is nobody's back to look for it on.
+            place = self._canvas_rect(pygame.Rect(round(area[0]), round(area[1]), round(area[2]), round(area[3])))
+            name = self.font.render(bundle.name, PALETTE["bone"])
+            self._bundle_names.append((name, (place.centerx - name.get_width() // 2, place.top - CELL_SIZE[1])))
+
     def _remains_draw(self, remains: Remains) -> Draw:
         """A dead body or a part of one, in among the living by how far down the map it lies."""
         doll = self._doll_of(remains.body_id)
 
         def draw() -> None:
             if doll is not None:
-                self._doll_draws.append((remains.skeleton.ground, doll, remains.skeleton, None))
+                self._doll_draws.append((remains.skeleton.ground, doll, remains.skeleton, None, 1.0, (0.0, 0.0)))
                 return
             self.bodies.draw_remains(self._scene, remains, self._scene_origin)
 
@@ -2005,14 +2225,21 @@ class GlobalView:
         ground: float,
         turn: float | None = None,
         bites: int = 0,
+        about: tuple[float, tuple[float, float]] | None = None,
     ) -> None:
         """Have something shown in the hand of a resident whose feet are `ground` down the map.
-        With `turn`, how many turns of the eating clip have gone, it is a meal and crumbs fly from each bite."""
+        With `turn`, how many turns of the eating clip have gone, it is a meal and crumbs fly from each bite.
+        `about` is how much of its size their body is shown at and the spot between their feet,
+        for somebody not yet grown: their hand is where their smaller arm has it."""
         plan = self.bodies.plan
         hand = plan.anchor("held_item", facing, pose)
         mouth = plan.anchor("mouth", facing, pose)
         if hand is None or mouth is None:
             return
+        if about is not None and about[0] < 1.0:
+            share, (foot_x, foot_y) = about
+            hand = (foot_x + (hand[0] - foot_x) * share, foot_y + (hand[1] - foot_y) * share)
+            mouth = (foot_x + (mouth[0] - foot_x) * share, foot_y + (mouth[1] - foot_y) * share)
         offset = MOUTH_OFFSETS.get(facing, (0, 2))
         mouth = (mouth[0] + offset[0], mouth[1] + offset[1])
         left = facing.endswith("left")
@@ -2030,6 +2257,18 @@ class GlobalView:
             target.blit(picture, picture.get_rect(center=centre))
             at = (origin[0] + mouth[0] * detail, origin[1] + mouth[1] * detail)
             self._crumb_art.draw(target, flying, self.icons.crumb_colors(item_id), at, detail)
+
+    def _draw_smoke(self, resident: Resident, top_centre: tuple[int, int]) -> None:
+        """Smoke hanging round whoever smokes: puffs that rise from their head, swell and thin out."""
+        x, y = top_centre
+        offset = sum(map(ord, resident.resident_id)) % 5
+        for puff in range(SMOKE_PUFFS):
+            age = (self.time / SMOKE_SECONDS + (puff + offset / 5.0) / SMOKE_PUFFS) % 1.0
+            drift = math.sin((age + puff * 0.37) * math.tau) * SMOKE_DRIFT
+            centre = (round(x + drift + (puff - (SMOKE_PUFFS - 1) / 2) * 2), round(y + 4 - age * SMOKE_RISE))
+            radius = 1.5 + 3.0 * math.sin(age * math.pi)
+            pygame.draw.circle(self.canvas, PALETTE["stone"], centre, radius + 1)
+            pygame.draw.circle(self.canvas, PALETTE["bone" if age < 0.55 else "dust"], centre, radius)
 
     def _marker_draw(self, resident: Resident) -> Draw:
         """From afar a resident is only their face, over the tile they are on, roof or no roof."""
@@ -2102,7 +2341,7 @@ class GlobalView:
         face = self.bodies.renderer.head(resident.resident_id)
         head = face.subsurface((0, 0, face.get_width(), LYING_HEAD_ROWS))
 
-        doll = self._doll_of(resident.resident_id)
+        doll = self._doll_for(resident)
         neck = (bed.left + LYING_NECK[0], bed.top + LYING_NECK[1])
         game = self._game_picture(definition)
         if game is not None and game.neck is not None:
@@ -2112,7 +2351,7 @@ class GlobalView:
 
         def draw() -> None:
             if doll is not None:
-                self._doll_draws.append((bed.bottom, doll, None, neck))
+                self._doll_draws.append((bed.bottom, doll, None, neck, 1.0, (0.0, 0.0)))
             else:
                 self._blit(head, (bed.left + LYING_HEAD_OFFSET[0], bed.top + LYING_HEAD_OFFSET[1]))
             hitbox = self._canvas_rect(bed)
@@ -2122,6 +2361,44 @@ class GlobalView:
             )
 
         return (bed.bottom, 1, draw)
+
+    def sleeps_rough(self, resident: Resident) -> bool:
+        """Whether a resident is asleep on the ground, for want of a bed."""
+        activity = resident.activity
+        return activity is not None and activity.using and activity.action == SLEEP_ROUGH_ACTION
+
+    def rough_blanket(self, width: int, height: int) -> pygame.Surface:
+        """The blanket over whoever sleeps on the ground, at a size, made once and kept."""
+        key = ("rough", width, height)
+        if key not in self._bundle_pictures:
+            self._bundle_pictures[key] = ground_blanket(width, height)
+        return self._bundle_pictures[key]
+
+    def _rough_draw(self, resident: Resident) -> Draw:
+        """Somebody asleep on the ground: a blanket with them under it, and their head out at one end."""
+        bottom = (resident.y + 1) * TILE_SIZE - 1
+        left = (resident.x + 0.5) * TILE_SIZE - ROUGH_SIZE[0] / 2
+        area = (left, bottom - ROUGH_SIZE[1], *ROUGH_SIZE)
+        neck = (left + ROUGH_NECK[0], bottom - ROUGH_NECK[1])
+        doll = self._doll_for(resident)
+        face = self.bodies.renderer.head(resident.resident_id)
+        head = face.subsurface((0, 0, face.get_width(), LYING_HEAD_ROWS))
+        box = pygame.Rect(round(area[0]), round(area[1] - 6), round(area[2]), round(area[3] + 6))
+
+        def draw() -> None:
+            if doll is not None:
+                detail = self._cell / TILE_SIZE
+                blanket = self.rough_blanket(max(4, round(ROUGH_SIZE[0] * detail)), max(2, round(ROUGH_SIZE[1] * detail)))
+                self._rough.append((float(bottom) - 0.2, area, blanket))
+                self._doll_draws.append((float(bottom), doll, None, neck, 1.0, (0.0, 0.0)))
+            else:
+                self._blit(self.rough_blanket(round(ROUGH_SIZE[0]), round(ROUGH_SIZE[1])), (round(area[0]), round(area[1])))
+                self._blit(head, (round(neck[0]) - head.get_width() // 2, round(neck[1]) - head.get_height()))
+            hitbox = self._canvas_rect(box)
+            self.hitboxes[resident.resident_id] = hitbox
+            self._overlays.append(lambda: self._draw_overhead(resident, hitbox.midtop, with_name=False, resting=True))
+
+        return (bottom, 1, draw)
 
     def _status_icon(self, resident: Resident, resting: bool, unseen: bool = False) -> str | None:
         """Icon for what a resident is doing, most urgent first. For somebody `unseen`, who is
@@ -2146,7 +2423,10 @@ class GlobalView:
         if resident.health < HURT_HEALTH:
             return "hurt"
         at_work = activity is not None and activity.using and activity.action in (WORK_ACTION, BUILD_ACTION)
-        return "work" if at_work else None
+        if at_work:
+            return "work"
+        # Whoever is under something wears it, with nothing more pressing to show.
+        return UNDER_ICON if self.under_sign(resident) not in (None, *STEADY_SIGNS) else None
 
     def _bond_icon(self, resident: Resident) -> str | None:
         """What a resident is to whoever is selected: their partner, someone they hold as a friend, or neither."""
@@ -2190,6 +2470,8 @@ class GlobalView:
         """Stack how far along they are with a task, their name, a status icon and the
         selection arrow above a resident."""
         x, y = top_centre
+        if not unseen and self.under_sign(resident) == SMOKE_SIGN:
+            self._draw_smoke(resident, top_centre)
         done = task_progress(self.world, resident)
         if done is not None:
             bar = task_bar_rect((x, y), small=self.overview)
@@ -2201,6 +2483,9 @@ class GlobalView:
             name = self.font.render(resident.name, PALETTE["paper"])
             self.canvas.blit(name, (self._name_left(resident, x, name.get_width()), y))
         icons = [self._status_icon(resident, resting, unseen), self.mark_over(resident.resident_id)]
+        if resident.resident_id in self.world.residents and has_birthday(self.world, resident):
+            # A year more today: it is worn all day.
+            icons.append(BIRTHDAY_ICON)
         if resident.resident_id == self.hud.selected_id:
             icons.append("selected")
         else:

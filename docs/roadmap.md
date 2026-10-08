@@ -1484,10 +1484,9 @@ Still open here:
 - Nobody knows somebody is expecting, the two of them included: it is not a fact anyone holds
 - Whoever is turned away at the gate while their brother or sister is let in is gone for good
 - The water does not take more hands as the garden does: with one tank there is one post
-- None of it is on screen: who somebody is, the date, a family's tree and a bundle on a back
-  are for P25
+- All of it was put on screen in P25: who somebody is, the date, the tree and a bundle on a back
 
-### P25 — Coin, smoke and kin on screen (needs S23 to S25) — under way
+### P25 — Coin, smoke and kin on screen (needs S23 to S25) — done
 Asked first, and answered:
 
 - **From ten to eighteen the body grows a little at each birthday**: six tenths of what was
@@ -1499,9 +1498,7 @@ Asked first, and answered:
 - **When a child is born the screen for drawing them opens**, with time stopped. `Esc` leaves
   it for later, and meanwhile they have the look the game comes with for children
 
-It is built in three parts, each with its own commit.
-
-Coin and fund, built:
+Coin and fund:
 - **`Fondo` in the menu, or `F`**: how the settlement trades, what the fund holds, what there is
   in things that is nobody's, and what each resident said the last time they were all asked,
   face by face. The settlement keeps what each said (`asked_about` and `answers`, saved)
@@ -1521,28 +1518,72 @@ Coin and fund, built:
 - **What was bought waits by the gate where it can be seen**, a thing of each kind and how many
   in all, until somebody carries it in. Whoever has come to trade is on the minimap
 
-Decided without asking, in this part:
-- A sale is put to its owner with the advice that encourages it. There is no way yet to put
-  it to them without leaning on them
-- Three things of the residents' own are listed at once, and the rest are counted
-- The rows of the menu are two pixels shorter, so that every entry of the settlement stays
-  clear of the dock with one more of them
+Substances:
+- **How something is taken is seen as it is taken**: a mark over their head for each of the four
+  ways, a bottle, a line, a syringe or a cigarette. A way a pack brings has the first of them
+- **Whoever is under something reels**: they sway from side to side of where they stand, wide
+  and slow with drink and short and quick with the rest, on the map and inside a building, with
+  a spiral over their head while there is nothing more pressing to show
+- **Smoke hangs round whoever smokes**, puffs that rise from their head, and they walk straight
+- **`Quién es` in a resident's panel says what they take**: what they are under, what comes
+  after it, what they cannot do without and whether they are going without it, and what they
+  left behind. Never how much, or how often
 
-Still to build:
-- A substance seen to be taken, each of the four ways, and seen on whoever is under it: how
-  they walk, the smoke round them
-- A resident's family in their panel, and the tree of it on a screen of its own
-- **A child is drawn when they are born, as the adult they will be**: the same screen, the same
-  paper and the same measures as anyone (P17, P19)
-- **Until they are ten, what is seen of a child is their head and a blanket**: on the back of
-  whoever carries them, and in the bed, on the table or on the ground where they are put down
-- **From ten until they are grown the body is shown smaller and the head is not**: the one
-  drawing does for every age, and the body comes up to its drawn size as they grow
-- **A child nobody has drawn has a look the game comes with for children**, one for all of them
-- Sex, gender, who they are drawn to and the slider for libido where the first resident is made
-- The date by the clock, and a birthday seen when it comes round
-- Two at the gate seen together, and what is advised about each of them
-- Whoever sleeps on the ground seen to, and a couple marrying
+Kin:
+- **`Quién es`, a third face of a resident's panel**: their age and when their birthday falls,
+  what they are and who they are drawn to, a child on the way or on their back, and their kin
+  by what each is to them, the dead and the absent included. A click on one who lives here
+  selects them
+- **`Familias`, at the head of the list of residents or with `F7`**: the families of the whole
+  settlement on a screen of their own, time stopped. Each family is a block, a generation to a
+  row, parents over their children and partners side by side, with a line of its own colour for
+  the married, a couple, children, those taken in, and brothers and sisters. Whoever is kin to
+  nobody here comes after them. The dead and whoever never came are there, darkened. It opens
+  about whoever is selected, is dragged or moved with the arrows, and a click on somebody who
+  lives here goes back to the map with them selected
+- **A child under ten is a head and a blanket**: just behind whoever carries them and well up
+  their back, and where they were put down with their name over them, off the ground on a bed
+  or a table. The head is their own once they are drawn, and until then the face the game has
+  for them. The same inside a building
+- **From ten to eighteen the body is smaller and the head is not**: brought down about the
+  ground they stand on, with what they hold where their smaller arm has it
+- **A child nobody has drawn has one look**, the same figure for all of them in one colour
+- **When a child is born the doll editor opens on them**, titled as the adult they will be,
+  where there is somewhere to keep drawings. `Esc` leaves it for later
+- **Who the first resident is is said where they are made**: the sex of their body, what they
+  take themselves to be, who they are drawn to, and a slider for their libido. What they take
+  themselves to be follows their body until it is said otherwise
+- **The date is in the plaque at the head of the bar**, under the day, and the plaque is as wide
+  as the longest date. **A birthday is worn all day**, a cake over their head
+- **Whoever knocks at the gate stands there**, two side by side if they came together, and is
+  on the minimap. A click on them opens the answer of whoever is at the gate. In it both are
+  seen, the second in a corner of the first, and it is said that they came together
+- **Whoever sleeps on the ground is seen lying under a blanket**, their head out at one end
+- **Two who marry wear two rings over their heads** for a while
+
+Decided without asking:
+- The family tree is asked for from the head of the list of residents and with `F7`, and has
+  no entry of its own in the menu: with `Fondo` there is room for one more entry of the
+  settlement clear of the dock and no more, and the rows are already two pixels shorter for it
+- Who somebody is drawn to is said outright in their panel. It is not found out, as tastes are
+- A child on the way is said in the panel of whoever carries it, as the log says it. Nothing
+  of it is seen on their body
+- A sale is put to its owner with the advice that encourages it. Three things of the
+  residents' own are listed at once, and the rest are counted
+- The one look of children is a yellow figure. With no window under the canvas, the game's own
+  small body is brought down whole, head and all
+- Whoever is under something that has them notice nothing reels like anybody: they are not
+  seen sitting or lying
+
+Still open here:
+- A child still carried cannot be selected: what is known of them is in the panel of whoever
+  is kin to them, and on the tree
+- The tree lays each family out by itself. Two families joined by a marriage are one block,
+  and with many of them the lines cross
+- Nothing is seen of a habit beyond the moment: whoever is going without looks like anybody
+- A wedding is two rings over two heads. Nobody gathers for it
+- The coin is not shown beside each price at a counter, nor in the deal with a caravan: there
+  the sums are in words
 
 ### S26 — Who is in charge (needs S20) — done
 Asked first, and answered: the ready-made settlement has no government and chooses one on its

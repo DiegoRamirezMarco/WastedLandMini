@@ -64,7 +64,8 @@ python main.py
 ```
 
 The game opens on a menu. `Partida nueva` starts on an empty plot and leads through settling it,
-step by step. Nothing there comes ready made: the first resident is named and then drawn, with
+step by step. Nothing there comes ready made: the first resident is named, said to be who
+they are (the sex of their body, what they take themselves to be, who they are drawn to) and then drawn, with
 the game teaching how, and so are the shack, the bed, the crate and the rest as they are put
 down. Then come food, water, a garden, a job, a fire, and the first stranger at the gate.
 `Asentamiento de ejemplo` opens a settlement that is already running, with nine residents.
@@ -109,6 +110,19 @@ python -m simulation.headless --days 7 --seed 7
 - Whoever is outside the settlement waits as a face in the top left corner; click it to select
   them. What the residents have heard is coming is listed there too, with how many know
 - With a resident selected, a heart marks their partner and a star those they hold as friends
+- The plaque at the head of the bar has the day and the date. A cake is over whoever has
+  their birthday, all day, and two rings over two who have just married
+- What somebody takes is seen as they take it: a bottle, a line, a syringe or a cigarette
+  over their head. Whoever is under it reels as they walk, with a spiral over them, and
+  smoke hangs round whoever smokes
+- A child under ten is a head in a blanket: on the back of whoever carries them, or with
+  their name over them where they were put down. From ten to eighteen they walk, with a
+  body that comes up to its drawn size a little at each birthday under the head they were
+  drawn with. When one is born the screen to draw them opens, as the adult they will be;
+  `Esc` leaves it for later, and until then they have the one look children come with
+- Whoever knocks at the gate stands there to be seen, two side by side if they came
+  together. A click on them opens the answer of whoever is at the gate
+- Whoever has no bed is seen asleep on the ground, under a blanket
 - A building is always shut from the map. Whoever is in it shows as a face on its roof, with
   what they are doing over it: talking, eating, asleep, at work. To see more, go in. `T` takes
   every roof off, or puts them back
@@ -152,6 +166,13 @@ python -m simulation.headless --days 7 --seed 7
   of voice (young, old, child, monster, robot, or past understanding), then move the sliders:
   tone, speed, tremble, roughness, metal and scramble. Letting go of a slider says a line in
   the voice as it stands. `Guardar` keeps it; `Esc` goes back without
+- `Quién es` in a resident's panel turns it to who they are and whose: their age and their
+  birthday, what they are, a child on the way or on their back, their kin (a click on one who
+  lives here selects them), and what they take, depend on or have left behind
+- `Familias` at the head of the list of residents, or `F7`: the families of the whole
+  settlement on one screen, the dead and whoever never came included. Drag it or use the
+  arrows to move over it. A click on somebody who lives here goes back to the map with
+  them selected; `Esc` goes back as it was
 - `Maneras` in a resident's panel, or `F6`: choose how they walk, eat, fight, shoot and use a
   knife, three ways of each, with the one picked seen moving beside them. It changes how they
   look doing it and nothing else, and is theirs as soon as it is picked. `Esc` goes back

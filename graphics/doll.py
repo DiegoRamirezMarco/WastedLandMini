@@ -1111,18 +1111,30 @@ class DollStore:
                 self._illustrations.forget(doll_path(body_id, canvas))
 
 
+def _of_head(doll: Doll, name: str) -> bool:
+    """Whether a part is drawn on the paper of the head: it is of the head, whatever it is called."""
+    spec = doll.template.parts.get(name)
+    return spec is not None and spec.canvas == HEAD_CANVAS
+
+
 def _laid(
-    doll: Doll, plan: SkeletonPlan, skeleton: Skeleton, detail: float, allowance: rubber.Allowance | None = None
+    doll: Doll,
+    plan: SkeletonPlan,
+    skeleton: Skeleton,
+    detail: float,
+    allowance: rubber.Allowance | None = None,
+    heads: bool | None = None,
 ) -> Iterator[tuple[pygame.Surface, float, float]]:
     """Every picture a doll is made of over a skeleton, the furthest first, and where its corner
     goes from the skeleton's own (0, 0), in pixels of the target.
 
     A limb of rubber is one picture, shown where the first of its parts comes in the order. With
-    any of its bones gone from the skeleton it is the parts that are left.
+    any of its bones gone from the skeleton it is the parts that are left. `heads` leaves out
+    whatever is of the head, or whatever is not.
     """
     shown: set[str] = set()
     for name in plan.orders[DOLL_VIEW]:
-        if name in shown:
+        if name in shown or (heads is not None and _of_head(doll, name) != heads):
             continue
         bone = skeleton.bones.get(skeleton.as_posed(name))
         placed = None
@@ -1172,12 +1184,38 @@ def draw_doll(
     origin: Point,
     detail: float,
     allowance: rubber.Allowance | None = None,
+    grown: float = 1.0,
+    foot: Point = (0.0, 0.0),
 ) -> None:
     """Lay a doll's parts over a skeleton, the furthest first.
 
     `origin` is where on the target the skeleton's own (0, 0) falls, and `detail` how many pixels
     of the target go to one of the skeleton's. Whoever shows many dolls in a frame gives an
     `allowance`: past it, a limb keeps for that frame the nearest shape it has had.
+
+    `grown` is how much of its drawn size the body is shown at, for somebody not yet grown: it
+    is brought down about `foot`, the spot between its feet in the skeleton's own measure, and
+    the head is left as it was drawn, on the neck wherever that now is.
     """
-    for image, x, y in _laid(doll, plan, skeleton, detail, allowance):
-        target.blit(image, (round(origin[0] + x), round(origin[1] + y)))
+    if grown >= 1.0:
+        for image, x, y in _laid(doll, plan, skeleton, detail, allowance):
+            target.blit(image, (round(origin[0] + x), round(origin[1] + y)))
+        return
+    small = detail * grown
+    below = (origin[0] + foot[0] * (detail - small), origin[1] + foot[1] * (detail - small))
+    for image, x, y in _laid(doll, plan, skeleton, small, allowance, heads=False):
+        target.blit(image, (round(below[0] + x), round(below[1] + y)))
+    # The first part of the head there is hangs from the neck: the whole head goes with it.
+    neck = next(
+        (
+            bone.a
+            for bone in (skeleton.bones.get(skeleton.as_posed(name)) for name in plan.orders[DOLL_VIEW] if _of_head(doll, name))
+            if bone is not None
+        ),
+        None,
+    )
+    if neck is None:
+        return
+    above = (below[0] + (neck.x + 0.5) * (small - detail), below[1] + (neck.y + 0.5) * (small - detail))
+    for image, x, y in _laid(doll, plan, skeleton, detail, allowance, heads=True):
+        target.blit(image, (round(above[0] + x), round(above[1] + y)))

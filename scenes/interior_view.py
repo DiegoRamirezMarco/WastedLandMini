@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from graphics.body_renderer import FRAME_ORIGIN, FRAME_SIZE
-from graphics.doll import draw_doll
+from graphics.doll import DOLL_FACINGS, draw_doll
 from graphics.font import LINE_HEIGHT
 from graphics.object_pictures import DEPTH, ObjectPicture
 from graphics.ornament_pictures import OrnamentPictures
@@ -29,8 +29,23 @@ from graphics.palette import PALETTE, Color
 from graphics.screen_layers import TRANSPARENT
 from graphics.shelf_display import displayed_goods
 from graphics.ui_art import band_hue, darker, lighter, mix
-from scenes.body_stage import HEAD_BONE, LYING_HEAD_OFFSET, LYING_HEAD_ROWS, LYING_NECK, ground_spot
+from scenes.body_stage import (
+    BUNDLE_BEHIND,
+    BUNDLE_RAISED,
+    BUNDLE_UP,
+    BUNDLE_WIDTH,
+    HEAD_BONE,
+    HEAD_OF_HEIGHT,
+    LYING_HEAD_OFFSET,
+    LYING_HEAD_ROWS,
+    LYING_NECK,
+    ground_spot,
+    grown_share,
+)
 from settings import SCALE, TILE_SIZE
+from simulation.family.children import CARRIED as BUNDLE_CARRIED
+from simulation.family.children import GROUND as BUNDLE_ON_GROUND
+from simulation.family.children import Bundle
 from simulation.housing.decor import CELLS, FLOOR
 from simulation.housing.decor import WALL as ON_WALL
 from simulation.residents.manner import WALK
@@ -573,6 +588,9 @@ class InteriorView:
             depth, draw, label = self._resident(room, layout, resident)
             draws.append((depth, draw))
             labels.append(label)
+        for bundle in world.bundles.values():
+            if room.contains(bundle.tile):
+                draws.append(self._bundle(room, layout, bundle))
         for site in world.sites.values():
             if room.contains((site.x, site.y)):
                 draws.append(self._site(room, layout, site))
@@ -725,17 +743,44 @@ class InteriorView:
         # Whoever lies in it is drawn by its foot, between the two.
         return [(bottom - 0.5, under)] + ([(bottom + 0.5, over)] if picture.over is not None else [])
 
+    def _bundle(self, room: Room, layout: InteriorLayout, bundle: Bundle):
+        """A child in its blanket: on the back of whoever carries it, or where it was put down."""
+        view = self.view
+        detail = layout.cell / TILE_SIZE
+        carrier = view.world.residents.get(bundle.carried_by or "") if bundle.place == BUNDLE_CARRIED else None
+        if carrier is not None and room.contains(carrier.tile):
+            x, y, facing, _ = view._walk_state(carrier)
+            foot = layout.spot(*self.place(room, x + 0.5 + view.sway(carrier), y + 0.5))
+            turned = view._doll_facing.get(carrier.resident_id, DOLL_FACINGS.get(facing, DOLL_FACINGS["right"]))
+            back = BUNDLE_BEHIND if turned == DOLL_FACINGS["left"] or facing == "left" else -BUNDLE_BEHIND
+            share = grown_share(view.world, carrier)
+            middle, bottom, depth = foot[0] + back * share * detail, foot[1] - BUNDLE_UP * share * detail, foot[1] - 0.1
+        else:
+            foot = layout.spot(*self.place(room, bundle.x + 0.5, bundle.y + 0.5))
+            raised = BUNDLE_RAISED * detail if bundle.place != BUNDLE_ON_GROUND else 0.0
+            middle, bottom, depth = foot[0], foot[1] - raised, foot[1] + 0.7
+        picture = view.bundle_shown(bundle, max(4, round(BUNDLE_WIDTH * detail)))
+        corner_of = (round(middle - picture.get_width() / 2), round(bottom - picture.get_height()))
+
+        def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
+            target.blit(picture, (corner[0] + corner_of[0], corner[1] + corner_of[1]))
+
+        return (depth, draw)
+
     def _resident(self, room: Room, layout: InteriorLayout, resident: Resident):
         """Somebody in the room: how far down the floor they are, how to draw them, and what goes over their head."""
         view = self.view
         x, y, facing, stride = view._walk_state(resident)
-        column, row = self.place(room, x + 0.5, y + 0.5)
-        foot = layout.spot(column, row)
-        detail = layout.cell / TILE_SIZE
         lying_in = view._lying_in(resident)
         if lying_in is not None:
             return self._asleep(room, layout, resident, lying_in)
-        doll = view._doll_of(resident.resident_id)
+        # Whoever is under something reels here as they do on the map.
+        column, row = self.place(room, x + 0.5 + view.sway(resident), y + 0.5)
+        foot = layout.spot(column, row)
+        detail = layout.cell / TILE_SIZE
+        doll = view._doll_for(resident)
+        # Somebody not yet grown has a smaller body under the head they were drawn with.
+        grown = grown_share(view.world, resident)
         clip, rate = view._way_of(resident, WALK) if stride is not None else view._clip_of(resident)
         turn = (stride if stride is not None else view.time) * rate
         renderer = view.bodies.renderer
@@ -762,19 +807,23 @@ class InteriorView:
             character.stand(*ground_spot(x, y), facing, clip, turn % 1.0, overlay)
             pose = character.local_pose()
             skeleton.set_pose(pose)
-            held = self.in_hand(resident, facing, pose, turn, stride)
             reach = doll.standing(plan)
+            # A smaller body is brought down about the ground its soles are on.
+            sole = (0.0, reach[3])
+            held = self.in_hand(resident, facing, pose, turn, stride, grown, sole)
+            high = reach[1] * (HEAD_OF_HEIGHT + (1.0 - HEAD_OF_HEIGHT) * grown)
             box = pygame.Rect(
                 foot[0] + math.floor(reach[0] * detail),
-                foot[1] + math.floor(reach[1] * detail),
+                foot[1] + math.floor(high * detail),
                 math.ceil((reach[2] - reach[0]) * detail),
-                math.ceil((reach[3] - reach[1]) * detail),
+                math.ceil((reach[3] - high) * detail),
             )
 
             def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
                 self._shadow(target, corner, foot, layout)
                 draw_doll(
-                    target, doll, plan, skeleton, (corner[0] + foot[0], corner[1] + foot[1]), detail, view.dolls.allowance
+                    target, doll, plan, skeleton, (corner[0] + foot[0], corner[1] + foot[1]), detail,
+                    view.dolls.allowance, grown, sole,
                 )
                 self._show_held(target, held, (corner[0] + foot[0], corner[1] + foot[1]), detail)
 
@@ -782,7 +831,10 @@ class InteriorView:
             frames = renderer.frames(clip, facing)
             index = int(turn * frames) % frames
             picture, origin = renderer.frame(resident.resident_id, facing, clip, index, (), overlay)
-            held = self.in_hand(resident, facing, view.bodies.plan.pose(facing, clip, index / frames, overlay), turn, stride)
+            pose = view.bodies.plan.pose(facing, clip, index / frames, overlay)
+            held = self.in_hand(resident, facing, pose, turn, stride, grown)
+            # The game's own small body is brought down whole for whoever is not grown.
+            detail *= grown
             size = (round(picture.get_width() * detail), round(picture.get_height() * detail))
             key = (id(picture), size)
             if key not in self._pictures:
@@ -795,6 +847,7 @@ class InteriorView:
                 round(FRAME_SIZE[0] * detail),
                 round(FRAME_SIZE[1] * detail),
             )
+            detail /= grown
 
             def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
                 self._shadow(target, corner, foot, layout)
@@ -815,21 +868,32 @@ class InteriorView:
 
         return CARRY_CLIP
 
-    def in_hand(self, resident: Resident, facing: str, pose: dict, turn: float, stride: float | None) -> list:
+    def in_hand(
+        self,
+        resident: Resident,
+        facing: str,
+        pose: dict,
+        turn: float,
+        stride: float | None,
+        grown: float = 1.0,
+        sole: tuple[float, float] = (0.0, 0.0),
+    ) -> list:
         """What somebody has in their hand, as the map would show it, from where their feet are:
         the meal they are at with the bites gone from it and the crumbs that fly, what they
-        fight with, or what they carry for their job. Empty for empty hands."""
+        fight with, or what they carry for their job. Empty for empty hands. `grown` is how
+        much of its size their body is shown at, about the ground at `sole`."""
         view = self.view
         kept, view._held = view._held, []
         meal = view._meal_in_hand(resident)
         weapon = view._weapon_in_hand(resident) if stride is None else None
         load = view._load_of(resident)
+        about = (grown, sole)
         if meal is not None:
-            view._hold(meal, facing, pose, 0.0, turn, view._bites_taken(resident))
+            view._hold(meal, facing, pose, 0.0, turn, view._bites_taken(resident), about)
         elif weapon is not None:
-            view._hold(weapon, facing, pose, 0.0)
+            view._hold(weapon, facing, pose, 0.0, about=about)
         elif load is not None:
-            view._hold(load, facing, pose, 0.0)
+            view._hold(load, facing, pose, 0.0, about=about)
         held, view._held = view._held, kept
         return held
 
@@ -851,7 +915,7 @@ class InteriorView:
         # What they lie in is seen as the floor is, so a place on it is less far down than across.
         across, down = layout.cell / TILE_SIZE, layout.depth / TILE_SIZE
         bed = pygame.Rect(left, top, definition.width * layout.cell, definition.height * layout.depth)
-        doll = view._doll_of(resident.resident_id)
+        doll = view._doll_for(resident)
         head = doll.placed(HEAD_BONE, False, across, math.pi) if doll is not None else None
         own = self._own(layout, definition)
         if head is not None:

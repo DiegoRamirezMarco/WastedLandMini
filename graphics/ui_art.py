@@ -454,17 +454,6 @@ def _purse(p: Pen) -> None:
     p.circle(24, 30, 4.8, p.light)
 
 
-def _kin(p: Pen) -> None:
-    p.line([(24, 15), (24, 26)], 3.2, p.soft)
-    p.line([(11.5, 26), (36.5, 26)], 3.2, p.soft)
-    p.line([(11.5, 26), (11.5, 31)], 3.2, p.soft)
-    p.line([(36.5, 26), (36.5, 31)], 3.2, p.soft)
-    p.circle(24, 11.5, 7.6)
-    p.circle(11.5, 36, 7.6)
-    p.circle(36.5, 36, 7.6)
-    p.circle(21.5, 9, 2.2, p.light)
-
-
 GLYPHS: dict[str, Glyph] = {
     "people": _people,
     "work": _hammer,
@@ -488,7 +477,6 @@ GLYPHS: dict[str, Glyph] = {
     "lock": _lock,
     "coin": _coin,
     "fund": _purse,
-    "family": _kin,
 }
 # The colour each icon is, where it stands alone or on a tile of its own.
 HUES: dict[str, Color] = {
@@ -514,7 +502,6 @@ HUES: dict[str, Color] = {
     "lock": (226, 186, 84),
     "coin": (240, 190, 70),
     "fund": (206, 156, 62),
-    "family": (198, 112, 132),
 }
 # What is cut into an icon that stands alone, where it is not simply dark.
 CUTS: dict[str, Color] = {"medicine": (206, 58, 54)}

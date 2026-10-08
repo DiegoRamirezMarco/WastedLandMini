@@ -22,12 +22,19 @@ from ui.labels import (
     NEED_LABELS,
     affordable_goods,
     condition_of,
+    NO_HABITS,
+    NO_KIN,
     describe_action,
+    describe_age,
     describe_credits,
+    describe_identity,
     describe_injuries,
     describe_job,
     expression_of,
+    family_notes,
+    habit_rows,
     has_shop,
+    kin_rows,
     relationship_rows,
     taste_debug_rows,
     taste_rows,
@@ -65,7 +72,20 @@ ROSTER_TITLE = "Asentamiento"
 # The lower part of the panel shows one of two things: how they live, or what they like.
 LIFE_TAB, TASTES_TAB = "life", "tastes"
 TASTES_TITLE = "Gustos"
-TAB_LABELS = {LIFE_TAB: "Gustos", TASTES_TAB: "Volver"}
+# A third face: who they are and whose, and what they take.
+KIN_TAB = "kin"
+TAB_LABELS = {LIFE_TAB: "Gustos", TASTES_TAB: "Volver", KIN_TAB: "Volver"}
+KIN_LABEL = "Quién es"
+KIN_WIDTH = 56
+KIN_TITLE = "Quién es"
+FAMILY_TITLE = "Familia"
+HABITS_TITLE = "Costumbres"
+# How many lines of what is going on in their family there is room kept for, and how many of their kin.
+KIN_NOTES = 2
+MAX_KIN = 6
+# In the roster, the way to the families of the whole settlement.
+TREE_LABEL = "Familias"
+TREE_WIDTH = 54
 TAB_WIDTH = 40
 TASTE_ROW = LINE_HEIGHT + 2
 TASTE_ICONS = {LOVED: "relish", LIKED: "relish", DISLIKED: "disgust", HATED: "disgust"}
@@ -110,6 +130,9 @@ def draw_roster(
     draw_panel(target, panel)
     inner = panel.width - PADDING * 2
     _title(target, font, f"{ROSTER_TITLE} · {len(world.residents)}", panel.x + PADDING, panel.y + PADDING, inner)
+    tree = roster_tree_hitbox(panel)
+    draw_panel(target, tree, fill="shadow", border="lamp")
+    font.draw(target, TREE_LABEL, (tree.centerx - font.width(TREE_LABEL) // 2, tree.y), PALETTE["glow"])
     for row, resident_id in roster_rows(panel, world):
         resident = world.residents[resident_id]
         target.blit(faces.marker(resident_id, expression_of(world, resident)), row.topleft)
@@ -124,6 +147,81 @@ def affect_hitbox(panel: pygame.Rect) -> pygame.Rect:
     """Where a resident is stopped to be told something: under what they are about, beside their face."""
     bottom = panel.y + PADDING + FACE_SIZE[1]
     return pygame.Rect(panel.right - PADDING - AFFECT_WIDTH, bottom - LINE_HEIGHT - 1, AFFECT_WIDTH, LINE_HEIGHT + 2)
+
+
+def kin_hitbox(panel: pygame.Rect) -> pygame.Rect:
+    """Where a resident's panel is turned to who they are and whose: beside the way to affect them."""
+    affect = affect_hitbox(panel)
+    return pygame.Rect(affect.left - 3 - KIN_WIDTH, affect.y, KIN_WIDTH, affect.height)
+
+
+def roster_tree_hitbox(panel: pygame.Rect) -> pygame.Rect:
+    """Where the families of the whole settlement are asked for: at the right end of the roster's heading."""
+    return pygame.Rect(panel.right - PADDING - TREE_WIDTH, panel.y + PADDING - 1, TREE_WIDTH, LINE_HEIGHT)
+
+
+def _kin_top(panel: pygame.Rect) -> int:
+    """Where the list of somebody's kin starts, on the face of the panel that says who they are."""
+    top = panel.y + PADDING + FACE_SIZE[1] + 6 + BAR_ROW * (len(NEED_NAMES) + OTHER_BARS) + 4
+    return top + LINE_HEIGHT + 3 + LINE_HEIGHT * (2 + KIN_NOTES) + 4 + LINE_HEIGHT + 3
+
+
+def kin_hitboxes(panel: pygame.Rect, world: SimulationWorld, resident: Resident) -> list[tuple[pygame.Rect, str]]:
+    """Where each of somebody's kin who lives here is listed, to be picked there with a click."""
+    top = _kin_top(panel)
+    return [
+        (pygame.Rect(panel.x + PADDING, top + index * RELATIONSHIP_ROW, panel.width - PADDING * 2, RELATIONSHIP_ROW), person_id)
+        for index, (person_id, _, _, _) in enumerate(kin_rows(world, resident)[:MAX_KIN])
+        if person_id in world.residents
+    ]
+
+
+def _draw_kin(
+    target: pygame.Surface,
+    font: BitmapFont,
+    faces: FaceRenderer,
+    panel: pygame.Rect,
+    position: tuple[int, int],
+    world: SimulationWorld,
+    resident: Resident,
+) -> None:
+    """Who a resident is and whose: their age and their birthday, what they are, what is going
+    on in their family, their kin, and what they take."""
+    x, y = position
+    inner = panel.width - PADDING * 2
+    y = _title(target, font, KIN_TITLE, x, y, inner - TAB_WIDTH - 6)
+    font.draw(target, font.truncate(describe_age(world, resident), inner), (x, y), PALETTE["bone"])
+    font.draw(target, font.truncate(describe_identity(world, resident), inner), (x, y + LINE_HEIGHT), PALETTE["bone"])
+    for index, note in enumerate(family_notes(world, resident)[:KIN_NOTES]):
+        font.draw(target, font.truncate(note, inner), (x, y + LINE_HEIGHT * (2 + index)), PALETTE["lamp"])
+    y += LINE_HEIGHT * (2 + KIN_NOTES) + 4
+
+    y = _title(target, font, FAMILY_TITLE, x, y, inner)
+    rows = kin_rows(world, resident)
+    if not rows:
+        font.draw(target, NO_KIN, (x, y + 2), PALETTE["stone"])
+    for person_id, name, word, state in rows[:MAX_KIN]:
+        target.blit(faces.marker(person_id), (x, y))
+        left = x + MARKER_SIZE[0] + 4
+        font.draw(target, name, (left, y + 2), PALETTE["bone" if not state else "dust"])
+        left += font.width(name) + 6
+        said = f"{word} · {state}" if state else word
+        font.draw(target, font.truncate(said, panel.right - PADDING - left), (left, y + 2), PALETTE["sand" if not state else "stone"])
+        y += RELATIONSHIP_ROW
+    if len(rows) > MAX_KIN:
+        font.draw(target, f"y {len(rows) - MAX_KIN} más", (x, y), PALETTE["stone"])
+        y += LINE_HEIGHT
+    y = max(y, _kin_top(panel) + RELATIONSHIP_ROW) + 4
+
+    y = _title(target, font, HABITS_TITLE, x, y, inner)
+    habits = habit_rows(world, resident)
+    if not habits:
+        font.draw(target, NO_HABITS, (x, y), PALETTE["stone"])
+    for text, color in habits:
+        if y + LINE_HEIGHT > panel.bottom - 2:
+            break
+        font.draw(target, font.truncate(text, inner), (x, y), PALETTE[color])
+        y += LINE_HEIGHT
 
 
 def tab_hitbox(panel: pygame.Rect) -> pygame.Rect:
@@ -315,6 +413,11 @@ def draw_resident_panel(
             line_y += LINE_HEIGHT
     draw_panel(target, affect, fill="shadow", border="lamp")
     font.draw(target, AFFECT_LABEL, (affect.centerx - font.width(AFFECT_LABEL) // 2, affect.y + 1), PALETTE["glow"])
+    kin = kin_hitbox(panel)
+    draw_panel(target, kin, fill="lamp" if tab == KIN_TAB else "shadow", border="lamp")
+    font.draw(
+        target, KIN_LABEL, (kin.centerx - font.width(KIN_LABEL) // 2, kin.y + 1), PALETTE["ink" if tab == KIN_TAB else "glow"]
+    )
     y = portrait.bottom + 6
 
     # Health and mood are better full; the needs between them are better empty.
@@ -333,6 +436,10 @@ def draw_resident_panel(
 
     if tab == TASTES_TAB:
         _draw_tastes(target, font, assets, panel, (x, y), world, resident, debug)
+        _draw_tab(target, font, panel, tab)
+        return
+    if tab == KIN_TAB:
+        _draw_kin(target, font, faces, panel, (x, y), world, resident)
         _draw_tab(target, font, panel, tab)
         return
     traits = trait_names(world, resident)

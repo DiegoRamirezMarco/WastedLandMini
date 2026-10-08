@@ -1,5 +1,7 @@
 """Display text for simulation state. Nothing here feeds back into gameplay."""
 
+from simulation.family.calendar import MONTH_NAMES
+from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item import ItemInstance
 from simulation.items.item_system import FOOD_CATEGORY, WATER_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
 from simulation.residents.activity import ATTEND_ACTION, HEED_ACTION, LEAVE_ACTION, RETIRE_ACTION, SHELTER_ACTION
@@ -269,6 +271,8 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
         return "está donde manda la ley" if not activity.path else "acude adonde manda la ley"
     if activity.action == LEAVE_ACTION:
         return "se marcha del asentamiento"
+    if activity.action == SLEEP_ROUGH_ACTION:
+        return "duerme en el suelo: no tiene cama"
     if activity.action == HEED_ACTION:
         return "se queda pensando..."
     if placed is None:
@@ -393,6 +397,105 @@ def relationship_rows(world: SimulationWorld, resident: Resident, limit: int) ->
         rows.append((other, score, label, icon))
     rows.sort(key=lambda row: (row[0].resident_id != resident.couple_with, -abs(row[1]), row[0].resident_id))
     return rows[:limit]
+
+
+# What somebody takes themselves to be, in a word, grown and not; and who they are drawn to.
+GENDER_WORDS = {"m": "Hombre", "f": "Mujer", "nb": "No binario", "bi": "Bigénero"}
+YOUNG_WORDS = {"m": "Niño", "f": "Niña"}
+YOUNG_WORD = "Criatura"
+DRAWN_WORDS = {"m": "le atraen los hombres", "f": "le atraen las mujeres", "both": "le atraen hombres y mujeres"}
+# What is said of one of somebody's kin who is not about: dead, a child still carried, or never let in.
+KIN_DEAD, KIN_CARRIED, KIN_ELSEWHERE = "murió", "aún en brazos", "no vive aquí"
+NO_KIN = "Nadie de su familia, que se sepa"
+NO_HABITS = "Nada que se le conozca"
+# The order somebody's kin are listed in, by what they are to them.
+KIN_ORDER = ("spouse", "parents", "siblings", "children", "grandparents", "grandchildren")
+
+
+def describe_date(world: SimulationWorld) -> str:
+    """The date the settlement is on, short enough for the bar: `3 mar 2226`."""
+    today = world.family.today(world)
+    return f"{today.day} {MONTH_NAMES[today.month - 1][:3]} {today.year}"
+
+
+def has_birthday(world: SimulationWorld, resident: Resident) -> bool:
+    """Whether today is the day a resident was born on, some years ago."""
+    today, born = world.family.today(world), world.family.birth_date(world, resident)
+    return (today.month, today.day) == (born.month, born.day) and today.year > born.year
+
+
+def describe_age(world: SimulationWorld, resident: Resident) -> str:
+    """How old somebody is and when their birthday falls, such as `34 años · cumple el 3 de marzo`."""
+    born = world.family.birth_date(world, resident)
+    return f"{resident.age} años · cumple el {born.label.rsplit(' de ', 1)[0]}"
+
+
+def describe_identity(world: SimulationWorld, resident: Resident) -> str:
+    """Who somebody is, such as `Mujer · le atraen los hombres`. Of a child, only what they are."""
+    if not world.bonds.is_adult(world, resident):
+        return YOUNG_WORDS.get(resident.gender, YOUNG_WORD)
+    word = GENDER_WORDS.get(resident.gender, resident.gender)
+    drawn = DRAWN_WORDS.get(resident.drawn_to)
+    return f"{word} · {drawn}" if drawn else word
+
+
+def kin_rows(world: SimulationWorld, resident: Resident) -> list[tuple[str, str, str, str]]:
+    """Somebody's close kin, the nearest first: each one's ID, their name, what they are to the
+    resident (`Hermana`), and what there is to say of them if they are not about."""
+    tree = world.family.kin.tree(world, resident.resident_id)
+    dead = {death.resident_id for death in world.deaths}
+    rows: list[tuple[str, str, str, str]] = []
+    for group in KIN_ORDER:
+        for person_id, name, here in tree.get(group, []):
+            if any(row[0] == person_id for row in rows):
+                continue
+            word = world.family.kin.word(world, resident.resident_id, person_id).capitalize()
+            if here:
+                state = ""
+            elif person_id in world.bundles:
+                state = KIN_CARRIED
+            else:
+                state = KIN_DEAD if person_id in dead else KIN_ELSEWHERE
+            rows.append((person_id, name, word, state))
+    return rows
+
+
+def family_notes(world: SimulationWorld, resident: Resident) -> list[str]:
+    """What is going on in somebody's family right now: who they are with, a child on the way,
+    and whoever they carry on their back."""
+    notes = []
+    partner = world.residents.get(resident.couple_with or "")
+    if partner is not None and world.family.kin.spouse_of(world, resident.resident_id) != partner.resident_id:
+        notes.append(f"Pareja de {partner.name}")
+    if resident.expecting_with is not None:
+        other = world.residents.get(resident.expecting_with)
+        notes.append(f"Espera una criatura de {other.name}" if other is not None else "Espera una criatura")
+    carried = [bundle.name for bundle in world.children.carried_by(world, resident)]
+    if carried:
+        notes.append(f"Lleva a cuestas a {' y a '.join(carried)}")
+    return notes
+
+
+def habit_rows(world: SimulationWorld, resident: Resident) -> list[tuple[str, str]]:
+    """What somebody is under, coming down from, depends on or has left behind, as lines and the
+    colour of each. It is what has been seen of them: none of it is how much, or how often."""
+    now = world.clock.total_minutes
+    resolve = world.registries.items.resolve
+    rows: list[tuple[str, str]] = []
+    for intake in resident.under:
+        name = resolve(intake.item_id).name
+        if intake.until > now:
+            rows.append((f"Bajo los efectos: {name}", "lamp"))
+        elif intake.after_until > now:
+            rows.append((f"Lo que viene después: {name}", "dust"))
+    for item_id, habit in resident.habits.items():
+        name = resolve(item_id).name
+        if habit.dependent:
+            lacking = " · le falta" if world.substances.craves(world, resident, item_id) else ""
+            rows.append((f"No sabe pasar sin: {name}{lacking}", "ember"))
+        elif habit.recovered:
+            rows.append((f"Lo dejó: {name}", "lichen"))
+    return rows
 
 
 def expression_of(world: SimulationWorld, resident: Resident) -> str:
