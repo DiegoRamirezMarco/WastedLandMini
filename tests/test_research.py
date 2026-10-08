@@ -238,13 +238,14 @@ class StudyTests(unittest.TestCase):
 
     def test_what_a_subject_studies_is_fetched_to_the_desk_and_used_up(self) -> None:
         world, desk = _studying()
-        cabinet = world.containers["medicine_cabinet"]
-        before = cabinet.count("medicine")
+        # Wherever it is kept: in the cabinet, or in the store it is taken from through it (S53).
+        kept = lambda: sum(each.count("medicine") for name, each in world.containers.items() if name != desk)  # noqa: E731
+        before = kept()
         self.assertGreaterEqual(before, 2)
         world.apply_command(SetResearchCommand("dosage"))
 
         self.assertTrue(_run(world, MINUTES_PER_DAY, lambda: "dosage" in world.studies.supplied), "never brought")
-        self.assertEqual(cabinet.count("medicine"), before - 2)
+        self.assertEqual(kept(), before - 2)
         self.assertEqual(world.containers[desk].count("medicine"), 0)
         self.assertEqual(world.residents["nuria"].inventory.count("medicine"), 0)
         self.assertTrue(any("Nuria lleva 2 de medicinas a una mesa de estudio" in line for line in world.event_log))

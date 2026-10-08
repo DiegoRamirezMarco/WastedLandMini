@@ -38,6 +38,8 @@ PEOPLE_TIP = "Residentes, y camas que hay"
 NOT_KNOWN = "Aún no hay bastante apuntado para saber cómo va"
 TENTATIVE = "De las primeras horas: es aproximado"
 NOTHING_LEFT = "No queda nada"
+IN_STORE = "En el almacén: {kept}"
+STORE_FULL = "Almacén lleno: {kept}. Hace falta otro"
 
 
 @dataclass(frozen=True)
@@ -198,6 +200,10 @@ def tip_lines(world: SimulationWorld, chip: Chip) -> list[tuple[str, str]]:
     if line is None:
         return [(chip.figure, "paper")]
     lines = [(f"{line.name}: {line.stock}", "paper")]
+    if line.capacity is not None:
+        # How much of it is in the store, of what the store holds (S53).
+        kept = f"{line.stored or 0} de {line.capacity}"
+        lines.append((STORE_FULL.format(kept=kept), "ember") if line.full else (IN_STORE.format(kept=kept), "stone"))
     if not line.known:
         return [*lines, (NOT_KNOWN, "stone")]
     for why, units in line.by_reason:

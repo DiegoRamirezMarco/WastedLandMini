@@ -122,7 +122,7 @@ class HealthSystem:
         now = world.clock.total_minutes
         if now < resident.dosed_until:
             return True
-        for _, inventory in containers_of_kind(world, care.care_from or ""):
+        for _, inventory in containers_of_kind(world, care.care_from or "", stores=True):
             for item in inventory.items:
                 definition = world.registries.items.resolve(item.definition_id)
                 if item.owner_id is not None or care.care_item not in definition.tags:

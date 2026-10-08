@@ -29,6 +29,7 @@ from simulation.registries import builtin_registries
 from simulation.residents.needs import Needs
 from simulation.work import hauling
 from simulation.world import SimulationWorld
+from tests.worlds import no_store
 
 ROOT = Path(__file__).resolve().parent.parent
 MINUTES_PER_DAY = 24 * 60
@@ -44,6 +45,7 @@ def _settled(seed: int = 7) -> SimulationWorld:
     """The settlement that comes ready made, with nobody wanting for anything and no grudges,
     and its books open."""
     world = SimulationWorld.demo_world(seed=seed)
+    no_store(world)
     world.relationships.clear()
     _keep_content(world)
     world.ledger.tick(world)
@@ -345,8 +347,11 @@ class DayTests(unittest.TestCase):
 class DeterminismTests(unittest.TestCase):
     def test_the_books_move_no_dice_and_decide_nothing(self) -> None:
         registries = builtin_registries()
-        written = SimulationWorld.demo_world(seed=11)
-        unwritten = SimulationWorld.demo_world(seed=11, registries=replace(registries, resources=ResourceSettings()))
+        # With no store in either: a store goes by what the resources are, and that is not what is asked here.
+        written = no_store(SimulationWorld.demo_world(seed=11))
+        unwritten = no_store(
+            SimulationWorld.demo_world(seed=11, registries=replace(registries, resources=ResourceSettings()))
+        )
         for world in (written, unwritten):
             world.step(3 * MINUTES_PER_DAY)
         self.assertEqual(unwritten.accounts, LedgerState())

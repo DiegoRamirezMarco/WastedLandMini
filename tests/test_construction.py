@@ -17,6 +17,7 @@ from simulation.residents.needs import Needs
 from simulation.residents.personality import Personality
 from simulation.work.construction import BUILD_ACTION, NEEDS_BUILDING
 from simulation.world import SimulationWorld
+from tests.worlds import no_store
 from world.build import BUILDING_SITE, OBJECT_SITE, BuildRule, build_rule_from_data
 from world.urbanism import SITE_IN_THE_WAY
 
@@ -27,6 +28,7 @@ SCRAP_PILES = ("scrap_workshop", "scrap_yard")
 def _settled(seed: int = 7) -> SimulationWorld:
     """The demo settlement with everyone content and no grudges, so only work and building drive the day."""
     world = SimulationWorld.demo_world(seed=seed)
+    no_store(world)
     world.relationships.clear()
     _keep_content(world)
     return world

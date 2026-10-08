@@ -29,6 +29,7 @@ from simulation.work.rush import (
 )
 from simulation.work.work_system import WORK_ACTION
 from simulation.world import SimulationWorld
+from tests.worlds import no_store
 
 ROOT = Path(__file__).resolve().parent.parent
 MINUTES_PER_DAY = 24 * 60
@@ -49,6 +50,7 @@ def _settled(seed: int = 7, hour: int = 8) -> SimulationWorld:
     """The settlement that comes ready made, with everyone content, no grudges, and in the middle
     of every attribute: what is looked at here is told apart from all that."""
     world = SimulationWorld.demo_world(seed=seed)
+    no_store(world)
     world.relationships.clear()
     world.clock.hour, world.clock.minute = hour, 0
     for resident in world.residents.values():

@@ -913,6 +913,58 @@ def plaza(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
     return stage.picture()
 
 
+def warehouse(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A shed of sheet metal as big as a small building, with wide doors: where what is
+    everybody's is kept."""
+    stage = Stage((4, 3), 150, cell, depth)
+    s = stage.under
+    wall: Color = (150, 164, 170)
+    roof: Color = (176, 110, 72)
+    stage.shadow(4, 392, 90)
+    body = stage.solid(8, 384, 118, wall, margin=6, top=roof, radius=4)
+    # The roof is sheets laid side by side, a patch here and there, with a ridge along it.
+    for x in range(40, 384, 32):
+        s.stroke([(x, body.top + 5), (x, body.face - 5)], darker(roof, 0.22), 1.8)
+    s.shade(11, body.top + body.deep * 0.46, 378, 7, lighter(roof, 0.24), 255, 2)
+    for x, y, wide, tall, color in (
+        (58, 0.14, 46, 0.2, darker(roof, 0.3)), (236, 0.6, 54, 0.22, lighter(METAL, 0.1)), (316, 0.2, 38, 0.18, RUST),
+    ):
+        s.box(x, body.top + body.deep * y, wide, body.deep * tall, color, 2)
+    # The wall is the same sheet, stood up, and rusting from the ground.
+    for x in range(34, 384, 26):
+        s.stroke([(x, body.face + 5), (x, body.floor - 4)], darker(wall, 0.16), 1.4)
+    s.shade(11, body.floor - 16, 378, 13, mix(wall, RUST, 0.45), 255, 2)
+    # Two doors on a rail, one left a little open on the dark inside.
+    door_top = body.face + 24
+    s.box(118, door_top - 9, 172, 9, DARK_METAL, 2)
+    s.box(126, door_top, 156, body.floor - door_top, (46, 42, 44), 2)
+    for x, wide in ((126, 70), (212, 70)):
+        s.box(x, door_top, wide, body.floor - door_top, darker(roof, 0.12), 2)
+        for y in (0.3, 0.62):
+            s.stroke([(x + 5, door_top + (body.floor - door_top) * y), (x + wide - 5, door_top + (body.floor - door_top) * y)], darker(roof, 0.4), 2)
+    s.box(186, door_top + 34, 8, 16, YELLOW, 2)
+    s.box(214, door_top + 34, 8, 16, YELLOW, 2)
+    # What it is for, painted over the doors: a box.
+    s.box(180, body.face + 4, 48, 15, PAPER, 2)
+    s.box(196, body.face + 6, 16, 11, PALE_WOOD, 1)
+    s.stroke([(196, body.face + 11), (212, body.face + 11)], darker(PALE_WOOD, 0.4), 1.4)
+    # A lamp over them, and a little window to either side.
+    for x in (46, 322):
+        s.box(x, body.face + 26, 34, 24, (56, 66, 74), 3)
+        s.stroke([(x + 6, body.face + 44), (x + 18, body.face + 31)], (120, 140, 150), 2)
+    # What did not go in yet: a crate, a drum and a sack by the wall.
+    floor = body.floor + 4
+    s.box(22, floor - 34, 40, 34, PALE_WOOD, 3)
+    s.stroke([(22, floor - 17), (62, floor - 17)], darker(PALE_WOOD, 0.3), 1.6)
+    s.box(66, floor - 24, 26, 24, darker(PALE_WOOD, 0.14), 3)
+    s.box(318, floor - 44, 30, 44, BLUE, 8)
+    for y in (floor - 32, floor - 16):
+        s.stroke([(319, y), (347, y)], darker(BLUE, 0.35), 2)
+    s.oval(350, floor - 28, 34, 28, CANVAS, 255, outline=True)
+    s.stroke([(362, floor - 27), (370, floor - 33)], darker(CANVAS, 0.4), 2.4)
+    return stage.picture()
+
+
 PAINTERS: dict[str, Painter] = {
     "bed": bed,
     "pantry": pantry,
@@ -952,12 +1004,13 @@ PAINTERS: dict[str, Painter] = {
     "gallows": gallows,
     "guillotine": guillotine,
     "plaza": plaza,
+    "warehouse": warehouse,
 }
 # The ground each is drawn for, in cells: a kind whose data says otherwise keeps the art there was.
 FOOTPRINTS: dict[str, tuple[int, int]] = {
     "bed": (1, 2), "clinic_bed": (1, 2), "table": (2, 1), "bar": (3, 1), "workbench": (2, 1), "shop_counter": (2, 1),
     "shelf": (2, 1), "scrap_pile": (2, 1), "water_tank": (2, 2), "generator": (2, 1), "lab_bench": (2, 1),
-    "wreck": (3, 2), "caravan_cart": (2, 1),
+    "wreck": (3, 2), "caravan_cart": (2, 1), "warehouse": (4, 3),
 }
 # How many turns the picture of a kind goes through, for what burns.
 FRAMES: dict[str, int] = {"campfire": 3, "barrel": 3, "study_desk": 3, "lab_bench": 3}

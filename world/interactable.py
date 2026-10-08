@@ -88,6 +88,12 @@ class InteractableDefinition:
     # Whether it is something to sit on: whoever is at something done sitting down, on the
     # tile it stands on, sits on it and not on the ground.
     seat: bool = False
+    # For a store (S53): how many units of each resource it holds. None for what is no store.
+    store: dict[str, int] | None = None
+    # For a place what a store holds is taken from and brought to: how many units of each
+    # kind of thing of a resource it keeps at hand. The rest is the store's. None for what
+    # has nothing to do with a store.
+    outlet: dict[str, int] | None = None
 
 
 @dataclass
@@ -124,7 +130,13 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         build=build_rule_from_data(f"interactable {kind}", data.get("build")),
         salvage=_salvage_from_data(kind, data.get("salvage")),
         seat=bool(data.get("seat", False)),
+        store=_units_from_data(kind, "store", data.get("store")),
+        outlet=_units_from_data(kind, "outlet", data.get("outlet")),
     )
+    if (definition.store is not None or definition.outlet is not None) and not definition.container:
+        raise ValueError(f"Interactable {kind} holds what a store keeps, so it must be a container")
+    if definition.store is not None and (not definition.store or definition.outlet is not None):
+        raise ValueError(f"Interactable {kind} is a store: it holds something, and is taken from through others")
     if definition.seat and (definition.blocks or definition.width * definition.height != 1):
         raise ValueError(f"Interactable {kind} is a seat, so it takes up one tile and can be stood on")
     if definition.light < 0:
@@ -136,6 +148,18 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
     if definition.use is not None and definition.use.sells and not definition.container:
         raise ValueError(f"Interactable {kind} sells things, so it must be a container")
     return definition
+
+
+def _units_from_data(kind: str, what: str, data: Any) -> dict[str, int] | None:
+    """So many units of each resource, as a store holds or a place keeps at hand."""
+    if data is None:
+        return None
+    if not isinstance(data, dict):
+        raise ValueError(f"'{what}' of interactable {kind} must give units by resource")
+    units = {str(resource_id): int(count) for resource_id, count in data.items()}
+    if any(count < 0 for count in units.values()):
+        raise ValueError(f"'{what}' of interactable {kind} gives a negative number of units")
+    return units
 
 
 def _salvage_from_data(kind: str, data: Any) -> SalvageRule | None:

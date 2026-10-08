@@ -45,6 +45,9 @@
         "scrap": 2
       },
       "minutes": 60
+    },
+    "outlet": {
+      "food": 4
     }
   },
   "campfire": {
@@ -102,6 +105,13 @@
         "scrap": 1
       },
       "minutes": 30
+    },
+    "outlet": {
+      "food": 0,
+      "water": 0,
+      "energy": 0,
+      "medicine": 0,
+      "scrap": 0
     }
   },
   "study_desk": {
@@ -260,7 +270,10 @@
     "name": "montón de chatarra",
     "article": "un",
     "width": 2,
-    "container": true
+    "container": true,
+    "outlet": {
+      "scrap": 2
+    }
   },
   "water_tank": {
     "name": "depósito de agua",
@@ -281,6 +294,9 @@
         "scrap": 4
       },
       "minutes": 120
+    },
+    "outlet": {
+      "water": 20
     }
   },
   "generator": {
@@ -294,6 +310,9 @@
       },
       "minutes": 180,
       "job": "mechanic"
+    },
+    "outlet": {
+      "energy": 4
     }
   },
   "clinic_bed": {
@@ -329,6 +348,9 @@
         "scrap": 2
       },
       "minutes": 45
+    },
+    "outlet": {
+      "medicine": 2
     }
   },
   "grave": {
@@ -482,5 +504,25 @@
     "article": "una",
     "category": "decor",
     "blocks": false
+  },
+  "warehouse": {
+    "name": "almacén",
+    "article": "un",
+    "width": 4,
+    "height": 3,
+    "container": true,
+    "store": {
+      "food": 100,
+      "water": 300,
+      "energy": 30,
+      "medicine": 15,
+      "scrap": 40
+    },
+    "build": {
+      "cost": {
+        "scrap": 8
+      },
+      "minutes": 360
+    }
   }
 }

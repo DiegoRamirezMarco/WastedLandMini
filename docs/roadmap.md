@@ -4177,8 +4177,8 @@ Still open here:
 The user, on 2026-10-08: "intentemos plantear como darle ese toque tomodatchi life (los dialogos
 modulares con variables puestas por el jugador y los objetos)-> sims (todo el tema de
 interacciones) -> fallout shelter (gestion de recursos hipervitaminado)". It comes in three
-layers, each laid over what there is: what the settlement lives on (S51 to S57, P58 to P61 and
-P27), words and things (S58, S59 and P62), and what is done with things and with each other
+layers, each laid over what there is: what the settlement lives on (S51 to S57, S64, P58 to P61
+and P27), words and things (S58, S59 and P62), and what is done with things and with each other
 (S60 to S63 and P63).
 
 Asked first, in two batches, and answered, for the three of them:
@@ -4295,7 +4295,8 @@ Decided without asking:
   in that corner
 
 Still open here:
-- There is no room in the bar for how much there is room for: it comes with S53
+- There is no room in the bar for how much there is room for: what the pointer says of a
+  figure has it since S53, and the bar itself comes with P60
 - What draws water is called `Agua`, as the job is, under what is said of water
 - Nothing of this has been seen on a real window by whoever made it: the frames it was judged
   by were drawn without one
@@ -4397,26 +4398,102 @@ Still open here:
 - Nothing of this has been seen on a real window by whoever made it: the frames it was judged
   by were drawn without one
 
-### S53 — Room for things (needs S51) — planned
-- **A store holds so much, and is for some things and not others**, as data
-- **What does not fit waits** where it is: in the hands of whoever made it or brought it, or
-  at the gate
-- The bar says how much there is room for
+### S53 — Room for things (needs S51) — done
+Asked on 2026-10-08 together with S54, in two batches, and answered. Three of the four answers
+about this were in the user's own words, and none was one of the options:
+- **The store is one thing of its own.** "Deberiamos crear un item unico que sea Almacen y ahi
+  se meta todo recurso comun asi se diferencia cajas de Almacen". An `Almacén` is big, "tipo
+  edificio", and everything the settlement lives on is kept in it. A crate is something else
+- **What is kept there is taken through what there was.** "El almacen es el sitio donde se
+  «guardan» pero se pueden coger los items a traves de deposito de agua despensa botiquin etc".
+  The pantry, the tank and the cabinet are where it is taken from and brought to, not where it is
+- **Full, they stop and say so, and another is what is wanted.** "Se deberia crear otro almacen
+  (los almacenes son Grandes tipo edificio) si no paran e indican que no hay espacio"
 
-Still to settle, to be asked before it is built:
-- Whether room is counted store by store, or resource by resource for the whole settlement
-- What becomes of what does not fit: it waits, or it is lost
-- How much each kind of store holds
+What there is:
+- **An `Almacén` is a thing of its own kind**, four tiles by three, a shed of sheet metal with
+  wide doors, built as anything is (S16). It holds so much of each resource, as data: 100 of
+  food, 300 of water, 30 of fuel, 15 of medicine, 40 of scrap. There may be more than one, and
+  what they hold is added up
+- **What stands free at a pantry, the tank, the cabinet, a heap of scrap or the generator goes
+  to the store**, but for a little of each kind of thing kept at hand, and comes back as it is
+  taken. Nobody carries it between the two: it is as the user said, kept in one place and taken
+  through the others. So everything that was done at those places is done there still
+- **A crate keeps none of it.** Whatever of what the settlement lives on is left in one goes to
+  the store. A crate is for everything else: tools, what is somebody's, what is found
+- **What is cooked stays in the pot, what is poured at the bar, what is on sale at the shop**:
+  the store is for what is kept, not for what is served
+- **With the store full of something, whoever makes it stops**, as they did when their own
+  place was full, and it is said once a day: `No cabe más comida en el almacén: hace falta otro`
+- **Another store makes room.** What they hold is one figure for the settlement
+- **The cook fetches what goes in the pot from the store itself**, a load at a time. The medic
+  and the mechanic no longer carry medicine and fuel about: the cabinet and the generator are
+  kept up from the store
+- **What vermin spoil and raiders take, they take from the store too**, of what was theirs to
+  get at before: the food of the pantries and the scrap of the heaps, never the water
+- **A settlement with no `Almacén` goes on as it did**: a new settlement has none until it
+  builds one. Three seeds of ten days with the store taken out come out as they did before
+  any of this
+- **A save of the ready-made settlement from before gains its store** on being loaded, where
+  the map has it, if that ground is still bare. Nothing else the map has is put back. The
+  save went to version 42 to mark it
+- **The settlement that comes ready made has one**, by the building its food is taken from
+- The books say how much room there is, how much of each thing is in the store, and whether it
+  is full (S51). Resting the pointer on a figure of the bar says so (P58). The bar itself is P60
 
-### S54 — Better posts (needs S53 and S36) — planned
-- **A post or a store has levels**, as data: each makes it faster, or roomier, or for more hands
-- **Making one better is a site** on what is already standing, with what it takes carried to
-  it and worked on, as with anything built (S16, S36)
+Decided without asking:
+- **The store is a thing, not a building**: it is not gone into, and has no room of its own.
+  It is as large as a small building, which is what the user asked of it
+- **The building the ready-made settlement had under the name of `Almacén` is called
+  `Despensa` now**, which is what stands in it. There were two things of one name otherwise
+- **A little of each kind of thing is kept at hand, not a little in all**, so that whoever eats
+  at a pantry still has the choice of everything there is
+- **Room is by resource, not by unit of anything**: a store with no room for water has room
+  for food. Water is counted in hundreds and medicine in units
+- **What is brought from outside is let in with the store full.** It stays where it was left,
+  past what that place keeps at hand
+- **How much a store holds is a first guess.** With it the ready-made settlement holds about a
+  quarter more food than it did. Over eighteen seeds of ten weeks, against the same with the
+  store taken out: as many alive (10.3 and 10.3), food 109 against 86, water 176 against 185,
+  nobody without food in any, and four dead of thirst in one seed where there were none
 
-Still to settle, to be asked before it is built:
-- Which things have levels, and how many
-- How a better one looks: drawn again by the player, drawn by the game, or marked and no more
-- What it takes, and who does it
+Still open here:
+- **That one seed.** With a bartender at the bar and eleven mouths, one water carrier does not
+  keep up: the tank runs dry in ten weeks with the store and without, and with it four died
+  before the ten weeks were out. It is how the settlement was before this, and wants seeing to
+  where posts are made better (S54): a second carrier needs a second tank
+- **Nobody asks for another store to be built.** It is said that one is wanted, and it is the
+  player who has it built. The user's "se debería crear otro almacén" may ask for more
+- **What comes from outside is not held at the gate** when there is no room, as the plan had it
+- The store has no sign over it and says nothing of how full it is where it stands: P60
+
+### S54 — Better things (needs S53 and S36) — planned
+Asked with S53. Three of the four answers were in the user's own words:
+- **All four that were offered can be made better**: posts, stores, beds and the generator
+- **Five levels, and a sixth that cannot be built.** "5, el 6 se consigue mediante las
+  expediciones o mediante otros metodos mas adelante"
+- **A level is a rarity, with its colour.** "En el inventario cambia el borde del grid de rareza
+  comun pococomun raro epico legendario mitico (blanco verde azul rojo morado amarillo) si es una
+  construccion como cama y demas te dice si quieres redibujarlo"
+- **It takes a site and having been studied**: "Obra y estudio". Not the recommendation, which
+  was a site alone
+
+What it comes to:
+- **The six rarities are data**: what each is called, its colour, and how much better it makes
+  whatever has it
+- **Whatever stands has a level**, from common: a post makes faster, a store holds more, a bed
+  rests better, a generator burns less
+- **Making it better is a site on what already stands** (S16, S36), with what it takes carried
+  to it and worked on, once that rarity has been studied (S17). It is not used meanwhile
+- **Mythic is never built**: it is found (S64)
+
+### S64 — Rarer things (needs S54 and S47) — planned
+What the user's answers to S54 added, cut off as a milestone of its own. Asked what things that
+are carried have a rarity, and where it comes from, they ticked every option and wrote "Todos":
+- **What a better post makes is as rare as the post**: food that fills more, a tool that lasts
+- **What is brought from outside may be rare**, the rarer the less often, and mythic only so
+- **A tool or a weapon is made rarer at the workshop**, by the mechanic, with scrap and time
+- Things of one kind and two rarities are kept apart, and each is worth what it is
 
 ### S55 — Current, and things that break down (needs S54 and S15) — planned
 - **Some things run on current**: what each draws and what a generator gives is data
@@ -4428,9 +4505,12 @@ Still to settle, to be asked before it is built:
 - Which things run on current
 - Whether things wear with use, or only break by accident
 
-### P60 — Stores, levels and current on screen (needs S53 to S55) — planned
-- How much room there is, in the bar and on each store
-- The level of a thing and the way to make it better, from the thing itself
+### P60 — Stores, rarity and current on screen (needs S53 to S55 and S64) — planned
+- How much room there is, in the bar and on the store
+- **The border of a thing's square says how rare it is**, wherever things are shown in a grid:
+  white, green, blue, red, purple and yellow, as the user said
+- The level of what stands and the way to make it better, from the thing itself. **When it is
+  done it asks whether to draw it again**, as the user said
 - What has no current, and what is broken down, marked where it stands
 
 ### S56 — Errands, and the box (needs S51 and S39) — planned

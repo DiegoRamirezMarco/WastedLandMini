@@ -136,6 +136,13 @@ FIRST_FAMILY_VERSION = 29
 # what each knows how to make and is learning, and what they were last dosed with (S47). In a
 # save from before everybody starts their job anew and nothing has been come to.
 LAST_MAP_CHANGE_VERSION = 16
+# Version 42 marks another change to the built-in map: the settlement that comes ready made
+# got its store (S53). A save from before gains it, where nothing stands on its ground, and
+# nothing else: whatever the player has since taken down stays down. The building its food is
+# taken from, which the map called by the name the store now has, is called as the map calls
+# it now if nobody has given it another.
+MAP_GAINS: dict[int, tuple[str, ...]] = {42: ("warehouse",)}
+MAP_RENAMES: dict[int, dict[str, str]] = {42: {"storehouse": "almacén"}}
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 28
 FIRST_MEDICINE_VERSION = 23
@@ -153,7 +160,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 41
+    CURRENT_VERSION = 42
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -1374,12 +1381,45 @@ class SaveManager:
                     world.interactables[object_id] = placed
         if version < FIRST_MEDICINE_VERSION:
             self._move_what_the_map_moved(world)
+        self._gain_from_the_map(world, from_map, version)
         world.containers = {
             object_id: containers_before.get(object_id, Inventory())
             for object_id, placed in world.interactables.items()
             if world.definition_of(placed).container
         }
         self._restore_sites(world, data)
+
+    def _gain_from_the_map(self, world: SimulationWorld, from_map: dict[str, Interactable], version: int) -> None:
+        """Give a save from before a change to the map the things that change added, each
+        where the map has it, if all the ground it takes is still bare and nobody has built
+        over it. And call a building as the map calls it now, if it still has its old name."""
+        covered = {
+            tile for placed in world.interactables.values() for tile in placed.footprint(world.definition_of(placed))
+        }
+        terrain = world.registries.terrain
+        for since, object_ids in MAP_GAINS.items():
+            for object_id in object_ids if version < since else ():
+                placed = from_map.get(object_id)
+                if placed is None or object_id in world.interactables:
+                    continue
+                ground = placed.footprint(world.definition_of(placed))
+                bare = all(
+                    world.tile_map.in_bounds(tile)
+                    and tile not in covered
+                    and world.room_at(tile) is None
+                    and terrain[world.tile_map.terrain_at(tile)].walkable
+                    for tile in ground
+                )
+                if bare:
+                    world.interactables[object_id] = placed
+                    covered.update(ground)
+        layout = world.registries.maps.get(world.map_id)
+        named = {room_id: room.name for room_id, room in layout.rooms.items()} if layout is not None else {}
+        for since, renamed in MAP_RENAMES.items():
+            for room_id, was in renamed.items() if version < since else ():
+                room = world.rooms.get(room_id)
+                if room is not None and room.name == was and room_id in named:
+                    room.name = named[room_id]
 
     def _restore_sites(self, world: SimulationWorld, data: dict[str, Any]) -> None:
         """Put back what was being built. A site for something no longer defined, or that no

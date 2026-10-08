@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `41` |
+| `version` | `42` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -84,6 +84,13 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 42** is the same format. The number marks a change to the built-in map: the
+  settlement that comes ready made got its store (S53). A save of it from before gains the
+  store where the map has it, if nothing stands on its ground and nobody has built over it,
+  and the building the map used to call `almacén` is called `despensa` if it still had that
+  name. Nothing else the map has is put back: what the player took down stays down. A save
+  of any other settlement has no store until one is built. What stands free at a pantry,
+  the tank, the cabinet, a heap of scrap or a crate goes to the store the first minute.
 - **Version 41** added `keeper` and `set_down` on a bundle (P27). In an older save a bundle
   is nobody's but its own to see to, and was not laid down by the player. A keeper who is no
   longer a resident is forgotten. What a resident was told may now be `task:use`, with the

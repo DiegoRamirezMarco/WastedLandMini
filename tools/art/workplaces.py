@@ -369,6 +369,32 @@ def _generator() -> pygame.Surface:
     return surface
 
 
+def _warehouse() -> pygame.Surface:
+    """A shed of sheet metal, four tiles by three, seen from above and a little from its front."""
+    surface = _blank(64, 48)
+    # The roof, in sheets, with its ridge and a patch or two.
+    _box(surface, (1, 1, 62, 30), "rust")
+    for x in range(6, 62, 6):
+        fill(surface, "rust_dark", (x, 1, 1, 30))
+    fill(surface, "copper", (1, 14, 62, 2))
+    fill(surface, "iron", (38, 20, 9, 6))
+    fill(surface, "rust_dark", (10, 5, 8, 5))
+    # The wall under it, with its two doors and what is painted over them.
+    _box(surface, (1, 32, 62, 14), "steel")
+    fill(surface, "stone", (1, 32, 62, 1))
+    fill(surface, "rust_dark", (1, 44, 62, 2))
+    fill(surface, "ink", (20, 35, 24, 11))
+    fill(surface, "rust", (21, 36, 10, 10))
+    fill(surface, "rust", (33, 36, 10, 10))
+    fill(surface, "shadow", (31, 36, 2, 10))
+    dots(surface, "lamp", [(30, 40), (34, 40)])
+    fill(surface, "bone", (28, 33, 8, 2))
+    for x in (7, 51):
+        fill(surface, "ink", (x, 36, 6, 5))
+        fill(surface, "deep", (x + 1, 37, 4, 3))
+    return surface
+
+
 def _clinic_bed() -> pygame.Surface:
     # The ordinary bed in hospital colours: a steel frame, white sheets and a red cross on the blanket.
     legend = {
@@ -450,5 +476,6 @@ def build() -> dict[str, pygame.Surface]:
         "clinic_bed": _clinic_bed,
         "medicine_cabinet": _medicine_cabinet,
         "grave": _grave,
+        "warehouse": _warehouse,
     }
     return {f"sprites/objects/{kind}.png": painter() for kind, painter in painters.items()}

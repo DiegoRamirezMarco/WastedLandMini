@@ -51,7 +51,7 @@
   ],
   "rooms": [
     {"id": "dormitory", "name": "dormitorio", "x": 3, "y": 3, "width": 7, "height": 4, "privacy": 0.6, "roofed": true},
-    {"id": "storehouse", "name": "almacén", "x": 27, "y": 3, "width": 8, "height": 4, "privacy": 0.3, "roofed": true},
+    {"id": "storehouse", "name": "despensa", "x": 27, "y": 3, "width": 8, "height": 4, "privacy": 0.3, "roofed": true},
     {"id": "commons", "name": "plaza", "x": 12, "y": 8, "width": 16, "height": 8, "privacy": 0.0},
     {"id": "cantina", "name": "cantina", "x": 41, "y": 3, "width": 12, "height": 6, "privacy": 0.1, "roofed": true},
     {"id": "south_house", "name": "casa del sur", "x": 3, "y": 24, "width": 6, "height": 4, "privacy": 0.7, "roofed": true},
@@ -144,7 +144,8 @@
     {"id": "junk_5", "kind": "junk", "x": 48, "y": 12},
     {"id": "junk_6", "kind": "junk", "x": 2, "y": 13},
     {"id": "junk_7", "kind": "junk", "x": 56, "y": 22},
-    {"id": "junk_8", "kind": "junk", "x": 13, "y": 31}
+    {"id": "junk_8", "kind": "junk", "x": 13, "y": 31},
+    {"id": "warehouse", "kind": "warehouse", "x": 36, "y": 9}
   ],
   "stock": [
     {"container": "pantry_1", "item": "canned_beans", "count": 24},

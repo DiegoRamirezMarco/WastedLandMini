@@ -14,6 +14,8 @@ from simulation.economy.ledger import LedgerState, resource_settings_from_data
 from ui.labels import lowest_spirits, settlement_mood
 from ui.resource_bar import (
     COIN,
+    IN_STORE,
+    STORE_FULL,
     MOOD,
     NOT_KNOWN,
     PEOPLE,
@@ -96,10 +98,22 @@ class ResourceBarTests(_Shell):
         for one, other in zip(chips, chips[1:]):
             self.assertLess(one.rect.right, other.rect.left)
 
+    def test_a_store_with_no_room_left_says_so_in_red(self) -> None:
+        store = self.world.containers["warehouse"]
+        self.world.stores.tick(self.world)
+        self.world.stock(store, "vegetables", self.world.stores.room(self.world)["food"], None)
+        line = self._chip("food").line
+        self.assertTrue(line.full)
+        said = tip_lines(self.world, self._chip("food"))[1]
+        self.assertEqual(said, (STORE_FULL.format(kept=f"{line.capacity} de {line.capacity}"), "ember"))
+
     def test_with_too_little_written_a_resource_says_only_what_there_is(self) -> None:
         food = self._chip("food")
         self.assertEqual((food.way, food.pace, food.days), (0, "", ""))
-        self.assertEqual([text for text, _ in tip_lines(self.world, food)], [f"Comida: {food.figure}", NOT_KNOWN])
+        in_store = IN_STORE.format(kept=f"{food.line.stored} de {food.line.capacity}")
+        self.assertEqual(
+            [text for text, _ in tip_lines(self.world, food)], [f"Comida: {food.figure}", in_store, NOT_KNOWN]
+        )
 
     def test_it_says_which_way_each_is_going_and_by_how_much_a_day(self) -> None:
         self._written(food=FOOD, water=WATER)
@@ -143,8 +157,10 @@ class ResourceBarTests(_Shell):
         rect, lines = self.hud.resource_tip()
         said = [text for text, _ in lines]
         self.assertEqual(said[0], f"Comida: {food.figure}")
+        # Under it, how much of it is in the store, of what the store holds (S53).
+        self.assertEqual(said[1], IN_STORE.format(kept=f"{food.line.stored} de {food.line.capacity}"))
         self.assertEqual(
-            said[1:],
+            said[2:],
             ["+42 Huerto", "+15 Cocina", "+1,7 Traído de fuera", "-21 Comido", "-15 Cocina: lo que gasta", "Al día: +23"],
         )
         self.assertTrue(self.hud.layout.map.contains(rect), "it is under the bar, whole on the map")

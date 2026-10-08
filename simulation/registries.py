@@ -350,6 +350,10 @@ class BuiltInRegistries:
             holder = self.interactables.find(shown) if shown is not None else None
             if shown is not None and (holder is None or not holder.container):
                 raise ValueError(f"Interactable {kind} displays what is in {shown}, which is not a container kind")
+            for units in (self.interactables.get(kind).store, self.interactables.get(kind).outlet):
+                unknown = sorted(set(units or ()) - set(self.resources.resources))
+                if unknown:
+                    raise ValueError(f"Interactable {kind} keeps a resource there is not: {unknown}")
         for blueprint_id, building in self.buildings.items():
             if building.floor not in self.terrain:
                 raise ValueError(f"Building {blueprint_id} uses unknown floor terrain: {building.floor}")

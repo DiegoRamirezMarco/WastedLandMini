@@ -12,6 +12,7 @@ from simulation.social.social_system import SocialSystem
 from simulation.work.expedition import expedition_rule_from_data, expedition_settings_from_data
 from simulation.work.expedition_system import EXPEDITION_ACTION, RISKY_FIND
 from simulation.world import SimulationWorld
+from tests.worlds import no_store
 
 MINUTES_PER_DAY = 24 * 60
 SCRAP_PILES = ("scrap_workshop", "scrap_yard")
@@ -28,6 +29,7 @@ def _keep_content(world: SimulationWorld) -> None:
 
 def _settled(seed: int = 7) -> SimulationWorld:
     world = SimulationWorld.demo_world(seed=seed)
+    no_store(world)
     world.relationships.clear()
     _keep_content(world)
     return world

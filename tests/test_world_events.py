@@ -15,6 +15,7 @@ from simulation.rng import SimulationRNG
 from simulation.work.hauling import carried
 from simulation.work.work_system import WORK_ACTION
 from simulation.world import SimulationWorld
+from tests.worlds import no_store
 
 MINUTES_PER_DAY = 24 * 60
 PANTRIES = ("pantry_1", "pantry_2")
@@ -38,6 +39,7 @@ def _keep_content(world: SimulationWorld) -> None:
 
 def _settled(seed: int = 7) -> SimulationWorld:
     world = SimulationWorld.demo_world(seed=seed)
+    no_store(world)
     world.relationships.clear()
     for resident in world.residents.values():
         resident.needs = Needs(hunger=0, tiredness=0, social=0, stress=0)

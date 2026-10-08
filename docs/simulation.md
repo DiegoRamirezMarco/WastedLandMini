@@ -191,7 +191,8 @@ room. An argument's importance rises with the resentment between the two.
   warning without power. Fuel brought in from outside is left in a crate, and it is the mechanic
   who carries it on to the generator: a load at a time, or at once when the generator is
   running low. With nobody at the workshop the fuel waits and the lamps go out. A settlement
-  with no workbench has nobody to wait for, and there the fuel goes straight in.
+  with no workbench has nobody to wait for, and there the fuel goes straight in. Where a
+  store stands the generator is kept up from it, and nobody carries fuel (S53).
 - **Medicine.** The clinic's care uses it up. Whoever lies in a clinic bed with the medic on
   duty is given a unit from the cabinet, which goes on working in them for half a day; with
   none left they mend as anyone lying down does, and the settlement is told once a day
@@ -225,6 +226,29 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
   With no day closed yet it goes by the hours there are, once there are six, and marks the
   reading `tentative`.
 - **`resource_low`** is emitted on the hour, once a day for each resource that is running low.
+
+### Room for things
+
+- **A store** (`Almacén`) is where what the settlement lives on is kept, and it holds so
+  much of each resource (`simulation/economy/stores.py`). There may be more than one: what
+  they hold is added up.
+- **It is taken from through other things.** A pantry, the tank, the cabinet, a heap of
+  scrap and the generator each keep a little of each kind of thing at hand. Every minute
+  what stands free at one of them past that goes to the store, and what it lacks of it
+  comes back. Nobody carries it. A crate keeps none: what is left in one goes to the store.
+- **Only what is everybody's.** What is somebody's, kept for somebody or broken stays where
+  it is. So does what is no resource, and what is cooked, poured or on sale.
+- **With no room left** what is made stays where it was made, and whoever makes it stops
+  as they do when their own place is full. `store_full` is emitted once a day for each
+  resource there is no room for. What is brought from outside is let in all the same.
+- **What looked in a pantry looks in the store too**: the cook fetching what goes in the
+  pot, whoever gives a dose in care, vermin, and raiders, who take of the store only what
+  the places they get at keep.
+- **With no store** none of this happens and everything is where it was put. A new
+  settlement has none until it builds one.
+- `world.ledger.report(world)` gives, for each resource, the `capacity` of the stores,
+  how much of it is `stored` in them and whether they are `full`. All three are nothing
+  with no store.
 
 ## What comes from outside
 

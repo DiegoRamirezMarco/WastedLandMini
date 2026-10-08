@@ -175,6 +175,11 @@ python -m simulation.headless --days 7 --seed 7
   there. The other button, or `Esc`, lets go of them where they were. A child in its
   blanket is taken up the same way: over somebody it is theirs to carry, and anywhere
   else it is laid down
+- The `Almacén`, the shed by the pantry, is where what the settlement lives on is kept: it
+  goes there by itself from the pantries, the tank, the cabinet and the heaps of scrap, and
+  comes back to them as it is used. It holds so much of each thing. Full, whoever makes that
+  thing stops and it is said that another is wanted: build one from `Urbanismo`, under
+  `Muebles`. Resting the pointer on a figure of the bar says how much of it the store has
 - With nobody selected the panel on the right lists everybody: click a name to go to them. So
   does a click on anyone listed under a resident's relationships
 - While whoever is selected is talking with someone, the dock under the map shows the two of them

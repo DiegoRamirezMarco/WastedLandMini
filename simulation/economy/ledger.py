@@ -120,6 +120,12 @@ class ResourceLine:
     low: bool = False
     # What makes that up, by why: units a day, what comes in first and the most first.
     by_reason: tuple[tuple[str, float], ...] = ()
+    # How much of it the stores hold between them, and whether they have no room left for
+    # more (S53). None with no store: then there is no end to the room there is.
+    capacity: int | None = None
+    full: bool = False
+    # How much of it is in the stores, of what there is in all. None with no store.
+    stored: int | None = None
 
     @property
     def net(self) -> float:
@@ -292,12 +298,20 @@ class LedgerSystem:
         """How each resource stands, in the order the data gives them."""
         settings = self.settings(world)
         held = self.stock(world)
+        capacity = world.stores.capacity(world)
+        no_room = set(world.stores.full_of(world))
+        in_stores = world.stores.held(world)
         lines = []
         for resource_id, resource in settings.resources.items():
             stock = held.get(resource_id, 0)
             pace = self._pace(world, resource_id)
+            room = {
+                "capacity": capacity.get(resource_id),
+                "full": resource_id in no_room,
+                "stored": in_stores.get(resource_id),
+            }
             if pace is None:
-                lines.append(ResourceLine(resource_id, resource.name, resource.icon, stock))
+                lines.append(ResourceLine(resource_id, resource.name, resource.icon, stock, **room))
                 continue
             flows, tentative = pace
             coming = sum(units for units in flows.values() if units > 0)
@@ -309,6 +323,7 @@ class LedgerSystem:
                 ResourceLine(
                     resource_id, resource.name, resource.icon, stock, True, tentative, coming, going, days_left, low,
                     tuple((why, units) for why, units in ordered if abs(units) > 1e-9),
+                    **room,
                 )
             )
         return lines

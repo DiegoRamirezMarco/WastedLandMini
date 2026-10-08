@@ -276,13 +276,15 @@ class FoodTests(unittest.TestCase):
 
     def test_a_meal_takes_one_unit_off_the_shelf_and_lowers_hunger_by_its_effect(self) -> None:
         self.world.containers["pantry_2"].items.clear()
-        before = self.pantry.count("canned_beans")
+        # Wherever they are kept: in the pantry, or in the store it is taken from through it (S53).
+        beans = lambda: sum(each.count("canned_beans") for each in self.world.containers.values())  # noqa: E731
+        before = beans()
         self.marta.needs.hunger = 80
         for _ in range(240):
             self.world.step(1)
             if self.marta.current_action == "eat":
                 break
-        self.assertEqual(self.pantry.count("canned_beans"), before - 1)
+        self.assertEqual(beans(), before - 1)
         meal = next(event for event in reversed(self.world.events.pending) if event.event_type == "meal_started")
         self.assertEqual(meal.participants, ["marta"])
         self.assertEqual(meal.data, {"action": "eat", "item_id": "canned_beans"})

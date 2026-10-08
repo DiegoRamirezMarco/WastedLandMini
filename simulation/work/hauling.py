@@ -38,7 +38,9 @@ def room(world: "SimulationWorld", resident: Resident, rule: ProduceRule, invent
     what anybody has come to at it share the room there is, so that a pantry holds as much of
     the garden as it did, of more kinds."""
     family = {rule.item, *world.crafts.family(world, resident.job_id)}
-    return rule.max_stock - sum(inventory.count(item_id) for item_id in family)
+    left = rule.max_stock - sum(inventory.count(item_id) for item_id in family)
+    # Where what is brought goes on to a store, there is no more room than the store has.
+    return min(left, world.stores.room_at(world, inventory, rule.item))
 
 
 def wanted_raw(world: "SimulationWorld", resident: Resident, rule: ProduceRule, inventory: Inventory) -> ItemInstance | None:
@@ -63,12 +65,17 @@ def kept(world: "SimulationWorld", resident: Resident, rule: ProduceRule, item_i
     return stored + carried(resident, item_id)
 
 
-def containers_of_kind(world: "SimulationWorld", kind: str) -> list[tuple[str, Inventory]]:
-    return [
+def containers_of_kind(world: "SimulationWorld", kind: str, stores: bool = False) -> list[tuple[str, Inventory]]:
+    """Every container of a kind, in map order. With `stores`, and after them, the stores
+    that what is kept at that kind of place really lies in (S53)."""
+    found = [
         (object_id, inventory)
         for object_id, inventory in world.containers.items()
         if object_id in world.interactables and world.interactables[object_id].kind == kind
     ]
+    if stores and world.stores.feeds(world, kind):
+        found += world.stores.inventories(world)
+    return found
 
 
 def _raw_stack(world: "SimulationWorld", rule: ProduceRule, inventory: Inventory) -> ItemInstance | None:
@@ -104,7 +111,8 @@ def delivery_target(world: "SimulationWorld", rule: ProduceRule, resident: Resid
 def fetch_source(world: "SimulationWorld", rule: ProduceRule) -> str | None:
     """Where to fetch raw material from: the container with the fullest stack of it."""
     best: tuple[int, str] | None = None
-    for object_id, inventory in containers_of_kind(world, rule.source or ""):
+    # Where it is kept is as good a place to fetch it from as where it is taken from.
+    for object_id, inventory in containers_of_kind(world, rule.source or "", stores=True):
         stack = _raw_stack(world, rule, inventory)
         if stack is not None and (best is None or stack.quantity > best[0]):
             best = (stack.quantity, object_id)
@@ -168,6 +176,9 @@ def supply_errand(world: "SimulationWorld", resident: Resident, rule: SupplyRule
     held, target = min(receiving)
     if carried(resident, rule.item) > 0:
         return target
+    if world.stores.feeds(world, rule.into, rule.item):
+        # It comes there from the store by itself: there is nothing to go and fetch.
+        return None
     source = _supply_source(world, rule) if shift_minutes_left >= MIN_FETCH_MINUTES else None
     if source is None:
         return None
@@ -222,7 +233,9 @@ def exchange(world: "SimulationWorld", resident: Resident, rule: ProduceRule, pl
             return f"lleva {' y '.join(left)} a {where}"
         if rule.source is None or placed.kind != rule.source:
             return None
-    if placed.kind == rule.source:
+    # A store is where what is taken from the place they fetch at is kept.
+    at_store = definition.store is not None and world.stores.feeds(world, rule.source or "")
+    if placed.kind == rule.source or at_store:
         # What something of their own is made of comes first, when there is some and it is wanted.
         stack = wanted_raw(world, resident, rule, container) or _raw_stack(world, rule, container)
         if stack is None:

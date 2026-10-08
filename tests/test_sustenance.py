@@ -12,10 +12,12 @@ from simulation.social.social_system import argument_chance
 from simulation.work import hauling
 from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
 from simulation.world import POWER_ITEM, SimulationWorld
+from tests.worlds import no_store
 
 
 def _settled(seed: int = 7) -> SimulationWorld:
     world = SimulationWorld.demo_world(seed=seed)
+    no_store(world)
     world.relationships.clear()
     for resident in world.residents.values():
         resident.needs = Needs(hunger=0, thirst=0, tiredness=0, social=0, stress=0)
@@ -91,14 +93,15 @@ class WaterPostTests(unittest.TestCase):
         # else: from a sixth of it to all of it, in the four that were tried when the caravan's
         # hours changed. This is one in which it is kept up.
         world = SimulationWorld.demo_world(seed=6)
-        tank = world.containers["water_tank"]
-        start = tank.count("water")
+        # All the water there is, in the tank and in the store it is drawn from (S53).
+        water = lambda: world.ledger.stock(world)["water"]  # noqa: E731
+        start = water()
         worst = 0.0
         for _ in range(42 * 24 * 60):
             world.step(1)
             worst = max(worst, max(resident.needs.thirst for resident in world.residents.values() if not resident.away))
         self.assertIn("water_carrier", [resident.job_id for resident in world.residents.values()])
-        self.assertGreaterEqual(tank.count("water"), start // 2)
+        self.assertGreaterEqual(water(), start // 2)
         self.assertLess(worst, 85.0, "nobody went thirsty")
         self.assertTrue(world.has_power())
         self.assertEqual(world.deaths, [])

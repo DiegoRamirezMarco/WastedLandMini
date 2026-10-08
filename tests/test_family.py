@@ -20,6 +20,7 @@ from simulation.residents.activity import Activity
 from simulation.residents.needs import Needs
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
+from tests.worlds import no_store
 
 MINUTES_PER_DAY = 24 * 60
 
@@ -31,6 +32,7 @@ def _content(world: SimulationWorld, *resident_ids: str) -> None:
 
 def _settled(seed: int = 7) -> SimulationWorld:
     world = SimulationWorld.demo_world(seed=seed)
+    no_store(world)
     world.relationships.clear()
     _content(world)
     return world
@@ -878,8 +880,9 @@ class GrowingUpTests(unittest.TestCase):
     def test_a_settlement_that_puts_a_child_to_work_is_lower_in_mood(self) -> None:
         moods = {}
         for at_work in (True, False):
-            # A week is short for this: over fourteen seeds it holds in twelve, and this is one.
-            world = SimulationWorld.demo_world(seed=2)
+            # A week is short for this: over fourteen seeds it holds in twelve, and this is one,
+            # in the settlement as it was when they were counted, with no store (S53).
+            world = no_store(SimulationWorld.demo_world(seed=2))
             child = Resident("alba", "Alba", age=10, x=42, y=14)
             world.residents["alba"] = child
             world.family.welcome(world, child)

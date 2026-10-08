@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from simulation.ai.crowd import free_tile, spots_taken
 from simulation.economy.ledger import ARRIVED, RAIDED, SPOILED
 from simulation.events.event import DomainEvent
+from simulation.items.inventory import Inventory
 from simulation.knowledge.fact import SOURCE_PARTICIPANT
 from simulation.knowledge.knowledge_system import learn
 from simulation.events.world_event import (
@@ -256,13 +257,19 @@ class WorldEventSystem:
 
     def _loot(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
         taken = 0
-        for kind in definition.containers:
-            for _, inventory in containers_of_kind(world, kind):
-                for item in list(inventory.items):
-                    if item.owner_id is None:
-                        gone = inventory.take_units(item.instance_id, int(item.quantity * definition.fraction))
-                        world.ledger.record(world, item.definition_id, -gone, RAIDED)
-                        taken += gone
+        reached = [inventory for kind in definition.containers for _, inventory in containers_of_kind(world, kind)]
+        # What is kept in a store is theirs to take too, where the places they go through
+        # are where it is taken from (S53): the food of a pantry, and not the water of a tank
+        # they never got to.
+        through = world.stores.kept_through(world, definition.containers)
+        for inventory in reached:
+            for item in list(inventory.items):
+                if item.owner_id is None:
+                    taken += self._carry_off(world, inventory, item, definition.fraction)
+        for _, inventory in world.stores.inventories(world) if through else ():
+            for item in list(inventory.items):
+                if world.stores.resource_of(world, item) in through:
+                    taken += self._carry_off(world, inventory, item, definition.fraction)
         said = f"se llevan {taken} cosas" if taken else "no encuentran nada que llevarse"
         tile = self.arrival_tile(world)
         world.emit_event(
@@ -482,6 +489,12 @@ class WorldEventSystem:
             return
         self._come_to_gate(world, keeper, newcomer, alone=False)
 
+    def _carry_off(self, world: "SimulationWorld", inventory: Inventory, item, fraction: float) -> int:
+        """Have raiders take their share of a stack. Returns how many units went."""
+        gone = inventory.take_units(item.instance_id, int(item.quantity * fraction))
+        world.ledger.record(world, item.definition_id, -gone, RAIDED)
+        return gone
+
     def _stock(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
         container = containers_of_kind(world, definition.container or "")[0][1]
         left = self.draw_goods(world, definition)
@@ -507,7 +520,7 @@ class WorldEventSystem:
 
     def _spoil(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:
         lost = 0
-        for _, inventory in containers_of_kind(world, definition.container or ""):
+        for _, inventory in containers_of_kind(world, definition.container or "", stores=True):
             for item in list(inventory.items):
                 category = world.registries.items.resolve(item.definition_id).category
                 if item.owner_id is not None or category != definition.category:

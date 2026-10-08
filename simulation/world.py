@@ -11,6 +11,7 @@ from simulation.events.decision import Decision
 from simulation.events.event import DomainEvent, euphonic
 from simulation.events.event_manager import EventManager
 from simulation.economy.fund_system import FundSystem
+from simulation.economy.stores import StoreSystem
 from simulation.economy.ledger import BURNT, LedgerState, LedgerSystem
 from simulation.economy.lending import LendingSystem
 from simulation.economy.merchant import Merchant, MerchantSystem
@@ -124,6 +125,8 @@ class SimulationWorld:
     trading: TradingState = field(default_factory=TradingState)
     # What comes into what the settlement lives on and what goes out of it, as it is written down.
     ledger: LedgerSystem = field(default_factory=LedgerSystem)
+    # The stores what is everybody's is kept in, and the places it is taken from (S53).
+    stores: StoreSystem = field(default_factory=StoreSystem)
     accounts: LedgerState = field(default_factory=LedgerState)
     # Whoever has stopped by the gate to trade, while they are there.
     merchant: Merchant | None = None
@@ -221,6 +224,7 @@ class SimulationWorld:
         self.clock.advance_minutes(1)
         # Before anything else happens this minute: a day that has ended is counted as it ended.
         self.ledger.tick(self)
+        self.stores.tick(self)
         self._power_tick()
         self.interventions.tick(self)
         self.items.tick_world(self)

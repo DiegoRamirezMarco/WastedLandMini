@@ -19,6 +19,7 @@ from simulation.work.hauling import carried
 from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
 from simulation.residents.attributes import Attributes
 from simulation.world import SimulationWorld
+from tests.worlds import no_store
 from world.pathfinding import manhattan
 
 MINUTES_PER_DAY = 24 * 60
@@ -28,6 +29,7 @@ PANTRIES = ("pantry_1", "pantry_2")
 def _settled(seed: int = 7) -> SimulationWorld:
     """The demo settlement with everyone content and no grudges, so only work drives the day."""
     world = SimulationWorld.demo_world(seed=seed)
+    no_store(world)
     world.relationships.clear()
     _keep_content(world)
     # Everybody in the middle of every attribute: what is looked at here is told apart from it (S46).

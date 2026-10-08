@@ -424,6 +424,8 @@ class WorkSystem:
                 # Of the things made here, the one there is least of.
                 making = min((rule.item, *rule.also, *own), key=target.count)
             full = target is None or target.count(making) >= rule.max_stock
+            # What is made here and kept in a store has no more room than the store has.
+            full = full or world.stores.room_at(world, target, making) <= 0
         else:
             target = resident.inventory
             if own:

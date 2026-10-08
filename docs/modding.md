@@ -1049,6 +1049,26 @@ kept:
 - Nothing is a resource that is not named here: take one out and it is no longer counted, add
   one and it is.
 
+### Stores, and where what they hold is taken from
+
+Two keys of a kind of object in `data/interactables.json`, both of which need
+`"container": true`:
+
+```json
+"warehouse": {"name": "almacén", "article": "un", "width": 4, "height": 3, "container": true,
+              "store": {"food": 100, "water": 300}},
+"pantry": {"container": true, "outlet": {"food": 4}}
+```
+
+- `store` makes a kind of object a store: how many units of each resource one of them
+  holds. A resource it does not name is not kept in it.
+- `outlet` makes a kind of object somewhere what a store holds is taken from and brought
+  to: how many units of each kind of thing of a resource it keeps at hand. The rest goes to
+  the store, and comes back as it is used. `0` is for what keeps none, as a crate. A
+  resource it does not name stays in it as it always did.
+- A kind is one or the other, and the resources are those of `data/resources.json`.
+- A map with no store on it works as it did before there were stores.
+
 ## Wear, prices and the shop
 
 - An item wears out if its `properties` give it `wear`, the condition it loses per use out of 100:
