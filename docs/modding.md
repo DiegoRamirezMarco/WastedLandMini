@@ -1082,6 +1082,21 @@ Two keys of a kind of object in `data/interactables.json`, both of which need
 - A kind is one or the other, and the resources are those of `data/resources.json`.
 - A map with no store on it works as it did before there were stores.
 
+## Posts that wear
+
+`wear` in `data/work.json`:
+
+```json
+"wear": {"per_hour": 0.25, "pushed": 2.0, "cost": {"scrap": 2}, "minutes": 120, "job": "mechanic"}
+```
+
+- `per_hour` is how much of its hundred a post loses in an hour of being worked, and
+  `pushed` what that is multiplied by while whoever works it is pushing. With `per_hour`
+  at 0, or the block left out, nothing wears.
+- `cost`, by the tag of the items that will do, and `minutes` are what mending one takes.
+  `job` is who mends: left out, anybody does.
+- `breakdown` among the `mishaps` of `rush` is a push ending with the post broken down.
+
 ## Rarities, and making things better
 
 `data/rarities.json` says how rare a thing can be and what making it rarer takes:

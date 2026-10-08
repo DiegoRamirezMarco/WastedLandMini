@@ -32,7 +32,18 @@
         "text": "A {name} se le echa a perder el género por apretar: {job}",
         "fraction": 0.25,
         "most": 6
+      },
+      "breakdown": {
+        "weight": 2,
+        "text": "El puesto de {name} se avería de tanto apretar: {job}"
       }
     }
+  },
+  "wear": {
+    "per_hour": 0.25,
+    "pushed": 2.0,
+    "cost": {"scrap": 2},
+    "minutes": 120,
+    "job": "mechanic"
   }
 }

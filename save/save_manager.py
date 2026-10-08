@@ -164,7 +164,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 46
+    CURRENT_VERSION = 47
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -295,6 +295,7 @@ class SaveManager:
                     "level": placed.level,
                     "on": placed.on,
                     "switched_at": placed.switched_at,
+                    "condition": placed.condition,
                 }
                 for placed in world.interactables.values()
             ],
@@ -1393,6 +1394,8 @@ class SaveManager:
                 # Whether it is switched on. In a save from before everything is (S55).
                 bool(placed.get("on", True)),
                 max(0, _level_of({"level": placed.get("switched_at", 0)}) if placed.get("switched_at") else 0),
+                # How much is left in it. In a save from before everything is whole (S55).
+                _condition_of(placed),
             )
             for placed in saved
             if isinstance(placed, dict) and world.registries.interactables.find(str(placed.get("kind")))
@@ -1811,6 +1814,14 @@ def _memory_from_data(data: dict[str, Any]) -> Memory:
         timestamp=int(data.get("timestamp", 0)),
         location_id=str(location_id) if location_id is not None else None,
     )
+
+
+def _condition_of(saved: dict[str, Any]) -> float:
+    """How much is left in a thing that was saved, of a hundred. Whole where it was not said."""
+    condition = saved.get("condition", 100.0)
+    if isinstance(condition, bool) or not isinstance(condition, (int, float)):
+        return 100.0
+    return min(100.0, max(0.0, float(condition)))
 
 
 def _level_of(saved: dict[str, Any]) -> int:

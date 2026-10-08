@@ -60,6 +60,8 @@ Event types emitted so far:
 | `no_medicine` | Someone is lying in care and there is none to give them (once a day) | 40 |
 | `item_improved` | A thing mended at a workshop that has been made better comes away a rarity rarer, with `item_id`, `definition_id` and the `level` it has now in `data` | 20 |
 | `object_upgraded` | Something that stands has been made a level better, with `object_id`, its `kind`, the `level` it has now and its `rarity` in `data`. The site it was done at gives `site_laid` and `site_finished` as any does, with `kind` `upgrade` | 35 |
+| `post_broke` | A post is worn out, or a push broke it: it stands idle until it is mended, with `object_id` and its `kind` in `data`. The site it is mended at gives `site_laid` and `site_finished`, with `kind` `repair` | 45 |
+| `post_mended` | A post that had broken down works again, with `object_id` and its `kind` in `data` | 30 |
 | `power_switched` | The player switches something that runs on current on or off, with `object_id` and `on` in `data` | 10 |
 | `power_shed` | More current is asked for than there is, and what was switched on last is switched off, with `object_id` and the `supply` there is in `data` | 25 |
 | `store_full` | The stores have no room left for a resource (once a day for each), with `resource` and the `capacity` there is in `data` | 35 |

@@ -182,6 +182,11 @@ python -m simulation.headless --days 7 --seed 7
   `Muebles`. Resting the pointer on a figure of the bar says how much of it the store has
 - Water is drawn at the tank and at the well, which is slower and needs nothing. Each is one
   hand's post: put a second resident to `Agua` and they take the one that stands free
+- A post wears as it is worked and in time breaks down: nobody works at it until the mechanic
+  has mended it, with scrap, which they set about by themselves. A push may break one outright
+- Lamps, the radio, the workshop, the laboratory and the tank run on current, which the
+  generator gives while it has fuel: without it they stop, and whoever draws water goes to
+  the well
 - With nobody selected the panel on the right lists everybody: click a name to go to them. So
   does a click on anyone listed under a resident's relationships
 - While whoever is selected is talking with someone, the dock under the map shows the two of them

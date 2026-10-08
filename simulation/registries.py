@@ -42,6 +42,7 @@ from simulation.work.research import EFFECTS, JOB_PACE, ResearchSettings, resear
 from simulation.economy.power_settings import PowerSettings, power_settings_from_data
 from simulation.work.rush import RushSettings, rush_settings_from_data
 from simulation.work.upgrades import RaritySettings, rarity_settings_from_data
+from simulation.work.wear import WearSettings, wear_settings_from_data
 from world.interactable import InteractableDefinition, interactable_definition_from_data
 from world.custom_content import load_custom_buildings, load_custom_interactables
 from world.map import TerrainDefinition
@@ -176,6 +177,7 @@ class BuiltInRegistries:
     rush: RushSettings = field(default_factory=RushSettings)
     rarities: RaritySettings = field(default_factory=RaritySettings)
     power: PowerSettings = field(default_factory=PowerSettings)
+    wear: WearSettings = field(default_factory=WearSettings)
     bonds: BondSettings = field(default_factory=BondSettings)
     expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
     # How building is gone about. What each thing takes is in its own definition.
@@ -308,6 +310,7 @@ class BuiltInRegistries:
         work_path = root / "work.json"
         if work_path.is_file():
             registries.rush = rush_settings_from_data(_read_object(work_path).get("rush", {}))
+            registries.wear = wear_settings_from_data(_read_object(work_path).get("wear", {}))
         tastes_path = root / "tastes.json"
         if tastes_path.is_file():
             registries.tastes = taste_settings_from_data(_read_object(tastes_path))
@@ -368,6 +371,8 @@ class BuiltInRegistries:
             self.interactables.get(kind).gives for kind in self.interactables.kinds()
         ):
             raise ValueError(f"What gives current burns an item there is not: {self.power.fuel}")
+        if self.wear.job is not None and self.wear.job not in self.jobs:
+            raise ValueError(f"What breaks down is mended by a job there is not: {self.wear.job}")
         for rarity in self.rarities.tiers:
             if rarity.study is not None and rarity.study not in self.research.subjects:
                 raise ValueError(f"Rarity {rarity.rarity_id} is studied as a subject there is not: {rarity.study}")

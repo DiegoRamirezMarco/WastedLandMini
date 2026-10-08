@@ -301,6 +301,17 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
   unit of current a unit of fuel is good for.
 - **With no generator at all** nothing that draws runs, and nothing is said of it.
 
+### Posts that wear
+
+- **A post has a condition** (`Interactable.condition`, `simulation/work/wear.py`) and loses
+  some of it for every minute it is worked, more while whoever works it is pushing.
+- **At nothing it has broken down**: `post_broke` is emitted, it is neither worked at nor
+  used, and a site of kind `repair` is laid on it, in the charge of whoever holds the job
+  that mends. What it takes is carried to it and worked on like any site, and only by
+  somebody of that job. Done, the post is whole again (`post_mended`).
+- **A push that goes wrong** may break the post outright: `breakdown` among the mishaps.
+- With `per_hour` at nothing no post wears and none breaks.
+
 ## What comes from outside
 
 - **World events** are defined in `data/world_events.json`: how likely each is on a day it can

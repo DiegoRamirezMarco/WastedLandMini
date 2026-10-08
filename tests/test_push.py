@@ -113,7 +113,8 @@ class RushDataTests(unittest.TestCase):
         rush = builtin_registries().rush
         self.assertTrue(rush.enabled)
         self.assertEqual((rush.pace, rush.risk), (1.5, 0.05))
-        self.assertEqual(sorted(rush.mishaps), sorted((HURT, TOOL, SPOIL)))
+        # The fourth, the post breaking down, came with posts that wear (S55).
+        self.assertEqual(sorted(rush.mishaps), sorted((HURT, TOOL, SPOIL, "breakdown")))
         self.assertTrue(all(kind in builtin_registries().injuries for kind in rush.mishaps[HURT].injuries))
         self.assertFalse(RushSettings().enabled, "with no data for it nobody can be pushed")
 

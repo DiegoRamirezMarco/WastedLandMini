@@ -145,8 +145,13 @@ class UpgradeSystem:
         )
 
     def in_hand(self, world: "SimulationWorld", object_id: str | None) -> bool:
-        """Whether a thing is being made better right now, and so is not to be used."""
-        return bool(world.sites) and object_id is not None and self.site_of(world, object_id) is not None
+        """Whether a thing is not to be used right now: it is being made better, or it has
+        broken down and waits to be mended (S55)."""
+        if object_id is None:
+            return False
+        if world.wear.broken(world, object_id):
+            return True
+        return bool(world.sites) and self.site_of(world, object_id) is not None
 
     def next(self, world: "SimulationWorld", placed: Interactable) -> Rarity | None:
         """The rarity a thing would have if it were made better once more. None at the top."""
@@ -161,8 +166,8 @@ class UpgradeSystem:
         coming = self.next(world, placed)
         if coming is None or not coming.built:
             return "Mejor que eso no se hace aquí: solo se encuentra"
-        if self.site_of(world, object_id) is not None:
-            return IN_HAND
+        if self.site_of(world, object_id) is not None or world.wear.broken(world, object_id):
+            return IN_HAND if not world.wear.broken(world, object_id) else "Antes hay que arreglarlo"
         subject = world.registries.research.subjects.get(coming.study or "")
         if subject is not None and not world.research.knows(world, subject.subject_id):
             return f"Antes hay que estudiarlo: {subject.name}"

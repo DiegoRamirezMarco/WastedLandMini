@@ -280,6 +280,11 @@ class WorkSystem:
                 )
             )
         resident.needs.apply(self._toll(world, resident, job))
+        # The post is the worse for every minute of it, and may break down (S55).
+        world.wear.worked(world, resident, placed)
+        if world.wear.broken(world, placed.object_id):
+            self._leave(resident)
+            return
         world.attributes.practise(world, resident, job.stat, "work")
         world.crafts.worked(world, resident, job)
         world.trade.pay_wage(world, resident, job)

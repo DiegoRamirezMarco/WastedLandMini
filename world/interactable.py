@@ -115,6 +115,8 @@ class Interactable:
     # last switched on, which is what goes off first when there is not enough for everything.
     on: bool = True
     switched_at: int = 0
+    # For a post (S55): how much is left in it of a hundred. At nothing it has broken down.
+    condition: float = 100.0
 
     def footprint(self, definition: InteractableDefinition) -> list[Tile]:
         return [

@@ -29,8 +29,8 @@ if TYPE_CHECKING:
     from simulation.world import SimulationWorld
 
 # What can go wrong.
-HURT, TOOL, SPOIL = "hurt", "tool", "spoil"
-MISHAPS = (HURT, TOOL, SPOIL)
+HURT, TOOL, SPOIL, BREAKDOWN = "hurt", "tool", "spoil", "breakdown"
+MISHAPS = (HURT, TOOL, SPOIL, BREAKDOWN)
 PUSH_EVENT = "work_pushed"
 ACCIDENT_EVENT = "work_accident"
 PUSH_IMPORTANCE = 20
@@ -234,7 +234,13 @@ class RushSystem:
     def _go_wrong(self, world: "SimulationWorld", resident: Resident, job: JobDefinition, placed: Interactable) -> None:
         settings = self.settings(world)
         tool = world.work.tool_of(world, resident, job)
-        within_reach = {HURT: True, TOOL: tool is not None, SPOIL: bool(self._at_stake(world, resident, job, placed))}
+        within_reach = {
+            HURT: True,
+            TOOL: tool is not None,
+            SPOIL: bool(self._at_stake(world, resident, job, placed)),
+            # The post itself may give out, where posts wear at all (S55).
+            BREAKDOWN: world.wear.settings(world).enabled and not world.wear.broken(world, placed.object_id),
+        }
         choices = [(name, mishap) for name, mishap in settings.mishaps.items() if within_reach.get(name)]
         if not choices:
             return
@@ -251,6 +257,8 @@ class RushSystem:
             world.items.shatter(world, resident, tool)
         elif name == SPOIL:
             units = self._spoil(world, resident, job, placed, mishap)
+        elif name == BREAKDOWN:
+            world.wear.break_down(world, placed)
         text = mishap.text.replace("{name}", resident.name).replace("{job}", job.name).replace("{thing}", thing)
         room = world.room_at(resident.tile)
         world.emit_event(

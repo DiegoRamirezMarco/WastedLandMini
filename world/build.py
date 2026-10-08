@@ -6,11 +6,15 @@ from typing import Any
 from world.map import Tile
 
 # What a site is for: a piece of furniture or other object, a whole building, or making
-# better something that already stands (S54), which is then the ID of that thing.
+# better something that already stands (S54) or mending one that has broken down (S55),
+# which is then the ID of that thing.
 OBJECT_SITE = "object"
 BUILDING_SITE = "building"
 UPGRADE_SITE = "upgrade"
-SITE_KINDS = (OBJECT_SITE, BUILDING_SITE, UPGRADE_SITE)
+REPAIR_SITE = "repair"
+SITE_KINDS = (OBJECT_SITE, BUILDING_SITE, UPGRADE_SITE, REPAIR_SITE)
+# The kinds of site that are on something that stands, and not for something to come.
+ON_WHAT_STANDS = (UPGRADE_SITE, REPAIR_SITE)
 
 
 @dataclass(frozen=True)

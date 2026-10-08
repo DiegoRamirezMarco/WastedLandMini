@@ -4354,7 +4354,7 @@ Decided without asking:
 - Trust in the player moves only when it goes wrong: a push that ends well is a shift
 
 Still open here:
-- The post breaking down is the fourth thing that can go wrong, and comes with S55
+- The post breaking down is the fourth thing that can go wrong: it came with S55
 - Nobody thinks anything of being pushed until it goes wrong: what they make of being told
   what to do (S20) does not come into it
 - Whoever studies loses none of what was worked out: there is nothing of theirs to spoil
@@ -4565,8 +4565,8 @@ Still open here:
 - **A thing that is rarer is not shown to be**: the border of its square is P60
 - **Nobody prefers a rarer tool** when there are two to hand, and nobody is told a thing is rare
 
-### S55 — Current, and things that break down (needs S54 and S15) — under way
-Of its three parts the well and current are done. Wear and mending are not.
+### S55 — Current, and things that break down (needs S54 and S15) — done
+Built in three parts, each its own commit: the well, current, and wear and mending.
 Asked on 2026-10-08, with S64 and after it, in two batches, and answered:
 - **With no current, what runs on it stops.** Not the recommendation, which was that it only
   lose what current gave it over working without
@@ -4640,20 +4640,31 @@ Still open here, of current:
 - **There is no switch on screen**, nor any mark on what has stopped: P60
 - **The mechanic of a workshop that has stopped is left with nothing to do**, and says nothing
 
-How the rest is to be built, worked out on 2026-10-08 and not yet done:
-- **In three parts, each its own commit**: the well; current and switches; wear and mending
-- **The well is one more kind of post for the job of drawing water**, slower than the tank: a
-  job may have more than one kind of post, and a kind of post says how fast it is worked
-  against any other. So a second hand can draw water, which one tank never allowed (S53). The
-  opening of a new settlement has a well drawn where it had a tank, since there is no
-  generator yet. In a save from before, a tank in a settlement with no generator is a well
-- **What a kind of thing draws and what a generator gives are whole numbers in its data**, and
-  a better generator gives more by its rarity in place of burning less (S54). Whatever stands
-  is switched on or off, and when it was last switched on is kept, to know what goes off first
-- **Fuel is burnt by how much is drawn and for how long**: a lamp by night, a post while it is
-  worked. What is burnt is kept as a part of a unit until it comes to a whole one
-- **A post has a condition**, as an item has, and mending one that has broken down is a site
-  on it for the mechanic, with scrap, laid by itself when it breaks
+Wear and mending, done:
+- **A post has a condition, of a hundred**, and loses a quarter of one for every hour it is
+  worked, twice that while whoever works it is pushing. Only posts wear: not a bed, nor a store
+- **Worn out, it breaks down**: it is said, nobody works at it or uses it, and it cannot be made
+  better until it is mended
+- **Mending is a site on it, laid by itself when it breaks**, in the charge of whoever holds
+  the workshop: 2 of scrap carried to it and two hours of work, as anything is built (S16)
+- **Only the mechanic mends.** With none it waits, and it is theirs within the hour when
+  somebody takes the workshop
+- **A push that goes wrong may break the post outright**, the fourth way of the four the user
+  chose (S52)
+- The save went to version 47: `condition` on whatever stands
+- Over eighteen seeds of ten weeks, against the same before it: as many alive and nobody dead,
+  two posts broken down in a run and two mended, and 4 of scrap the less for it
+
+Decided without asking, of wear:
+- **How fast a post wears and what mending takes are first guesses**: a post worked every day
+  breaks down about once in two months
+- **A mechanic mends without current**: it is the workshop that needs it, not the hands
+- **Nothing is looked over before it breaks.** The user chose wear and accidents, not rounds
+
+Still open here, of wear:
+- **How worn a post is is not shown**, nor that it has broken down but in the log: P60, with
+  the bar on each thing in the inventory that the user asked for
+- **A broken workshop is mended like any other post**, by the mechanic whose post it is
 
 ### S65 — What goes off (needs S51 and S64) — planned
 From the user's answer about how things break (S55): "algunas comida y algunos consumibles que

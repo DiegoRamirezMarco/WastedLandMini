@@ -62,6 +62,7 @@ from simulation.work.craft import CraftResult, Discovery
 from simulation.work.craft_system import CraftSystem
 from simulation.work.construction import ConstructionSystem
 from simulation.work.upgrades import UpgradeSystem
+from simulation.work.wear import WearSystem
 from simulation.work.expedition_system import ExpeditionSystem
 from simulation.work.research import ResearchResult, ResearchState, ResearchSystem
 from simulation.work.rush import RushSystem
@@ -193,6 +194,8 @@ class SimulationWorld:
     construction: ConstructionSystem = field(default_factory=ConstructionSystem)
     # How good what stands is, and the making of it better (S54).
     upgrades: UpgradeSystem = field(default_factory=UpgradeSystem)
+    # Posts that wear, break down and are mended (S55).
+    wear: WearSystem = field(default_factory=WearSystem)
     # Ground marked out for what somebody has agreed to put up, by site ID.
     sites: dict[str, BuildSite] = field(default_factory=dict)
     site_count: int = 0
@@ -234,6 +237,7 @@ class SimulationWorld:
         self.items.tick_world(self)
         self.staffing.tick(self)
         self.construction.tick(self)
+        self.wear.tick(self)
         self.research.tick(self)
         self.crafts.tick(self)
         self.happenings.tick(self)

@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `46` |
+| `version` | `47` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -29,7 +29,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `map_id` | ID of the map in `data/maps/` |
 | `terrain`, `rooms` | The live terrain grid and stable room records after changes made in Urbanismo |
 | `urbanism` | Stable placement counters and the terrain kept below constructed buildings, so they can be moved or removed later |
-| `interactables` | Placed objects: `id`, `kind`, tile `x` and `y`, and `level` (how good it is, from 1: the place of its rarity among those of `data/rarities.json`), and for what runs on current `on` and `switched_at` (the game minute it was last switched on) |
+| `interactables` | Placed objects: `id`, `kind`, tile `x` and `y`, and `level` (how good it is, from 1: the place of its rarity among those of `data/rarities.json`), for what runs on current `on` and `switched_at` (the game minute it was last switched on), and `condition` (how much is left in a post, of a hundred: at nothing it has broken down) |
 | `sites`, `site_count` | What is being built: `id`, `kind` (`object` or `building`), `what` (the object kind or blueprint ID), tile `x` and `y`, `in_charge` (the resident who agreed to it), `delivered` (units brought so far, per item definition), `progress` (minutes of work done) and `started_at`; and the counter behind site IDs |
 | `salvage` | What somebody has been told to take apart: `object_id`, `resident_id` and `progress` (minutes of work done) |
 | `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `attributes` (`strength`, `constitution`, `dexterity`, `mind` and `senses` from 1 to 10, or `null` for somebody not asked yet), `trade` (minutes at each job, by job ID), `makes` (the day each thing they know how to make was learned, by discovery ID), `lessons` (minutes of being shown each thing they are learning), `dosed_with`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `pushing_until`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them), `doing` (what they are at for having been told, as `kind` and `target_id`, or `null`), `orders` (what they were told and have not got to, the next first, each the same way) and `free_will` (false for somebody who does nothing unasked) |
@@ -84,6 +84,8 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 47** added `condition` on whatever stands (S55). In a save from before everything
+  is whole. A site may be of `kind` `repair`, and then `what` is the ID of the thing being mended.
 - **Version 46** added `on` and `switched_at` on whatever stands, and `power_burnt`: the part
   of a unit of fuel burnt since the last whole one (S55). In a save from before everything
   is switched on and nothing is part burnt. A water tank in a settlement with nothing that
