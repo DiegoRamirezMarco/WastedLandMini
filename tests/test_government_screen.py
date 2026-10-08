@@ -4,6 +4,7 @@ import unittest
 import pygame
 
 from scenes.hud import GOVERNMENT_INTENT, JOBS_INTENT
+from simulation.residents.activity import PROTEST_ACTION, Activity
 from ui.government_board import (
     CHOOSE_LABEL,
     CONFIRM_LABEL,
@@ -12,6 +13,26 @@ from ui.government_board import (
     law_lines,
     status_lines,
 )
+from ui.law_board import (
+    CHANGE_LABEL,
+    ENACT_LABEL,
+    KINDS_TAB,
+    LAWS_TAB,
+    ODD_TAB,
+    REPEAL_LABEL,
+    VOTE_LABEL,
+    decided_at_once,
+    degree_intent,
+    enact_intent,
+    item_intent,
+    laws_of,
+    named_items,
+    picked_degree,
+    picked_params,
+    repeal_intent,
+    tab_intent,
+)
+from ui.law_board import status_lines as law_status_lines
 
 
 class GovernmentScreenTests(unittest.TestCase):
@@ -119,6 +140,141 @@ class GovernmentScreenTests(unittest.TestCase):
         self.assertEqual(len(set(lines.values())), len(lines), "no two kinds read the same")
         self.assertIn("consejo de 3", lines["council"])
         self.assertIn("75%", lines["commune"])
+
+
+class LawsOnScreenTests(unittest.TestCase):
+    """The laws on the government's panel, for the player to put, change and do away with (P51)."""
+
+    def setUp(self) -> None:
+        for variable in ("SDL_VIDEODRIVER", "SDL_AUDIODRIVER"):
+            self.addCleanup(GovernmentScreenTests._restore_driver, variable, os.environ.get(variable))
+            os.environ[variable] = "dummy"
+        from game.game import Game
+
+        self.game = Game(illustrations_dir=None, voices_dir=None, start_in_menu=False)
+        self.addCleanup(pygame.quit)
+        self.view, self.hud, self.world = self.game.global_view, self.game.global_view.hud, self.game.world
+
+    def _governed(self, kind: str) -> None:
+        self.world.politics.leadership.establish(self.world, kind)
+        self.hud.toggle_government()
+        self._press(tab_intent(LAWS_TAB))
+
+    def _button(self, intent):
+        return next((button for button in self.hud.buttons if button.intent == intent), None)
+
+    def _press(self, intent) -> None:
+        button = self._button(intent)
+        self.assertIsNotNone(button, intent)
+        self.view.click(button.rect.center)
+        self.view.render()
+
+    def _listed(self) -> set[str]:
+        return {button.intent[1] for button in self.hud.buttons if button.intent[:1] == ("law_enact",)}
+
+    def test_the_panel_has_a_tab_for_the_laws_and_one_for_the_odd_ones(self) -> None:
+        self._governed("strong_mayor")
+        self.assertEqual(self.hud.government_tab, LAWS_TAB)
+        laws = self.world.registries.laws.laws
+        serious = [law_id for law_id, law in laws.items() if not law.absurd]
+        self.assertEqual([law.law_id for law in laws_of(self.world, LAWS_TAB)], serious)
+        self.assertEqual(self._listed(), set(serious), "every one of them has its button, and fits")
+        board = self.hud.government_rect()
+        self.assertTrue(self.hud.layout.map.contains(board))
+        put = [button for button in self.hud.buttons if button.intent[:1] == ("law_enact",)]
+        self.assertTrue(all(board.contains(button.rect) for button in put))
+        self._press(tab_intent(ODD_TAB))
+        self.assertEqual(self._listed(), {law_id for law_id, law in laws.items() if law.absurd})
+        self._press(tab_intent(KINDS_TAB))
+        self.assertEqual(self._listed(), set(), "and back on how they are governed there are none")
+
+    def test_under_a_mayor_a_law_is_decreed_and_is_in_force_there_and_then(self) -> None:
+        self._governed("strong_mayor")
+        self.assertEqual(self._button(enact_intent("curfew")).label, ENACT_LABEL)
+        self.assertIsNone(self._button(repeal_intent("curfew")))
+        self._press(degree_intent("curfew", 1))
+        self._press(enact_intent("curfew"))
+        held = self.world.government.laws["curfew"]
+        self.assertEqual((held.degree, held.imposed), (2, True))
+        self.assertIn("decretado", self.hud.notice)
+        self.assertIsNone(self._button(enact_intent("curfew")), "as it stands there is nothing to put")
+        self.assertEqual(self._button(repeal_intent("curfew")).label, REPEAL_LABEL)
+        self._press(degree_intent("curfew", -1))
+        self._press(degree_intent("curfew", -1))
+        self.assertEqual(self._button(enact_intent("curfew")).label, CHANGE_LABEL)
+        self._press(enact_intent("curfew"))
+        self.assertEqual(self.world.government.laws["curfew"].degree, 0)
+        self._press(repeal_intent("curfew"))
+        self.assertEqual(self.world.government.laws, {})
+
+    def test_how_far_a_law_goes_stops_at_either_end(self) -> None:
+        self._governed("strong_mayor")
+        law = self.world.registries.laws.laws["curfew"]
+        for _ in range(6):
+            self._press(degree_intent("curfew", 1))
+        self.assertEqual(picked_degree(self.world, law, self.hud.law_degrees), len(law.degrees) - 1)
+        for _ in range(6):
+            self._press(degree_intent("curfew", -1))
+        self.assertEqual(picked_degree(self.world, law, self.hud.law_degrees), 0)
+        self.assertIsNone(self._button(degree_intent("rest_day", 1)), "a law that goes one way has nothing to pick")
+
+    def test_under_an_assembly_it_is_put_to_a_vote_and_the_panel_says_so(self) -> None:
+        self._governed("direct_democracy")
+        self.assertFalse(decided_at_once(self.world))
+        self.assertEqual(self._button(enact_intent("rest_day")).label, VOTE_LABEL)
+        self._press(enact_intent("rest_day"))
+        self.assertEqual(self.world.government.laws, {}, "nothing is done until it is voted")
+        self.assertEqual(len(self.world.government.proposals), 1)
+        width = self.hud.government_rect().width
+        said = " ".join(text for text, _ in law_status_lines(self.view.font, self.world, width))
+        self.assertIn("Se vota en", said)
+        self.assertIn("se vota:", said)
+        self._press(enact_intent("rest_day"))
+        self.assertEqual(len(self.world.government.proposals), 1, "the same thing is not put twice")
+        self.assertTrue(self.hud.notice)
+
+    def test_a_law_that_names_a_food_is_told_which(self) -> None:
+        self._governed("strong_mayor")
+        self._press(tab_intent(ODD_TAB))
+        law = self.world.registries.laws.laws["banned_food"]
+        options = named_items(self.world)
+        self.assertGreater(len(options), 1)
+        self.assertEqual(picked_params(self.world, law, self.hud.law_items), {"item": options[0]})
+        self._press(item_intent("banned_food"))
+        self.assertEqual(picked_params(self.world, law, self.hud.law_items), {"item": options[1]})
+        self._press(enact_intent("banned_food"))
+        self.assertEqual(self.world.government.laws["banned_food"].params, {"item": options[1]})
+
+    def test_with_no_government_there_are_no_laws_to_put(self) -> None:
+        self.world.government.choosing_until = None
+        self.hud.toggle_government()
+        self._press(tab_intent(LAWS_TAB))
+        self.assertEqual(self._listed(), set())
+        said = " ".join(text for text, _ in law_status_lines(self.view.font, self.world, 300))
+        self.assertIn("Sin gobierno", said)
+
+    def test_whoever_is_out_in_the_square_carries_a_placard_and_the_panel_counts_them(self) -> None:
+        self._governed("strong_mayor")
+        world = self.world
+        self._press(degree_intent("long_hours", 1))
+        self._press(enact_intent("long_hours"))
+        protests = world.politics.protests
+        world.clock.hour, world.clock.minute = protests.settings(world).hours[0], 0
+        out = protests.call(world).get("long_hours", [])
+        self.assertTrue(out, "longer hours put on them bring somebody out")
+        centre = protests.square(world, (0, 0))
+        for resident_id in out:
+            resident = world.residents[resident_id]
+            resident.x, resident.y = centre
+            resident.activity = Activity(PROTEST_ACTION, minutes_left=60, item_id="long_hours")
+        self.view.centre_on_resident(out[0])
+        self.view.render()
+        self.assertIn(out[0], self.view.placards)
+        self.assertTrue(self.view.protesting(world.residents[out[0]]))
+        others = [resident_id for resident_id in world.residents if resident_id not in out]
+        self.assertTrue(all(resident_id not in self.view.placards for resident_id in others))
+        said = " ".join(text for text, _ in law_status_lines(self.view.font, world, 300))
+        self.assertIn("En la plaza contra Jornada larga", said)
 
 
 if __name__ == "__main__":

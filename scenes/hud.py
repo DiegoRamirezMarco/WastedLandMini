@@ -30,7 +30,8 @@ from ui.affect_board import PANEL_WIDTH as AFFECT_WIDTH
 from ui.fund_board import PANEL_WIDTH as FUND_WIDTH
 from ui.fund_board import FundEntry, draw_fund_board, field_intent, field_rects, fund_board_height, fund_buttons
 from ui.government_board import PANEL_WIDTH as GOVERNMENT_WIDTH
-from ui.government_board import choose_buttons, draw_government_board, government_board_height
+from ui.government_board import draw_government_board, government_board_height, government_buttons
+from ui.law_board import KINDS_TAB
 from ui.inventory_view import (
     container_item_hitboxes,
     container_panel_height,
@@ -235,6 +236,11 @@ class Hud:
         self.drawable = drawable
         # The kind of government the player has pressed for once, and has to press for again.
         self.government_armed: str | None = None
+        # The tab of the government's panel that is open, and what has been picked of each law
+        # there before it is put: how far it goes, and what it names.
+        self.government_tab = KINDS_TAB
+        self.law_degrees: dict[str, int] = {}
+        self.law_items: dict[str, str] = {}
         # What the player can tell whoever is selected, while they stand stopped to be told: the
         # kind of thing chosen so far, and the thing, on the way to who or what it is about.
         self.affect_open = False
@@ -331,7 +337,10 @@ class Hud:
         if self.research_open:
             return fixed + study_buttons(self.font, self.research_rect(), self.world)
         if self.government_open:
-            return fixed + choose_buttons(self.font, self.government_rect(), self.world, self.government_armed)
+            return fixed + government_buttons(
+                self.font, self.government_rect(), self.world, self.government_armed, self.government_tab,
+                self.law_degrees, self.law_items,
+            )
         if self.fund_open:
             return fixed + fund_buttons(self.font, self.fund_rect(), self.world, self.fund_entry, self.drawable)
         if self.trading:
@@ -551,7 +560,7 @@ class Hud:
         return self._float(RESEARCH_WIDTH, research_board_height(self.world, self.font))
 
     def government_rect(self) -> pygame.Rect:
-        return self._float(GOVERNMENT_WIDTH, government_board_height(self.font, self.world))
+        return self._float(GOVERNMENT_WIDTH, government_board_height(self.font, self.world, self.government_tab))
 
     def fund_rect(self) -> pygame.Rect:
         return self._float(FUND_WIDTH, fund_board_height(self.font, self.world, self.fund_entry))
@@ -625,7 +634,8 @@ class Hud:
             draw_research_board(self.canvas, self.font, self.research_rect(), self.world)
         if self.government_open:
             draw_government_board(
-                self.canvas, self.font, self.government_rect(), self.world, self.government_armed, band_hue("government")
+                self.canvas, self.font, self.government_rect(), self.world, self.government_armed, band_hue("government"),
+                self.government_tab, self.law_degrees, self.law_items,
             )
         if self.fund_open:
             draw_fund_board(

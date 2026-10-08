@@ -1,5 +1,6 @@
 """Panel on how the settlement is governed: its kind, who holds its seats, how things stand, the
-laws in force, and the kinds there are to choose from."""
+laws in force, and the kinds there are to choose from. Its other tabs list the laws there are,
+for the player to put, change and do away with (P51)."""
 
 from dataclasses import dataclass
 
@@ -11,12 +12,15 @@ from simulation.politics.government import COUNCIL, EVERYONE, LEADER, NOBODY, SE
 from simulation.world import SimulationWorld
 from ui.button import HEIGHT as BUTTON_HEIGHT
 from ui.button import Button
+from ui.law_board import KINDS_TAB, LAW_TABS, TABS, draw_laws, law_buttons, laws_height, tab_intent
 from ui.panel import draw_bar, draw_panel
 
 PANEL_WIDTH = 330
 PADDING = 6
 # The band its title sits on, and the room under it.
 BAND = LINE_HEIGHT + PADDING + 1
+# The row of tabs under the band.
+TAB_ROW = BUTTON_HEIGHT + 3
 ROW_HEIGHT = LINE_HEIGHT * 2 + 2
 TITLE = "Gobierno"
 CHOOSE_LABEL = "Elegir"
@@ -127,7 +131,7 @@ class Parts:
 
 def _parts(font: BitmapFont, world: SimulationWorld) -> Parts:
     width = PANEL_WIDTH - PADDING * 2
-    status = BAND + 3
+    status = BAND + 3 + TAB_ROW
     lines = sum(len(font.wrap(text, width)) for text, _ in status_lines(world))
     bars = status + lines * LINE_HEIGHT + 3
     governed = world.government.kind is not None
@@ -138,8 +142,38 @@ def _parts(font: BitmapFont, world: SimulationWorld) -> Parts:
     return Parts(status, bars, laws, kinds, hint, hint + LINE_HEIGHT * 2 + PADDING)
 
 
-def government_board_height(font: BitmapFont, world: SimulationWorld) -> int:
+def government_board_height(font: BitmapFont, world: SimulationWorld, tab: str = KINDS_TAB) -> int:
+    if tab in LAW_TABS:
+        return BAND + 3 + TAB_ROW + laws_height(font, world, tab, PANEL_WIDTH - PADDING * 2)
     return _parts(font, world).bottom
+
+
+def tab_buttons(font: BitmapFont, rect: pygame.Rect) -> list[Button]:
+    """The tabs of the panel: how they are governed, and the laws there are."""
+    buttons = []
+    x = rect.x + PADDING
+    for tab, label in TABS:
+        button = Button.at(font, x, rect.y + BAND + 2, label, tab_intent(tab))
+        buttons.append(button)
+        x = button.rect.right + 2
+    return buttons
+
+
+def government_buttons(
+    font: BitmapFont,
+    rect: pygame.Rect,
+    world: SimulationWorld,
+    armed: str | None,
+    tab: str = KINDS_TAB,
+    degrees: dict[str, int] | None = None,
+    items: dict[str, str] | None = None,
+) -> list[Button]:
+    """Every button of the panel as it stands: its tabs, and those of the tab that is open."""
+    tabs = tab_buttons(font, rect)
+    if tab in LAW_TABS:
+        top = rect.y + BAND + 3 + TAB_ROW
+        return tabs + law_buttons(font, rect, top, world, tab, degrees or {}, items or {})
+    return tabs + choose_buttons(font, rect, world, armed)
 
 
 def can_choose(world: SimulationWorld) -> bool:
@@ -172,10 +206,18 @@ def draw_government_board(
     world: SimulationWorld,
     armed: str | None = None,
     band_color: Color | None = None,
+    tab: str = KINDS_TAB,
+    degrees: dict[str, int] | None = None,
+    items: dict[str, str] | None = None,
 ) -> None:
     draw_panel(target, rect, band=BAND, band_color=band_color)
     x, width = rect.x + PADDING, rect.width - PADDING * 2
     font.draw(target, TITLE, (x, rect.y + PADDING - 1), PALETTE["paper"])
+    for button in tab_buttons(font, rect):
+        button.draw(target, font, active=button.intent == tab_intent(tab))
+    if tab in LAW_TABS:
+        draw_laws(target, font, rect, rect.y + BAND + 3 + TAB_ROW, world, tab, degrees or {}, items or {})
+        return
     parts = _parts(font, world)
     floor = rect.bottom - PADDING
 

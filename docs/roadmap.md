@@ -3613,8 +3613,7 @@ Decided without asking:
   nothing worse comes of it. Trouble that grows is still S29
 
 Still open here:
-- None of it is on screen: P51. Until then a law is put with `ProposeCommand`, and nobody
-  carries a banner
+- It is on screen since P51: the laws on the government's panel, and placards in the square
 - Whoever leads is a representative in name: what they think of a law of the player's tells
   on their own vote where there is one, and on nothing else
 - Nobody campaigns against a law before it is voted, and a council that votes a law in
@@ -3767,6 +3766,35 @@ Still open here:
 - Nobody is put to a job, or kept at one, for the level they have at it (S8)
 - A new thing has no part in what residents like until they have tried it (S19)
 - What each level takes and gives is a first guess
+
+### P51 — Laws to put, and placards in the square (needs S45) — done
+- **The government's panel has three tabs**: how they are governed, as it was (P34); the
+  laws; and the odd laws. Fourteen and eight, each on a line of its own, and all of them fit
+- **How a law comes in here is said at the top**: at once where one person decides, or by a
+  vote, with the hours it is talked over. Under it, what waits to be voted and in how long,
+  and who is out in the square against what, how many and for how many days
+- **Each law says how far it goes**, with an arrow either side for one that goes further or
+  less far, and what it names for one that names a food. What is picked is kept on the panel
+  until it is put
+- **`Decretar` puts it in force** where one person decides, and reads `A votar` where it is
+  voted. A law in force reads `Quitar`, and `Cambiar` beside it once another degree is
+  picked. What comes of it is said in the notice, and a refusal sounds as one
+- **Whoever stands in the square against a law holds up a placard**, a board on a stick with
+  a thing crossed out, shaken as they stand. The list of residents says they are out
+  protesting
+- **The square is in the plaza**, by the fire, in the settlement that comes ready made, and
+  is in Urbanismo to be put down anywhere
+
+Decided without asking: the laws go on the government's panel as tabs, and not in an entry
+of the menu of their own, which has no room for another.
+
+Still open here:
+- What a law does at each degree is its name and nothing more: nobody is told what each
+  resident makes of it before it is put
+- The votes of a law that is voted are not shown, nor who can be spoken to: `LobbyCommand`
+  is still a command (P26)
+- The currency is still put from `Fondo`, as it was, and comes in as a law does (S45)
+- The square has the game's plain sprite on the canvas, and its picture on the window
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

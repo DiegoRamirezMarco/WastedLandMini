@@ -31,6 +31,24 @@ def draw_mark(target: pygame.Surface, icon: pygame.Surface, top_centre: tuple[in
     return rect
 
 
+PLACARD_SIZE = (15, 10)
+PLACARD_STICK = 5
+
+
+def draw_placard(target: pygame.Surface, top_centre: tuple[int, int], tilt: int = 0) -> pygame.Rect:
+    """A board on a stick with a thing crossed out on it, held up over `top_centre`'s column:
+    what whoever is out against a law carries. `tilt` leans it a pixel one way or the other."""
+    width, height = PLACARD_SIZE
+    board = pygame.Rect(top_centre[0] - width // 2 + tilt, top_centre[1], width, height)
+    target.fill(PALETTE["rust_dark"], (top_centre[0] - 1, board.bottom, 2, PLACARD_STICK))
+    pygame.draw.rect(target, PALETTE["paper"], board)
+    pygame.draw.rect(target, PALETTE["ink"], board, 1)
+    inner = board.inflate(-6, -4)
+    pygame.draw.line(target, PALETTE["ember"], inner.topleft, (inner.right - 1, inner.bottom - 1), 2)
+    pygame.draw.line(target, PALETTE["ember"], (inner.right - 1, inner.top), (inner.left, inner.bottom - 1), 2)
+    return board
+
+
 def draw_speech(
     target: pygame.Surface, font: BitmapFont, rect: pygame.Rect, text: str, towards: int = -1, shout: bool = False
 ) -> None:

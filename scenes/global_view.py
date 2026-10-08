@@ -99,6 +99,7 @@ from simulation.commands import (
     LockHouseCommand,
     NameBuildingCommand,
     ProposeBarterCommand,
+    ProposeCommand,
     ProposeCurrencyCommand,
     ProposeObjectCommand,
     ProposeSaleCommand,
@@ -129,6 +130,8 @@ from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
 from simulation.tastes.taste_system import FOUND_OUT_EVENT, REACTION_EVENT
 from simulation.work.construction import BUILD_ACTION, FINISHED_EVENT
 from simulation.work.work_system import WORK_ACTION
+from simulation.politics.proposal import ENACT_LAW, REPEAL_LAW
+from simulation.residents.activity import PROTEST_ACTION
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
 from skeleton.plan import IDLE_CLIP, builtin_plan
@@ -138,7 +141,8 @@ from ui.fund_board import BARTER_BACK, CURRENCY, RENAME, FundEntry
 from ui.trade_board import CART_INTENT as TRADE_CART_INTENT
 from ui.trade_board import DEAL_INTENT as TRADE_DEAL_INTENT
 from ui.trade_board import DRAW_INTENT as TRADE_DRAW_INTENT
-from ui.bubble import MARK_SIZE, MARK_TAIL, draw_mark
+from ui.bubble import MARK_SIZE, MARK_TAIL, PLACARD_SIZE, PLACARD_STICK, draw_mark, draw_placard
+from ui.law_board import named_items, picked_degree, picked_params
 from ui.labels import away_residents, has_birthday
 from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, tile_at
 from ui.panel import draw_item, draw_panel
@@ -430,6 +434,8 @@ class GlobalView:
         # Where the bar that says how far along a resident is with their task was last drawn,
         # by resident ID.
         self.task_bars: dict[str, pygame.Rect] = {}
+        # Where the placard of each resident out in the square was drawn this frame, by resident ID.
+        self.placards: dict[str, pygame.Rect] = {}
         # What sounds the player's own clicks, if anything does: given the name of what was done.
         self.sound: Callable[[str], object] | None = None
         # Whoever the player has stopped to tell something, while they are choosing what.
@@ -744,6 +750,7 @@ class GlobalView:
         self.hitboxes = {}
         self.container_hitboxes = {}
         self.task_bars = {}
+        self.placards = {}
         self.sign_boxes = {}
         self.interior.render(room)
         self.hud.render()
@@ -1029,6 +1036,10 @@ class GlobalView:
             self._propose_sale(intent[1], intent[2])
         elif isinstance(intent, tuple) and intent[0] == "choose_government":
             self._choose_government(intent[1])
+        elif isinstance(intent, tuple) and intent[0] == "government_tab":
+            self.hud.government_tab, self.hud.government_armed = intent[1], None
+        elif isinstance(intent, tuple) and intent[0] in ("law_degree", "law_item", "law_enact", "law_repeal"):
+            self._law(intent)
         elif isinstance(intent, tuple) and intent[0] == "trade_step":
             self.hud.trade_step(intent[1], intent[2], intent[3])
         elif intent == TRADE_DEAL_INTENT:
@@ -1217,6 +1228,37 @@ class GlobalView:
         elif not self.world.affect.is_held(self.world, resident_id):
             if not self.world.apply_command(HoldResidentCommand(resident_id)).ok:
                 self._affect_back(close=True)
+
+    def _law(self, intent: tuple) -> None:
+        """Something pressed beside a law on the government's panel: how far it would go, what
+        it would name, putting it or doing away with it. How it comes in is the government's."""
+        hud = self.hud
+        law = self.world.registries.laws.laws.get(intent[1])
+        if law is None:
+            return
+        if intent[0] == "law_degree":
+            degree = picked_degree(self.world, law, hud.law_degrees) + int(intent[2])
+            hud.law_degrees[law.law_id] = max(0, min(degree, len(law.degrees) - 1))
+            return
+        if intent[0] == "law_item":
+            options = named_items(self.world)
+            now = picked_params(self.world, law, hud.law_items).get("item", "")
+            if options:
+                hud.law_items[law.law_id] = options[(options.index(now) + 1) % len(options) if now in options else 0]
+            return
+        if intent[0] == "law_enact":
+            command = ProposeCommand(
+                ENACT_LAW, law=law.law_id, degree=picked_degree(self.world, law, hud.law_degrees),
+                params=picked_params(self.world, law, hud.law_items),
+            )
+        else:
+            command = ProposeCommand(REPEAL_LAW, law=law.law_id)
+        result = self.world.apply_command(command)
+        hud.notify(result.message)
+        if result.ok:
+            hud.law_degrees.pop(law.law_id, None)
+        else:
+            self._sound("refuse")
 
     def _choose_government(self, government_id: str) -> None:
         """Give the settlement a kind of government. It is asked for twice: once to say which, and once to mean it."""
@@ -1413,6 +1455,7 @@ class GlobalView:
         self.hitboxes = {}
         self.container_hitboxes = {}
         self.task_bars = {}
+        self.placards = {}
         self._overlays = []
         self._doll_draws = []
         self._held = []
@@ -2635,6 +2678,11 @@ class GlobalView:
             return None
         return activity.item_id if activity.target_id is not None and activity.partner_id is None else None
 
+    def protesting(self, resident: Resident) -> bool:
+        """Whether a resident is standing in the square against a law right now."""
+        activity = resident.activity
+        return activity is not None and activity.action == PROTEST_ACTION and not activity.path
+
     def _draw_overhead(
         self, resident: Resident, top_centre: tuple[int, int], with_name: bool, resting: bool = False, unseen: bool = False
     ) -> None:
@@ -2668,6 +2716,10 @@ class GlobalView:
             y -= ITEM_ICON_SIZE[1] + 1
             draw_item(self.canvas, self.icons, in_hand, pygame.Rect(x - ITEM_ICON_SIZE[0] // 2, y, *ITEM_ICON_SIZE))
         bob = int(self.time * ANIMATION_FPS) % 2
+        if self.protesting(resident):
+            # Out in the square against a law: a placard held up, and shaken.
+            y -= PLACARD_SIZE[1] + PLACARD_STICK + 1
+            self.placards[resident.resident_id] = draw_placard(self.canvas, (x, y - bob), tilt=bob)
         for icon in icons:
             if icon is None:
                 continue
