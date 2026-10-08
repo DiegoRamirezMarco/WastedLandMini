@@ -156,10 +156,12 @@ class WorkSystem:
         if item.broken:
             return None
         definition = world.registries.items.resolve(item.definition_id)
+        # A rarer tool is that much faster (S64).
+        better = world.items.better(world, item)
         if job.tool is not None and job.tool.tag in definition.tags:
-            return job.tool.speed
+            return job.tool.speed * better
         if tool_tag(job.job_id) in definition.tags:
-            return max(1.0, definition.properties.get("speed", 1.0))
+            return max(1.0, definition.properties.get("speed", 1.0)) * better
         return None
 
     def candidate(self, world: "SimulationWorld", resident: Resident) -> ScoredAction | None:
@@ -460,7 +462,8 @@ class WorkSystem:
             resident.inventory.take_unit(material.instance_id)
             world.ledger.record(world, material.definition_id, -1, USED, job.job_id)
         units = how.batch if how is not None else 1
-        world.stock(target, making, units, None)
+        # What a post makes is as rare as the post (S64).
+        world.stock(target, making, units, None, placed.level)
         world.ledger.record(world, making, units, MADE, job.job_id, resident.resident_id, placed.object_id)
         resident.work_progress = 0
         if tool is not None:

@@ -68,5 +68,16 @@
     "kinds": [
       "generator"
     ]
+  },
+  "found": {
+    "weights": {
+      "common": 86,
+      "uncommon": 10,
+      "rare": 3,
+      "epic": 0.8,
+      "legendary": 0.17,
+      "mythic": 0.03
+    },
+    "risk_factor": 3
   }
 }

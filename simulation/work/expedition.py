@@ -71,6 +71,8 @@ class Expedition:
     find_at: int | None = None
     # The one item they went out for, when it is not whatever turns up: all they find is that.
     fetch: str | None = None
+    # Whether they went on at something worth a risk: what they bring is the likelier to be rare (S64).
+    risked: bool = False
 
 
 def expedition_rule_from_data(job_id: str, data: dict[str, Any]) -> ExpeditionRule:

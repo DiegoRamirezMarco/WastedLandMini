@@ -109,12 +109,22 @@ class ItemSystem:
                 effects["stress"] = effects.get("stress", 0.0) - liked / 100.0 * world.registries.tastes.meal_stress
         return effects
 
-    def take_in(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> None:
+    def better(self, world: "SimulationWorld", item: ItemInstance | None) -> float:
+        """By how much a thing does what it does better than a common one, for how rare it is (S64)."""
+        return world.upgrades.settings(world).of(item.level if item is not None else 1).better
+
+    def take_in(
+        self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition, better: float = 1.0
+    ) -> None:
         """Have a resident eat, drink or use an item: it is taken as their tastes have them, it
-        does what it does to their needs, and what is eaten may turn on them."""
+        does what it does to their needs, and what is eaten may turn on them. A rarer one
+        does them that much more good, and no more harm."""
         # Tastes they did not have for it are made first, so that the pleasure of it is theirs.
         world.tastes.react(world, resident, definition, self.how_taken(definition))
-        resident.needs.apply(self.use_effects(world, resident, definition))
+        effects = self.use_effects(world, resident, definition)
+        if better != 1.0:
+            effects = {need: delta * better if delta < 0 else delta for need, delta in effects.items()}
+        resident.needs.apply(effects)
         if definition.substance is not None:
             world.substances.taken(world, resident, definition)
             if resident.resident_id not in world.residents:
@@ -146,7 +156,8 @@ class ItemSystem:
     def wear(self, world: "SimulationWorld", holder: Resident, item: ItemInstance) -> None:
         """Take the toll of one use on an item. A thing worn right out breaks, and does nothing until repaired."""
         definition = world.registries.items.resolve(item.definition_id)
-        toll = definition.properties.get("wear", 0.0)
+        # A rarer thing lasts that much longer.
+        toll = definition.properties.get("wear", 0.0) / self.better(world, item)
         if toll <= 0 or item.broken:
             return
         item.condition = max(0.0, item.condition - toll)
@@ -198,7 +209,8 @@ class ItemSystem:
         return max(
             choices,
             key=lambda item: (
-                self._relief(resident, self.use_effects(world, resident, resolve(item.definition_id))),
+                self._relief(resident, self.use_effects(world, resident, resolve(item.definition_id)))
+                * self.better(world, item),
                 -sum(resolve(item.definition_id).effects.values())
                 + world.tastes.liking(world, resident, resolve(item.definition_id)) * taste,
                 item.instance_id,
@@ -207,6 +219,14 @@ class ItemSystem:
 
     def take_food(self, world: "SimulationWorld", resident: Resident, container_id: str, category: str) -> str | None:
         """Take one unit of the best food out of a container. Returns its definition ID."""
+        taken = self.take_meal(world, resident, container_id, category)
+        return taken[0] if taken is not None else None
+
+    def take_meal(
+        self, world: "SimulationWorld", resident: Resident, container_id: str, category: str
+    ) -> tuple[str, int] | None:
+        """Take one unit of the best food out of a container. Returns its definition ID and
+        how rare it was, which is gone with the unit."""
         food = self.best_food(world, resident, container_id, category)
         if food is None:
             # A wasted walk to one empty pot is not news. Nothing to eat anywhere is.
@@ -222,7 +242,7 @@ class ItemSystem:
             world.ledger.record(
                 world, food.definition_id, -1, DRUNK if category == WATER_CATEGORY else EATEN, by=resident.resident_id
             )
-        return food.definition_id
+        return (food.definition_id, food.level)
 
     def _report_no_food(self, world: "SimulationWorld", resident: Resident) -> None:
         """Say that someone found every shelf bare, at most once a day."""
@@ -419,10 +439,11 @@ class ItemSystem:
         definition = world.registries.items.resolve(item.definition_id)
         if definition.category == FOOD_CATEGORY or definition.substance is not None:
             # What is eaten or taken is used up, and it is gone before it can do for them.
+            better = self.better(world, item)
             inventory.take_unit(item.instance_id)
-            self.take_in(world, resident, definition)
+            self.take_in(world, resident, definition, better)
             return
-        self.take_in(world, resident, definition)
+        self.take_in(world, resident, definition, self.better(world, item))
         if RADIO_TAG in definition.tags:
             world.happenings.hear_radio(world, resident)
         self.wear(world, resident, item)
@@ -602,7 +623,7 @@ class ItemSystem:
         definition = resolve(item.definition_id)
         if item.quantity > 1:
             item.quantity -= 1
-            given = world.stock(receiver.inventory, item.definition_id, 1, receiver.resident_id)
+            given = world.stock(receiver.inventory, item.definition_id, 1, receiver.resident_id, item.level)
         else:
             giver.inventory.remove(item.instance_id)
             item.owner_id, item.meant_for = receiver.resident_id, None

@@ -198,14 +198,16 @@ def supply_exchange(world: "SimulationWorld", resident: Resident, rule: SupplyRu
         units = min(on_them.quantity, rule.max_stock - container.count(rule.item)) if on_them is not None else 0
         if units <= 0:
             return None
+        level = on_them.level
         resident.inventory.take_units(on_them.instance_id, units)
-        world.stock(container, rule.item, units, None)
+        world.stock(container, rule.item, units, None, level)
         return f"lleva {units} de {name} a {where}"
     stack = container.stack_of(rule.item, None)
     if stack is None or on_them is not None:
         return None
+    level = stack.level
     units = container.take_units(stack.instance_id, load(world, resident, rule))
-    world.stock(resident.inventory, rule.item, units, None)
+    world.stock(resident.inventory, rule.item, units, None, level)
     return f"coge {units} de {name} de {where}"
 
 
@@ -226,8 +228,9 @@ def exchange(world: "SimulationWorld", resident: Resident, rule: ProduceRule, pl
             units = min(on_them.quantity, room(world, resident, rule, container)) if on_them is not None else 0
             if units <= 0:
                 continue
+            level = on_them.level
             resident.inventory.take_units(on_them.instance_id, units)
-            world.stock(container, item_id, units, None)
+            world.stock(container, item_id, units, None, level)
             left.append(f"{units} de {world.registries.items.resolve(item_id).name}")
         if left:
             return f"lleva {' y '.join(left)} a {where}"
@@ -240,8 +243,8 @@ def exchange(world: "SimulationWorld", resident: Resident, rule: ProduceRule, pl
         stack = wanted_raw(world, resident, rule, container) or _raw_stack(world, rule, container)
         if stack is None:
             return None
-        definition_id = stack.definition_id
+        definition_id, level = stack.definition_id, stack.level
         units = container.take_units(stack.instance_id, load(world, resident, rule))
-        world.stock(resident.inventory, definition_id, units, None)
+        world.stock(resident.inventory, definition_id, units, None, level)
         return f"coge {units} de {world.registries.items.resolve(definition_id).name} de {where}"
     return None

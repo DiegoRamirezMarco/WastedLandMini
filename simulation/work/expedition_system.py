@@ -6,6 +6,7 @@ from simulation.residents.attributes import SENSES
 from simulation.ai.crowd import free_tile
 from simulation.economy.ledger import FOUND
 from simulation.events.event import DomainEvent
+from simulation.rng import SimulationRNG
 from simulation.events.world_event import WEATHER
 from simulation.items.item import ItemInstance
 from simulation.residents.activity import Activity
@@ -134,6 +135,7 @@ class ExpeditionSystem:
             return
         if choice == PUSH_ON:
             trip.finds += settings.push_on_finds
+            trip.risked = True
             trip.danger = min(1.0, trip.danger + settings.push_on_danger)
             trip.returns_at += settings.push_on_minutes
         elif choice == TURN_BACK:
@@ -162,12 +164,16 @@ class ExpeditionSystem:
             found[entry.item] = found.get(entry.item, 0) + 1
         haul = ", ".join(f"{world.registries.items.resolve(item_id).name} ({units})" for item_id, units in found.items())
         kept = self._keeps(world, resident, found) if trip.fetch is None else None
+        # How rare each thing is is drawn apart from everything else, so that it changes
+        # nothing of what is found or of what happens after (S64).
+        dice = SimulationRNG.keyed(world.rng.seed, "found", resident.resident_id, world.clock.total_minutes)
         if kept is not None:
             found[kept] -= 1
-            world.stock(resident.inventory, kept, 1, resident.resident_id)
+            world.stock(resident.inventory, kept, 1, resident.resident_id, world.upgrades.found_level(world, dice, trip.risked))
         for item_id, units in found.items():
+            for _ in range(max(0, units)):
+                world.stock(resident.inventory, item_id, 1, None, world.upgrades.found_level(world, dice, trip.risked))
             if units > 0:
-                world.stock(resident.inventory, item_id, units, None)
                 world.ledger.record(world, item_id, units, FOUND, by=resident.resident_id)
         said = f"{resident.name} vuelve de fuera con {haul}" if haul else f"{resident.name} vuelve de fuera de vacío"
         if kept is not None:
@@ -240,14 +246,16 @@ class ExpeditionSystem:
         container = world.containers.get(placed.object_id)
         if container is None:
             return None
-        left = []
+        # What is left is told by the kind of thing, however many rarities of it there were (S64).
+        units: dict[str, int] = {}
         for item in self._finds_on(world, resident):
             if self._goes_to(world, item) != placed.kind:
                 continue
             resident.inventory.remove(item.instance_id)
-            world.stock(container, item.definition_id, item.quantity, None)
-            left.append(f"{world.registries.items.resolve(item.definition_id).name} ({item.quantity})")
-        if not left:
+            world.stock(container, item.definition_id, item.quantity, None, item.level)
+            units[item.definition_id] = units.get(item.definition_id, 0) + item.quantity
+        if not units:
             return None
+        left = [f"{world.registries.items.resolve(item_id).name} ({count})" for item_id, count in units.items()]
         definition = world.definition_of(placed)
         return f"deja {', '.join(left)} en {definition.article} {definition.name}"

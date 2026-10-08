@@ -21,16 +21,20 @@ class Inventory:
                 return self.items.pop(index)
         return None
 
-    def stack_of(self, definition_id: str, owner_id: str | None) -> ItemInstance | None:
+    def stack_of(self, definition_id: str, owner_id: str | None, level: int | None = None) -> ItemInstance | None:
         """The stack of this kind of item belonging to this owner, if there is one here.
 
-        What is being kept for somebody is never part of it.
+        What is being kept for somebody is never part of it. With `level`, only a stack of
+        things that rare: without, the first there is, of whatever rarity.
         """
         return next(
             (
                 item
                 for item in self.items
-                if item.definition_id == definition_id and item.owner_id == owner_id and item.meant_for is None
+                if item.definition_id == definition_id
+                and item.owner_id == owner_id
+                and item.meant_for is None
+                and (level is None or item.level == level)
             ),
             None,
         )

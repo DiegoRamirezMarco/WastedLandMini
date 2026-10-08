@@ -54,5 +54,7 @@ class Activity:
     partner_id: str | None = None
     intent: str | None = None
     item_id: str | None = None
+    # How rare the unit of food being eaten was: it is gone from the shelf by then (S64).
+    item_level: int = 1
     held_up: int = 0
     ordered: bool = False

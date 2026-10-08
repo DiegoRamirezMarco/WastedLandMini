@@ -209,7 +209,8 @@ class HealthSystem:
         if weapon is None:
             return (1.0, ())
         definition = world.registries.items.resolve(weapon.definition_id)
-        return (definition.properties.get("damage", 1.0), definition.tags)
+        # A rarer weapon hits that much harder (S64).
+        return (definition.properties.get("damage", 1.0) * world.items.better(world, weapon), definition.tags)
 
     def fight_damage(
         self, world: "SimulationWorld", victim: Resident, attacker: Resident, definition: InteractionDefinition

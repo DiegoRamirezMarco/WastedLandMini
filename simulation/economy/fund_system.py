@@ -145,7 +145,7 @@ class FundSystem:
         was = item.owner_id
         if item.quantity > 1:
             item.quantity -= 1
-            item = world.new_item(item.definition_id, 1, None)
+            item = world.new_item(item.definition_id, 1, None, item.level)
         else:
             holder.remove(item.instance_id)
             item.owner_id, item.given_by = None, None
@@ -232,7 +232,7 @@ def hand_over(
     was = item.owner_id
     if item.quantity > 1:
         item.quantity -= 1
-        moved = world.stock(to, item.definition_id, 1, owner_id)
+        moved = world.stock(to, item.definition_id, 1, owner_id, item.level)
     else:
         holder.remove(item.instance_id)
         item.owner_id = owner_id

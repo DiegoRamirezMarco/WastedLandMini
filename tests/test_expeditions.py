@@ -57,7 +57,12 @@ def _scrap(world: SimulationWorld) -> int:
 
 
 def _carried(resident) -> dict[str, int]:
-    return {item.definition_id: item.quantity for item in resident.inventory.items if item.owner_id is None}
+    """How many of each kind of thing somebody carries that is nobody's, of whatever rarity (S64)."""
+    carried: dict[str, int] = {}
+    for item in resident.inventory.items:
+        if item.owner_id is None:
+            carried[item.definition_id] = carried.get(item.definition_id, 0) + item.quantity
+    return carried
 
 
 def _registries_with(file_name: str, old: str, new: str) -> BuiltInRegistries:

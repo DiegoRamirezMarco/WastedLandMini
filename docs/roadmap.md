@@ -4515,7 +4515,7 @@ Still open here:
   on current (S55). Until then it burns less
 - Whether what a better post makes is better too is S64
 
-### S64 — Rarer things (needs S54 and S47) — planned
+### S64 — Rarer things (needs S54 and S47) — done
 What the user's answers to S54 added, cut off as a milestone of its own. Asked what things that
 are carried have a rarity, and where it comes from, they ticked every option and wrote "Todos".
 Asked again on 2026-10-08, after S54, what it does and how it comes:
@@ -4528,10 +4528,42 @@ Asked again on 2026-10-08, after S54, what it does and how it comes:
   common, and when whoever is out goes on at something worth a risk (S12) the odds are better.
   Mythic hardly ever
 
-What it comes to:
-- **What a better post makes is as rare as the post**
-- **Things of one kind and two rarities are kept apart**, and each is worth what it is
-- The border of its square says how rare a thing is (P60)
+What there is:
+- **A thing that is carried has a level**, which is its rarity (S54), and things of one kind
+  and two rarities are two stacks. It keeps it wherever it goes: carried to a pantry, put away
+  in the store, brought back out, handed over, bought, given
+- **What a post makes is as rare as the post.** A bed of the garden that has been made rare
+  grows rare vegetables
+- **What is eaten or drunk does that much more good**, and no more harm. Of two things that
+  would do, the rarer is what is reached for
+- **A rarer tool is that much faster and wears that much less. A rarer weapon hits that much
+  harder**
+- **It is dearer by as much**, on a counter and in what anybody takes it to be worth
+- **Mended at a workshop that has been made better, a thing comes away a rarity rarer**, no
+  rarer than the workshop, for a unit more of what mending takes. It is said
+- **What is found outside is drawn by weight**, as data: 86 in a hundred common, 10 uncommon,
+  3 rare, and the rest between epic, legendary and mythic, which is three in ten thousand.
+  Whoever went on at something worth a risk has three times the odds of anything but common
+- How rare a find is is drawn with dice of its own: the settlement's are not moved by it, and
+  the same things are found. What happens after may not be the same, for what a rarer thing
+  does. Three seeds of ten days no longer come out as they did before this layer
+- The save went to version 44: `level` on every item, and whether a trip took a risk
+
+Decided without asking:
+- **What rarity is better by is the one figure of S54**: a rare thing is 1.3 times as good at
+  whatever it does, a mythic one twice
+- **A mend raises one level and takes one unit more.** With none to be had the thing is mended
+  and no more
+- **What is used to build with loses its rarity in the building.** So does what is sold to the
+  caravan
+- **How much of a thing there is counts every rarity of it together**, in the bar and the books
+
+Still open here:
+- **What the caravan brings is always common.** The user asked for what comes from outside to
+  be rare at times, "rebusca y caravana": what is bought at the gate is counted and not kept
+  thing by thing, and wants that first
+- **A thing that is rarer is not shown to be**: the border of its square is P60
+- **Nobody prefers a rarer tool** when there are two to hand, and nobody is told a thing is rare
 
 ### S55 — Current, and things that break down (needs S54 and S15) — planned
 Asked on 2026-10-08, with S64 and after it, in two batches, and answered:

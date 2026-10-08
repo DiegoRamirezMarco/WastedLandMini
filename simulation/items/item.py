@@ -55,6 +55,9 @@ class ItemInstance:
     owner_id: str | None = None
     condition: float = 100.0
     quantity: int = 1
+    # How rare it is, and so how good, from 1: the place of its rarity among those there
+    # are (S64). Things of one kind and two rarities are two stacks.
+    level: int = 1
     # ID of the resident who made a present of it to its owner, if anyone did.
     given_by: str | None = None
     # Who it is being kept for: the resident it was bought as a present for, or the settlement,

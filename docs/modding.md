@@ -1093,6 +1093,12 @@ Two keys of a kind of object in `data/interactables.json`, both of which need
   tag of the items that will do, and `minutes` of work. The second takes twice that.
 - `kinds` names kinds of object that can be made better besides those that always can: the
   post of any job, a store, and whatever is slept in.
+- `found` says how rare what a trip brings back is: `weights` by rarity, and the
+  `risk_factor` every weight but the first is multiplied by for whoever went on at
+  something worth a risk. Left out, everything found is common.
+- Nothing has to be said of an item for it to have a rarity: any may. What rarity does to
+  one follows from what the item is already said to do: its `effects`, its `speed`, `wear`
+  and `damage` among its `properties`, and its `base_value`.
 
 ## Wear, prices and the shop
 

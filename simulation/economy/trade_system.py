@@ -40,6 +40,7 @@ STASH_SIZE = 2
 # Fear of someone from which a resident wants something to defend themselves with.
 ARM_FEAR = 30.0
 PURCHASE_IMPORTANCE = 15
+IMPROVED_IMPORTANCE = 20
 MINUTES_PER_HOUR = 60.0
 MINUTES_PER_DAY = 24 * 60
 KEEP_IMPORTANCE = 10
@@ -299,7 +300,8 @@ class TradeSystem:
         """What one unit of a thing on a counter costs: its price new, and less the more worn it is."""
         definition = world.registries.items.resolve(item.definition_id)
         new = self.price_of(world, definition, container.count(item.definition_id))
-        return math.ceil(new * world.items.condition_share(world, item))
+        # What is rarer is dearer, to buy as to sell (S64).
+        return math.ceil(new * world.items.condition_share(world, item) * world.items.better(world, item))
 
     def want(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition, price: float) -> float:
         """How much a resident wants to buy something at a price, from 0 to `MAX_WANT`. Under
@@ -431,7 +433,7 @@ class TradeSystem:
             hand_over(world, container, item, resident.inventory, resident.resident_id, SOLD)
         else:
             # A present is kept apart from what is theirs to use, until it is given.
-            kept = world.new_item(item.definition_id, 1, resident.resident_id)
+            kept = world.new_item(item.definition_id, 1, resident.resident_id, item.level)
             kept.condition, kept.meant_for = item.condition, gift[2].resident_id
             container.take_unit(item.instance_id)
             resident.inventory.add(kept)
@@ -495,7 +497,8 @@ class TradeSystem:
     def worth(self, world: "SimulationWorld", resident: Resident, item: ItemInstance) -> float:
         """What one thing in particular is worth to somebody, as worn as it is."""
         definition = world.registries.items.resolve(item.definition_id)
-        return world.items.personal_value(world, resident, definition, item) * world.items.condition_share(world, item)
+        value = world.items.personal_value(world, resident, definition, item) * world.items.condition_share(world, item)
+        return value * world.items.better(world, item)
 
     def keeper(self, world: "SimulationWorld", container_id: str) -> Resident | None:
         """Whoever is behind a counter, a bar or a bench right now, to serve at it."""
@@ -651,4 +654,30 @@ class TradeSystem:
         if item is None or (use.staffed_by is not None and not world.work.is_staffed(world, use.staffed_by)):
             return True
         item.condition = min(100.0, max(0.0, item.condition) + use.repairs)
-        return item.condition >= 100.0
+        if item.condition < 100.0:
+            return False
+        self._leave_it_better(world, activity, use, item)
+        return True
+
+    def _leave_it_better(self, world: "SimulationWorld", activity: Activity, use: UseDefinition, item: ItemInstance) -> None:
+        """A thing mended at a workshop that has been made better comes away a rarity rarer,
+        as far as the workshop's own, for a unit more of what mending uses (S64). With none
+        to be had it is mended and no more."""
+        bench = world.interactables.get(activity.target_id or "")
+        if bench is None or item.level >= bench.level or item.quantity != 1:
+            return
+        if use.material is not None and not self.take_repair_material(world, use):
+            return
+        item.level += 1
+        definition = world.registries.items.resolve(item.definition_id)
+        rarity = world.upgrades.settings(world).of(item.level)
+        owner = world.residents.get(item.owner_id or "")
+        world.emit_event(
+            DomainEvent(
+                "item_improved",
+                IMPROVED_IMPORTANCE,
+                f"Del taller sale {definition.article} {definition.name} de calidad: {rarity.name.lower()}",
+                [owner.resident_id] if owner is not None else [],
+                data={"item_id": item.instance_id, "definition_id": item.definition_id, "level": item.level},
+            )
+        )

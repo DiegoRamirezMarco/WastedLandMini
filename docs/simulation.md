@@ -265,6 +265,19 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
 - **It is not used meanwhile**: not worked at, not slept in, not eaten from. A store goes
   on holding.
 - **The rarest is never made**: a rarity whose data says it is not built is only found.
+- **What is carried has a rarity too** (`ItemInstance.level`). Things of one kind and two
+  rarities are two stacks, and `world.stock(inventory, item_id, units, owner, level)` puts
+  units on the stack of that rarity. Whatever moves a thing from one place to another
+  passes its level on. What a post makes has the level of the post.
+- **A rarer thing does what it does better by its rarity**: food and drink lower a need by
+  more, a tool is faster and wears less, a weapon deals more, and its price and what it is
+  worth to anybody are higher.
+- **A thing mended at a workshop of a higher level** comes away one level rarer, no rarer
+  than the workshop, for a unit more of the material mending takes.
+- **What a trip brings back** is drawn by the weights of `found` in the data, with dice
+  keyed to who came back and when, so that the settlement's own are not moved by the
+  drawing. A trip that
+  went on at something worth a risk has the odds of everything but common multiplied.
 
 ## What comes from outside
 

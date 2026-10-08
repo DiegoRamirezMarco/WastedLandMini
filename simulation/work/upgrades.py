@@ -54,6 +54,11 @@ class RaritySettings:
     minutes: int = 0
     # Kinds of object that can be made better besides what is a post, a store or a bed.
     kinds: tuple[str, ...] = ()
+    # How often a thing brought from outside is of each rarity, as weights in the order of
+    # `tiers`, and by how much every weight past the first is multiplied for whoever went on
+    # at something worth a risk (S64). With no weights everything found is common.
+    found: tuple[float, ...] = ()
+    risk_factor: float = 1.0
 
     def of(self, level: int) -> Rarity:
         """The rarity a level is. Past either end, the nearest there is."""
@@ -86,12 +91,21 @@ def rarity_settings_from_data(data: dict[str, Any]) -> RaritySettings:
     if any(later.better < earlier.better for earlier, later in zip(tiers, tiers[1:])):
         raise ValueError("Rarities go from the commonest to the rarest: each is at least as good as the one before")
     upgrade = data.get("upgrade", {})
+    found = data.get("found", {})
+    weights = found.get("weights", {})
+    unknown = sorted(set(weights) - {each.rarity_id for each in tiers})
+    if unknown:
+        raise ValueError(f"What is found is of rarities there are not: {unknown}")
     settings = RaritySettings(
         tiers=tuple(tiers),
         cost={str(tag): int(units) for tag, units in upgrade.get("cost", {}).items()},
         minutes=int(upgrade.get("minutes", 0)),
         kinds=tuple(str(kind) for kind in upgrade.get("kinds", [])),
+        found=tuple(float(weights.get(each.rarity_id, 0.0)) for each in tiers) if weights else (),
+        risk_factor=float(found.get("risk_factor", 1.0)),
     )
+    if any(weight < 0 for weight in settings.found) or settings.risk_factor <= 0:
+        raise ValueError("How often a rarity is found is a weight of nothing or more, and a risk multiplies it by more than nothing")
     if settings.minutes < 0 or any(units < 0 for units in settings.cost.values()):
         raise ValueError("Making a thing better takes no less than nothing")
     return settings
@@ -191,6 +205,23 @@ class UpgradeSystem:
             at=(placed.x, placed.y),
         )
         return placed.object_id
+
+    def found_level(self, world: "SimulationWorld", dice, risked: bool = False) -> int:
+        """How rare one thing brought from outside is, drawn with `dice`: seldom anything but
+        common, and the oftener for a risk taken."""
+        settings = self.settings(world)
+        weights = [
+            weight * (settings.risk_factor if risked and index else 1.0) for index, weight in enumerate(settings.found)
+        ]
+        total = sum(weights)
+        if total <= 0:
+            return 1
+        mark = dice.random() * total
+        for index, weight in enumerate(weights):
+            mark -= weight
+            if mark < 0:
+                return index + 1
+        return 1
 
     def spares_fuel(self, world: "SimulationWorld", object_id: str) -> bool:
         """Whether a generator burns nothing this night for being better than a common one:

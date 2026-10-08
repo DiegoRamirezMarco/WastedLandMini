@@ -160,7 +160,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 43
+    CURRENT_VERSION = 44
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -580,6 +580,7 @@ class SaveManager:
                     danger=float(trip.get("danger", 0.0)),
                     find_at=int(trip["find_at"]) if trip.get("find_at") is not None else None,
                     fetch=_text_or_none(trip.get("fetch")),
+                    risked=bool(trip.get("risked", False)),
                 )
                 if trip is not None
                 else None,
@@ -1555,6 +1556,7 @@ def _activity_to_data(activity: Activity | None) -> dict[str, Any] | None:
         "partner_id": activity.partner_id,
         "intent": activity.intent,
         "item_id": activity.item_id,
+        "item_level": activity.item_level,
         "held_up": activity.held_up,
         "ordered": activity.ordered,
     }
@@ -1576,6 +1578,7 @@ def _activity_from_data(data: Any) -> Activity | None:
         partner_id=str(partner_id) if partner_id is not None else None,
         intent=str(intent) if intent is not None else None,
         item_id=str(item_id) if item_id is not None else None,
+        item_level=max(1, _level_of({"level": data.get("item_level", 1)})),
         held_up=int(data.get("held_up", 0)),
         ordered=bool(data.get("ordered", False)),
     )
@@ -1600,6 +1603,7 @@ def _inventory_to_data(inventory: Inventory) -> list[dict[str, Any]]:
             "owner_id": item.owner_id,
             "condition": item.condition,
             "quantity": item.quantity,
+            "level": item.level,
             "given_by": item.given_by,
             "meant_for": item.meant_for,
         }
@@ -1620,6 +1624,8 @@ def _inventory_from_data(data: Any) -> Inventory:
                 owner_id=str(owner_id) if owner_id is not None else None,
                 condition=float(item.get("condition", 100.0)),
                 quantity=max(1, int(item.get("quantity", 1))),
+                # How rare it is. In a save from before everything is common (S64).
+                level=max(1, _level_of(item)),
                 given_by=_text_or_none(item.get("given_by")),
                 meant_for=_text_or_none(item.get("meant_for")),
             )

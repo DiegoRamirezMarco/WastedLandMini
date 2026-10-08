@@ -165,9 +165,9 @@ class StoreSystem:
             going = min(units - moved, rule.get(resource_id, 0) - there)
             if going <= 0:
                 continue
-            definition_id = item.definition_id
+            definition_id, level = item.definition_id, item.level
             going = inventory.take_units(item.instance_id, going)
-            world.stock(store, definition_id, going, None)
+            world.stock(store, definition_id, going, None, level)
             moved += going
         return moved
 
@@ -190,9 +190,9 @@ class StoreSystem:
                 lacking = kept - at_hand.get(item.definition_id, 0)
                 if lacking <= 0:
                     continue
-                definition_id = item.definition_id
+                definition_id, level = item.definition_id, item.level
                 coming = store.take_units(item.instance_id, lacking)
-                world.stock(inventory, definition_id, coming, None)
+                world.stock(inventory, definition_id, coming, None, level)
                 at_hand[definition_id] = at_hand.get(definition_id, 0) + coming
                 moved += coming
         return moved

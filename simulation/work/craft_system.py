@@ -404,7 +404,7 @@ class CraftSystem:
         if resident.work_progress < needed:
             return
         resident.work_progress = 0
-        world.stock(world.containers[target], product.item_id, product.batch, None)
+        world.stock(world.containers[target], product.item_id, product.batch, None, placed.level)
         world.ledger.record(world, product.item_id, product.batch, MADE, job.job_id, resident.resident_id, placed.object_id)
         definition = world.registries.items.resolve(product.item_id)
         world.emit_event(

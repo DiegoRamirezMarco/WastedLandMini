@@ -348,9 +348,10 @@ class ActivitySystem:
             ):
                 return False
             # What they eat is taken off the shelf now, so two residents never eat the same unit.
-            activity.item_id = world.items.take_food(world, resident, activity.target_id, use.consumes)
-            if activity.item_id is None:
+            taken = world.items.take_meal(world, resident, activity.target_id, use.consumes)
+            if taken is None:
                 return False
+            activity.item_id, activity.item_level = taken
         elif use.item_id is not None:
             activity.item_id = use.item_id
         world.trade.charge(world, resident, use, activity.target_id)
@@ -435,7 +436,9 @@ class ActivitySystem:
             return
         if use is not None and activity.item_id is not None and not use.sells and use.repairs <= 0:
             item = world.registries.items.resolve(activity.item_id)
-            world.items.take_in(world, resident, item)
+            # What was eaten off a shelf did them good by how rare it was (S64).
+            better = world.upgrades.settings(world).of(activity.item_level).better if use.consumes is not None else 1.0
+            world.items.take_in(world, resident, item, better)
         resident.activity = None
         resident.current_action = "idle"
 

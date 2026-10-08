@@ -555,18 +555,23 @@ class SimulationWorld:
         self.event_log.append(f"{self.clock.label} | {event.event_type} | {event.text}")
         return fact
 
-    def new_item(self, definition_id: str, quantity: int = 1, owner_id: str | None = None) -> ItemInstance:
-        """Create an item with a fresh stable ID. It is not placed anywhere yet."""
+    def new_item(
+        self, definition_id: str, quantity: int = 1, owner_id: str | None = None, level: int = 1
+    ) -> ItemInstance:
+        """Create an item with a fresh stable ID, as rare as `level` says. It is not placed anywhere yet."""
         self.item_count += 1
-        return ItemInstance(f"item_{self.item_count}", definition_id, owner_id, quantity=quantity)
+        return ItemInstance(f"item_{self.item_count}", definition_id, owner_id, quantity=quantity, level=level)
 
-    def stock(self, inventory: Inventory, definition_id: str, count: int, owner_id: str | None) -> ItemInstance:
-        """Put `count` units in an inventory, on top of a matching stack if there is one."""
-        stack = inventory.stack_of(definition_id, owner_id)
+    def stock(
+        self, inventory: Inventory, definition_id: str, count: int, owner_id: str | None, level: int = 1
+    ) -> ItemInstance:
+        """Put `count` units in an inventory, on top of a matching stack if there is one:
+        one of the same rarity, which is common unless `level` says otherwise (S64)."""
+        stack = inventory.stack_of(definition_id, owner_id, level)
         if stack is not None:
             stack.quantity += count
             return stack
-        item = self.new_item(definition_id, count, owner_id)
+        item = self.new_item(definition_id, count, owner_id, level)
         inventory.add(item)
         return item
 
