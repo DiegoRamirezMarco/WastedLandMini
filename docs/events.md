@@ -135,6 +135,11 @@ Event types emitted so far:
 | `newcomer_joined` | A stranger is let in and stays | 60 |
 | `stranger_turned_away` | A stranger is sent on their way | 40 |
 | `stranger_unanswered` | Someone knocks and there is no gatekeeper to answer | 35 |
+| `house_given` | The player says whose a building is, with `room`, `owners` and who had it `before` in `data`. Those who gain and lose it are its participants | 30 |
+| `house_locked` | The door of a building that is somebody's is locked or left open again, with `room` and `locked` in `data` | 10 |
+| `building_named` | A building is given a name of its own, or said to be for something, with `room` in `data` | 10 |
+| `house_decorated` | An ornament is put in a building or taken out of it, or its floor or walls are changed, with `room` in `data` | 5 |
+| `trespass` | Somebody goes into a house they had no business in, for what is there. The first participant is who went in and the rest are whoever lives there; `data` has `room` and `object`. It happens where they are, and is known as a fact | 35 |
 | `merchant_arrived` | A merchant stops by the gate to trade, with `event_id` and `goods` in `data`. It happens where they stand | 45 |
 | `merchant_left` | They move on | 20 |
 | `merchant_deal` | The player sells them what is nobody's and buys from them, with `sold`, `bought` and `paid` (out of the fund, or into it if negative) in `data` | 30 |

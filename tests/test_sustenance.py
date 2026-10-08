@@ -328,6 +328,8 @@ class MedicineTests(unittest.TestCase):
         raul, vera = world.residents["raul"], world.residents["vera"]
         raul.injuries = [Injury("cut", 40)]
         raul.job_id = None
+        # Nobody goes out scavenging meanwhile: what is in the cabinet is not to hang on what a trip turns up.
+        world.residents["sergio"].job_id = None
         raul.x, raul.y = 27, 22
         raul.activity = Activity("rest", "clinic_bed_1", minutes_left=10_000, using=True)
         if medic_on_duty:

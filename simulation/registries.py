@@ -27,6 +27,8 @@ from simulation.social.bonds import BondSettings, bond_settings_from_data
 from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
 from simulation.substances.substance import SubstanceSettings, substance_settings_from_data
 from simulation.tastes.settings import TasteSettings, taste_settings_from_data
+from simulation.housing.decor import DecorSettings, decor_settings_from_data
+from simulation.housing.housing import HousingSettings, housing_settings_from_data
 from simulation.tutorial.tutorial import BUILDING, JOB, OBJECT, TutorialDefinition, tutorial_definition_from_data
 from simulation.work.construction import ConstructionSettings, construction_settings_from_data
 from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
@@ -181,6 +183,10 @@ class BuiltInRegistries:
     dialogue: dict[str, list[str]] = field(default_factory=dict)
     # The steps a new settlement is led through, and the map it starts on.
     tutorial: TutorialDefinition = field(default_factory=TutorialDefinition)
+    # Whose a building is and what follows from it, and what each thing adds to a house.
+    housing: HousingSettings = field(default_factory=HousingSettings)
+    # What there is to dress a building with: ornaments, floors and walls.
+    decor: DecorSettings = field(default_factory=DecorSettings)
 
     @classmethod
     def load(cls, data_dir: Path | str = DATA_DIR, custom_dir: Path | str | None = None) -> "BuiltInRegistries":
@@ -287,6 +293,12 @@ class BuiltInRegistries:
         manners_path = root / "manners.json"
         if manners_path.is_file():
             registries.manners = manner_settings_from_data(_read_object(manners_path))
+        housing_path = root / "housing.json"
+        if housing_path.is_file():
+            registries.housing = housing_settings_from_data(_read_object(housing_path))
+        decor_path = root / "decor.json"
+        if decor_path.is_file():
+            registries.decor = decor_settings_from_data(_read_object(decor_path))
         tutorial_path = root / "tutorial.json"
         if tutorial_path.is_file():
             registries.tutorial = tutorial_definition_from_data(_read_object(tutorial_path))

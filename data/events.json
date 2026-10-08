@@ -130,6 +130,20 @@
         "stress": 4.0
       },
       "secret": true
+    },
+    "trespass": {
+      "blame_target": "actor",
+      "blame": {
+        "resentment": 2.0,
+        "trust": -3.0
+      },
+      "victim": {
+        "resentment": 10.0,
+        "trust": -10.0
+      },
+      "victim_needs": {
+        "stress": 4.0
+      }
     }
   }
 }

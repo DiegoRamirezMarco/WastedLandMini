@@ -577,7 +577,9 @@ class DaysOffTests(unittest.TestCase):
             for resident in self.world.residents.values():
                 resident.needs = Needs(hunger=0, tiredness=0, social=0, stress=70)
             self.assertFalse(self.world.work.on_duty(self.world, self.lucia), self.world.clock.label)
-        self.assertFalse(any("toma algo en la cantina" in line for line in self.world.event_log))
+        # Whoever keeps the bar may serve herself at it, day off or not: it is to everybody else that it is shut.
+        served = [line for line in self.world.event_log if "toma algo en la cantina" in line]
+        self.assertFalse([line for line in served if self.lucia.name not in line])
         self.assertNotIn("bartender", self.world.vacancies, "a day off is not a vacancy")
 
 

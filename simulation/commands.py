@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 
 from simulation.ai.affect import AffectResult
 from simulation.economy.terms import TradeResult
+from simulation.housing.housing import HousingResult
 from simulation.politics.government import PoliticsResult
 from simulation.work.research import ResearchResult
 from world.map import Tile
@@ -104,6 +105,24 @@ class CommandTarget(Protocol):
         ...
 
     def choose_government(self, government_id: str) -> PoliticsResult:
+        ...
+
+    def give_house(self, room_id: str, owners: list[str]) -> HousingResult:
+        ...
+
+    def name_building(self, room_id: str, name: str | None = None, use: str | None = None) -> HousingResult:
+        ...
+
+    def lock_house(self, room_id: str, locked: bool) -> HousingResult:
+        ...
+
+    def decorate(self, room_id: str, kind: str, x: int, y: int) -> HousingResult:
+        ...
+
+    def undecorate(self, room_id: str, ornament_id: str) -> HousingResult:
+        ...
+
+    def surface_building(self, room_id: str, floor: str | None = None, wall: str | None = None) -> HousingResult:
         ...
 
     def propose(
@@ -406,6 +425,90 @@ class ProposeGovernmentCommand:
 
     def apply(self, world: CommandTarget) -> PoliticsResult:
         return world.propose_government(self.government_id)
+
+
+@dataclass(frozen=True)
+class GiveHouseCommand:
+    """The player says who a building belongs to (S41). With nobody, it is the settlement's again.
+
+    It is theirs from then on: they sleep there, whoever they would have in may come in, and
+    what is kept in it is none of the settlement's.
+    """
+
+    room_id: str
+    owners: tuple[str, ...] = ()
+
+    def apply(self, world: CommandTarget) -> HousingResult:
+        return world.give_house(self.room_id, list(self.owners))
+
+
+@dataclass(frozen=True)
+class DecorateCommand:
+    """The player puts an ornament in a building (S42): at once and for nothing.
+
+    Where it goes is in cells of the inside of the building from its back left corner: a
+    cell of the floor, or a stretch of the back wall.
+    """
+
+    room_id: str
+    kind: str
+    x: int
+    y: int = 0
+
+    def apply(self, world: CommandTarget) -> HousingResult:
+        return world.decorate(self.room_id, self.kind, self.x, self.y)
+
+
+@dataclass(frozen=True)
+class UndecorateCommand:
+    """The player takes an ornament out of a building."""
+
+    room_id: str
+    ornament_id: str
+
+    def apply(self, world: CommandTarget) -> HousingResult:
+        return world.undecorate(self.room_id, self.ornament_id)
+
+
+@dataclass(frozen=True)
+class SurfaceCommand:
+    """The player says what the floor of a building is made of, its walls, or both (S42).
+
+    Nothing said of one, as an empty ID, puts it back as the building was put up.
+    """
+
+    room_id: str
+    floor: str | None = None
+    wall: str | None = None
+
+    def apply(self, world: CommandTarget) -> HousingResult:
+        return world.surface_building(self.room_id, self.floor, self.wall)
+
+
+@dataclass(frozen=True)
+class LockHouseCommand:
+    """The player locks the door of a building that is somebody's, or leaves it open again (S41).
+
+    Locked, nobody but whoever lives there goes in, however well they are thought of.
+    """
+
+    room_id: str
+    locked: bool = True
+
+    def apply(self, world: CommandTarget) -> HousingResult:
+        return world.lock_house(self.room_id, self.locked)
+
+
+@dataclass(frozen=True)
+class NameBuildingCommand:
+    """The player gives a building a name of its own, says what it is for, or both (S41)."""
+
+    room_id: str
+    name: str | None = None
+    use: str | None = None
+
+    def apply(self, world: CommandTarget) -> HousingResult:
+        return world.name_building(self.room_id, self.name, self.use)
 
 
 @dataclass(frozen=True)

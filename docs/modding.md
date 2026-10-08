@@ -492,6 +492,38 @@ settlement is created, in `SimulationWorld.demo_world`.
   outcome's `"gate"` (`let_in` or `turn_away`) is what is done about them.
 - A map's `arrivals` lists the tiles just inside the gate where someone let in first stands.
 
+## Houses
+
+`data/housing.json` holds how houses work. Everything in it can be left out.
+
+- `welcome_affection` is how well somebody who owns a house has to think of another to have
+  them in.
+- `desperate` maps a need to the level at which somebody goes into a house that is not theirs
+  for what would see to it.
+- `trespass_importance` and `housed_importance` are how much going in unasked, and a house
+  being given, matter as events.
+- `furnishing` maps a kind of object from `data/interactables.json` to what it adds to the
+  building it stands in: any of `comfort`, `warmth`, `light` and `beauty`, which may be less
+  than nothing. A kind that is not listed adds nothing.
+- `rest_per_comfort` is how much better somebody rests in a bed in their own house for each
+  point of its comfort, and `mood_per_day` how much a house as good to look at as can be lifts
+  whoever owns it each day. Neither may be less than nothing.
+- `uses` maps an ID to the name of something a building can be said to be for.
+
+## Ornaments, floors and walls
+
+`data/decor.json` holds what a building can be dressed with from inside.
+
+- `ornaments` maps a kind to its `name`, where it goes (`on`: `floor` or `wall`), and the
+  cells of the inside it takes: `width` across and, on the floor, `height` towards the front.
+  `flat` is for what lies on the floor, so that anything else can stand on it.
+- `floors` and `walls` map an ID to the name of something a floor, or the walls, can be made
+  of.
+- What any of them adds to a building goes in `furnishing` in `data/housing.json`, under the
+  same kind or ID.
+- The game draws the kinds, floors and walls it comes with. One it has no picture of is shown
+  as a plain box, or as bare boards.
+
 ## Families
 
 - `data/family.json` holds `start_year`; `old_age` (`from`, `chance_per_year`, `doubles_every`);

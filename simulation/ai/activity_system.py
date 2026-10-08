@@ -335,6 +335,7 @@ class ActivitySystem:
             world.happenings.hear_radio(world, resident)
         placed = world.interactables[activity.target_id]
         world.politics.laws.used(world, resident, placed, use)
+        world.housing.used(world, resident, placed)
         resident.current_action = activity.action
         resident.facing = facing_towards(resident.tile, (placed.x, placed.y)) or "down"
         if use.sells:
@@ -389,6 +390,13 @@ class ActivitySystem:
         relieved = False
         if use is not None:
             resident.needs.apply(use.per_minute)
+            placed = world.interactables.get(activity.target_id or "")
+            rest = use.per_minute.get("tiredness", 0.0)
+            if placed is not None and rest < 0:
+                # In a bed of their own, in a house that is comfortable, they rest the better.
+                extra = world.housing.rest_factor(world, resident, placed) - 1.0
+                if extra > 0:
+                    resident.needs.apply({"tiredness": rest * extra})
             lowered = [use.until] if use.until else [need for need, delta in use.per_minute.items() if delta < 0]
             relieved = bool(lowered) and all(getattr(resident.needs, need, 0.0) <= 0.0 for need in lowered)
             if (use.per_minute or use.heals) and self.urgent_needs(world, resident, ignoring=use.per_minute):
