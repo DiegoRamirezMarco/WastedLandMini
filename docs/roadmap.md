@@ -2051,6 +2051,8 @@ Still to settle:
 
 ### P27 — Picked up and put down (needs P10) — planned
 The user's idea: residents can be dragged and dropped, and where one is dropped is what they do.
+It is built with the layer of resources, after P59, as the user said on 2026-10-08: dropping
+somebody on a post is one of the two ways of putting them to it (S52).
 
 - **A resident is picked up with the mouse on the map and carried with the pointer**, their
   body hanging from it as a paper doll's would (P10), and put down wherever the button is let go
@@ -4114,6 +4116,234 @@ Still open here:
 - The faces offered are the eight nearest: anybody further is to be clicked on the map
 - Nothing of this has been seen on a real window by whoever made it: the frames it was
   judged by were drawn without one
+
+### S51 — What comes in and what goes out (needs S15) — planned
+The user, on 2026-10-08: "intentemos plantear como darle ese toque tomodatchi life (los dialogos
+modulares con variables puestas por el jugador y los objetos)-> sims (todo el tema de
+interacciones) -> fallout shelter (gestion de recursos hipervitaminado)". It comes in three
+layers, each laid over what there is: what the settlement lives on (S51 to S57, P58 to P61 and
+P27), words and things (S58, S59 and P62), and what is done with things and with each other
+(S60 to S63 and P63).
+
+Asked first, in two batches, and answered, for the three of them:
+- **Resources first.** Not the recommendation, which was the order they were named in
+- **The whole layer of resources in one go**, a milestone after another, with what is still to
+  settle in each asked before it. Not the recommendation, which was to stop after the first
+  four for them to be looked at
+- **Every part of it that was offered**: a bar that says how things stand; work that is seen;
+  stores, better posts and current; errands and training
+- **Somebody is put to a post from the board, as an order, and by being dropped on it** (P27).
+  Sharing everybody out among the posts at a press, and a mark on whoever would do better
+  somewhere else, were offered and left out
+- **A post is pushed for what is left of a shift**, as an order like any other, over a gamble
+  settled there and then. **It can go wrong in all four ways that were offered**: whoever
+  works is hurt, the tool breaks, the post breaks down, and what was being made is lost
+- **For words** (S58): each resident's own phrases, lists of the settlement's, and what one
+  calls another. In the user's words: "Los propios pj y los nombres de los items entran dentro
+  de la composicion de las frases modulares". Writing whole lines inside the game was offered
+  and left out
+- **For what is done** (S60 to S63): things with more than one use, wishes and what weighs on
+  somebody, and leisure of their own accord. In the user's words: "La parte agresiva, pegar,
+  robar, acciones especiales que vayan con los rasgos". The other one answering was offered and
+  left out
+
+Read without asking: after resources come words, and then what is done, as they were named.
+
+What holds for the layer of resources:
+- Nothing is collected by the player. Whoever makes a thing carries it, as now (S8)
+- What is the settlement's is what is nobody's: in a store, in the hands of whoever is
+  carrying it, and at the gate
+- Whatever changes how a settlement fares is run with the rule and without it, over some
+  eighteen seeds of ten weeks, before it is taken as good
+
+This one:
+- **The resources a settlement counts are data** (`data/resources.json`): food, water, fuel,
+  medicine and scrap to begin with, each by a category or a tag of the items that count as it
+- **What comes in and what goes out is written down as it happens**, by resource and by why:
+  made, brought from outside, bought, eaten, burnt, built with, spoiled, taken
+- **What there is at the end of each day is counted**, and what the entries do not account for
+  is entered as such: the count is the truth and the entries explain it
+- **From the last few days**: how much comes in and goes out in a day, how many days what
+  there is will last where more goes out than comes in, and whether that is too few
+- It writes down and decides nothing: no dice are thrown and nobody does anything for it
+- Saved, with the days it keeps
+
+Done when: a week of the settlement that comes ready made, with three seeds, leaves nothing
+unaccounted for; what the garden makes is in and a meal is out; carrying a thing about changes
+nothing; a settlement that eats more than it grows is told how many days it has; and a save
+from before loads with nothing written down.
+
+### P58 — A bar that says how long it will last (needs S51) — planned
+- **Each resource in the bar says what there is, whether it is going up or down and by how
+  much a day**, and how many days are left where it is going down
+- **Red where too few days are left**
+- **Resting the pointer on one says who makes it and what uses it up**
+- **How the settlement's spirits stand**, as the mean of everybody's, at the end of the bar.
+  It is shown and does nothing
+
+### S52 — Work that is seen, pushed and given out (needs S51, S46 and S50) — planned
+- **How fast somebody works is worked out in one place**, from what it already went by: the
+  tool, health, spirits, pay, what they have taken, the laws, the attribute the job goes by,
+  what has been worked out and the level they have at it
+- **How far along the next unit is** can be asked of anybody at a post
+- **What somebody would make of a post can be asked before they have it**, beside anybody else
+- **Putting somebody to a post is an order** (S37, S50): the one there already was, from the
+  board. Proposing it is still there for whoever would rather ask
+- **A post is pushed for what is left of the shift**: half as much again is made, whoever is
+  at it tires twice as fast and their nerves with it, and every unit made may end badly. The
+  more tired, the likelier; the better at it, by attribute and by level, the less
+- **What ends badly**: they are hurt; their tool breaks; what was being made, and some of what
+  the post holds, is lost. The post breaking down comes with S55. It ends the push, and they
+  trust the player the less for it (S27)
+- What a push does and risks is data (`data/work.json`), and a job can say it is not pushed
+
+Done when: pushed, a post makes more in the same shift and whoever is at it ends it more
+tired; each thing that can go wrong does, with the risk forced; whoever is better at it has
+fewer accidents over many seeds; a push ends with the shift; and with nobody pushed a
+settlement goes exactly as it did.
+
+### P59 — Rings over posts, and a board that puts people to them (needs S52) — planned
+- **A ring over each post somebody is at** fills as the next unit comes, on the roof for one
+  under a roof
+- **A unit made is seen to come out**, with its picture, and says nothing in the log
+- **Whoever is pushed is seen to be**
+- **The board says what whoever is selected would make of each post**, with `Poner` beside
+  `Proponer`, and `Apretar` for whoever holds it. The wheel has `Apretar` under `Trabajo`
+
+### S53 — Room for things (needs S51) — planned
+- **A store holds so much, and is for some things and not others**, as data
+- **What does not fit waits** where it is: in the hands of whoever made it or brought it, or
+  at the gate
+- The bar says how much there is room for
+
+Still to settle, to be asked before it is built:
+- Whether room is counted store by store, or resource by resource for the whole settlement
+- What becomes of what does not fit: it waits, or it is lost
+- How much each kind of store holds
+
+### S54 — Better posts (needs S53 and S36) — planned
+- **A post or a store has levels**, as data: each makes it faster, or roomier, or for more hands
+- **Making one better is a site** on what is already standing, with what it takes carried to
+  it and worked on, as with anything built (S16, S36)
+
+Still to settle, to be asked before it is built:
+- Which things have levels, and how many
+- How a better one looks: drawn again by the player, drawn by the game, or marked and no more
+- What it takes, and who does it
+
+### S55 — Current, and things that break down (needs S54 and S15) — planned
+- **Some things run on current**: what each draws and what a generator gives is data
+- **A post wears and breaks down**, and stands idle until the mechanic has mended it with scrap
+- A push can end with the post broken down (S52)
+
+Still to settle, to be asked before it is built:
+- Whether a thing with no current loses something it had over working without, or stops
+- Which things run on current
+- Whether things wear with use, or only break by accident
+
+### P60 — Stores, levels and current on screen (needs S53 to S55) — planned
+- How much room there is, in the bar and on each store
+- The level of a thing and the way to make it better, from the thing itself
+- What has no current, and what is broken down, marked where it stands
+
+### S56 — Errands, and the box (needs S51 and S39) — planned
+- **An errand is a thing to be brought about, as data**, measured against how the settlement
+  stands and against what was written down of what comes in and goes out
+- **One that is done is paid with a box**, which waits at the gate to be carried in, as what
+  is bought does (S23)
+
+Still to settle, to be asked before it is built:
+- Who sets them: the caravaneer, the settlement itself, or both
+- How many at once, and whether one lapses
+- What a box holds
+
+### S57 — Training (needs S46) — planned
+- **Things to train at**, each for one attribute, as data: time at one raises it as using it
+  does, and sooner
+- A resident is told to, from the wheel
+
+Still to settle, to be asked before it is built:
+- Which things
+- Whether anybody trains unasked
+- How fast it raises an attribute, and what it costs whoever does it
+
+### P61 — Errands and training on screen (needs S56 and S57) — planned
+- The errands there are, and how far along each is
+- A box opened, and what was in it
+- Training, in the wheel
+
+### S58 — Lines with holes in them (needs S2, S19 and S47) — planned
+The second layer: words and things. It is the first way of putting talk into words (S34): a
+line, not a murmur.
+
+Already done, ahead of it: which line is said no longer moves the settlement's dice.
+
+- **A line may have holes in it**, in `data/dialogue.json`, which still takes plain lines as it
+  did. What a hole is filled with is data
+- **A hole is filled with somebody or with the name of a thing**: whoever is listening, a
+  partner, a friend, somebody they cannot stand; what they carry, what they like and what
+  they loathe, what somebody came to at their job and the player named (S47). Only ever out
+  of what whoever speaks knows
+- **Words of the player's**, kept with the settlement: each resident's own phrases (how they
+  greet, what they keep saying, what they say glad, low and angry), lists of the settlement's
+  that fill holes for everybody, and what one calls another, each way by itself
+- No words change what happens
+
+Still to settle, to be asked before it is built:
+- How the player is asked for words: by the residents, on a screen that opens, or only from
+  a menu
+- Where a line is read and heard: the dock, over their heads, and whether they speak alone
+- Which holes, phrases and lists to begin with
+
+### S59 — Handed over, and found (needs S58 and S19) — planned
+- **A thing is put into a resident's hands by the player**, and how they take it is seen and
+  said (S19)
+- **What is found outside may be something nobody knows**, which the player draws, names and
+  says what it is, as with what is come to at a job (S47, P54)
+- What a thing is for, and what is in it, is S30
+
+Still to settle, to be asked before it is built:
+- What is given from: the settlement's stores, something of the player's own, or only what
+  one resident gives another
+- Where new things come from: outside, the caravan, the workshop, a box (S56)
+
+### P62 — Words on screen (needs S58 and S59) — planned
+- Lines in the dock and over heads, the way to give words, and a thing handed over
+
+### S60 — More than one thing to do with a thing (needs S30 and P27) — planned
+The third layer: what is done with things and with each other.
+
+- **A piece of furniture offers several things to do**, as data, where it offered one
+- **A click on a thing opens a ring of what whoever is selected can do with it**, and dropping
+  somebody on it (P27) goes by the same
+
+### S61 — Wishes, and what weighs on somebody (needs S60) — planned
+- **A resident comes to want small things**, which they see to themselves or are helped to
+- **What has lifted their spirits and what has brought them down**, as a list, on their panel
+
+Still to settle, to be asked before it is built:
+- Which wishes, and what one that is met is worth
+
+### S62 — Leisure of their own accord (needs S49 and S31) — planned
+- **Wanting to be entertained is a need of its own**, which tedium and work raise and pastimes
+  and things lower. With time on their hands residents pass it unasked (S49 left it open)
+- Run with it and without it over many seeds before it is taken as good
+
+### S63 — Blows, theft, and what goes with what somebody is like (needs S48 and S60) — planned
+The user's words: "La parte agresiva, pegar, robar, acciones especiales que vayan con los
+rasgos".
+
+- **Things only somebody with a given trait can be told to do**, as data, beside what goes by
+  what is felt (S48)
+- **Stealing can be told**, as coming to blows can
+
+Still to settle, to be asked before it is built:
+- Which traits, and what each opens: there are six, and it will take more
+- Who can be stolen from, and what
+
+### P63 — What is done, on screen (needs S60 to S63) — planned
+- The ring of a thing, wishes over heads, what weighs on somebody in their panel, and what
+  only they can do in the wheel
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

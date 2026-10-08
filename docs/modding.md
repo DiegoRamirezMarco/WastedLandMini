@@ -1097,6 +1097,8 @@ line that is reworded is simply spoken anew. `python -m tools.make_voices` has e
 ```
 
 `dialogue` names a list of lines in `data/dialogue.json`; one is picked for the event text.
+Lines can be written, changed and taken out freely: which one is said comes of a die of its
+own, and no number of lines changes what happens in a settlement with the same seed.
 `relationship` holds base changes that are scaled by both residents' personalities.
 
 `doing` is what is said of somebody who is at it, with `{other}` for the other one: without it

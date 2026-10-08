@@ -896,3 +896,9 @@ generator of its own for that one question, which moves no other on. The same se
 event log, and a world saved mid-activity continues exactly as if it had never been saved. Both are
 covered by tests. Player advice is part of the input: the same advice at the same minute gives
 the same history.
+
+Words are not part of the input. The line somebody says when an exchange begins comes from a
+keyed generator, and the settlement's own is moved on as it was when lines came of it
+(`LINE_DICE` in `simulation/social/social_system.py`), whatever lines there are: writing a line
+in `data/dialogue.json`, or taking one out, changes how something is put and nothing that
+happens.

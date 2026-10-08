@@ -10,6 +10,7 @@ from simulation.knowledge.knowledge_system import share_rumor
 from simulation.memory.memory import Memory
 from simulation.residents.activity import MOVE_TILES_PER_MINUTE, SHELTER_ACTION, WAIT_ACTION, WANDER_ACTION, Activity
 from simulation.residents.resident import Resident
+from simulation.rng import SimulationRNG
 from simulation.social.bonds import AFFAIR_EVENT, AFFAIR_IMPORTANCE, TRYST
 from simulation.social.interaction import InteractionDefinition
 from simulation.social.relationship import SIGNED_FEELINGS, Relationship
@@ -35,6 +36,10 @@ CONFRONTATION_IMPORTANCE = 15
 # After an argument a resident does not seek the other out for this long, unless a crisis drives them.
 ARGUMENT_COOLDOWN_MINUTES = 360
 LOW_MOOD_ARGUMENT_WEIGHT = 0.2
+# The sides of the die the settlement threw for a line when lines came of it, by what they are
+# filed under. It is thrown as it was, so that a seed goes the way it always went, and settles
+# nothing: writing a line, or taking one out, changes nothing that happens.
+LINE_DICE = {"chat": 6, "angry": 5, "reconcile": 3, "fight": 3}
 
 
 def _clamp(value: float, lowest: float, highest: float) -> float:
@@ -298,8 +303,15 @@ class SocialSystem:
             speaker, listener = partner, resident
         text = definition.text.replace("{a}", speaker.name).replace("{b}", listener.name)
         lines = world.registries.dialogue.get(definition.dialogue or "", [])
+        sides = LINE_DICE.get(definition.dialogue or "")
+        if sides:
+            world.rng.choice(range(sides))
         if lines:
-            text = f'{text} — {speaker.name}: "{world.rng.choice(lines)}"'
+            # Which line is a matter of words, and comes of a die that nothing else is thrown with.
+            words = SimulationRNG.keyed(
+                world.rng.seed, "line", speaker.resident_id, listener.resident_id, world.clock.total_minutes
+            )
+            text = f'{text} — {speaker.name}: "{words.choice(lines)}"'
         room = world.room_at(resident.tile)
         importance = definition.importance + round(
             definition.tension_importance * tension(world, resident, partner)

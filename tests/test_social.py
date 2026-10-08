@@ -1,4 +1,6 @@
+import re
 import unittest
+from dataclasses import replace
 
 from save.save_manager import SaveManager
 from simulation.registries import builtin_registries
@@ -28,6 +30,11 @@ def _snapshot(world: SimulationWorld) -> dict[tuple[str, str], tuple[float, ...]
         key: (rel.affection, rel.trust, rel.attraction, rel.fear, rel.resentment)
         for key, rel in world.relationships.items()
     }
+
+
+def _happened(world: SimulationWorld) -> list[str]:
+    """What the log tells of, with the line somebody said taken out of it."""
+    return [re.sub(r' — [^:"]+: "[^"]*"$', "", line) for line in world.event_log]
 
 
 def _talking(resident: Resident) -> bool:
@@ -262,6 +269,35 @@ class SocialLifeTests(unittest.TestCase):
         self.assertTrue(chats and arguments)
         self.assertGreater(len(chats), len(arguments))
         self.assertGreater(min(e.importance for e in arguments), max(e.importance for e in chats))
+
+
+class SpokenLineTests(unittest.TestCase):
+    """Which line is said is a matter of words. Writing one changes nothing that happens."""
+
+    def _world(self, chat: list[str]) -> SimulationWorld:
+        registries = builtin_registries()
+        return SimulationWorld.demo_world(seed=7, registries=replace(registries, dialogue={**registries.dialogue, "chat": chat}))
+
+    def test_writing_another_line_changes_nothing_that_happens(self) -> None:
+        written = list(builtin_registries().dialogue["chat"])
+        worlds = [self._world(written), self._world([*written, "Otra más.", "Y otra."]), self._world([])]
+        for world in worlds:
+            world.step(2 * MINUTES_PER_DAY)
+        plain, wordy, silent = worlds
+        self.assertTrue(any('"Otra más."' in line or '"Y otra."' in line for line in wordy.event_log))
+        for other in (wordy, silent):
+            self.assertEqual(_happened(other), _happened(plain))
+            self.assertEqual(other.rng.get_state(), plain.rng.get_state())
+
+    def test_the_line_said_is_one_of_those_written_and_the_same_for_the_same_seed(self) -> None:
+        written = list(builtin_registries().dialogue["chat"])
+        first, second = self._world(written), self._world(written)
+        for world in (first, second):
+            world.step(MINUTES_PER_DAY)
+        said = [line for line in first.event_log if "| chat_started |" in line]
+        self.assertTrue(said)
+        self.assertTrue(all(any(f'"{each}"' in line for each in written) for line in said))
+        self.assertEqual(first.event_log, second.event_log)
 
 
 class SocialSaveTests(unittest.TestCase):
