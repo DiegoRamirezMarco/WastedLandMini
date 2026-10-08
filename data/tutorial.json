@@ -122,12 +122,12 @@
     {
       "id": "water",
       "title": "Agua",
-      "text": "Pon un depósito de agua (Muebles), mejor al aire libre, y dibújalo. Ocupa dos casillas por dos. La sed aprieta antes que el hambre.",
-      "goal": {"type": "object", "target": "water_tank", "deed": "draw:water_tank"},
-      "gifts": [{"item": "water", "count": 120, "into": "water_tank"}],
+      "text": "Pon un pozo (Muebles), mejor al aire libre, y dibújalo. De él se saca el agua a mano: el depósito con su bomba vendrá cuando haya corriente. La sed aprieta antes que el hambre.",
+      "goal": {"type": "object", "target": "well", "deed": "draw:well"},
+      "gifts": [{"item": "water", "count": 120, "into": "well"}],
       "focus": "urbanism",
       "hint": "save",
-      "done": "El depósito queda lleno hasta la mitad"
+      "done": "El pozo queda con agua para unos días"
     },
     {
       "id": "time",

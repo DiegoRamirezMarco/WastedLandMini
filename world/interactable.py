@@ -88,6 +88,9 @@ class InteractableDefinition:
     # Whether it is something to sit on: whoever is at something done sitting down, on the
     # tile it stands on, sits on it and not on the ground.
     seat: bool = False
+    # How fast a post of this kind is worked, against any other of the same job: a well is
+    # slower than a tank with its pump (S55).
+    post_pace: float = 1.0
     # For a store (S53): how many units of each resource it holds. None for what is no store.
     store: dict[str, int] | None = None
     # For a place what a store holds is taken from and brought to: how many units of each
@@ -132,6 +135,7 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         build=build_rule_from_data(f"interactable {kind}", data.get("build")),
         salvage=_salvage_from_data(kind, data.get("salvage")),
         seat=bool(data.get("seat", False)),
+        post_pace=float(data.get("post_pace", 1.0)),
         store=_units_from_data(kind, "store", data.get("store")),
         outlet=_units_from_data(kind, "outlet", data.get("outlet")),
     )
@@ -141,6 +145,8 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         raise ValueError(f"Interactable {kind} is a store: it holds something, and is taken from through others")
     if definition.seat and (definition.blocks or definition.width * definition.height != 1):
         raise ValueError(f"Interactable {kind} is a seat, so it takes up one tile and can be stood on")
+    if definition.post_pace <= 0:
+        raise ValueError(f"Interactable {kind} is worked at a pace above nothing")
     if definition.light < 0:
         raise ValueError(f"Interactable {kind} gives a negative amount of light")
     if definition.urbanism_category not in URBANISM_CATEGORIES:

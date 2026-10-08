@@ -79,7 +79,7 @@ def post_rows(world: SimulationWorld, selected_id: str | None) -> list[PostRow]:
     """The jobs that have a post on this map, the ones the settlement misses most first."""
     selected = world.residents.get(selected_id or "")
     stations = {placed.kind for placed in world.interactables.values()}
-    jobs = [job for job in world.registries.jobs.values() if job.station in stations]
+    jobs = [job for job in world.registries.jobs.values() if any(kind in stations for kind in job.stations)]
     options = {option.kind: option for option in world.affect_options(selected.resident_id)} if selected else {}
     free = {target for target, _name in options[PUT_KIND].targets} if PUT_KIND in options else set()
     rows = []

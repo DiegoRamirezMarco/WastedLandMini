@@ -145,7 +145,8 @@
     {"id": "junk_6", "kind": "junk", "x": 2, "y": 13},
     {"id": "junk_7", "kind": "junk", "x": 56, "y": 22},
     {"id": "junk_8", "kind": "junk", "x": 13, "y": 31},
-    {"id": "warehouse", "kind": "warehouse", "x": 36, "y": 9}
+    {"id": "warehouse", "kind": "warehouse", "x": 36, "y": 9},
+    {"id": "well", "kind": "well", "x": 57, "y": 14}
   ],
   "stock": [
     {"container": "pantry_1", "item": "canned_beans", "count": 24},

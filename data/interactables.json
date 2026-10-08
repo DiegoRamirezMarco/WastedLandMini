@@ -524,5 +524,28 @@
       },
       "minutes": 360
     }
+  },
+  "well": {
+    "name": "pozo",
+    "article": "un",
+    "container": true,
+    "use": {
+      "action": "drink_water",
+      "text": "bebe {item}",
+      "label": "Beber",
+      "minutes": 8,
+      "consumes": "water",
+      "capacity": 2
+    },
+    "build": {
+      "cost": {
+        "scrap": 2
+      },
+      "minutes": 120
+    },
+    "outlet": {
+      "water": 20
+    },
+    "post_pace": 0.6
   }
 }

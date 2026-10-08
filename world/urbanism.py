@@ -370,7 +370,7 @@ class UrbanismSystem:
         return (
             definition.use is not None
             or definition.container
-            or any(job.station == definition.kind for job in world.registries.jobs.values())
+            or any(job.works_at(definition.kind) for job in world.registries.jobs.values())
         )
 
     @staticmethod

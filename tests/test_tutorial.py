@@ -55,7 +55,7 @@ def settle(world: SimulationWorld, until: str | None = None) -> None:
         "bed": lambda: put("bed", (10, 10)),
         "crate": lambda: put("crate", (13, 10)),
         "pantry": lambda: put("pantry", (12, 10)),
-        "water": lambda: put("water_tank", (18, 10)),
+        "water": lambda: put("well", (18, 10)),
         "time": lambda: world.step(120),
         "garden": lambda: put("crop_bed", (20, 16), (22, 16)),
         "job": lambda: world.apply_command(SuggestJobCommand(next(iter(world.residents)), "farmer")),
@@ -185,7 +185,7 @@ class NewSettlementTests(unittest.TestCase):
             self.world.interactables[object_id].kind: {item.definition_id: item.quantity for item in inventory.items}
             for object_id, inventory in self.world.containers.items()
         }
-        self.assertEqual(stock, {"crate": {"scrap": 6}, "pantry": {"canned_beans": 30}, "water_tank": {"water": 120}})
+        self.assertEqual(stock, {"crate": {"scrap": 6}, "pantry": {"canned_beans": 30}, "well": {"water": 120}})
 
     def test_the_old_radio_that_the_radio_is_worked_out_from_comes_with_the_settlement(self) -> None:
         # It turns up seldom outside, and the radio is what gives word of what is coming.

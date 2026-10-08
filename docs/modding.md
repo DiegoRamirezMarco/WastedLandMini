@@ -584,6 +584,9 @@ looks and nothing of what happens.
 - `needed` is how many residents the job takes (1 unless set); with fewer it has a vacancy.
   `priority` says how much it is missed: a vacancy is offered to those in jobs of lower priority.
 - An object's use can require a job to be on duty with `"staffed_by": "bartender"`.
+- `"also_at": ["well"]` on a job names other kinds of object it is worked at, each a post of
+  it as its `station` is. `"post_pace": 0.6` on a kind of object in
+  `data/interactables.json` has a post of that kind worked at six tenths of the pace of any other.
 - A use may have a `label`: what it is called for short where it is offered by name, as
   when somebody is carried over the object (`Dormir`, `Comer`). Left out, it is `Usar`.
 

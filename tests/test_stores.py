@@ -139,9 +139,11 @@ class KeepingTests(unittest.TestCase):
         self.assertEqual(world.containers["water_tank"].count("water"), 20)
         self.assertEqual(world.containers["generator"].count("fuel"), 4)
         self.assertEqual(world.containers["medicine_cabinet"].count("medicine"), 2)
-        self.assertEqual(self.store.count("water"), before["water"] - 20)
+        # The well keeps as much at hand as the tank does (S55).
+        self.assertEqual(world.containers["well"].count("water"), 20)
+        self.assertEqual(self.store.count("water"), before["water"] - 40)
         held = world.stores.held(world)
-        self.assertEqual(held["water"], before["water"] - 20)
+        self.assertEqual(held["water"], before["water"] - 40)
         self.assertGreater(held["food"], 0)
         again = SaveManager().to_data(world)
         world.stores.tick(world)

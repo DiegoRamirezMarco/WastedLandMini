@@ -478,8 +478,11 @@ class WorkSystem:
         with `tool` in them: what everything that tells on it comes to."""
         speed = self.tool_speed(world, job, tool) or 1.0 if tool is not None else 1.0
         if resident.job_id == job.job_id:
-            # A post that has been made better is worked that much faster (S54).
+            # A post that has been made better is worked that much faster (S54), and one
+            # kind of post may be slower than another of the same job (S55).
             speed *= world.upgrades.better(world, resident.post_id)
+            post = world.interactables.get(resident.post_id or "")
+            speed *= world.definition_of(post).post_pace if post is not None else 1.0
         # Short of an arm the work still gets done, in more minutes.
         speed *= world.health.work_pace(world, resident)
         speed *= self.mood_pace(resident)

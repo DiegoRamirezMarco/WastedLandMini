@@ -94,6 +94,18 @@ class JobDefinition:
     stat: str | None = None
     # Whether whoever holds it can be told to push it (S52).
     rush: bool = True
+    # Other kinds of object it is worked at, each as good a post for it as the first: a well,
+    # for whoever draws water (S55).
+    also_at: tuple[str, ...] = ()
+
+    @property
+    def stations(self) -> tuple[str, ...]:
+        """Every kind of object that is a post of this job."""
+        return (self.station, *self.also_at)
+
+    def works_at(self, kind: str) -> bool:
+        """Whether a kind of object is a post of this job."""
+        return kind == self.station or kind in self.also_at
 
 
 def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition:
@@ -152,6 +164,7 @@ def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition
         job_id=job_id,
         name=str(data["name"]),
         station=str(data["station"]),
+        also_at=tuple(str(kind) for kind in data.get("also_at", [])),
         shifts=shifts,
         text=str(data["text"]),
         interruptible=bool(data.get("interruptible", True)),

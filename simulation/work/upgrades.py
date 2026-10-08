@@ -131,7 +131,7 @@ class UpgradeSystem:
         definition = world.definition_of(placed)
         if definition.store is not None or placed.kind in self.settings(world).kinds:
             return True
-        if any(job.station == placed.kind for job in world.registries.jobs.values()):
+        if any(job.works_at(placed.kind) for job in world.registries.jobs.values()):
             return True
         use = definition.use
         return use is not None and use.unaware and use.per_minute.get(BED_NEED, 0.0) < 0

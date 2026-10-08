@@ -4565,7 +4565,8 @@ Still open here:
 - **A thing that is rarer is not shown to be**: the border of its square is P60
 - **Nobody prefers a rarer tool** when there are two to hand, and nobody is told a thing is rare
 
-### S55 — Current, and things that break down (needs S54 and S15) — planned
+### S55 — Current, and things that break down (needs S54 and S15) — under way
+Of its three parts the well is done. Current and switches, and wear and mending, are not.
 Asked on 2026-10-08, with S64 and after it, in two batches, and answered:
 - **With no current, what runs on it stops.** Not the recommendation, which was that it only
   lose what current gave it over working without
@@ -4589,7 +4590,21 @@ What it comes to:
   (S52), and stands idle until the mechanic has mended it with scrap
 - A better generator gives more current (S54)
 
-How it is to be built, worked out on 2026-10-08 and not yet done:
+The well, done:
+- **A job may have more than one kind of post** (`also_at` in `data/jobs.json`), each as
+  good a post for it as the first, and **a kind of post says how fast it is worked** against
+  any other (`post_pace` in `data/interactables.json`)
+- **A well is a post of drawing water**, worked at six tenths of the pace of the tank. What
+  is drawn is in it, a little kept at hand and the rest in the store (S53), and it is drunk
+  from as the tank is. It takes 2 of scrap and two hours, and can be made better (S54)
+- **Two can draw water now**, one at the tank and one at the well, which one tank never allowed
+- **The opening of a new settlement asks for a well** where it asked for a tank
+- **The settlement that comes ready made has one**, by its tank, and a save of it from before
+  gains it (save version 45)
+- Not yet: a tank does not need current, so nothing is lost for having no well. That comes
+  with the next part, and with it whoever draws water moving to the well when the tank stops
+
+How the rest is to be built, worked out on 2026-10-08 and not yet done:
 - **In three parts, each its own commit**: the well; current and switches; wear and mending
 - **The well is one more kind of post for the job of drawing water**, slower than the tank: a
   job may have more than one kind of post, and a kind of post says how fast it is worked

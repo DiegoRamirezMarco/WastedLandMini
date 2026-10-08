@@ -398,6 +398,9 @@ class BuiltInRegistries:
                 event.kind == job.watch_for for event in self.world_events.events.values()
             ):
                 raise ValueError(f"Job {job_id} keeps watch for a kind of event that never happens: {job.watch_for}")
+            unknown = sorted(kind for kind in job.also_at if self.interactables.find(kind) is None)
+            if unknown:
+                raise ValueError(f"Job {job_id} is also worked at unknown object kinds: {unknown}")
             station = self.interactables.find(job.station)
             if station is None:
                 raise ValueError(f"Job {job_id} is worked at unknown object kind: {job.station}")

@@ -175,6 +175,9 @@ room. An argument's importance rises with the resentment between the two.
 
 ## What the settlement lives on
 
+- **A job may be worked at more than one kind of post.** Water is drawn at the tank and at a
+  well, which is slower: a kind of post says how fast it is worked against any other. Each
+  post is one worker's, so two posts are two hands.
 - **Water.** `thirst` is a bodily need like hunger. Residents drink from the water tank, consuming
   shared `water` items. Drawing it is a job, `water_carrier`, worked at the tank as the garden is
   worked at its plots; a morning's shift is about a day's water for everybody. The post stands

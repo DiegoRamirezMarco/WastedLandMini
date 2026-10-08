@@ -141,7 +141,8 @@ LAST_MAP_CHANGE_VERSION = 16
 # nothing else: whatever the player has since taken down stays down. The building its food is
 # taken from, which the map called by the name the store now has, is called as the map calls
 # it now if nobody has given it another.
-MAP_GAINS: dict[int, tuple[str, ...]] = {42: ("warehouse",)}
+# Version 45 marks one more: it got a well, where water is drawn with no current (S55).
+MAP_GAINS: dict[int, tuple[str, ...]] = {42: ("warehouse",), 45: ("well",)}
 MAP_RENAMES: dict[int, dict[str, str]] = {42: {"storehouse": "almacén"}}
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 28
@@ -160,7 +161,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 44
+    CURRENT_VERSION = 45
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")

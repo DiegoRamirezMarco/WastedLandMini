@@ -238,7 +238,10 @@
       "max_stock": 240
     },
     "priority": 6,
-    "outdoors": true
+    "outdoors": true,
+    "also_at": [
+      "well"
+    ]
   },
   "researcher": {
     "name": "Estudio",

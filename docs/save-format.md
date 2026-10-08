@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `44` |
+| `version` | `45` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -84,6 +84,9 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 45** is the same format. The number marks a change to the built-in map: the
+  settlement that comes ready made got a well (S55), which a save of it from before gains as it
+  gained its store.
 - **Version 44** added `level` on every item, wherever it is kept or carried, `item_level` on
   an `activity` (how rare the unit being eaten was) and `risked` on an `expedition` (S64).
   In a save from before every item is common and no trip took a risk.

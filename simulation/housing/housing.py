@@ -179,7 +179,7 @@ class HousingSystem:
 
     def _at_work(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> bool:
         job = world.registries.jobs.get(resident.job_id or "")
-        return job is not None and job.station == placed.kind
+        return job is not None and job.works_at(placed.kind)
 
     def may_use(self, world: "SimulationWorld", resident: Resident, placed: Interactable, use: UseDefinition) -> bool:
         """Whether a thing is somebody's to use, by whose building it stands in.

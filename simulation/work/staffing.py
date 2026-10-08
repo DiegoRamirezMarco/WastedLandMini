@@ -30,7 +30,7 @@ class StaffingSystem:
             (
                 object_id
                 for object_id, placed in world.interactables.items()
-                if placed.kind == job.station and object_id not in taken
+                if job.works_at(placed.kind) and object_id not in taken
             ),
             None,
         )
@@ -59,7 +59,7 @@ class StaffingSystem:
         placed = world.interactables.get(post_id)
         if placed is None:
             return None
-        return next((job for job in world.registries.jobs.values() if job.station == placed.kind), None)
+        return next((job for job in world.registries.jobs.values() if job.works_at(placed.kind)), None)
 
     def assign(
         self, world: "SimulationWorld", resident: Resident, job_id: str, post_id: str | None = None

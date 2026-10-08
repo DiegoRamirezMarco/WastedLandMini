@@ -913,6 +913,32 @@ def plaza(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
     return stage.picture()
 
 
+def well(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A ring of stones round a hole, with a beam over it, a rope and a bucket: water by hand."""
+    stage = Stage((1, 1), 62, cell, depth)
+    s = stage.under
+    stage.shadow(4, 92, 80)
+    floor = stage.front - 6
+    top = floor - 44
+    # The posts and the beam stand behind the ring.
+    for x in (12, 80):
+        s.box(x, top - 46, 8, 62, WOOD, 2)
+    s.box(6, top - 54, 88, 10, darker(WOOD, 0.14), 3)
+    s.stroke([(50, top - 44), (50, top - 6)], PALE_WOOD, 2.4)
+    # The ring, of stones: its mouth, the dark and a glint of water in it, and its wall.
+    s.box(8, top + 12, 84, 32, STONE, 10)
+    for x in (30, 52, 72):
+        s.stroke([(x, top + 26), (x, top + 42)], darker(STONE, 0.3), 1.6)
+    s.stroke([(10, top + 30), (90, top + 30)], darker(STONE, 0.3), 1.6)
+    s.oval(8, top, 84, 26, lighter(STONE, 0.18), 255, outline=True)
+    s.oval(18, top + 5, 64, 16, (34, 40, 48))
+    s.oval(34, top + 11, 26, 6, (84, 128, 150))
+    # The bucket hangs over it.
+    s.box(42, top - 12, 16, 14, METAL, 3)
+    s.stroke([(42, top - 6), (58, top - 6)], DARK_METAL, 1.6)
+    return stage.picture()
+
+
 def warehouse(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
     """A shed of sheet metal as big as a small building, with wide doors: where what is
     everybody's is kept."""
@@ -1005,6 +1031,7 @@ PAINTERS: dict[str, Painter] = {
     "guillotine": guillotine,
     "plaza": plaza,
     "warehouse": warehouse,
+    "well": well,
 }
 # The ground each is drawn for, in cells: a kind whose data says otherwise keeps the art there was.
 FOOTPRINTS: dict[str, tuple[int, int]] = {

@@ -369,6 +369,24 @@ def _generator() -> pygame.Surface:
     return surface
 
 
+def _well() -> pygame.Surface:
+    """A ring of stones with a beam over it and a bucket."""
+    surface = _blank(16, 32)
+    for x in (2, 12):
+        fill(surface, "ink", (x - 1, 7, 4, 16))
+        fill(surface, "rust", (x, 8, 2, 14))
+    _box(surface, (1, 5, 14, 2), "rust_dark")
+    fill(surface, "sand", (8, 7, 1, 8))
+    _box(surface, (6, 14, 4, 3), "iron")
+    pygame.draw.ellipse(surface, PALETTE["ink"], (0, 17, 16, 9))
+    _box(surface, (1, 22, 14, 8), "stone")
+    pygame.draw.ellipse(surface, PALETTE["dust"], (1, 18, 14, 7))
+    pygame.draw.ellipse(surface, PALETTE["shadow"], (3, 19, 10, 5))
+    dots(surface, "teal", [(6, 21), (7, 21), (8, 21)])
+    dots(surface, "ink", [(5, 25), (10, 25), (7, 28), (12, 27)])
+    return surface
+
+
 def _warehouse() -> pygame.Surface:
     """A shed of sheet metal, four tiles by three, seen from above and a little from its front."""
     surface = _blank(64, 48)
@@ -477,5 +495,6 @@ def build() -> dict[str, pygame.Surface]:
         "medicine_cabinet": _medicine_cabinet,
         "grave": _grave,
         "warehouse": _warehouse,
+        "well": _well,
     }
     return {f"sprites/objects/{kind}.png": painter() for kind, painter in painters.items()}
