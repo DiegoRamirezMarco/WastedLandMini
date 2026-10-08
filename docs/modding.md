@@ -340,6 +340,13 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   and `springs` gives a bone one of its own: stiff for legs, loose for hands and heads.
   `jolt` is the speed a body is given when it takes up something else: `root` in pixels a
   second, and under `bones` a turn in degrees a second and a length in lengths a second.
+- `life` is what a body shown as a doll does of itself. `breath` names a clip laid over
+  whatever else it is doing, and its `rate` in turns a second; everybody is somewhere else
+  in theirs. `stand` names the clip a body with nothing to do and nothing in hand stands in,
+  in place of `idle`. `fidgets` lists clips done once, now and then, by such a body: between
+  one and the next go by from the first to the second of `every` seconds, and each is gone
+  through at `rate` turns a second. A fidget should be a clip marked `once` that starts and
+  ends standing. `idle` itself stays one pose: dolls are measured by it.
 - `footing` keeps feet on the ground. A clip moves the whole body with `root`; in the `views`
   listed, a foot of one of the `legs` (a bone and the one that hangs from it) that the clip
   has on the ground stays where it stands, and the knee bends to let the body go. A leg too

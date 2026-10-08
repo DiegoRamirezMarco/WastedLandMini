@@ -3042,14 +3042,51 @@ Still open here:
 - It has not been seen on a real window by the user: all of it was checked on pictures made
   without one
 
-### P44 — Life at rest (needs P43) — planned
+### P44 — Life at rest (needs P43) — done
 Answered with P42: "Además, gestos sueltos".
 
-- Breathing, over whatever else the body is doing, each to a beat of their own
-- Standing with nothing to do, the weight goes slowly from one leg to the other
-- Now and then one of a few gestures, by the stage's own chance and never the simulation's:
-  a look to each side, a scratch, a stretch, a shrug. Only for whoever has nothing in hand
-- Which clips these are, and how often, is data (`life` in `data/skeleton.json`)
+- **Everybody breathes**, over whatever else they are doing, each to a beat of their own: the
+  chest swells and lifts, the shoulders with it
+- **Standing with nothing to do, the weight goes over one foot and then the other**, hips first
+- **Every four to eleven seconds, something small**, done once: a long look down and then up,
+  a scratch at the back of the head, a crouch and a stretch on tiptoe with both arms up, a
+  shrug. Only for whoever has nothing to do and nothing in hand: carrying, eating, armed or
+  walking, nobody fidgets, and given something to do they leave off at once
+- **When is left to chance, and the chance is each body's own** (`Life` in
+  `skeleton/motion.py`), seeded by the stage and by who they are: never the simulation's, and
+  none of it saved
+- Which clips these are, and how often, is data (`life` in `data/skeleton.json`). `idle`
+  stays one pose, since dolls are measured by it
+- The doll in the editor breathes and fidgets too, where it stood still between its clips
+
+**Made a good deal stronger, all of P42 to P44.** Shown the first version, the user said: "no
+veo ningun cambio de movilidad en los movimientos ni nada de eso, ni en zoom ni en f2 seguro se
+ha implementado?". It had been. The same seconds of the game were taken with the old code and
+with the new, and the two could hardly be told apart: a bounce of one pixel of the skeleton is
+two of the window where the map opens, the trunk was squashed by a twentieth, and the resident
+followed walks dragging their feet. "Muy cartoon" had been answered, and it was not.
+- Walking, the body drops and is thrown up at every step, the trunk squashed by a sixth and
+  drawn out by as much, the arms swung twice as far. Dragging the feet is low and bent double,
+  with the arms hanging in front
+- A limb of rubber is one curve from end to end (`doll.hose.round` 2, from 1.4), and wider by
+  more when it is short (`volume` 0.7, from 0.5)
+- Springs are looser: the body bounces on its legs, and hands and heads are left well behind.
+  The jolt of taking up something else is three times what it was
+- Working, arguing, fighting and eating go further: up on tiptoe before the blow, a fist drawn
+  out by a third
+- At rest, breathing and the shift of weight are plain to see, and a fidget comes every four to
+  eleven seconds, where it came every seven to nineteen
+
+Seen then, the user said "guay", and to bring it into `main`.
+
+What it costs now, on the user's machine: the game with nine residents and seven in sight shows
+a frame in about 10.6 ms without a window, from about 9 before any of P42 to P44.
+
+Still open here:
+- A fidget is the same for everybody: it does not go by mood, by trait or by what they are
+- Nobody fidgets inside a bed, at a post or while talking
+- The measures of the three walks were written by a script that is not kept: they are plain
+  numbers in `data/skeleton.json` now, and changing a walk means changing eight keys
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

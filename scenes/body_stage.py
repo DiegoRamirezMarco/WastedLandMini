@@ -17,6 +17,7 @@ from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
 from skeleton import physics
 from skeleton.character import Character
+from skeleton.motion import Life
 from skeleton.rig import Skeleton
 
 # Game minutes that a body, or a part of one, lies where it fell before it is taken away.
@@ -79,6 +80,7 @@ class BodyStage:
         self.characters: dict[str, Character] = {}
         self.remains: list[Remains] = []
         self._random = random.Random(seed)
+        self._seed = seed
         rest = self.plan.rests["front"]
         self._struck = sorted(rest, key=lambda joint: rest[joint][1])[:STRUCK_JOINTS]
 
@@ -92,6 +94,8 @@ class BodyStage:
         if character is None:
             character = Character(self.plan, gone)
             character.stand(*ground_spot(resident.x, resident.y), resident.facing)
+            # A life of their own, with a chance of its own: nobody breathes or fidgets in step.
+            character.life = Life(random.Random(f"{self._seed}:{resident.resident_id}"))
             self.characters[resident.resident_id] = character
         for limb in gone:
             # Lost without this stage being told, as in a game just loaded: it is simply not there.

@@ -7,9 +7,59 @@ further out on the body the looser. Nothing here is gameplay: it runs on real ti
 saved, and knows no bone by name. How loose each bone is, is data.
 """
 
+import random
 from collections.abc import Hashable
 
-from skeleton.plan import Keyframe, SkeletonPlan, Spring
+from skeleton.plan import Keyframe, LifeSettings, SkeletonPlan, Spring
+
+
+class Life:
+    """What one body does with itself besides what it is given to do.
+
+    It breathes, to a beat of its own. With nothing to do it does not stand stock still: it
+    shifts its weight, and now and then does something small, a look about or a scratch. When
+    is left to chance, and the chance is its own: nothing here is the simulation's, and none of
+    it is saved.
+    """
+
+    def __init__(self, chance: random.Random) -> None:
+        self._chance = chance
+        # How far through a breath it is, and through shifting its weight, from 0 to 1. Nobody
+        # starts in step with anybody else.
+        self.breath = chance.random()
+        self.stood = chance.random()
+        # The small thing it is doing, how far through it, and seconds until the next one.
+        self.fidget: str | None = None
+        self.through = 0.0
+        self._wait: float | None = None
+
+    def update(self, settings: LifeSettings, seconds: float, at_ease: bool) -> None:
+        """Let real time pass. `at_ease` is whether it has nothing to do and nothing in hand."""
+        self.breath = (self.breath + seconds * settings.breath_rate) % 1.0
+        if not at_ease or not settings.fidgets:
+            # Busy: whatever small thing it was at is dropped, and the wait starts over when it is free.
+            self.fidget, self._wait = None, None
+            if at_ease:
+                self.stood = (self.stood + seconds * settings.stand_rate) % 1.0
+            return
+        if self._wait is None:
+            self._wait = self._chance.uniform(*settings.every)
+        if self.fidget is not None:
+            self.through += seconds * settings.fidget_rate
+            if self.through >= 1.0:
+                self.fidget, self._wait = None, self._chance.uniform(*settings.every)
+            return
+        self.stood = (self.stood + seconds * settings.stand_rate) % 1.0
+        self._wait -= seconds
+        if self._wait <= 0.0:
+            self.fidget, self.through = self._chance.choice(settings.fidgets), 0.0
+
+    def idling(self, settings: LifeSettings) -> tuple[str, float] | None:
+        """The clip a body with nothing to do is in right now, and how far through it. None if
+        it is to stand as its own clip has it."""
+        if self.fidget is not None:
+            return (self.fidget, self.through)
+        return (settings.stand, self.stood) if settings.stand is not None else None
 
 
 class Motion:

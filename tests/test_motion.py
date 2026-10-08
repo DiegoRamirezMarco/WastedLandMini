@@ -1,9 +1,12 @@
+import itertools
 import math
+import random
 import unittest
 from dataclasses import replace
+from types import SimpleNamespace
 
 from skeleton.character import Character
-from skeleton.motion import Motion
+from skeleton.motion import Life, Motion
 from skeleton.plan import FACINGS, Keyframe, MotionSettings, Spring, added, builtin_plan, plan_from_data
 
 
@@ -400,6 +403,176 @@ class LivelyCharacterTests(unittest.TestCase):
                 body.local_pose()
         held_out = self.plan.pose("doll_right", "carry")["hand_right"]
         self.assertLess(math.dist(fast.local_pose()["hand_right"], held_out), math.dist(slow.local_pose()["hand_right"], held_out))
+
+
+class LifeTests(unittest.TestCase):
+    """A body shown moving breathes, and with nothing to do it shifts its weight and fidgets."""
+
+    FRAME = 1 / 60
+
+    def setUp(self) -> None:
+        self.plan = builtin_plan()
+        self.settings = self.plan.life
+
+    def test_what_a_body_at_rest_does_is_data(self) -> None:
+        settings = self.settings
+        self.assertIn(settings.breath, self.plan.clips)
+        self.assertIn(settings.stand, self.plan.clips)
+        self.assertGreaterEqual(len(settings.fidgets), 3)
+        for clip in settings.fidgets:
+            self.assertIn(clip, self.plan.once, f"{clip} is done once")
+            first, last = self.plan.sample(clip, "side", 0.0), self.plan.sample(clip, "side", 1.0)
+            self.assertEqual((first.bones, last.bones), ({}, {}), f"{clip} starts and ends standing")
+        self.assertNotIn(settings.stand, self.plan.once)
+        self.assertNotIn(settings.breath, self.plan.once)
+        self.assertEqual(self.plan.frames("idle", "side"), 1, "standing still is still one pose, to measure by")
+        self.assertLess(settings.every[0], settings.every[1])
+        data = {
+            "root": "a",
+            "joints": {"a": {}, "b": {}},
+            "bones": {"ab": ["a", "b"]},
+            "views": {view: {"rest": {"a": [0, -2], "b": [0, 0]}} for view in ("front", "side")},
+            "orders": {"front": [], "side": [], "back": []},
+            "clips": {"idle": {}, "sigh": {"side": [{}, {"ab": 5}]}, "nod": {"once": True, "side": [{}, {"ab": 9}, {}]}},
+        }
+        made = plan_from_data({**data, "life": {"breath": {"clip": "sigh", "rate": 0.5}, "fidgets": {"clips": ["nod"], "every": [2, 3]}}})
+        self.assertEqual((made.life.breath, made.life.breath_rate, made.life.stand, made.life.fidgets), ("sigh", 0.5, None, ("nod",)))
+        self.assertEqual(plan_from_data(data).life.fidgets, ())
+        for life in (
+            {"breath": {"clip": "yawn"}},
+            {"fidgets": {"clips": ["nod", "wave"]}},
+            {"fidgets": {"clips": ["nod"], "every": [5, 2]}},
+            {"fidgets": {"clips": ["nod"], "rate": 0}},
+        ):
+            with self.assertRaises(ValueError, msg=life):
+                plan_from_data({**data, "life": life})
+
+    def test_everybody_breathes_to_a_beat_of_their_own(self) -> None:
+        one, other, again = Life(random.Random("a")), Life(random.Random("b")), Life(random.Random("a"))
+        self.assertNotEqual(one.breath, other.breath)
+        self.assertEqual(one.breath, again.breath, "the same chance gives the same life")
+        before = one.breath
+        one.update(self.settings, 1.0, False)
+        self.assertAlmostEqual(one.breath, (before + self.settings.breath_rate) % 1.0)
+        self.assertIsNone(one.fidget)
+
+    def test_with_nothing_to_do_it_shifts_its_weight_and_now_and_then_does_something_small(self) -> None:
+        settings, life = self.settings, Life(random.Random(3))
+        seen = []
+        for _ in range(round(120 / self.FRAME)):
+            life.update(settings, self.FRAME, True)
+            seen.append(life.idling(settings))
+        self.assertEqual(seen[0][0], settings.stand)
+        runs = [(clip, len(list(frames))) for clip, frames in itertools.groupby(clip for clip, _ in seen)]
+        done = [clip for clip, _ in runs if clip != settings.stand]
+        self.assertGreaterEqual(len(done), 4, "in two minutes it has fidgeted a few times")
+        self.assertLessEqual(set(done), set(settings.fidgets))
+        self.assertGreater(len(set(done)), 1, "and not always the same way")
+        for clip, frames in runs[1:-1]:
+            if clip == settings.stand:
+                self.assertGreaterEqual(frames, settings.every[0] / self.FRAME - 2, "it stands a while between two")
+                self.assertLessEqual(frames, settings.every[1] / self.FRAME + 2)
+            else:
+                self.assertAlmostEqual(frames, 1 / settings.fidget_rate / self.FRAME, delta=2, msg="each is done once through")
+        through = [phase for clip, phase in seen if clip == done[0]][: round(1 / settings.fidget_rate / self.FRAME) - 2]
+        self.assertEqual(through, sorted(through))
+        self.assertLess(through[0], 0.05)
+        self.assertGreater(through[-1], 0.9)
+        stood = [phase for clip, phase in seen[:200] if clip == settings.stand]
+        self.assertNotEqual(stood[0], stood[-1], "standing, its weight is on the move")
+
+    def test_busy_it_does_not_fidget_and_drops_what_it_was_at(self) -> None:
+        settings, life = self.settings, Life(random.Random(5))
+        while life.fidget is None:
+            life.update(settings, self.FRAME, True)
+        life.update(settings, self.FRAME, False)
+        self.assertIsNone(life.fidget, "given something to do, it leaves off")
+        for _ in range(round(90 / self.FRAME)):
+            life.update(settings, self.FRAME, False)
+            self.assertIsNone(life.fidget)
+        # Free again, it waits as long as ever before the next.
+        for _ in range(round((settings.every[0] - 1) / self.FRAME)):
+            life.update(settings, self.FRAME, True)
+            self.assertIsNone(life.fidget)
+
+    def test_its_chance_is_its_own_and_the_same_seed_gives_the_same_life(self) -> None:
+        state = random.getstate()
+        lives = [Life(random.Random(11)), Life(random.Random(11))]
+        told = [[], []]
+        for _ in range(round(60 / self.FRAME)):
+            for life, heard in zip(lives, told):
+                life.update(self.settings, self.FRAME, True)
+                heard.append(life.idling(self.settings))
+        self.assertEqual(told[0], told[1])
+        self.assertEqual(random.getstate(), state, "nobody else's chance was touched")
+
+    def test_a_body_with_a_life_breathes_whatever_it_is_doing_and_one_without_does_not(self) -> None:
+        heights = []
+        for life in (Life(random.Random(1)), None):
+            body = Character(self.plan)
+            body.lively, body.life = True, life
+            body.stand(0, 0, "doll_right", "work", 0.0)
+            chest = []
+            for _ in range(round(4 / self.FRAME)):
+                body.update(self.FRAME)
+                chest.append(body.local_pose()["shoulder_right"][1])
+            heights.append(max(chest) - min(chest))
+        self.assertGreater(heights[0], 0.1, "its shoulders rise and fall")
+        self.assertAlmostEqual(heights[1], 0.0, 6)
+        # A body that is not lively is posed to the letter, life or no life.
+        body = Character(self.plan)
+        body.life = Life(random.Random(1))
+        body.stand(0, 0, "doll_right", "work", 0.0)
+        body.update(1.0)
+        self.assertEqual(body.local_pose(), self.plan.pose("doll_right", "work", 0.0))
+
+    def test_at_ease_it_stands_as_its_life_has_it_and_with_something_in_hand_as_its_clip_does(self) -> None:
+        body = Character(self.plan)
+        body.lively, body.life = True, Life(random.Random(2))
+        body.life.fidget, body.life.through = "fidget_stretch", 0.5
+        body.stand(0, 0, "doll_right", "idle", 0.0)
+        hanging = self.plan.pose("doll_right")["hand_right"][1]
+        body.at_ease = False
+        self.assertFalse(body.idle)
+        self.assertAlmostEqual(body.plan.place("doll_right", body.aim())["hand_right"][1], hanging, delta=1.0)
+        body.at_ease = True
+        self.assertTrue(body.idle)
+        self.assertLess(body.plan.place("doll_right", body.aim())["hand_right"][1], hanging - 6.0, "its arms are up over its head")
+        # Carrying, or walking, it is not idle whatever whoever shows it says.
+        body.stand(0, 0, "doll_right", "idle", 0.0, "carry")
+        self.assertFalse(body.idle)
+        body.stand(0, 0, "doll_right", "walk", 0.2)
+        self.assertFalse(body.idle)
+        # Fidgeting is not taking up something else: the body is given no jolt for it.
+        body.stand(0, 0, "doll_right", "idle", 0.0)
+        body.life.fidget = None
+        body.update(self.FRAME)
+        body.local_pose()
+        low = body.local_pose()["pelvis"][1]
+        body.life.fidget, body.life.through = "fidget_shrug", 0.0
+        sunk = 0.0
+        for _ in range(12):
+            body.update(0.0)
+            body._owed = self.FRAME
+            sunk = max(sunk, body.local_pose()["pelvis"][1] - low)
+        self.assertLess(sunk, 0.2)
+
+    def test_the_stage_gives_every_resident_a_life_of_their_own(self) -> None:
+        from scenes.body_stage import BodyStage
+
+        def stage() -> BodyStage:
+            return BodyStage(SimpleNamespace(plan=self.plan), seed=4)
+
+        def resident(name: str) -> SimpleNamespace:
+            return SimpleNamespace(resident_id=name, lost_limbs=[], x=3.0, y=4.0, facing="down")
+
+        first, second = stage(), stage()
+        ana, luis = first.character(resident("ana")), first.character(resident("luis"))
+        self.assertIsNotNone(ana.life)
+        self.assertNotEqual(ana.life.breath, luis.life.breath)
+        self.assertIs(first.character(resident("ana")), ana)
+        self.assertEqual(second.character(resident("ana")).life.breath, ana.life.breath, "the same stage gives the same lives")
+        self.assertFalse(ana.lively, "until it is shown as a doll it is posed to the letter")
 
 
 if __name__ == "__main__":

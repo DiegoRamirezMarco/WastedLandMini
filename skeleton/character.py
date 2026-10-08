@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from enum import Enum
 
 from skeleton import physics
-from skeleton.motion import Motion
-from skeleton.plan import FACINGS, IDLE_CLIP, Keyframe, Point, SkeletonPlan
+from skeleton.motion import Life, Motion
+from skeleton.plan import FACINGS, IDLE_CLIP, Keyframe, Point, SkeletonPlan, added
 from skeleton.rig import Skeleton
 
 # Seconds a body takes to steady itself after a blow that did not knock it down, and to get up after one that did.
@@ -76,6 +76,11 @@ class Character:
         self._motion = Motion()
         # Time gone by since its springs were last moved, which is when it was last looked at.
         self._owed = 0.0
+        # What a lively body does of itself: breathing, and fidgeting when it is at ease. None for
+        # one that does nothing but what it is given to do. It is at ease when whoever shows it
+        # says it has nothing to do and nothing in hand.
+        self.life: Life | None = None
+        self.at_ease = False
         # Seconds left of the present stagger or of lying knocked down, and how long the stagger is.
         self._left = 0.0
         self._span = STAGGER_SECONDS
@@ -110,9 +115,27 @@ class Character:
         self.x, self.y, self.facing = x, y, facing
         self.clip, self.phase, self.overlay = clip, phase, overlay
 
+    @property
+    def idle(self) -> bool:
+        """Whether it stands with nothing to do and nothing in hand, physics aside."""
+        return self.at_ease and self.clip == IDLE_CLIP and self.overlay is None
+
     def aim(self) -> Keyframe:
-        """How its clips have its bones right now, for a body facing the unmirrored way."""
-        return self.plan.turned(FACINGS[self.facing][0], self.clip, self.phase, self.overlay)
+        """How its clips have its bones right now, for a body facing the unmirrored way.
+
+        A lively body with a life of its own breathes over whatever its clips have it doing,
+        and with nothing to do it stands as that life has it.
+        """
+        view = FACINGS[self.facing][0]
+        life = self.life if self.lively else None
+        if life is None:
+            return self.plan.turned(view, self.clip, self.phase, self.overlay)
+        settings = self.plan.life
+        clip, phase = (life.idling(settings) if self.idle else None) or (self.clip, self.phase)
+        frame = self.plan.turned(view, clip, phase, self.overlay)
+        if settings.breath is not None:
+            frame = added(frame, self.plan.sample(settings.breath, view, life.breath))
+        return frame
 
     def local_pose(self) -> dict[str, Point]:
         """Where every joint is right now, from the spot between its feet: where its springs have
@@ -188,6 +211,8 @@ class Character:
         """Let real time pass. A body posed to the letter, or a limp one lying still, costs nothing."""
         if self.lively:
             self._owed = min(self._owed + seconds * self.pace, UNSEEN)
+            if self.life is not None:
+                self.life.update(self.plan.life, seconds, self.idle and not self.physical)
         elif self._motion.started:
             self._motion = Motion()
         skeleton = self.skeleton

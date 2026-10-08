@@ -2,6 +2,7 @@
 
 import json
 import math
+import random
 from collections.abc import Callable
 from pathlib import Path
 
@@ -30,6 +31,7 @@ from scenes.scene import canvas_position
 from simulation.residents.manner import OCCASIONS
 from simulation.world import SimulationWorld
 from skeleton.character import Character
+from skeleton.motion import Life
 from skeleton.plan import SkeletonPlan
 from skeleton.rig import Skeleton
 from ui.button import Button
@@ -187,6 +189,7 @@ class DollEditor:
         self._preview: Doll | None = None
         # The body the doll is shown moving on beside the paper: on springs, as on the map.
         self._body = Character(plan)
+        self._body.life, self._body.at_ease = Life(random.Random(0)), True
         # A shape being laid down, whether shapes are filled, and whether the mouse is held on the field of colour.
         self._draft: ShapeDraft | None = None
         self.filled = False

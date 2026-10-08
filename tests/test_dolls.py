@@ -481,13 +481,17 @@ class RubberLimbTests(unittest.TestCase):
         self.assertEqual(len(painted.connected_components(30)), 1, "it is all one piece")
         self.assertFalse(self._solid(picture, (elbow[0] - past, elbow[1] + past)), "the outside of the bend is round")
         self.assertTrue(self._solid(picture, (elbow[0] + past * 0.7, elbow[1] - past * 0.7)), "and the inside is filled")
-        # It is as thick all the way round the bend as it was drawn: no notch where the joint is.
-        middle = ((at["shoulder_right"][0] + at["elbow_right"][0]) / 2, (at["shoulder_right"][1] + at["elbow_right"][1]) / 2)
-        across = lambda y: sum(1 for x in range(400) if picture.get_at((x, round(y)))[3] > 127)
-        self.assertAlmostEqual(across(middle[1]), self.HALF * 2, delta=6)
-        down = lambda x: sum(1 for y in range(400) if picture.get_at((round(x), y))[3] > 127)
-        beyond = (at["elbow_right"][0] + at["hand_right"][0]) / 2
-        self.assertAlmostEqual(down(beyond), self.HALF * 2, delta=6)
+        # The whole limb is one curve, so only by its ends does it still run the way its bones do.
+        # There it is as thick as it was drawn, or a little thicker for being bent: no notch, no bulge.
+        near = at["shoulder_right"][1] + (at["elbow_right"][1] - at["shoulder_right"][1]) * 0.1
+        across = sum(1 for x in range(400) if picture.get_at((x, round(near)))[3] > 127)
+        far = at["elbow_right"][0] + (at["hand_right"][0] - at["elbow_right"][0]) * 0.9
+        down = sum(1 for y in range(400) if picture.get_at((round(far), y))[3] > 127)
+        for thick in (across, down):
+            self.assertGreater(thick, self.HALF * 2 - 6)
+            self.assertLess(thick, self.HALF * 2 * 1.4)
+        # And it cuts the corner: where the elbow of the skeleton is, on the outside, there is nothing.
+        self.assertFalse(self._solid(picture, (elbow[0] - self.HALF * 0.6, elbow[1] + self.HALF * 0.6)))
 
     def test_both_ends_stay_where_the_skeleton_has_them_however_it_bends(self) -> None:
         pygame.draw.circle(self.body, BLUE, self.fore.end, 6)

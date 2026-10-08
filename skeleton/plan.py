@@ -196,6 +196,23 @@ class Footing:
 
 
 @dataclass(frozen=True)
+class LifeSettings:
+    """What a body shown moving does besides what it is given to do, by the clips that show it."""
+
+    # A clip laid over whatever else the body is doing, and how many turns of it a second.
+    breath: str | None = None
+    breath_rate: float = 0.25
+    # The clip a body with nothing to do stands in, in place of standing stock still.
+    stand: str | None = None
+    stand_rate: float = 0.1
+    # Clips done once, now and then, by a body with nothing to do: how many seconds go by
+    # between one and the next, at the least and at the most, and how many turns of one a second.
+    fidgets: tuple[str, ...] = ()
+    every: Point = (8.0, 20.0)
+    fidget_rate: float = 0.5
+
+
+@dataclass(frozen=True)
 class MotionSettings:
     """How loosely the bones of a body that is shown moving follow its clips."""
 
@@ -258,6 +275,7 @@ class SkeletonPlan:
     once: frozenset[str] = frozenset()
     motion: MotionSettings = field(default_factory=MotionSettings)
     footing: Footing = field(default_factory=Footing)
+    life: LifeSettings = field(default_factory=LifeSettings)
     # Per pose view and bone, how long it is and which way it points while the body stands at rest.
     _at_rest: dict[str, dict[str, tuple[float, float]]] = field(init=False, repr=False, compare=False)
     # The bone each bone hangs from, from the root outwards. None for one that hangs from the root.
@@ -525,6 +543,25 @@ def _footing(data: Any, bones: dict[str, BoneSpec], views: Any) -> Footing:
     return Footing(seen, legs, free, stretch)
 
 
+def _life(data: Any, clips: Any) -> LifeSettings:
+    if not isinstance(data, dict):
+        return LifeSettings()
+    breath, stand, fidgets = (data.get(key) or {} for key in ("breath", "stand", "fidgets"))
+    known = LifeSettings()
+    made = LifeSettings(
+        breath.get("clip"), float(breath.get("rate", known.breath_rate)),
+        stand.get("clip"), float(stand.get("rate", known.stand_rate)),
+        tuple(str(clip) for clip in fidgets.get("clips", ())),
+        _pair(fidgets.get("every", known.every), "life fidgets every"), float(fidgets.get("rate", known.fidget_rate)),
+    )
+    unknown = [clip for clip in (made.breath, made.stand, *made.fidgets) if clip is not None and clip not in clips]
+    if unknown:
+        raise ValueError(f"Life names unknown clips: {unknown}")
+    if made.every[0] <= 0.0 or made.every[1] < made.every[0] or made.fidget_rate <= 0.0:
+        raise ValueError("Life needs fidgets `every` so many seconds, from the least to the most, at a `rate` above 0")
+    return made
+
+
 def _motion(data: Any, bones: dict[str, BoneSpec]) -> MotionSettings:
     if not isinstance(data, dict):
         return MotionSettings()
@@ -623,6 +660,7 @@ def plan_from_data(data: dict[str, Any]) -> SkeletonPlan:
         root, joints, bones, braces, parts, limits, rests, orders, skins, clips,
         physics=physics, likes=likes, follows=follows, anchors=anchors,
         once=once, motion=_motion(data.get("motion"), bones), footing=_footing(data.get("footing"), bones, rests),
+        life=_life(data.get("life"), clips),
     )
 
 

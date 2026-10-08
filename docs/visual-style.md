@@ -193,6 +193,10 @@ cut apart where the body bends, each part laid along its bone and turned as the 
   and gives the body a small drop and a bounce. Its feet stay on the ground while the body
   sinks, rises and lunges over them, the knees bending and the legs drawn out to let it. A
   trunk or a head squashed by its clip is wider, and thinner when drawn out.
+- **At rest.** A doll breathes, whatever it is doing, each to a beat of their own. With
+  nothing to do and nothing in hand it does not stand stock still: its weight goes over one
+  foot and then the other, and every few seconds it does something small: a long look down
+  and then up, a scratch at the back of the head, a stretch on tiptoe, a shrug.
   It reels, falls, loses limbs and lies still exactly as the game's own bodies do, since it is the
   same skeleton underneath.
 - **Showing.** Dolls go on the window itself, at its full resolution and with smooth edges, over

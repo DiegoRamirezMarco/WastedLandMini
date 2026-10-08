@@ -1596,6 +1596,13 @@ class GlobalView:
             character.plan = own
         # A doll moves on springs, with some weight to it. A body kept as pictures is posed exactly.
         character.lively = doll is not None
+        # With nothing to do and nothing in hand it may fidget.
+        character.at_ease = (
+            stride is None
+            and load is None
+            and self._meal_in_hand(resident) is None
+            and self._weapon_in_hand(resident) is None
+        )
         # A doll turns smoothly; the game's own bodies go from one kept picture to the next.
         character.stand(spot[0], spot[1], facing, clip, turn % 1.0 if doll is not None else index / frames, overlay)
 

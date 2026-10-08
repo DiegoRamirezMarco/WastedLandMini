@@ -6,3 +6,4 @@
 - A body that is merely posed runs no physics. A limp one that lies still goes to sleep.
 - A lively body follows its clips on springs (`skeleton/motion.py`): real time, never saved, moved only when the body is looked at. How loose each bone is (`motion`) and which legs keep their feet on the ground (`footing`) are data.
 - Springs work on a body facing the unmirrored way. Mirroring comes last, in `SkeletonPlan.place`.
+- What a body does of itself (`Life` in `skeleton/motion.py`: breathing, shifting its weight, fidgeting) goes by a chance of its own, handed to it by whoever shows it. Which clips those are, and how often, is data (`life`).

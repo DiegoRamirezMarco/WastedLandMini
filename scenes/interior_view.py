@@ -393,6 +393,12 @@ class InteriorView:
             if character.plan is not plan and not character.physical:
                 character.plan = plan
             character.lively = True
+            character.at_ease = (
+                stride is None
+                and overlay is None
+                and view._meal_in_hand(resident) is None
+                and view._weapon_in_hand(resident) is None
+            )
             character.stand(*ground_spot(x, y), facing, clip, turn % 1.0, overlay)
             pose = character.local_pose()
             skeleton.set_pose(pose)
