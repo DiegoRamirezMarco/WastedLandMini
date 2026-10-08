@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from simulation.clock import SimulationClock
+from simulation.economy.ledger import LedgerState
 from simulation.economy.merchant import Merchant
 from simulation.housing.housing import HousingState, Ornament
 from simulation.economy.terms import Currency, Debt, TradingState
@@ -152,7 +153,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 38
+    CURRENT_VERSION = 39
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -296,6 +297,16 @@ class SaveManager:
             "salvage": [vars(job) for job in world.salvage.values()],
             "discoveries": [asdict(discovery) for discovery in world.discoveries.values()],
             "discovery_count": world.discovery_count,
+            "ledger": {
+                "day": world.accounts.day,
+                "opened_at": world.accounts.opened_at,
+                "today": {resource: dict(flows) for resource, flows in world.accounts.today.items()},
+                "days": {
+                    str(day): {resource: dict(flows) for resource, flows in written.items()}
+                    for day, written in world.accounts.days.items()
+                },
+                "held": {str(day): dict(count) for day, count in world.accounts.held.items()},
+            },
             "research": {
                 "subject": world.studies.subject_id,
                 "known": list(world.studies.known),
@@ -672,7 +683,33 @@ class SaveManager:
         self._restore_tastes(world, data)
         self._restore_research(world, data, version)
         self._restore_housing(world, data)
+        self._restore_ledger(world, data)
         return world
+
+    def _restore_ledger(self, world: SimulationWorld, data: dict[str, Any]) -> None:
+        """Put back what was written down of what comes in and goes out. A save from before has
+        nothing written: its books are opened the first minute it goes on."""
+        saved = _object_or_empty(data.get("ledger"))
+
+        def flows(written: Any) -> dict[str, dict[str, float]]:
+            return {
+                str(resource): {str(why): float(units) for why, units in _object_or_empty(by_why).items()}
+                for resource, by_why in _object_or_empty(written).items()
+            }
+
+        def by_day(written: Any) -> dict[int, Any]:
+            return {int(day): each for day, each in _object_or_empty(written).items() if str(day).lstrip("-").isdigit()}
+
+        world.accounts = LedgerState(
+            day=int(saved.get("day", 0)),
+            opened_at=int(saved.get("opened_at", 0)),
+            today=flows(saved.get("today")),
+            days={day: flows(written) for day, written in by_day(saved.get("days")).items()},
+            held={
+                day: {str(resource): int(units) for resource, units in _object_or_empty(count).items()}
+                for day, count in by_day(saved.get("held")).items()
+            },
+        )
 
     def _restore_discoveries(self, world: SimulationWorld, data: dict[str, Any]) -> None:
         """Put back what residents have come to at their jobs, and the items that were made of

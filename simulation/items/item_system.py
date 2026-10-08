@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from simulation.ai.navigation import path_beside
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency
 from simulation.economy import pilfering
+from simulation.economy.ledger import ARRIVED, DRUNK, EATEN
 from simulation.economy.pilfering import PILFERING_ACTIONS
 from simulation.events.event import DomainEvent
 from simulation.events.world_event_system import RADIO_TAG
@@ -206,6 +207,11 @@ class ItemSystem:
                     self._report_no_food(world, resident)
             return None
         world.containers[container_id].take_unit(food.instance_id)
+        if food.owner_id is None:
+            # What was everybody's is one the less for it.
+            world.ledger.record(
+                world, food.definition_id, -1, DRUNK if category == WATER_CATEGORY else EATEN, by=resident.resident_id
+            )
         return food.definition_id
 
     def _report_no_food(self, world: "SimulationWorld", resident: Resident) -> None:
@@ -710,6 +716,7 @@ class ItemSystem:
             if rule.hour != world.clock.hour or container is None or definition is None:
                 continue
             world.stock(container, rule.item, rule.count, None)
+            world.ledger.record(world, rule.item, rule.count, ARRIVED)
             world.emit_event(
                 DomainEvent("supplies_arrived", 10, f"Llegan provisiones: {rule.count} de {definition.name}")
             )

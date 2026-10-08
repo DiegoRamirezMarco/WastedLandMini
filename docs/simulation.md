@@ -183,6 +183,30 @@ room. An argument's importance rises with the resentment between the two.
   to minute state of the body pulls it slowly up or down. Low mood makes arguments more likely and
   productive work slower.
 
+### What comes in and what goes out
+
+The settlement keeps books (`simulation/economy/ledger.py`). They are for whoever looks at it:
+nobody in it knows what they say, no dice are thrown for them and nothing is decided by them.
+
+- **What is counted is data** (`data/resources.json`): each resource is the items of a category,
+  or with a tag. Food, water, fuel, medicine and scrap.
+- **What the settlement has** of each is what is nobody's: in any container, in the inventory of
+  any resident (a load on its way), and at the gate waiting to be carried in.
+- **An entry is written where the thing happens**, once it has happened:
+  `world.ledger.record(world, item_id, units, reason, source)`. Units above nothing come in, and
+  below it go out. `source` is the job a thing was made by. Moving a thing that stays the
+  settlement's writes nothing, which is why the entries are at the places that make and use
+  things up and not in `world.stock`.
+- **At midnight the day is closed**: what there is is counted, set against the count of the day
+  before and the day's entries, and what they do not come to is entered under `other`. So the
+  books always come to what there is, whatever a pack or a new system forgot to write.
+- **`world.ledger.report(world)`** says, for each resource: what there is, what comes in and
+  goes out in a day (the mean of the last `window_days` closed), how many days it will last if
+  more goes out than comes in, whether that is under `low_days`, and what makes it up by why.
+  With no day closed yet it goes by the hours there are, once there are six, and marks the
+  reading `tentative`.
+- **`resource_low`** is emitted on the hour, once a day for each resource that is running low.
+
 ## What comes from outside
 
 - **World events** are defined in `data/world_events.json`: how likely each is on a day it can

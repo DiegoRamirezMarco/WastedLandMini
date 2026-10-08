@@ -1,0 +1,36 @@
+{
+  "window_days": 3,
+  "kept_days": 7,
+  "low_days": 2,
+  "resources": {
+    "food": {"name": "Comida", "icon": "food", "category": "food"},
+    "water": {"name": "Agua", "icon": "water", "category": "water"},
+    "energy": {"name": "Combustible", "icon": "energy", "tag": "fuel"},
+    "medicine": {"name": "Medicinas", "icon": "medicine", "tag": "medicine"},
+    "scrap": {"name": "Chatarra", "icon": "scrap", "tag": "scrap"}
+  },
+  "reasons": {
+    "made": "Hecho aquí",
+    "found": "Traído de fuera",
+    "salvaged": "Desguace",
+    "bought": "Comprado a la caravana",
+    "arrived": "Llegado",
+    "returned": "Devuelto de una obra",
+    "handed": "Entregado al común",
+    "eaten": "Comido",
+    "drunk": "Bebido",
+    "used": "Gastado en hacer otra cosa",
+    "burnt": "Quemado en el generador",
+    "dosed": "En curas",
+    "built": "En obras",
+    "studied": "Estudiado",
+    "mended": "En arreglos",
+    "sold": "Vendido",
+    "rationed": "Dado a los presos",
+    "spoiled": "Echado a perder",
+    "raided": "Saqueado",
+    "stolen": "Robado",
+    "taken": "Se lo llevan",
+    "other": "Sin explicar"
+  }
+}

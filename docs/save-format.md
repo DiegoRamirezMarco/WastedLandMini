@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `38` |
+| `version` | `39` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -50,6 +50,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `tastes` | Per resident ID, their tastes under `category`, `tag`, `item` and `people`: each a name with its `leaning` and what has been `learned` |
 | `taste_seen_as` | The same way round as `taste_knowledge`: the reaction each taste looked like the last time it showed |
 | `taste_knowledge` | Per onlooker (`@player`, or a resident ID), per resident, per taste (`tag:sweet`, `item:stew`, `category:food`): how much of it has been seen |
+| `ledger` | The settlement's books (S51): `day` (the day being written down, or `0` if they have not been opened), `opened_at` (the game minute they were opened at), `today` (per resource ID, what has come in, above nothing, and gone out, below it, by why: `made:farmer`, `eaten`, `other`), `days` (the same per day, for the last days kept) and `held` (per day, what the settlement had of each resource when it ended). Missing in an older save, which has nothing written |
 | `tutorial` | Where a new settlement is in its opening: `step` (a step ID from `data/tutorial.json`, or `null` once it is over or if it never had one), `since` (game minute the step began), `opened`, `acknowledged`, the `deeds` the player has done of what the step asks them to do themselves, and the IDs of the steps `done` |
 
 A resident's `activity` is `null` or `action`, `target_id` (an object ID, or a site ID), `partner_id` (a resident
@@ -83,6 +84,8 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 39** added `ledger` (S51). In an older save nothing has been written down: the books
+  are opened the first minute it goes on, with what there is then as what there was.
 - **Version 38** added `doing`, `orders` and `free_will` on a resident, and `ordered` on their
   `activity` (S50). In an older save nobody has been told anything, and everybody does as
   they like.

@@ -6,6 +6,7 @@ however the player got there. The world outside leaves the settlement alone unti
 
 from typing import TYPE_CHECKING
 
+from simulation.economy.ledger import ARRIVED
 from simulation.events.event import DomainEvent
 from simulation.tutorial.tutorial import (
     ACKNOWLEDGED,
@@ -191,6 +192,7 @@ class TutorialSystem:
             holders = containers_of_kind(world, gift.into)
             if holders:
                 world.stock(holders[0][1], gift.item, gift.count, None)
+                world.ledger.record(world, gift.item, gift.count, ARRIVED)
             return
         resident = next(iter(world.residents.values()), None)
         if resident is not None:

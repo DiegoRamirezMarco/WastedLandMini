@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
+from simulation.economy.ledger import MADE
 from simulation.events.event import DomainEvent
 from simulation.items.registry import ItemRegistry
 from simulation.memory.memory import Memory
@@ -402,6 +403,7 @@ class CraftSystem:
             return
         resident.work_progress = 0
         world.stock(world.containers[target], product.item_id, product.batch, None)
+        world.ledger.record(world, product.item_id, product.batch, MADE, job.job_id, resident.resident_id, placed.object_id)
         definition = world.registries.items.resolve(product.item_id)
         world.emit_event(
             DomainEvent(

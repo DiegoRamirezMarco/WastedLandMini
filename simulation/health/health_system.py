@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING
 
+from simulation.economy.ledger import DOSED
 from simulation.events.event import DomainEvent
 from simulation.health.injury import Death, Injury, InjuryDefinition, LimbDefinition
 from simulation.items.item import ItemInstance
@@ -127,6 +128,7 @@ class HealthSystem:
                 if item.owner_id is not None or care.care_item not in definition.tags:
                     continue
                 inventory.take_unit(item.instance_id)
+                world.ledger.record(world, item.definition_id, -1, DOSED, by=resident.resident_id)
                 lasts = care.dose_minutes * world.research.factor(world, DOSE_MINUTES)
                 resident.dosed_until = now + round(lasts * max(1.0, definition.properties.get("dose", 1.0)))
                 resident.dosed_with = definition.item_id

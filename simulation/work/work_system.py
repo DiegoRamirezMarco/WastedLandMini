@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from simulation.ai.crowd import free_tile
 from simulation.ai.navigation import path_beside
 from simulation.ai.utility_ai import ScoredAction
+from simulation.economy.ledger import MADE, USED
 from simulation.events.event import DomainEvent
 from simulation.items.item import ItemInstance
 from simulation.residents.activity import Activity
@@ -446,7 +447,10 @@ class WorkSystem:
             if material is None:
                 return hauling.errand(world, resident, rule, shift_left) is None
             resident.inventory.take_unit(material.instance_id)
-        world.stock(target, making, how.batch if how is not None else 1, None)
+            world.ledger.record(world, material.definition_id, -1, USED, job.job_id)
+        units = how.batch if how is not None else 1
+        world.stock(target, making, units, None)
+        world.ledger.record(world, making, units, MADE, job.job_id, resident.resident_id, placed.object_id)
         resident.work_progress = 0
         if tool is not None:
             world.items.wear(world, resident, tool)

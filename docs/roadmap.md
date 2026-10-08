@@ -4117,7 +4117,7 @@ Still open here:
 - Nothing of this has been seen on a real window by whoever made it: the frames it was
   judged by were drawn without one
 
-### S51 — What comes in and what goes out (needs S15) — planned
+### S51 — What comes in and what goes out (needs S15) — done
 The user, on 2026-10-08: "intentemos plantear como darle ese toque tomodatchi life (los dialogos
 modulares con variables puestas por el jugador y los objetos)-> sims (todo el tema de
 interacciones) -> fallout shelter (gestion de recursos hipervitaminado)". It comes in three
@@ -4158,20 +4158,54 @@ What holds for the layer of resources:
 
 This one:
 - **The resources a settlement counts are data** (`data/resources.json`): food, water, fuel,
-  medicine and scrap to begin with, each by a category or a tag of the items that count as it
-- **What comes in and what goes out is written down as it happens**, by resource and by why:
-  made, brought from outside, bought, eaten, burnt, built with, spoiled, taken
-- **What there is at the end of each day is counted**, and what the entries do not account for
-  is entered as such: the count is the truth and the entries explain it
-- **From the last few days**: how much comes in and goes out in a day, how many days what
-  there is will last where more goes out than comes in, and whether that is too few
-- It writes down and decides nothing: no dice are thrown and nobody does anything for it
-- Saved, with the days it keeps
+  medicine and scrap, each by the category or the tag of the items that count as it. A pack
+  adds another with an entry, and no code names any of them
+- **What the settlement has of each** is what is nobody's: in a store, in the hands of whoever
+  is carrying it, and at the gate waiting to be carried in. What is somebody's own is not
+- **What comes in and what goes out is written down as it happens** (`LedgerSystem.record`, in
+  `simulation/economy/ledger.py`), by resource and by why, where it happens: made at a post,
+  with the job that made it; brought from outside; taken apart; bought from a caravan or sold
+  to one; come as supplies; eaten and drunk; used to make something else; burnt in the
+  generator; given in care; carried to a site, or given back from one; studied; used in a
+  mending; sold over the counter; given to a prisoner; spoiled; taken by raiders; stolen;
+  handed in to the settlement, or taken from it
+- **Carrying is not written.** A thing that goes from a store into somebody's hands and on to
+  another store is the settlement's all the way
+- **At midnight what there is is counted**, and whatever the entries of the day do not come to
+  is entered as unexplained. The count is the truth, and the entries explain it
+- **How things stand** (`LedgerSystem.report`): for each resource, what there is; what comes
+  in and what goes out in a day, by why, over the last three days closed; how many days it
+  will last where more goes out than comes in; and whether that is fewer than two. Before a
+  day has closed it is told from the hours there are, once there are six, and said to be so
+- **What is running low is said once a day** (`resource_low`)
+- **It decides nothing.** No dice are thrown and nobody does anything for what is written: a
+  settlement goes with its books exactly as it would without them
+- Saved (version 39): what was written today and on the last seven days, and what was counted
+  at the end of each. A save from before has nothing written, and opens its books the minute
+  it goes on
 
-Done when: a week of the settlement that comes ready made, with three seeds, leaves nothing
-unaccounted for; what the garden makes is in and a meal is out; carrying a thing about changes
-nothing; a settlement that eats more than it grows is told how many days it has; and a save
-from before loads with nothing written down.
+Done when: six weeks of the settlement that comes ready made, with six seeds, leave nothing
+unaccounted for on any day; three seeds of ten days come out as they did before there were
+books, event for event and die for die; what the garden makes is in and a meal is out; carrying
+a thing about changes nothing; a deal with a caravan, a bed put up and a subject that uses up
+what it studies are written as they happen; what nothing wrote down is entered as such; and a
+save from before loads with nothing written.
+
+Decided without asking:
+- **Cooking is written as food into the pot and as much out of it.** The kitchen neither adds
+  to what there is nor takes from it, and is seen to do both
+- **What a site takes has left the stores once it is carried there**, and is back if the site
+  is given up
+- **Drink, tools and coin are not counted.** Nothing is a resource that the data does not name,
+  and what the fund holds in coin is a figure of its own (S23)
+- A week is kept, and three days tell the pace. The numbers are in the data
+
+Still open here:
+- It is on screen with P58
+- Nobody in the settlement knows what the books say: they are for the player (S3)
+- Three tests were failing before any of this, on the settlement as it was committed, and
+  still are: four weeks of storms and raiders (`test_dark_and_danger`), three nights of curfew
+  (`test_laws`) and ten weeks of medicine and light (`test_sustenance`)
 
 ### P58 — A bar that says how long it will last (needs S51) — planned
 - **Each resource in the bar says what there is, whether it is going up or down and by how

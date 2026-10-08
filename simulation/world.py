@@ -10,6 +10,7 @@ from simulation.events.decision import Decision
 from simulation.events.event import DomainEvent, euphonic
 from simulation.events.event_manager import EventManager
 from simulation.economy.fund_system import FundSystem
+from simulation.economy.ledger import BURNT, LedgerState, LedgerSystem
 from simulation.economy.lending import LendingSystem
 from simulation.economy.merchant import Merchant, MerchantSystem
 from simulation.economy.terms import Debt, TradeResult, TradingState
@@ -117,6 +118,9 @@ class SimulationWorld:
     merchants: MerchantSystem = field(default_factory=MerchantSystem)
     # How the settlement trades, and what it holds in coin as a whole. A new one trades by barter.
     trading: TradingState = field(default_factory=TradingState)
+    # What comes into what the settlement lives on and what goes out of it, as it is written down.
+    ledger: LedgerSystem = field(default_factory=LedgerSystem)
+    accounts: LedgerState = field(default_factory=LedgerState)
     # Whoever has stopped by the gate to trade, while they are there.
     merchant: Merchant | None = None
     lending: LendingSystem = field(default_factory=LendingSystem)
@@ -211,6 +215,8 @@ class SimulationWorld:
 
     def _tick(self) -> None:
         self.clock.advance_minutes(1)
+        # Before anything else happens this minute: a day that has ended is counted as it ended.
+        self.ledger.tick(self)
         self._power_tick()
         self.interventions.tick(self)
         self.items.tick_world(self)
@@ -646,6 +652,7 @@ class SimulationWorld:
                 self.emit_event(DomainEvent("power_failed", POWER_EVENT_IMPORTANCE, "El generador se queda sin combustible"))
             return
         generator.take_unit(stack.instance_id)
+        self.ledger.record(self, POWER_ITEM, -1, BURNT)
 
     def under_roof(self, tile: Tile) -> bool:
         room = self.room_at(tile)

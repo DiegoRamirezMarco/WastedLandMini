@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from simulation.residents.attributes import SENSES
 from simulation.ai.crowd import free_tile
+from simulation.economy.ledger import FOUND
 from simulation.events.event import DomainEvent
 from simulation.events.world_event import WEATHER
 from simulation.items.item import ItemInstance
@@ -167,6 +168,7 @@ class ExpeditionSystem:
         for item_id, units in found.items():
             if units > 0:
                 world.stock(resident.inventory, item_id, units, None)
+                world.ledger.record(world, item_id, units, FOUND, by=resident.resident_id)
         said = f"{resident.name} vuelve de fuera con {haul}" if haul else f"{resident.name} vuelve de fuera de vacío"
         if kept is not None:
             mine = world.registries.items.resolve(kept)

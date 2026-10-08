@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from simulation.ai.navigation import path_beside
 from simulation.ai.utility_ai import ScoredAction
+from simulation.economy.ledger import SALVAGED, USED
 from simulation.events.event import DomainEvent
 from simulation.items.inventory import Inventory
 from simulation.items.item import ItemInstance
@@ -191,6 +192,7 @@ class SalvageSystem:
         world.salvage.pop(placed.object_id, None)
         world.urbanism.invalidate_routes(world, tiles, target_ids={placed.object_id})
         world.stock(resident.inventory, rule.item, rule.units, None)
+        world.ledger.record(world, rule.item, rule.units, SALVAGED, by=resident.resident_id)
         self._leave(resident)
         world.emit_event(
             DomainEvent(
@@ -267,9 +269,12 @@ class SalvageSystem:
                 ),
             )
         inventory.remove(item_id)
+        if item.owner_id is None:
+            world.ledger.record(world, item.definition_id, -item.quantity, USED)
         where = self._store(world, scrap.item_id, container_id, carrier)
         if where is not None:
             world.stock(world.containers[where], scrap.item_id, units, None)
+            world.ledger.record(world, scrap.item_id, units, SALVAGED, at=where)
         tile = None
         if container_id is not None and container_id in world.interactables:
             tile = (world.interactables[container_id].x, world.interactables[container_id].y)

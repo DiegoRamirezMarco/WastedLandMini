@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from simulation.ai.crowd import spots_taken
 from simulation.ai.navigation import path_beside
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction
+from simulation.economy.ledger import BUILT, RETURNED
 from simulation.events.event import DomainEvent
 from simulation.events.intervention_system import BUILD_PROPOSAL
 from simulation.items.item import ItemInstance
@@ -238,6 +239,7 @@ class ConstructionSystem:
         if nearest is not None:
             for item_id, units in site.delivered.items():
                 world.stock(world.containers[nearest], item_id, units, None)
+                world.ledger.record(world, item_id, units, RETURNED)
         self._clear(world, site)
         world.emit_event(
             DomainEvent(
@@ -790,6 +792,7 @@ class ConstructionSystem:
                 if wanted <= 0:
                     break
                 units = resident.inventory.take_units(item.instance_id, wanted)
+                world.ledger.record(world, item.definition_id, -units, BUILT, by=resident.resident_id)
                 site.delivered[item.definition_id] = site.delivered.get(item.definition_id, 0) + units
                 given[item.definition_id] = given.get(item.definition_id, 0) + units
                 wanted -= units

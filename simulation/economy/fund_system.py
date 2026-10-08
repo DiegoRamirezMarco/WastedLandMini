@@ -8,6 +8,7 @@ What becomes the settlement's away from where it is kept is carried there in som
 import math
 from typing import TYPE_CHECKING
 
+from simulation.economy.ledger import HANDED, TAKEN
 from simulation.economy.terms import Currency
 from simulation.items.inventory import Inventory
 from simulation.items.item import ItemInstance
@@ -53,21 +54,25 @@ class FundSystem:
                     held[item.definition_id] = held.get(item.definition_id, 0) + item.quantity
         return held
 
-    def take_goods(self, world: "SimulationWorld", definition_id: str, units: int, unit_price: int = 0) -> tuple[int, int]:
+    def take_goods(
+        self, world: "SimulationWorld", definition_id: str, units: int, unit_price: int = 0, reason: str = TAKEN
+    ) -> tuple[int, int]:
         """Take units of something that is nobody's out of wherever it is kept.
 
-        Returns how many there were and what they fetch at `unit_price` each: a worn one fetches less.
+        Returns how many there were and what they fetch at `unit_price` each: a worn one fetches
+        less. `reason` is why they leave, for the settlement's books.
         """
         left, fetched = units, 0
         for inventory in world.containers.values():
             for item in list(inventory.items):
                 if left <= 0:
-                    return (units, fetched)
+                    break
                 if item.definition_id == definition_id and item.owner_id is None and not item.broken:
                     share = world.items.condition_share(world, item)
                     taken = inventory.take_units(item.instance_id, left)
                     left -= taken
                     fetched += taken * math.floor(unit_price * share)
+        world.ledger.record(world, definition_id, -(units - left), reason)
         return (units - left, fetched)
 
     def worth_of_goods(self, world: "SimulationWorld", definition_id: str, units: int, unit_price: int) -> int:
@@ -137,6 +142,7 @@ class FundSystem:
 
     def _hand(self, world: "SimulationWorld", holder: Inventory, item: ItemInstance, carrier: Resident) -> None:
         """Give one unit of a thing to whoever is to carry it to the till, as the settlement's."""
+        was = item.owner_id
         if item.quantity > 1:
             item.quantity -= 1
             item = world.new_item(item.definition_id, 1, None)
@@ -145,6 +151,8 @@ class FundSystem:
             item.owner_id, item.given_by = None, None
         item.meant_for = COMMON
         carrier.inventory.add(item)
+        if was is not None:
+            world.ledger.record(world, item.definition_id, 1, HANDED, by=carrier.resident_id)
 
     # ----- carrying it to where it is kept -----
 
@@ -209,16 +217,32 @@ class FundSystem:
 
 
 def hand_over(
-    world: "SimulationWorld", holder: Inventory, item: ItemInstance, to: Inventory, owner_id: str | None
+    world: "SimulationWorld",
+    holder: Inventory,
+    item: ItemInstance,
+    to: Inventory,
+    owner_id: str | None,
+    reason: str | None = None,
 ) -> ItemInstance:
-    """Move one unit of a thing from one inventory to another, as `owner_id`'s. Returns it where it now is."""
+    """Move one unit of a thing from one inventory to another, as `owner_id`'s. Returns it where it now is.
+
+    What becomes the settlement's, or stops being it, is written down in its books: `reason`
+    says why, where it is something other than being handed in or taken.
+    """
+    was = item.owner_id
     if item.quantity > 1:
         item.quantity -= 1
-        return world.stock(to, item.definition_id, 1, owner_id)
-    holder.remove(item.instance_id)
-    item.owner_id = owner_id
-    # Whoever made a present of it made it to somebody else, and it is kept for nobody now.
-    item.given_by = None
-    item.meant_for = None
-    to.add(item)
-    return item
+        moved = world.stock(to, item.definition_id, 1, owner_id)
+    else:
+        holder.remove(item.instance_id)
+        item.owner_id = owner_id
+        # Whoever made a present of it made it to somebody else, and it is kept for nobody now.
+        item.given_by = None
+        item.meant_for = None
+        to.add(item)
+        moved = item
+    if was is None and owner_id is not None:
+        world.ledger.record(world, moved.definition_id, -1, reason or TAKEN)
+    elif was is not None and owner_id is None:
+        world.ledger.record(world, moved.definition_id, 1, reason or HANDED)
+    return moved

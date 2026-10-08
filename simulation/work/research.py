@@ -4,6 +4,7 @@ it out on their shift. What is known opens up things to build and makes other th
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from simulation.economy.ledger import STUDIED
 from simulation.residents.attributes import MIND
 from simulation.events.event import DomainEvent
 from simulation.residents.resident import Resident
@@ -306,6 +307,7 @@ class ResearchSystem:
             stack = desk.stack_of(subject.item, None)
             if stack is not None and wanted > 0:
                 wanted -= desk.take_units(stack.instance_id, wanted)
+        world.ledger.record(world, subject.item, -subject.count, STUDIED)
         state.supplied.append(subject.subject_id)
         return True
 

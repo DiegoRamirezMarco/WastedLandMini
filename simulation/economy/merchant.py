@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from simulation.ai.crowd import free_tile, spots_taken
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction
+from simulation.economy.ledger import BOUGHT, SOLD
 from simulation.economy.terms import TradeResult
 from simulation.economy.trade_system import BASE_DESIRE, MAX_WANT, MIN_WANT, SHOP_APPEAL
 from simulation.events.event import DomainEvent
@@ -268,7 +269,7 @@ class MerchantSystem:
             world.fund.pay_in(world, earned - owed)
             settled = f"; el fondo cobra {coin.amount(earned - owed)}"
         for item_id, units in sold.items():
-            world.fund.take_goods(world, item_id, units)
+            world.fund.take_goods(world, item_id, units, reason=SOLD)
             merchant.goods[item_id] = merchant.goods.get(item_id, 0) + units
         for item_id, units in bought.items():
             self._take(merchant, item_id, units)
@@ -276,6 +277,7 @@ class MerchantSystem:
                 world.at_gate[item_id] = world.at_gate.get(item_id, 0) + units
             else:
                 world.stock(store, item_id, units, None)
+            world.ledger.record(world, item_id, units, BOUGHT)
         parts = []
         if sold:
             parts.append(f"se le vende {self._listed(world, sold)}")

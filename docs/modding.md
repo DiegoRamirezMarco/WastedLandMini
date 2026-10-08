@@ -970,6 +970,34 @@ A pastime with somebody is an exchange in `data/social.json` with a `pastime`, o
   (`take` or `resist`) is what is done about what they were about to take, and their texts may
   use `{thing}`.
 
+## Resources
+
+`data/resources.json` says what a settlement counts as what it lives on, and how its books are
+kept:
+
+```json
+{
+  "window_days": 3,
+  "kept_days": 7,
+  "low_days": 2,
+  "resources": {
+    "food": {"name": "Comida", "icon": "food", "category": "food"},
+    "energy": {"name": "Combustible", "icon": "energy", "tag": "fuel"}
+  },
+  "reasons": {"made": "Hecho aquí", "eaten": "Comido"}
+}
+```
+
+- A resource is every item of a `category`, every item with a `tag`, or both. An item of a pack
+  counts as one by having that category or tag, with nothing else to do. `icon` is the name of
+  the picture it goes by in the bar.
+- `window_days` is how many of the last days the pace of things is worked out from, `kept_days`
+  how many are kept, and `low_days` how few days a resource has to have left to be running low.
+- `reasons` is what each reason a thing comes in or goes out is called where it is shown. What
+  a job made is called by the job's name.
+- Nothing is a resource that is not named here: take one out and it is no longer counted, add
+  one and it is.
+
 ## Wear, prices and the shop
 
 - An item wears out if its `properties` give it `wear`, the condition it loses per use out of 100:

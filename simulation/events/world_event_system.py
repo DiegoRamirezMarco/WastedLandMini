@@ -7,6 +7,7 @@ never changes what the residents would otherwise have done.
 from typing import TYPE_CHECKING
 
 from simulation.ai.crowd import free_tile, spots_taken
+from simulation.economy.ledger import ARRIVED, RAIDED, SPOILED
 from simulation.events.event import DomainEvent
 from simulation.knowledge.fact import SOURCE_PARTICIPANT
 from simulation.knowledge.knowledge_system import learn
@@ -259,7 +260,9 @@ class WorldEventSystem:
             for _, inventory in containers_of_kind(world, kind):
                 for item in list(inventory.items):
                     if item.owner_id is None:
-                        taken += inventory.take_units(item.instance_id, int(item.quantity * definition.fraction))
+                        gone = inventory.take_units(item.instance_id, int(item.quantity * definition.fraction))
+                        world.ledger.record(world, item.definition_id, -gone, RAIDED)
+                        taken += gone
         said = f"se llevan {taken} cosas" if taken else "no encuentran nada que llevarse"
         tile = self.arrival_tile(world)
         world.emit_event(
@@ -484,6 +487,7 @@ class WorldEventSystem:
         left = self.draw_goods(world, definition)
         for item_id, units in left.items():
             world.stock(container, item_id, units, None)
+            world.ledger.record(world, item_id, units, ARRIVED)
         goods = ", ".join(f"{world.registries.items.resolve(item_id).name} ({units})" for item_id, units in left.items())
         if goods:
             world.emit_event(DomainEvent("goods_left", STOCK_IMPORTANCE, f"{definition.text}: {goods}"))
@@ -508,7 +512,9 @@ class WorldEventSystem:
                 category = world.registries.items.resolve(item.definition_id).category
                 if item.owner_id is not None or category != definition.category:
                     continue
-                lost += inventory.take_units(item.instance_id, int(item.quantity * definition.fraction))
+                gone = inventory.take_units(item.instance_id, int(item.quantity * definition.fraction))
+                world.ledger.record(world, item.definition_id, -gone, SPOILED)
+                lost += gone
         if lost:
             world.emit_event(
                 DomainEvent("food_spoiled", SPOIL_IMPORTANCE, f"{definition.text}: se pierden {lost} raciones")

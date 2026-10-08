@@ -56,6 +56,7 @@ Event types emitted so far:
 | `power_failed` | Night falls and the generator has no fuel (once a day) | 25 |
 | `dose_given` | Someone lying in care is given a unit of what that care uses up, with `item` in `data` | 10 |
 | `no_medicine` | Someone is lying in care and there is none to give them (once a day) | 40 |
+| `resource_low` | The settlement's books say that what there is of a resource will last fewer days than `low_days`, or that there is none and it is being used (on the hour, once a day for each), with `resource`, `stock` and `days_left` in `data` | 35 |
 | `gift_given`, `trade_made` | Something changes hands after a friendly exchange | 20, 15 |
 | `taste_reaction` | A resident takes a meal, a drink, a thing used or a present well or badly, with `resident_id`, `item_id`, `reaction` (`hated`, `disliked`, `liked`, `loved`), `how` and `giver_id` in `data`. Taking it as any other is not an event | 8 |
 | `taste_found_out` | The player comes to suspect or to know a taste of a resident, with `resident_id`, `taste`, `state` and `leaning` in `data`. Never a number | 12 suspected, 22 known |

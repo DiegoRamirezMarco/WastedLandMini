@@ -6,6 +6,7 @@ from typing import Any
 
 from simulation.ai.affect import AffectSettings, affect_settings_from_data
 from simulation.ai.leisure import LeisureSettings, leisure_settings_from_data
+from simulation.economy.ledger import ResourceSettings, resource_settings_from_data
 from simulation.economy.settings import EconomySettings, economy_settings_from_data
 from simulation.events.decision import DecisionDefinition, decision_definition_from_data
 from simulation.events.world_event import RAID, STRANGER, WorldEventSettings, world_event_settings_from_data
@@ -166,6 +167,8 @@ class BuiltInRegistries:
     # Limbs a resident can lose for good, by limb ID.
     limbs: dict[str, LimbDefinition] = field(default_factory=dict)
     economy: EconomySettings = field(default_factory=EconomySettings)
+    # What the settlement lives on, and which items count as each.
+    resources: ResourceSettings = field(default_factory=ResourceSettings)
     bonds: BondSettings = field(default_factory=BondSettings)
     expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
     # How building is gone about. What each thing takes is in its own definition.
@@ -286,6 +289,9 @@ class BuiltInRegistries:
         economy_path = root / "economy.json"
         if economy_path.is_file():
             registries.economy = economy_settings_from_data(_read_object(economy_path))
+        resources_path = root / "resources.json"
+        if resources_path.is_file():
+            registries.resources = resource_settings_from_data(_read_object(resources_path))
         tastes_path = root / "tastes.json"
         if tastes_path.is_file():
             registries.tastes = taste_settings_from_data(_read_object(tastes_path))

@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from simulation.ai.navigation import path_beside
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction
 from simulation.economy.fund_system import hand_over
+from simulation.economy.ledger import STOLEN
 from simulation.events.event import DomainEvent
 from simulation.items.item import ItemInstance
 from simulation.items.theft import (
@@ -203,7 +204,7 @@ def _raid_fund(world: "SimulationWorld", thief: Resident, activity: Activity) ->
             return False
         definition = world.registries.items.resolve(item.definition_id)
         # It is theirs now, as far as they are concerned: nobody's would be put away as a find.
-        mine = hand_over(world, container, item, thief.inventory, thief.resident_id)
+        mine = hand_over(world, container, item, thief.inventory, thief.resident_id, STOLEN)
         attempt = TheftAttempt(thief.resident_id, FUND_VICTIM, mine.instance_id, container_id=till_id)
         taken = f"{definition.article} {definition.name}"
     _record(

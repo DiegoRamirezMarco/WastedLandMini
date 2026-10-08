@@ -11,6 +11,7 @@ those who see it or hear of it takes it their own way, and the settlement is mov
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from simulation.economy.ledger import RATIONED
 from simulation.events.event import DomainEvent
 from simulation.items.item_system import FOOD_CATEGORY, WATER_CATEGORY
 from simulation.justice.records import (
@@ -706,7 +707,7 @@ class JusticeSystem:
             if times <= 0 or minute % (MINUTES_PER_DAY // times) != (MINUTES_PER_DAY // times) // 2:
                 continue
             given = item_id if item_id and world.fund.goods(world).get(item_id, 0) > 0 else self._plentiful(world, category)
-            if given is None or world.fund.take_goods(world, given, 1)[0] < 1:
+            if given is None or world.fund.take_goods(world, given, 1, reason=RATIONED)[0] < 1:
                 if sentence.unfed_on != world.clock.day:
                     sentence.unfed_on = world.clock.day
                     word = "comer" if category == FOOD_CATEGORY else "beber"

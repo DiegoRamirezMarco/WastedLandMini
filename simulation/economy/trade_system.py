@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from simulation.work.craft_system import tool_tag
 from simulation.ai.utility_ai import need_urgency
 from simulation.economy.fund_system import hand_over
+from simulation.economy.ledger import MENDED, SOLD
 from simulation.events.event import DomainEvent
 from simulation.items.inventory import Inventory
 from simulation.items.item import WORN_CONDITION, ItemDefinition, ItemInstance
@@ -427,13 +428,15 @@ class TradeSystem:
         definition = world.registries.items.resolve(item.definition_id)
         text = f"{resident.name} compra {definition.article} {definition.name} por {coin.amount(price)}"
         if gift is None:
-            hand_over(world, container, item, resident.inventory, resident.resident_id)
+            hand_over(world, container, item, resident.inventory, resident.resident_id, SOLD)
         else:
             # A present is kept apart from what is theirs to use, until it is given.
             kept = world.new_item(item.definition_id, 1, resident.resident_id)
             kept.condition, kept.meant_for = item.condition, gift[2].resident_id
             container.take_unit(item.instance_id)
             resident.inventory.add(kept)
+            if item.owner_id is None:
+                world.ledger.record(world, item.definition_id, -1, SOLD)
             text = f"{text}, para {gift[2].name}"
         room = world.room_at(resident.tile)
         world.emit_event(
@@ -544,7 +547,7 @@ class TradeSystem:
                 continue
             wanted_definition, given_definition = resolve(wanted.definition_id), resolve(given.definition_id)
             hand_over(world, resident.inventory, given, container, None)
-            hand_over(world, container, wanted, resident.inventory, resident.resident_id)
+            hand_over(world, container, wanted, resident.inventory, resident.resident_id, SOLD)
             world.emit_event(
                 DomainEvent(
                     "item_swapped",
@@ -636,6 +639,7 @@ class TradeSystem:
         if material is None:
             return False
         material[0].take_unit(material[1].instance_id)
+        world.ledger.record(world, material[1].definition_id, -1, MENDED)
         return True
 
     def repair_minute(self, world: "SimulationWorld", activity: Activity, use: UseDefinition) -> bool:
