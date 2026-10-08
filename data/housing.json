@@ -15,7 +15,8 @@
     "shop": "tienda",
     "bar": "cantina",
     "clinic": "enfermería",
-    "hall": "sala común"
+    "hall": "sala común",
+    "jail": "cárcel"
   },
   "furnishing": {
     "bed": {

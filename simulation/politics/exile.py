@@ -83,6 +83,10 @@ class ExileSystem:
     def _depart(self, world: "SimulationWorld", resident: Resident) -> None:
         resident_id, name, tile = resident.resident_id, resident.name, resident.tile
         world.leaving.pop(resident_id, None)
+        record = next((each for each in reversed(world.exiled) if each.resident_id == resident_id and not each.returned), None)
+        if record is not None:
+            # Who they were is kept, and when they will be heard of again.
+            world.justice.left(world, resident, record)
         world.health.leave_behind(world, resident, takes_own=True)
         world.emit_event(
             PoliticalEvent(

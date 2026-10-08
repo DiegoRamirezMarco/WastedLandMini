@@ -7,6 +7,7 @@ from simulation.clock import SimulationClock
 from simulation.economy.merchant import Merchant
 from simulation.housing.housing import HousingState, Ornament
 from simulation.economy.terms import Currency, Debt, TradingState
+from simulation.justice.records import CLOSED, STEPS, JusticeState, PunishmentRecord, Ration, Sentence, Trial
 from simulation.events.crisis import Crisis
 from simulation.events.decision import Decision, DecisionOption
 from simulation.events.event import DomainEvent
@@ -223,6 +224,15 @@ class SaveManager:
             },
             "leaving": dict(world.leaving),
             "exiled": [vars(exile) for exile in world.exiled],
+            "courts": {
+                "trials": [vars(trial) for trial in world.courts.trials.values()],
+                "trial_count": world.courts.trial_count,
+                "sentences": [vars(sentence) for sentence in world.courts.sentences],
+                "history": [vars(record) for record in world.courts.history],
+                "ration": vars(world.courts.ration) if world.courts.ration is not None else None,
+                "weighing": {resident_id: list(about) for resident_id, about in world.courts.weighing.items()},
+                "at_gate": world.courts.at_gate,
+            },
             "bundles": [
                 {**{key: value for key, value in vars(bundle).items() if key != "personality"}, "personality": vars(bundle.personality)}
                 for bundle in world.bundles.values()
@@ -707,10 +717,91 @@ class SaveManager:
                 name=str(exile.get("name", "")),
                 at=int(exile.get("at", 0)),
                 why=str(exile.get("why", "")),
+                # Somebody thrown out before anybody could come back is gone for good.
+                back_at=int(exile["back_at"]) if exile.get("back_at") is not None else None,
+                grudge=float(exile.get("grudge", 0.0)),
+                tries=int(exile.get("tries", 0)),
+                person=dict(_object_or_empty(exile.get("person"))),
+                returned=bool(exile.get("returned", False)),
             )
             for exile in _list_or_empty(data.get("exiled"))
             if isinstance(exile, dict)
         ]
+        self._restore_courts(world, _object_or_empty(data.get("courts")))
+
+    def _restore_courts(self, world: SimulationWorld, saved: dict[str, Any]) -> None:
+        """Put back the trials, the sentences being served and what has been carried out. A
+        save from before there were any has none."""
+        courts = JusticeState()
+        punishments = world.registries.justice.punishments
+        for values in _list_or_empty(saved.get("trials")):
+            if not isinstance(values, dict) or not values.get("trial_id"):
+                continue
+            step = str(values.get("step", CLOSED))
+            trial = Trial(
+                trial_id=str(values["trial_id"]),
+                accused=str(values.get("accused", "")),
+                accuser=str(values.get("accuser", "")),
+                offence=str(values.get("offence", "")),
+                fact_id=str(values.get("fact_id", "")),
+                opened_at=int(values.get("opened_at", 0)),
+                step=step if step in (*STEPS, CLOSED) else CLOSED,
+                next_at=int(values.get("next_at", 0)),
+                witnesses=[str(each) for each in _list_or_empty(values.get("witnesses"))],
+                ballots={str(key): bool(value) for key, value in _object_or_empty(values.get("ballots")).items()},
+                verdict=str(values["verdict"]) if values.get("verdict") else None,
+                punishment=str(values["punishment"]) if values.get("punishment") else None,
+                closed_at=int(values["closed_at"]) if values.get("closed_at") is not None else None,
+            )
+            if trial.open and trial.accused not in world.residents:
+                # Nobody is tried who is no longer here.
+                trial.step = CLOSED
+            courts.trials[trial.trial_id] = trial
+        courts.trial_count = max(int(saved.get("trial_count", 0)), len(courts.trials))
+        for values in _list_or_empty(saved.get("sentences")):
+            if isinstance(values, dict) and values.get("resident_id") in world.residents and values.get("punishment") in punishments:
+                place = values.get("place_id")
+                courts.sentences.append(
+                    Sentence(
+                        resident_id=str(values["resident_id"]),
+                        punishment=str(values["punishment"]),
+                        trial_id=str(values.get("trial_id", "")),
+                        until=int(values.get("until", 0)),
+                        place_id=str(place) if place else None,
+                        unfed_on=int(values.get("unfed_on", 0)),
+                    )
+                )
+        for values in _list_or_empty(saved.get("history")):
+            if isinstance(values, dict) and values.get("resident_id"):
+                courts.history.append(
+                    PunishmentRecord(
+                        resident_id=str(values["resident_id"]),
+                        name=str(values.get("name", "")),
+                        offence=str(values.get("offence", "")),
+                        punishment=str(values.get("punishment", "")),
+                        at=int(values.get("at", 0)),
+                        trial_id=str(values.get("trial_id", "")),
+                        present=[str(each) for each in _list_or_empty(values.get("present"))],
+                        kin=[str(each) for each in _list_or_empty(values.get("kin"))],
+                        friends=[str(each) for each in _list_or_empty(values.get("friends"))],
+                        reactions={str(key): str(value) for key, value in _object_or_empty(values.get("reactions")).items()},
+                        child=bool(values.get("child", False)),
+                    )
+                )
+        ration = saved.get("ration")
+        if isinstance(ration, dict):
+            courts.ration = Ration(
+                meals=max(0, int(ration.get("meals", 0))),
+                drinks=max(0, int(ration.get("drinks", 0))),
+                food=str(ration.get("food", "")),
+                drink=str(ration.get("drink", "")),
+            )
+        for resident_id, about in _object_or_empty(saved.get("weighing")).items():
+            if resident_id in world.residents and isinstance(about, list) and len(about) == 2:
+                courts.weighing[str(resident_id)] = (str(about[0]), str(about[1]))
+        at_gate = saved.get("at_gate")
+        courts.at_gate = str(at_gate) if at_gate else None
+        world.courts = courts
 
     def _restore_kin(self, world: SimulationWorld, data: dict[str, Any], version: int) -> None:
         """Put back who is kin to whom. In a save from before, nobody is, and everyone is who

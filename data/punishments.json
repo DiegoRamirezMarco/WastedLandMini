@@ -1,0 +1,65 @@
+{
+  "offences": {
+    "theft_committed": {"name": "un robo", "gravity": 3},
+    "fight_started": {"name": "una pelea", "gravity": 3},
+    "law_broken": {"name": "saltarse una ley", "gravity": 2},
+    "election_rigged": {"name": "amañar una votación", "gravity": 5},
+    "death": {"name": "una muerte", "gravity": 9}
+  },
+  "punishments": {
+    "warning": {"name": "amonestación", "severity": 1, "said": "se lleva una amonestación"},
+    "fine": {"name": "multa", "severity": 2, "amount": 12, "said": "paga una multa"},
+    "confiscation": {"name": "confiscación", "severity": 3, "things": 2, "said": "pierde lo que tenía"},
+    "community_service": {"name": "trabajos para todos", "severity": 3, "days": 3, "said": "trabajará para todos"},
+    "public_stocks": {
+      "name": "cepo", "severity": 4, "hours": 12, "objects": ["stocks"], "public": true,
+      "said": "queda en el cepo, a la vista de todos"
+    },
+    "prison": {"name": "cárcel", "severity": 5, "days": 3, "building": "jail", "said": "va a la cárcel"},
+    "corporal_punishment": {
+      "name": "castigo corporal", "severity": 6, "harm": 25, "public": true, "harsh": true,
+      "said": "recibe un castigo corporal"
+    },
+    "exile": {"name": "destierro", "severity": 8, "harsh": true, "said": "queda fuera del asentamiento"},
+    "execution": {
+      "name": "ejecución", "severity": 10, "objects": ["gallows", "guillotine"], "public": true, "harsh": true,
+      "cause": "la condena", "said": "paga con la vida"
+    }
+  },
+  "trial": {
+    "step_minutes": 60,
+    "sentence_hours": 24,
+    "unanswered": "warning",
+    "guilty_from": 0.5,
+    "weights": {
+      "saw": 1.0, "told": 0.8, "testimony": 0.6, "resentment": 0.3, "affection": -0.3, "kin": -0.4, "accuser": 0.1
+    }
+  },
+  "accusing": {
+    "hour": 12,
+    "sure_from": 0.6,
+    "within_days": 6,
+    "from": 0.45,
+    "weights": {"gravity": 0.05, "resentment": 0.6, "affection": -0.6, "justice": 0.3}
+  },
+  "prison": {"meals": 3, "drinks": 2, "food": "", "drink": "", "most": 4},
+  "reactions": {
+    "friend_from": 40,
+    "harsher_by": 3,
+    "indifferent_below": 2,
+    "approval": {"trust": 2.0, "loyalty": 1.5},
+    "anger": {"resentment": 3.0, "trust": -2.0},
+    "grief": {"resentment": 4.0, "trust": -3.0, "stress": 4.0, "mood": -3.0},
+    "fear": {"fear": 3.0},
+    "measures": {
+      "approval": {"legitimacy": 0.5, "unrest": -0.2},
+      "anger": {"legitimacy": -0.7, "unrest": 0.6},
+      "grief": {"legitimacy": -0.5, "unrest": 0.5},
+      "fear": {"unrest": 0.1}
+    },
+    "harsh": {"authoritarianism": 3.0},
+    "child_factor": 3.0,
+    "heard_share": 0.5
+  },
+  "exile_return": {"days": [5, 12], "raid_chance": 0.5, "tries": 3}
+}

@@ -196,8 +196,74 @@ def _strip(frames: list[pygame.Surface]) -> pygame.Surface:
     return strip
 
 
+JUSTICE = {**WOOD, "s": "stone", "d": "dust", "b": "bone"}
+
+STOCKS = [
+    "................",
+    "................",
+    "................",
+    ".oooooooooooooo.",
+    ".oTTTTTTTTTTTTo.",
+    ".ottoottttootto.",
+    ".ottoottttootto.",
+    ".offffffffffffo.",
+    ".oooooooooooooo.",
+    "...ok......ko...",
+    "...ok......ko...",
+    "...ok......ko...",
+    "...ok......ko...",
+    "..oooo....oooo..",
+    "................",
+    "................",
+]
+
+
+def _tall(marks: dict[tuple[int, int], str]) -> list[str]:
+    """A grid a tile wide and two high from the pixels that are painted on it."""
+    return ["".join(marks.get((x, y), ".") for x in range(16)) for y in range(32)]
+
+
+def _gallows() -> list[str]:
+    marks: dict[tuple[int, int], str] = {}
+    for y in range(2, 27):
+        marks.update({(3, y): "o", (4, y): "t", (5, y): "o"})
+    for x in range(3, 13):
+        marks.update({(x, 2): "o", (x, 3): "T", (x, 4): "o"})
+    for step in range(4):
+        marks[(6 + step, 9 - step)] = "k"
+    for y in range(5, 11):
+        marks[(11, y)] = "d"
+    for spot in ((10, 11), (12, 11), (10, 12), (12, 12), (11, 13)):
+        marks[spot] = "d"
+    for x in range(1, 15):
+        marks.update({(x, 26): "o", (x, 27): "T", (x, 28): "f", (x, 29): "o"})
+    return _tall(marks)
+
+
+def _guillotine() -> list[str]:
+    marks: dict[tuple[int, int], str] = {}
+    for y in range(3, 27):
+        for x in (3, 11):
+            marks.update({(x, y): "o", (x + 1, y): "t", (x + 2, y): "o"})
+    for x in range(3, 14):
+        marks.update({(x, 2): "o", (x, 3): "T", (x, 4): "o"})
+    for x in range(6, 11):
+        for y in range(6, 8 + (x - 6) // 2):
+            marks[(x, y)] = "s"
+        marks[(x, 5)] = "o"
+    for x in range(6, 11):
+        marks.update({(x, 21): "o", (x, 22): "t", (x, 23): "o"})
+    marks.update({(8, 22): "o"})
+    for x in range(1, 15):
+        marks.update({(x, 26): "o", (x, 27): "T", (x, 28): "f", (x, 29): "o"})
+    return _tall(marks)
+
+
 def build() -> dict[str, pygame.Surface]:
     return {
+        "sprites/objects/stocks.png": paint(STOCKS, JUSTICE),
+        "sprites/objects/gallows.png": paint(_gallows(), JUSTICE),
+        "sprites/objects/guillotine.png": paint(_guillotine(), JUSTICE),
         "sprites/objects/bed.png": paint(BED, BED_LEGEND),
         "sprites/objects/pantry.png": paint(PANTRY, PANTRY_LEGEND),
         "sprites/objects/table.png": paint(TABLE, WOOD),

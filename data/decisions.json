@@ -1215,5 +1215,107 @@
         "influence": {}
       }
     ]
+  },
+  "accuse": {
+    "event_type": "accusation_weighed",
+    "window_minutes": 120,
+    "cooldown_minutes": 0,
+    "anger_threshold": 0,
+    "importance": 55,
+    "text": "{name} sabe algo de {thing} y se pregunta si acusarle",
+    "prompt": "Sé lo que hizo {thing}. ¿Le acuso?",
+    "outcomes": {
+      "accuse": {
+        "score": {
+          "bias": 0.3,
+          "aggression": 0.2,
+          "courage": 0.2
+        },
+        "agrees": true,
+        "text": "{name} decide acusar a {thing}"
+      },
+      "let_it_be": {
+        "score": {
+          "bias": 0.25,
+          "empathy": 0.3
+        },
+        "text": "{name} lo deja estar"
+      }
+    },
+    "options": [
+      {
+        "id": "encourage",
+        "text": "Que responda por ello",
+        "influence": {
+          "accuse": 0.5,
+          "let_it_be": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "discourage",
+        "text": "Déjalo estar",
+        "influence": {
+          "let_it_be": 0.5,
+          "accuse": -0.3
+        }
+      }
+    ]
+  },
+  "exile_back": {
+    "event_type": "exile_at_gate",
+    "window_minutes": 120,
+    "cooldown_minutes": 0,
+    "anger_threshold": 0,
+    "importance": 65,
+    "text": "{thing}, a quien echaron, pide volver, y {name} está en la puerta",
+    "prompt": "{thing} está en la puerta y pide volver. ¿Le abro?",
+    "outcomes": {
+      "let_back": {
+        "score": {
+          "bias": -0.05,
+          "empathy": 0.4,
+          "affection": 0.6,
+          "kin": 0.6
+        },
+        "agrees": true,
+        "text": "{name} le abre la puerta a {thing}"
+      },
+      "keep_out": {
+        "score": {
+          "bias": 0.3,
+          "resentment": 0.6,
+          "aggression": 0.1
+        },
+        "text": "{name} no le abre a {thing}"
+      }
+    },
+    "options": [
+      {
+        "id": "open",
+        "text": "Que vuelva",
+        "influence": {
+          "let_back": 0.5,
+          "keep_out": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      },
+      {
+        "id": "close",
+        "text": "Que siga fuera",
+        "influence": {
+          "keep_out": 0.5,
+          "let_back": -0.3
+        }
+      }
+    ]
   }
 }

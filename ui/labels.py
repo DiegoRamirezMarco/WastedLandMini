@@ -4,7 +4,14 @@ from simulation.family.calendar import MONTH_NAMES
 from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item import ItemInstance
 from simulation.items.item_system import FOOD_CATEGORY, WATER_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
-from simulation.residents.activity import ATTEND_ACTION, HEED_ACTION, LEAVE_ACTION, RETIRE_ACTION, SHELTER_ACTION
+from simulation.residents.activity import (
+    ATTEND_ACTION,
+    HEED_ACTION,
+    LEAVE_ACTION,
+    RETIRE_ACTION,
+    SERVE_ACTION,
+    SHELTER_ACTION,
+)
 from simulation.residents.resident import Resident
 from simulation.tastes.knowledge import PLAYER
 from simulation.tastes.reaction import reaction_to
@@ -273,6 +280,8 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
         return "se marcha del asentamiento"
     if activity.action == SLEEP_ROUGH_ACTION:
         return "duerme en el suelo: no tiene cama"
+    if activity.action == SERVE_ACTION:
+        return "cumple su condena" if not activity.path else "va a cumplir su condena"
     if activity.action == HEED_ACTION:
         return "se queda pensando..."
     if placed is None:

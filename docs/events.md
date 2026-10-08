@@ -112,6 +112,16 @@ Event types emitted so far:
 | `saluted` | A resident greets whoever leads, as a law has it | 8 |
 | `resident_expelled` | A resident is thrown out, with `resident_id` and `by` in `data`, and sets off for the gate | 80 |
 | `resident_left` | They go through it for good, with `resident_id` and the `tile` in `data` | 70 |
+| `accusation_weighed` | A resident who knows of something somebody did wonders whether to accuse them, and waits for advice | 55 |
+| `trial_opened` | Somebody is accused, by a resident or by the player, with `trial_id`, `accused`, `accuser` and `offence` in `data` | 55 |
+| `trial_step` | A trial moves on: `evidence`, `witnesses` or `defence` as `step` in `data`, with what came of it in its text | 35 |
+| `trial_verdict` | Those who judge have said, with `verdict` (`guilty` or `innocent`), `guilty` and `judges` in `data` | 60 |
+| `punishment_carried` | What the player said somebody is given is done, with `punishment`, `offence`, `harsh`, `public`, who was `present` and how each took it as `reactions` in `data` | 46 to 100, by its severity |
+| `sentence_served` | Somebody has done their days locked up, their hours in the stocks or their days of work | 40 |
+| `prisoner_unfed` | There was nothing to give a prisoner of what they are to be given. At most once a day for each | 45 |
+| `exile_at_gate` | Somebody who was exiled is at the gate asking to come back, and whoever is there waits for advice | 65 |
+| `exile_readmitted`, `exile_turned_away` | They are let back in, the same person they were, or sent on their way | 65, 50 |
+| `exile_raid` | Somebody exiled who left with a grudge comes back with raiders, and a raid follows | 75 |
 | `rigging_stirring` | A leader about to lose a secret vote wonders whether to see to the count, and waits for advice | 65 |
 | `election_rigged` | They do. Only whoever sees them knows | 70 |
 | `fraud_claimed` | A loser says there was cheating, with the `winner` and whether the vote was `rigged` in `data` | 60 |

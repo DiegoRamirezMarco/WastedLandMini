@@ -114,3 +114,14 @@ class Exile:
     name: str
     at: int = 0
     why: str = ""
+    # The game minute at which they are heard of again, at the gate or with raiders. None once
+    # they have been, or if they never are.
+    back_at: int | None = None
+    # What they held against the government as they left, from 0 to 1, and how many times
+    # they have come to the gate and found nobody.
+    grudge: float = 0.0
+    tries: int = 0
+    # Who they were, for them to be the same if they are let back in.
+    person: dict = field(default_factory=dict)
+    # Whether they were let back in, and so are no longer out.
+    returned: bool = False

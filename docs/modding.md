@@ -743,6 +743,43 @@ settlement is created, in `SimulationWorld.demo_world`.
 - `charisma` and `leadership` are sides of a personality like any other, from 0 to 100.
 - The game opens `resign` by ID. Its scores may weigh `support`.
 
+## Trials and punishments
+
+`data/punishments.json` holds what somebody can be tried for and what they can be given.
+
+- `offences` lists, by the type of the event, what can be brought to trial: a `name`, as it is
+  said after "de" (`un robo`), and a `gravity` from 1 to 10. An event of that type has to leave
+  a fact whose first subject is whoever did it, as a theft or a broken law does.
+- `punishments` lists them by ID, each with a `name`, a `severity` from 1 to 10 and what is
+  `said` of whoever is given it. `building` names the use a building has to have for it to be
+  carried out, and `objects` the kinds of object any one of which has to stand in the
+  settlement: without them nobody is sentenced to it. `public` has it seen by whoever is there,
+  and `harsh` marks the ones that frighten. `amount`, `things`, `days`, `hours`, `harm` and
+  `cause` say how much of it there is. What `fine`, `confiscation`, `community_service`,
+  `public_stocks`, `prison`, `corporal_punishment`, `exile` and `execution` do is code: a
+  punishment by another ID is a word, a record and how it is taken, and no more.
+- `trial` holds `step_minutes`, the `sentence_hours` the player has to say what is given and
+  what is given `unanswered`, `guilty_from`, and the `weights` of a verdict: `saw`, `told`,
+  `testimony`, `resentment`, `affection`, `kin` and `accuser`.
+- `accusing` holds the `hour` at which whoever knows of something thinks of accusing, how sure
+  of it they have to be (`sure_from`), how old it may be (`within_days`), what it has to come to
+  (`from`), and its `weights`: `gravity`, `resentment`, `affection` and `justice`.
+- `prison` holds what a prisoner is given each day until the player says otherwise: `meals`,
+  `drinks`, a `food` and a `drink` by item ID (empty for whatever there is most of), and the
+  `most` of either.
+- `reactions` holds how a punishment is taken: `friend_from`, `harsher_by`,
+  `indifferent_below`, what `approval`, `anger`, `grief` and `fear` each do to whoever feels
+  them (sides of a political profile, `stress` and `mood`) for each point of severity, what
+  each does to the settlement's `measures`, what a `harsh` one adds, the `child_factor`, and
+  the `heard_share` that reaches whoever was not there.
+- `exile_return` holds after how many `days` somebody exiled is heard of again (a range), the
+  `raid_chance` for one who left with all the grudge there is, and how many `tries` they give
+  the gate.
+- A building is a jail by its use: `uses` in `data/housing.json` has `jail`. `stocks`, `gallows`
+  and `guillotine` are objects like any other in `data/interactables.json`.
+- The game opens the decisions `accuse` and `exile_back` by ID. `exile_back` may weigh
+  `affection`, `resentment` and `kin`.
+
 ## Substances
 
 - An item is a substance with a `substance` entry:

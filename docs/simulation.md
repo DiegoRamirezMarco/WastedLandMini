@@ -389,6 +389,54 @@ room. An argument's importance rises with the resentment between the two.
 - **Whims.** Whoever leads an authoritarian enough settlement passes what takes their fancy:
   bans the food they cannot stand, has everybody greet them.
 
+## Trials and punishment
+
+- `world.justice` (`JusticeSystem`) tries people and punishes them; `world.courts`
+  (`JusticeState`) is what is kept: trials, sentences being served, the history of punishments
+  and what prisoners are given. All of it is data in `data/punishments.json`.
+- **Somebody is tried for what is known of them.** `known_offences` is what a resident did
+  that left a fact, that somebody else who is here knows by having seen it or been told, and
+  that nobody was tried for. What only the world knows cannot be brought, and nobody is tried
+  twice for one thing. There is one trial at a time.
+- **Who accuses**: a resident, at one hour of the day, who knows of it surely enough and
+  wants it answered for, by how grave it is, what they feel for whoever did it and how much
+  justice matters to them. Nobody accuses their partner or their kin. It is theirs to decide
+  and the player's to advise on (`accuse`). And the player, with `AccuseCommand`.
+- **Six steps**, `step_minutes` apart: accusation, evidence (how many know of it), witnesses
+  (who saw it, as against having heard it told), defence, verdict and punishment. Each is a
+  domain event.
+- **Who judges** is whoever decides anything under the government in force, and every adult
+  where there is none. The accused never does. Each holds them guilty or not on what they
+  believe they know (`belief_in_guilt`): what they saw counts whole and what they were told
+  for less; having neither, they go by the witness they trust most; and what they feel for the
+  accused and for whoever accuses weighs on it. More guilty than not is guilty. Found
+  innocent, the accused holds it against whoever accused them.
+- **The punishment is the player's to say** (`SentenceCommand`), out of `available`: nobody is
+  sentenced to prison without a building whose use is `jail`, to the stocks without stocks, or
+  to death without a gallows or a guillotine. Said nothing in `sentence_hours`, it is the
+  least there is.
+- **What each does**: a warning is a word. A fine goes into the fund, in coin as far as they
+  have it, or under barter in things of theirs worth as much. Confiscation takes what is worth
+  most of what they carry. Work for everybody weighs on them for its days. The stocks and
+  prison keep them where they are served (`SERVE_ACTION`): they go nowhere and do nothing else,
+  and at night they sleep where they are. Corporal punishment is an injury. Exile is
+  `ExileSystem.banish`. Execution is a death.
+- **A prisoner is given what the player says** (`SetPrisonRationCommand`): so many meals and so
+  many drinks a day, of an item named or of whatever there is most of, out of what is nobody's.
+  Given nothing, they go hungry like anybody who does not eat.
+- **A punishment is a political event.** Whoever is there, or for one not done in public
+  whoever is in the settlement, takes it one of five ways: with approval, fear, anger, grief
+  or indifference, by whether the condemned is one of their own, whether they hold them
+  guilty, and how far it goes beyond what was done. Each moves their political profile, their
+  nerves and their mood, leaves a memory worded their own way, and adds to what the
+  settlement's measures are moved by. A child's counts `child_factor` times, and nobody
+  approves of a harsh one. It is all on record (`PunishmentRecord`).
+- **Somebody exiled is heard of again**, `exile_return.days` later. Who they were is kept on
+  their `Exile` record. One who left with a grudge may come with raiders, by `raid_chance`
+  times that grudge. Otherwise they come to the gate, and whoever is there decides
+  (`exile_back`), with the player's advice: let in, they are the same person with the same
+  ID, kin and all. Turned away, or finding nobody for `tries` days, they are gone.
+
 ## Substances
 
 - **Taking one.** A substance is an item: owned and used like any other, or had over a bar that

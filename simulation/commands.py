@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from simulation.ai.affect import AffectResult
 from simulation.economy.terms import TradeResult
 from simulation.housing.housing import HousingResult
+from simulation.justice.justice_system import JusticeResult
 from simulation.politics.government import PoliticsResult
 from simulation.work.research import ResearchResult
 from world.map import Tile
@@ -143,6 +144,15 @@ class CommandTarget(Protocol):
         ...
 
     def set_manner(self, resident_id: str, kind_id: str, manner_id: str) -> bool:
+        ...
+
+    def accuse(self, accused_id: str, fact_id: str | None = None) -> JusticeResult:
+        ...
+
+    def sentence(self, trial_id: str, punishment_id: str) -> JusticeResult:
+        ...
+
+    def set_prison_ration(self, meals: int, drinks: int, food: str = "", drink: str = "") -> JusticeResult:
         ...
 
     def acknowledge_tutorial(self) -> bool:
@@ -657,6 +667,48 @@ class SetIdentityCommand:
     def apply(self, world: CommandTarget) -> bool:
         """Returns whether they are now so: there must be such a resident, and it must make sense."""
         return world.set_identity(self.resident_id, self.sex, self.gender, self.drawn_to)
+
+
+@dataclass(frozen=True)
+class AccuseCommand:
+    """The player's accusation: that a resident be tried for something known of them.
+
+    It is refused for what nobody in the settlement saw or was told of. Left out, the thing is
+    the latest that is known of them. Whether they are guilty is for those who decide to say.
+    """
+
+    accused_id: str
+    # The fact it rests on, by its ID.
+    fact_id: str | None = None
+
+    def apply(self, world: CommandTarget) -> JusticeResult:
+        return world.accuse(self.accused_id, self.fact_id)
+
+
+@dataclass(frozen=True)
+class SentenceCommand:
+    """What the player says somebody found guilty is given. Only what the settlement has a
+    place for can be: no prison without a jail, nor stocks, gallows or guillotine without one."""
+
+    trial_id: str
+    punishment_id: str
+
+    def apply(self, world: CommandTarget) -> JusticeResult:
+        return world.sentence(self.trial_id, self.punishment_id)
+
+
+@dataclass(frozen=True)
+class SetPrisonRationCommand:
+    """How much a prisoner is given to eat and to drink each day, and of what, by item ID. An
+    item left out is whatever of the kind the settlement has most of."""
+
+    meals: int
+    drinks: int
+    food: str = ""
+    drink: str = ""
+
+    def apply(self, world: CommandTarget) -> JusticeResult:
+        return world.set_prison_ration(self.meals, self.drinks, self.food, self.drink)
 
 
 @dataclass(frozen=True)

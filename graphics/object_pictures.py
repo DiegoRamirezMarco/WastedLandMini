@@ -773,6 +773,59 @@ def caravan_cart(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
 Painter = Callable[[int, int, int], ObjectPicture]
 
 # The picture the game draws of each kind of object, by kind.
+def stocks(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A board with three holes in it between two posts, for a head and two hands."""
+    stage = Stage((1, 1), 60, cell, depth)
+    s = stage.under
+    stage.shadow(8, 84, 60)
+    floor = stage.front - (stage.front - stage.back) * 0.3
+    top = max(6.0, floor - 88)
+    for x in (14, 76):
+        s.box(x, top + 4, 10, floor - top - 4, WOOD, 2)
+    s.box(6, top + 14, 88, 32, PALE_WOOD, 4)
+    s.stroke([(9, top + 30), (91, top + 30)], LINE, 1.8)
+    s.oval(40, top + 20, 20, 20, darker(WOOD, 0.55), 255, outline=True)
+    for x in (16, 70):
+        s.oval(x, top + 23, 14, 14, darker(WOOD, 0.55), 255, outline=True)
+    return stage.picture()
+
+
+def gallows(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A post with an arm to it and a rope hanging from the arm, on a low stand."""
+    stage = Stage((1, 1), 170, cell, depth)
+    s = stage.under
+    stage.shadow(4, 92, 60)
+    floor = stage.front - (stage.front - stage.back) * 0.3
+    top = max(6.0, floor - 210)
+    s.box(6, floor - 16, 88, 16, WOOD, 3)
+    s.shade(10, floor - 13, 80, 4, lighter(WOOD, 0.3), 255, 2)
+    s.box(18, top + 6, 12, floor - top - 20, PALE_WOOD, 2)
+    s.box(14, top, 70, 12, PALE_WOOD, 3)
+    s.stroke([(30, top + 46), (56, top + 12)], darker(WOOD, 0.3), 5.0)
+    s.stroke([(72, top + 12), (72, top + 62)], CANVAS, 3.0)
+    s.oval(63, top + 60, 18, 24, CANVAS, 0, outline=True)
+    return stage.picture()
+
+
+def guillotine(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """Two tall posts with a slanted blade up between them, and a board with a hole at their foot."""
+    stage = Stage((1, 1), 180, cell, depth)
+    s = stage.under
+    stage.shadow(4, 92, 60)
+    floor = stage.front - (stage.front - stage.back) * 0.3
+    top = max(6.0, floor - 220)
+    s.box(6, floor - 14, 88, 14, WOOD, 3)
+    for x in (22, 68):
+        s.box(x, top + 8, 10, floor - top - 20, PALE_WOOD, 2)
+    s.box(18, top, 64, 12, PALE_WOOD, 3)
+    s.poly([(32, top + 22), (68, top + 22), (68, top + 58), (32, top + 40)], METAL)
+    s.stroke([(34, top + 41), (67, top + 57)], lighter(METAL, 0.5), 2.0)
+    s.box(32, top + 14, 36, 9, DARK_METAL, 2)
+    s.box(26, floor - 50, 48, 34, WOOD, 3)
+    s.oval(41, floor - 42, 18, 18, darker(WOOD, 0.55), 255, outline=True)
+    return stage.picture()
+
+
 PAINTERS: dict[str, Painter] = {
     "bed": bed,
     "pantry": pantry,
@@ -803,6 +856,9 @@ PAINTERS: dict[str, Painter] = {
     "tyres": tyres,
     "junk": junk,
     "caravan_cart": caravan_cart,
+    "stocks": stocks,
+    "gallows": gallows,
+    "guillotine": guillotine,
 }
 # The ground each is drawn for, in cells: a kind whose data says otherwise keeps the art there was.
 FOOTPRINTS: dict[str, tuple[int, int]] = {

@@ -1894,56 +1894,99 @@ Still open here:
 - With a law resting whoever is expecting, the post left is covered by taking somebody from a
   post that matters less, and nobody goes back when she does
 
-### S28 — Trials and punishment (needs S27, and S23 to S25) — planned
-- **Laws came with S27.** Left for here are the ones that need a punishment or a trial to mean
-  anything: `weapon_restrictions`, `theft_penalties`, `election_rules`, children put to work,
-  and couples that marry or part
-- **Breaking a law leads somewhere**: being seen to (S27) is what an accusation starts from
-- **Punishing a resident is a proposal** (S27), decided as the government decides anything
-- **A scale of punishments, as data** (`data/punishments.json`): `warning`, `fine`,
-  `confiscation`, `community_service`, `prison`, `public_stocks`, `exile`, `corporal_punishment`
-  and `execution`
-- **A punishment needs its place.** A jail is a building, and the stocks, a gallows and a
-  guillotine are things put down in Urbanismo, each drawn as everything put down is (P15, P17).
-  Without a jail nobody is locked up, without stocks nobody is put in them, and without a
-  gallows or a guillotine nobody is put to death
-- **A fine goes into the common fund** (S23), in coin or, under barter, in things
-- **Exile is walking out for good**, as whoever is thrown out by a proposal already does (S27):
-  to the gate and through it, with what depended on them let go of as on a death, and no grave
-- **A punishment moves fear, legitimacy, unrest, support, resentment and relationships, by how
-  things stand.** Putting to death a killer whom most hate may raise support. Putting to death
-  someone held to be innocent sinks legitimacy and sends unrest up
-- **The harsh ones are political events of the first order**, and as with anything that cannot be
-  undone, the player is given a say before they are carried out
-- **Nothing gory is shown.** What happened is recorded with its consequences, with no detailed
-  animation of it
-- **A trial in six steps**: accusation, evidence, witnesses, defence, verdict, punishment. It
-  goes by memory, knowledge, witnesses, rumours and relationships, and never by what the world
-  knows: each resident judges, votes and reacts on what they believe they know
-- **A punishment in public is a political event that records** who was condemned, for what, to
-  what, who was there, which of them were kin (S25) or friends, how each took it and what
-  memories it left
-- **Each takes it their own way**: approval, fear, anger, grief or indifference. There is never
-  one consequence dealt out the same to everybody
-- **A child can be tried and punished like anyone** (S25), and it costs a government far more:
-  in legitimacy, in support and in unrest, by each of those who see it or come to hear of it.
-  So does a law or a post that puts children to work
-- Laws in force and the history of punishments are saved
+### S28 — Trials and punishment (needs S27, and S23 to S25) — done
+Asked first, and answered:
 
-Done when: a theft that was witnessed goes to trial and one that nobody saw cannot; a law
-that was seen broken can be answered for; nobody is sentenced to what the
-settlement has no place for; someone exiled is gone from the map, the posts and the beds, and
-is still in the memories of those they left; the same punishment raises legitimacy when those
-watching hold the condemned guilty and sinks it when they hold them innocent; and after a harsh
-one the kin of the condemned and those who wanted it remember it differently.
+- **Prison is whole days locked up**, and in the user's words "se configura cuanto y que come
+  y bebe": the player says how much a prisoner is given each day, and of what
+- **Somebody exiled may be heard of again, both ways that were offered**: at the gate, asking
+  to come back, and with raiders for one who left with a grudge
+- **Residents accuse of their own accord, and the player may too**
+- **What somebody found guilty is given is the player's to say, always.** Not the
+  recommendation, which was that whoever decides in the government chose it and the player
+  was asked before the harsh ones
 
-Tests it is not done without: legitimacy after a just punishment, and its fall after an unjust
-one; a fine reaching the fund; exile removing a resident without breaking what depended on
-them; and no prison without a jail.
+What follows from the last: a punishment is not a proposal, as this milestone was written to
+have it. Whether somebody is guilty is decided as the government decides anything; what they
+are given is not decided by the settlement at all.
 
-Still to settle:
-- What a day locked up is, and how a sentence is counted
-- Whether someone exiled is ever heard of or met again, outside or at the gate (S10, S11)
+Built:
+- **Somebody is tried for what is known of them, and never for what only the world knows**: a
+  thing they did that left a fact, that somebody else who is here saw or was told of, and that
+  nobody was tried for. One trial at a time, and nobody twice for one thing
+- **What can be tried is data** (`offences` in `data/punishments.json`): a theft, a fight, a
+  law broken, a vote rigged, a death. Each has a gravity from 1 to 10
+- **Whoever knows of something may accuse**, once a day: by how grave it is, what they feel
+  for whoever did it and how much justice matters to them, and never their partner or their
+  kin. It is theirs to decide, with the player's advice. The player accuses with a command
+- **A trial in six steps**, an hour apart: accusation, evidence, witnesses, defence, verdict,
+  punishment. Who saw it is told from who only heard it
+- **Each of those who judge holds the accused guilty or not on what they believe they know**:
+  what they saw, what they were told, the word of the witness they trust most, and what they
+  feel for the accused and for whoever accuses. Those who judge are whoever decides anything
+  under the government in force, or every adult where there is none
+- **A scale of nine punishments, as data**, each with a severity from 1 to 10: `warning`,
+  `fine`, `confiscation`, `community_service`, `public_stocks`, `prison`, `corporal_punishment`,
+  `exile` and `execution`
+- **A punishment needs its place**: prison a building whose use is `jail`, the stocks a
+  `stocks`, and death a `gallows` or a `guillotine`. The three are objects to put down and the
+  jail a use to give a building, and nobody is sentenced to what there is none of
+- **A fine goes into the common fund**, in coin as far as they have it, or under barter in
+  things of theirs worth as much. Confiscation takes what is worth most of what they carry
+- **Whoever is locked up or in the stocks goes there and stays**, doing nothing else, for
+  their days or their hours, and sleeps where they are
+- **A prisoner is given what the player says**: so many meals and drinks a day, of an item
+  named or of whatever there is most of, out of what is nobody's. Given nothing they starve
+- **Exile is walking out for good** (S27), and then being heard of again in five to twelve
+  days: with raiders, the likelier the more they held against the government as they left, or
+  at the gate, where whoever is there decides with the player's advice. Let back in they are
+  who they were, kin and all. Turned away, or finding nobody three days running, they are gone
+- **A punishment is a political event that records** who was condemned, for what, to what, who
+  was there, which of them were kin or friends, and how each took it
+- **Each takes it their own way**: approval, fear, anger, grief or indifference, by whether
+  the condemned is one of their own, whether they hold them guilty, and how far the
+  punishment goes beyond what was done. Each moves what they hold of the government, leaves
+  a memory in their own words, and moves legitimacy and unrest by how many took it how
+- **A child can be tried and punished like anyone**, and it counts three times over with
+  whoever takes it ill. Nobody approves of a harsh one
+- **Nothing gory is shown**: what is kept is what happened and what came of it
+- Trials, sentences, the history of punishments and what prisoners are given are saved, with
+  nothing of it in an older save. Each thing the player does is a command: `AccuseCommand`,
+  `SentenceCommand` and `SetPrisonRationCommand`. None has a screen until P26
+
+Decided without asking:
+- With no word from the player in a day, somebody found guilty is given a warning
+- A prisoner is given three meals and two drinks a day until it is said otherwise: fewer
+  meals than that and they go hungry, as anybody would
+- Found innocent, the accused holds it against whoever accused them, and nothing else
+  comes of it
+- Whoever is not there for a punishment that is not done in public takes it half as hard
+- Somebody exiled comes to the gate once. A second exile of the same person is another going
+- Work for everybody is their days as they were, weighing on their nerves: they are not
+  set to anything in particular
+- The jail and the three objects have the game's plain sprites, and no picture of their own
+  on the window: that is P26
+
+Still open here:
+- **The laws that need a court are not written.** They are S43, after this one
+- Nobody defends anybody: the defence is a step with nothing said in it that changes a mind
+- A prisoner cannot be let out early, nor a sentence changed once given
+- Whoever is locked up keeps their post and their house, and is paid nothing for not working
+- Nobody breaks out, and nobody helps anybody to
+- A prisoner who starves is a death like any other: nobody is held to answer for it
+- What somebody exiled does out there is not played: they are a date and a grudge
+- A fight in which somebody died is tried as a death only if somebody saw who struck
+
+### S43 — The laws that need a court (needs S28) — planned
+Left out of S28, which had the trial and the punishments to build, and re-cut here.
+
+- `weapon_restrictions`: who may carry what, and being seen with it is breaking it
+- `election_rules`: who may stand and who may vote
+- Children put to work, or kept from it, by law
+- Couples that marry or part by law
+- `theft_penalties` as it was written no longer has a place: a law cannot say what a thief is
+  given, since that is the player's to say (S28). To be asked: whether a law may narrow what
+  the player can choose from
 
 ### S29 — Unrest and factions (needs S28) — planned
 - **Trouble of eight kinds, as data**: `protest`, `refusal_to_work`, `sabotage`, `riot`, `coup`,
@@ -1991,6 +2034,10 @@ The entry in the menu, the kind, the seats, the measures and the laws in force a
 - Somebody thrown out seen to walk to the gate and through it
 - A leader making up their mind about the count of a vote, and what is advised
 - An election, a trial and a public punishment seen as they happen, with nothing gory
+- Accusing somebody of what is known of them, saying what somebody found guilty is given out
+  of what there is a place for, and what prisoners are given to eat and drink. Until then
+  the three are commands (S28)
+- Somebody exiled seen at the gate when they come back, as a stranger is (P25)
 - Trouble on the map: who has stopped work, who is out protesting
 
 Still to settle:

@@ -13,6 +13,7 @@ from simulation.events.crisis import Crisis
 from simulation.events.decision import Decision, DecisionDefinition, DecisionOption, OutcomeDefinition
 from simulation.events.event import DomainEvent
 from simulation.family.children import TAKE_IN
+from simulation.residents.activity import ACCUSE_DECISION, EXILE_BACK_DECISION
 from simulation.politics.election import RIG
 from simulation.politics.leadership import RESIGN
 from simulation.memory.memory import Memory
@@ -539,6 +540,10 @@ class InterventionSystem:
             world.substances.decided(world, resident, chosen.substance)
         if decision.kind == TAKE_IN:
             world.children.decided(world, resident, chosen.agrees)
+        if decision.kind == ACCUSE_DECISION:
+            world.justice.accusing_decided(world, resident, chosen.agrees)
+        if decision.kind == EXILE_BACK_DECISION:
+            world.justice.gate_answered(world, resident, chosen.agrees)
         if decision.kind == RESIGN and chosen.agrees:
             world.politics.leadership.resign(world, resident)
         if decision.kind == RIG and chosen.agrees:

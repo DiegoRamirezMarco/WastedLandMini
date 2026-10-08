@@ -25,6 +25,7 @@ from simulation.residents.manner import MannerSettings, manner_settings_from_dat
 from simulation.residents.personality import Personality
 from simulation.social.bonds import BondSettings, bond_settings_from_data
 from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
+from simulation.justice.settings import JusticeSettings, justice_settings_from_data
 from simulation.substances.substance import SubstanceSettings, substance_settings_from_data
 from simulation.tastes.settings import TasteSettings, taste_settings_from_data
 from simulation.housing.decor import DecorSettings, decor_settings_from_data
@@ -177,6 +178,8 @@ class BuiltInRegistries:
     proposals: ProposalSettings = field(default_factory=ProposalSettings)
     # How substances work in general. What each one does is in its own item.
     substances: SubstanceSettings = field(default_factory=SubstanceSettings)
+    # Trials and punishments: what can be tried, the scale of punishments, and how each is taken.
+    justice: JusticeSettings = field(default_factory=JusticeSettings)
     # The ways there are of walking, eating and fighting, for each resident to have their own.
     manners: MannerSettings = field(default_factory=MannerSettings)
     event_settings: dict[str, Any] = field(default_factory=dict)
@@ -290,6 +293,9 @@ class BuiltInRegistries:
         substances_path = root / "substances.json"
         if substances_path.is_file():
             registries.substances = substance_settings_from_data(_read_object(substances_path))
+        punishments_path = root / "punishments.json"
+        if punishments_path.is_file():
+            registries.justice = justice_settings_from_data(_read_object(punishments_path))
         manners_path = root / "manners.json"
         if manners_path.is_file():
             registries.manners = manner_settings_from_data(_read_object(manners_path))

@@ -29,6 +29,8 @@ from simulation.items.theft import TheftAttempt
 from simulation.knowledge.fact import Fact, KnowledgeStore
 from simulation.knowledge.knowledge_system import record_fact, witnesses_of
 from simulation.memory.memory_system import MemorySystem
+from simulation.justice.justice_system import JusticeResult, JusticeSystem
+from simulation.justice.records import JusticeState
 from simulation.politics.government import GovernmentState, PoliticsResult
 from simulation.politics.politics_system import PoliticsSystem
 from simulation.politics.profile import PoliticalProfile
@@ -111,6 +113,7 @@ class SimulationWorld:
     family: FamilySystem = field(default_factory=FamilySystem)
     children: ChildSystem = field(default_factory=ChildSystem)
     politics: PoliticsSystem = field(default_factory=PoliticsSystem)
+    justice: JusticeSystem = field(default_factory=JusticeSystem)
     # The government the settlement has: none until it has grown enough to choose one.
     government: GovernmentState = field(default_factory=GovernmentState)
     # What each resident holds about how the settlement is run, by resident ID. Kept apart from the resident.
@@ -122,6 +125,8 @@ class SimulationWorld:
     # they are gone, by resident ID. And everyone who has been thrown out, oldest first.
     leaving: dict[str, int] = field(default_factory=dict)
     exiled: list[Exile] = field(default_factory=list)
+    # The trials there have been, the sentences being served and the punishments carried out.
+    courts: JusticeState = field(default_factory=JusticeState)
     # Children under ten, by ID: carried and seen to by somebody until they walk.
     bundles: dict[str, Bundle] = field(default_factory=dict)
     # What residents have lent one another and not had back yet.
@@ -205,6 +210,7 @@ class SimulationWorld:
         self.lending.tick(self)
         self.family.tick(self)
         self.politics.tick(self)
+        self.justice.tick(self)
         self.housing.tick(self)
         self.activities.begin_minute(self)
         for resident in list(self.residents.values()):
@@ -323,6 +329,18 @@ class SimulationWorld:
         """Take in the player's first resident. Returns their ID, or None if there is already someone."""
         resident = found_resident(self, name, age, personality, traits, manners, identity)
         return resident.resident_id if resident is not None else None
+
+    def accuse(self, accused_id: str, fact_id: str | None = None) -> JusticeResult:
+        """Have a resident tried for something that is known of them. Those who decide judge."""
+        return self.justice.accuse(self, accused_id, fact_id)
+
+    def sentence(self, trial_id: str, punishment_id: str) -> JusticeResult:
+        """Say what somebody found guilty is given, out of what the settlement has a place for."""
+        return self.justice.sentence(self, trial_id, punishment_id)
+
+    def set_prison_ration(self, meals: int, drinks: int, food: str = "", drink: str = "") -> JusticeResult:
+        """Say how much a prisoner is given to eat and to drink each day, and of what."""
+        return self.justice.set_ration(self, meals, drinks, food, drink)
 
     def propose_government(self, government_id: str) -> PoliticsResult:
         """Put a kind of government to everyone, while the settlement is choosing one. They settle it."""

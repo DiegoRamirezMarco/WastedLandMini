@@ -14,6 +14,12 @@ ATTEND_ACTION = "attend"
 LEAVE_ACTION = "leave"
 # Standing where they were stopped, listening for what the player has to say.
 HEED_ACTION = "heed"
+# Being where a sentence is served: locked up, or in the stocks.
+SERVE_ACTION = "serve_sentence"
+# What a resident who knows of something makes up their mind about: whether to accuse. And
+# what whoever is at the gate decides when somebody who was exiled asks to come back.
+ACCUSE_DECISION = "accuse"
+EXILE_BACK_DECISION = "exile_back"
 
 
 @dataclass

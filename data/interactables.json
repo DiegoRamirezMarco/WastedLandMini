@@ -431,5 +431,38 @@
     "article": "un",
     "width": 2,
     "category": "decor"
+  },
+  "stocks": {
+    "name": "cepo",
+    "article": "un",
+    "category": "decor",
+    "build": {
+      "cost": {
+        "scrap": 2
+      },
+      "minutes": 90
+    }
+  },
+  "gallows": {
+    "name": "horca",
+    "article": "una",
+    "category": "decor",
+    "build": {
+      "cost": {
+        "scrap": 5
+      },
+      "minutes": 240
+    }
+  },
+  "guillotine": {
+    "name": "guillotina",
+    "article": "una",
+    "category": "decor",
+    "build": {
+      "cost": {
+        "scrap": 6
+      },
+      "minutes": 300
+    }
   }
 }
