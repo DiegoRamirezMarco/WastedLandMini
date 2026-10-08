@@ -5012,13 +5012,49 @@ Already done, ahead of it: which line is said no longer moves the settlement's d
 - **Words of the player's**, kept with the settlement: each resident's own phrases (how they
   greet, what they keep saying, what they say glad, low and angry), lists of the settlement's
   that fill holes for everybody, and what one calls another, each way by itself
-- No words change what happens
+- No words change what happens: so it was written, and the answers below undo it
 
-Still to settle, to be asked before it is built:
-- How the player is asked for words: by the residents, on a screen that opens, or only from
-  a menu
-- Where a line is read and heard: the dock, over their heads, and whether they speak alone
-- Which holes, phrases and lists to begin with
+Asked on 2026-10-09, in three batches with S59 and the layer after it, and answered. Two of
+the answers changed what this milestone is: talk is no longer lines said in turn, and what
+is talked of tells on how two people get on.
+- **The residents ask the player for words**, with a notice that is opened whenever the
+  player likes; they can be changed from the resident's panel as well
+- **There is no dock any more, and nobody talks line by line.** In the user's words, which
+  were none of the options: "El dock lo suprimimos, para las conversaciones, ahora saldran
+  hablando y al pinchar sobre los que conversan pondra estan hablando sobre el dia que se
+  comio [variable] y se atraganto etc. no van a conversar de manera real como antes,
+  mientras les saldran bocadillos con iconos de lo que estan hablando ya sea pizza martillo
+  la cara de un pj si es un tema en concreto sin ser un item saldra la frase variable en
+  los bocadillos"
+- **The lists to begin with are the four that were offered**, insults and compliments, food
+  and cravings, places and dangers, subjects and gossip, and with them "Pj, items que
+  conozcan": the residents themselves and the things they know of
+- **What two people talk of need not be anything that passes between them, and it tells on
+  how they get on.** In the user's words: "no tiene por que ser de algo que pase entre ellos
+  pero si pueden hablar de rumores, items temas y todo eso, si pjA dice bla bla Zanahoria...
+  osea hablan de zanahoria porque a pj A le gusta pero a pj B no le gusta bajara la relacion
+  si es neutra o buena subira, asi con el tiempo se les podran pensar (!) de que puedo hablar
+  con X y tu entre todo el vocabulario creado le puedes decir habla sobre esto o creas un
+  nuevo tema, un poco como tomodatchi life 2". This undoes `No words change what happens`,
+  which was written above before it was asked
+- **Whether somebody likes a subject goes by the tastes there already are** (S19), and is
+  listed with them: "ya tiene mecanica eso. en la lista de gustos de personaje salen de ahi,
+  los temas tambien aplican ahi toda variable aplica en esa lista que ya tenemos"
+- **Each resident's own phrases show as bubbles of text**: how they greet as a talk begins,
+  what they keep saying now and then, and what they say glad, low and angry when they are
+
+What it comes to:
+- **A talk has a subject**: a thing, somebody, a word of one of the settlement's lists, or
+  something heard. Whoever starts it picks one they like out of what they know
+- **How whoever listens takes it moves what they feel for whoever speaks**: down for a
+  subject they dislike, up for one they like or have nothing against
+- **Over their heads there is a bubble**: the picture of the thing, the face of whoever it
+  is about, or the words where it is neither. Pressing on either of them says what they
+  are talking about, in a sentence put together from a pattern with holes
+- **A resident comes to wonder what to talk about with somebody**, with a mark over them,
+  and the player picks a subject out of everything there is, or makes a new one
+- **Every word the player gives is a subject like any other**, with a taste to it for each
+  resident, found out as their other tastes are
 
 ### S59 — Handed over, and found (needs S58 and S19) — planned
 - **A thing is put into a resident's hands by the player**, and how they take it is seen and
@@ -5027,10 +5063,15 @@ Still to settle, to be asked before it is built:
   says what it is, as with what is come to at a job (S47, P54)
 - What a thing is for, and what is in it, is S30
 
-Still to settle, to be asked before it is built:
-- What is given from: the settlement's stores, something of the player's own, or only what
-  one resident gives another
-- Where new things come from: outside, the caravan, the workshop, a box (S56)
+Asked on 2026-10-09, and answered:
+- **What is given comes out of the `Almacén` and the crates**: something that is everybody's
+  is taken and put in their hands, and it is theirs from then on
+- **A thing nobody knows may come from anywhere a thing comes from**: "de cualquier sitio,
+  cuando se crea un nuevo item ya sea de salidas de caravana o todos los sitios posibles".
+  The options were a trip outside, the caravan, the workshop and whoever arrives
+- **The player draws it and names it, and no more**: what it is and what it does is the
+  game's to settle when it is found. Not the recommendation, which had the player say what
+  kind of thing it is as well
 
 ### P62 — Words on screen (needs S58 and S59) — planned
 - Lines in the dock and over heads, the way to give words, and a thing handed over
@@ -5042,12 +5083,22 @@ The third layer: what is done with things and with each other.
 - **A click on a thing opens a ring of what whoever is selected can do with it**, and dropping
   somebody on it (P27) goes by the same
 
+Asked on 2026-10-09, since a click on a thing has shown what there is to say of it since P60,
+and answered:
+- **With somebody selected, a click on a thing opens the ring of what they can do with it**,
+  with a way from it to what is said of the thing. With nobody selected it shows that, as now
+
 ### S61 — Wishes, and what weighs on somebody (needs S60) — planned
 - **A resident comes to want small things**, which they see to themselves or are helped to
 - **What has lifted their spirits and what has brought them down**, as a list, on their panel
 
-Still to settle, to be asked before it is built:
-- Which wishes, and what one that is met is worth
+Asked on 2026-10-09, and answered:
+- **All four kinds of wish that were offered**: to eat or drink something, to be with
+  somebody, to have a thing, and to do something. `Other` was ticked as well, with nothing
+  written beside it
+- **A wish that is met lifts their spirits and is remembered**, and one that lapses unmet is
+  remembered too, the other way. Not the recommendation, which had it count for more when
+  it was the player who met it
 
 ### S62 — Leisure of their own accord (needs S49 and S31) — planned
 - **Wanting to be entertained is a need of its own**, which tedium and work raise and pastimes
@@ -5062,9 +5113,13 @@ rasgos".
   what is felt (S48)
 - **Stealing can be told**, as coming to blows can
 
-Still to settle, to be asked before it is built:
-- Which traits, and what each opens: there are six, and it will take more
-- Who can be stolen from, and what
+Asked on 2026-10-09, and answered:
+- **The four traits that were offered, and twenty more**: a bully who cows people, a charmer
+  who gets round them, a gossip who worms things out of them and a clown who makes everybody
+  laugh, and in the user's words "mete esos y unos 20 mas, 10 buenos y 10 malos mas". Which
+  twenty was left to whoever builds it: they are listed here when they are built, to be put right
+- **Stealing when told is from anybody, of what they carry, and from the `Almacén` and the
+  shop as well.** Not the recommendation, which stopped at what somebody carries
 
 ### P63 — What is done, on screen (needs S60 to S63) — planned
 - The ring of a thing, wishes over heads, what weighs on somebody in their panel, and what
