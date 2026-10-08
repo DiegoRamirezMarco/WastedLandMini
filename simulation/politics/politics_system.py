@@ -1,7 +1,9 @@
 """Politics: who is in charge of the settlement, what it decides, and what its people make of it.
 
-The player is nobody in the settlement. They may put things to it, speak to whoever decides
-them, and advise whoever is making up their mind, and never govern.
+The player is nobody in the settlement, and runs three things in it all the same (S45): its
+laws, its punishments and what it trades with. How a law of theirs comes into force is the
+government's: at once where one person decides, by a vote where more do. Who leads, how
+people vote and what they make of it are the residents' own.
 """
 
 from collections.abc import Mapping
@@ -15,6 +17,7 @@ from simulation.politics.influence import Influence
 from simulation.politics.law_system import Laws
 from simulation.politics.leadership import Leadership
 from simulation.politics.legitimacy import Legitimacy
+from simulation.politics.protest import Protests
 from simulation.politics.voting import Voting
 from simulation.residents.resident import Resident
 
@@ -30,6 +33,7 @@ class PoliticsSystem:
     elections = Elections()
     influence = Influence()
     exile = ExileSystem()
+    protests = Protests()
 
     def tick(self, world: "SimulationWorld") -> None:
         """One minute of politics, and at the start of each day what a day does."""
@@ -37,6 +41,7 @@ class PoliticsSystem:
         self.voting.tick(world)
         self.laws.tick(world)
         self.exile.tick(world)
+        self.protests.tick(world)
         if world.clock.hour == 0 and world.clock.minute == 0:
             self.influence.tick_day(world)
             if world.government.kind is not None:

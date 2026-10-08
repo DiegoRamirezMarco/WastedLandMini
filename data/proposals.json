@@ -10,6 +10,8 @@
   "repeal_from": -0.5,
   "margin": 0.12,
   "history": 40,
+  "decrees": ["enact_law", "repeal_law", "adopt_currency", "return_to_barter"],
+  "residents_raise": ["call_election", "change_government"],
   "weights": {
     "proposer": 0.4,
     "player": 0.5,

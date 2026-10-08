@@ -23,6 +23,24 @@
   "whim_from": 50,
   "whim_chance": 0.25,
   "absurd_legitimacy": -4,
+  "protest": {
+    "kind": "plaza",
+    "reach": 3,
+    "hours": [12, 15],
+    "from": 0.3,
+    "imposed": 1.0,
+    "voted": 0.5,
+    "tire_days": 6,
+    "unrest": 12,
+    "legitimacy": -6,
+    "harsh_from": 60,
+    "cowed_fear": 6,
+    "cowed_resentment": 4,
+    "harsh_authoritarianism": 4,
+    "given_in_trust": 8,
+    "given_in_resentment": -6,
+    "given_in_legitimacy": 2
+  },
   "laws": {
     "curfew": {
       "name": "Toque de queda",

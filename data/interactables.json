@@ -465,5 +465,11 @@
       },
       "minutes": 300
     }
+  },
+  "plaza": {
+    "name": "plaza",
+    "article": "una",
+    "category": "decor",
+    "blocks": false
   }
 }

@@ -421,9 +421,11 @@ class Laws:
         params: Mapping[str, str] | None = None,
         by: str | None = None,
         pushed: bool = False,
+        imposed: bool = False,
     ) -> bool:
         """Put a law in force at a degree, in place of the same law at another and of any it
-        cannot stand beside. Returns whether there was such a law."""
+        cannot stand beside. `imposed` for one put in force with nobody asked. Returns whether
+        there was such a law."""
         definition = self.definition(world, law_id)
         if definition is None:
             return False
@@ -435,7 +437,9 @@ class Laws:
         degree = max(0, min(degree, len(definition.degrees) - 1))
         weight = self.degree(definition, degree).weight
         was = self.degree(definition, before.degree).weight if before is not None else 0.0
-        state.laws[law_id] = LawInForce(law_id, degree, dict(params or {}), world.clock.day, by, pushed)
+        state.laws[law_id] = LawInForce(law_id, degree, dict(params or {}), world.clock.day, by, pushed, imposed)
+        if before is not None and weight < was:
+            world.politics.protests.answered(world, law_id, definition, gone=False)
         changes = {"authoritarianism": definition.harsh * (weight - was)}
         government = world.politics.leadership.definition(world)
         if definition.absurd and before is None:
@@ -449,7 +453,7 @@ class Laws:
                 "law_enacted",
                 ENACTED_IMPORTANCE,
                 f"Desde hoy es ley: {self.describe(world, law_id, degree, params)}",
-                data={"law": law_id, "degree": degree, "params": dict(params or {}), "by": by},
+                data={"law": law_id, "degree": degree, "params": dict(params or {}), "by": by, "imposed": imposed},
                 government=state.kind,
             )
         )
@@ -466,6 +470,7 @@ class Laws:
         if definition is not None:
             weight = self.degree(definition, held.degree).weight
             world.politics.legitimacy.shock(world, {"authoritarianism": -definition.harsh * weight})
+        world.politics.protests.answered(world, law_id, definition, gone=True)
         world.emit_event(
             PoliticalEvent(
                 "law_repealed",

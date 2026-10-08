@@ -826,6 +826,22 @@ def guillotine(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
     return stage.picture()
 
 
+def plaza(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A tall post on a slab of stone with a rag of a flag to it: where the square is."""
+    stage = Stage((1, 1), 150, cell, depth)
+    s = stage.under
+    stage.shadow(6, 88, 60)
+    floor = stage.front - (stage.front - stage.back) * 0.3
+    top = max(6.0, floor - 190)
+    s.box(14, floor - 12, 72, 12, STONE, 3)
+    s.shade(18, floor - 10, 64, 3, lighter(STONE, 0.35), 255, 2)
+    s.box(45, top, 10, floor - top - 10, PALE_WOOD, 2)
+    s.poly([(55, top + 6), (94, top + 14), (80, top + 26), (94, top + 40), (55, top + 44)], RED)
+    s.stroke([(58, top + 18), (78, top + 21)], lighter(RED, 0.4), 2.0)
+    s.oval(42, top - 6, 16, 12, YELLOW, 255, outline=True)
+    return stage.picture()
+
+
 PAINTERS: dict[str, Painter] = {
     "bed": bed,
     "pantry": pantry,
@@ -859,6 +875,7 @@ PAINTERS: dict[str, Painter] = {
     "stocks": stocks,
     "gallows": gallows,
     "guillotine": guillotine,
+    "plaza": plaza,
 }
 # The ground each is drawn for, in cells: a kind whose data says otherwise keeps the art there was.
 FOOTPRINTS: dict[str, tuple[int, int]] = {

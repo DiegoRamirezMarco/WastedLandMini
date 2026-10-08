@@ -12,6 +12,8 @@ SHELTER_ACTION = "shelter"
 RETIRE_ACTION = "retire"
 ATTEND_ACTION = "attend"
 LEAVE_ACTION = "leave"
+# Standing in the square against a law in force, with the others who are (S45).
+PROTEST_ACTION = "protest"
 # Standing where they were stopped, listening for what the player has to say.
 HEED_ACTION = "heed"
 # Being where a sentence is served: locked up, or in the stocks.

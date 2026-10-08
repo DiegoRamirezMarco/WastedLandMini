@@ -73,6 +73,7 @@
     {"id": "crate_2", "kind": "crate", "x": 34, "y": 3},
     {"id": "crate_3", "kind": "crate", "x": 34, "y": 4},
     {"id": "campfire", "kind": "campfire", "x": 19, "y": 11},
+    {"id": "plaza", "kind": "plaza", "x": 18, "y": 17},
     {"id": "stool_1", "kind": "stool", "x": 19, "y": 10},
     {"id": "stool_2", "kind": "stool", "x": 18, "y": 11},
     {"id": "stool_3", "kind": "stool", "x": 20, "y": 11},

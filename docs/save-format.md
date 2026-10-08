@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `34` |
+| `version` | `35` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -21,7 +21,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `housing` | Whose each building is: `owners` (resident IDs per room ID; a room that is missing is the settlement's), `names` and `uses` given by the player per room ID, `began` (whether houses have been given out for the first time), `locked` (the room IDs whose door is locked), `lifted_on` (the day a house last told on the mood of whoever lives in it), and what has been put in each to be looked at: `ornaments` (per room ID, each with `ornament_id`, `kind`, `on` which is `floor` or `wall`, and `x` and `y` in cells of its inside from its back left corner), `floors`, `walls` and `ornament_count` |
 | `debts` | What residents have lent one another and not had back: `debtor_id`, `creditor_id`, `amount`, `since` (the day) and `overdue` |
 | `at_gate` | Units of what was bought for the settlement that wait at the gate to be carried in, per item ID |
-| `government` | The government the settlement has: `kind`, `leader`, `council`, the seven `measures`, `chosen_on`, `term_began`, `choosing_until`, `proposed`, `election_at`, `vacant_since`, `heir`, `resigned`; `laws` (per law ID: `degree`, `params`, `since`, `by`, `pushed`); `meals` (per resident ID, `[day, times]` eaten out of the commons); `proposals` waiting, per ID, and those `decided`, oldest first (each with `kind`, `by`, `sponsor`, `law`, `degree`, `target`, `government`, `params`, `text`, `raised_at`, `decides_at`, `lobbied`, `pushed`, `status`, `decided_at`, `passed_degree`, `ballots` and `open_ballot`); `proposal_count`, `refused` (per matter, the day from which it may be put again) and `raised_on` (day per resident); `elections` (each with `day`, `at`, `seat`, `way`, `candidates`, the `tally` given out, `winner`, who each voter `backed`, `open_ballot`, `rigged_by` and `claimed_by`); `recall`, `rigged_by`, `rig_asked` and `backing` for the vote that has been called |
+| `government` | The government the settlement has: `kind`, `leader`, `council`, the seven `measures`, `chosen_on`, `term_began`, `choosing_until`, `proposed`, `election_at`, `vacant_since`, `heir`, `resigned`; `laws` (per law ID: `degree`, `params`, `since`, `by`, `pushed`, `imposed`); `protests` (per law ID: `days`, `last_day` and `who` was there); `meals` (per resident ID, `[day, times]` eaten out of the commons); `proposals` waiting, per ID, and those `decided`, oldest first (each with `kind`, `by`, `sponsor`, `law`, `degree`, `target`, `government`, `params`, `text`, `raised_at`, `decides_at`, `lobbied`, `pushed`, `status`, `decided_at`, `passed_degree`, `ballots`, `open_ballot` and `imposed`); `proposal_count`, `refused` (per matter, the day from which it may be put again) and `raised_on` (day per resident); `elections` (each with `day`, `at`, `seat`, `way`, `candidates`, the `tally` given out, `winner`, who each voter `backed`, `open_ballot`, `rigged_by` and `claimed_by`); `recall`, `rigged_by`, `rig_asked` and `backing` for the vote that has been called |
 | `political_profiles` | Per resident ID, the seven leanings and `loyalty`, `trust`, `fear` and `resentment` |
 | `player_standing` | Per resident ID, what the player is to them: `trust` and `resistance` |
 | `leaving`, `exiled` | Per resident ID, the game minute by which somebody thrown out is gone; and everyone thrown out, oldest first: `resident_id`, `name`, `at` and `why`, and, since S28, `back_at` (the game minute at which they are heard of again, or `null`), `grudge`, `tries`, `person` (who they were, for them to be the same if they are let back in) and `returned`. In a save from before, whoever was thrown out is gone for good |
@@ -82,6 +82,10 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 35** added `imposed` on a law in force and on a proposal, and `protests` inside
+  `government` (S45). In an older save every law was voted and nobody is out against any.
+  Somebody who is no longer there is dropped from a protest, and so is a protest against a
+  law that is no longer in force.
 - **Version 32** added `salvage`, and `fetch` in a resident's `expedition` (the one item a trip
   is for, or `null`). In an older save nobody has been told to take anything apart. An entry
   for something that is no longer there, or for somebody who is, is dropped.

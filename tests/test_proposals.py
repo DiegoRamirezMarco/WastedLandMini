@@ -53,8 +53,16 @@ def _politics(world: SimulationWorld, **changes) -> SimulationWorld:
 
 
 def _settled(seed: int = 7) -> SimulationWorld:
-    """The ready-made settlement with nothing felt by anyone for anyone, and nobody in need."""
+    """The ready-made settlement with nothing felt by anyone for anyone, and nobody in need.
+
+    Nothing in it is the player's to run, and residents raise whatever they have a mind to: the
+    process a proposal goes through, which the data can still ask for. What the game's own
+    data makes of laws and of the currency since S45 is in `tests/test_decrees.py`.
+    """
     world = SimulationWorld.demo_world(seed=seed)
+    world.registries = replace(
+        world.registries, proposals=replace(world.registries.proposals, decrees=(), residents_raise=KINDS)
+    )
     world.relationships.clear()
     for resident in world.residents.values():
         resident.needs = Needs(hunger=0, tiredness=0, social=0, stress=0)

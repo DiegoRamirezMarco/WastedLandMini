@@ -37,6 +37,7 @@ from simulation.politics.records import (
     ElectionRecord,
     Exile,
     LawInForce,
+    ProtestRecord,
     PlayerStanding,
     Proposal,
 )
@@ -124,6 +125,8 @@ FIRST_FAMILY_VERSION = 29
 # Version 32 added what somebody has been told to take apart, and the one thing a trip outside
 # is for when it is for one thing. In a save from before nobody has been told to take anything
 # apart, and every trip is for whatever turns up.
+# Version 35 added whether a law was put in force with nobody asked, and who is out in the
+# square against which (S45). In a save from before every law was voted and nobody is out.
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 28
@@ -142,7 +145,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 34
+    CURRENT_VERSION = 35
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -660,9 +663,21 @@ class SaveManager:
                 since=int(law.get("since", 0)),
                 by=_text_or_none(law.get("by")),
                 pushed=bool(law.get("pushed", False)),
+                imposed=bool(law.get("imposed", False)),
             )
             for law_id, law in _object_or_empty(saved.get("laws")).items()
             if isinstance(law, dict) and law_id in world.registries.laws.laws
+        }
+        # Nobody is out against a law that is no longer in force.
+        state.protests = {
+            str(law_id): ProtestRecord(
+                law_id=str(law_id),
+                days=max(0, int(record.get("days", 0))),
+                last_day=int(record.get("last_day", 0)),
+                who=[str(each) for each in _list_or_empty(record.get("who")) if each in world.residents],
+            )
+            for law_id, record in _object_or_empty(saved.get("protests")).items()
+            if isinstance(record, dict) and law_id in state.laws
         }
         state.meals = {
             str(resident_id): [int(eaten[0]), int(eaten[1])]
@@ -1555,6 +1570,7 @@ def _proposal_from_data(data: dict[str, Any]) -> Proposal:
             if isinstance(ballot, dict) and ballot.get("vote") in VOTES
         ],
         open_ballot=bool(data.get("open_ballot", True)),
+        imposed=bool(data.get("imposed", False)),
     )
 
 

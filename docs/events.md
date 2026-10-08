@@ -107,7 +107,8 @@ Event types emitted so far:
 | `proposal_lobbied` | The player speaks to one of those who decide, with the `stance` and how they `took` it in `data` | 30 |
 | `vote_held` | More than one decide a proposal, with how many said `yes`, `no` and neither (`abstain`), whether it was `open`, and after a show of hands each one's vote (`ballots`) in `data` | 55 |
 | `proposal_accepted`, `proposal_changed`, `proposal_rejected`, `proposal_vetoed` | How it came out, with `proposal`, `kind`, `status`, `by`, the `degree` it passed at and what it was about in `data` | 65 |
-| `law_enacted`, `law_repealed` | A law comes into force, with `law`, `degree`, `params` and `by` in `data`, or stops being one | 60, 50 |
+| `law_enacted`, `law_repealed` | A law comes into force, with `law`, `degree`, `params`, `by` and whether it was `imposed` in `data`, or stops being one | 60, 50 |
+| `protest_called`, `protest_held`, `protest_won` | People go out to the square against a law, stand there for the day (with `days` and whether it was `harsh`), and are heard when it is done away with or made milder (`gone`). `law` and `who` in `data` | 45, 55, 60 |
 | `law_broken` | A resident is seen to break a law, with `law` and `resident_id` in `data`. At most once a day for each resident and law | 35 |
 | `saluted` | A resident greets whoever leads, as a law has it | 8 |
 | `resident_expelled` | A resident is thrown out, with `resident_id` and `by` in `data`, and sets off for the gate | 80 |

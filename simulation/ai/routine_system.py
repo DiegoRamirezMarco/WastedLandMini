@@ -9,7 +9,14 @@ from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency, 
 from simulation.economy.merchant import VISIT_ACTION
 from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item_system import ITEM_ACTIONS, ItemSystem
-from simulation.residents.activity import ATTEND_ACTION, RETIRE_ACTION, SHELTER_ACTION, WANDER_ACTION, Activity
+from simulation.residents.activity import (
+    ATTEND_ACTION,
+    PROTEST_ACTION,
+    RETIRE_ACTION,
+    SHELTER_ACTION,
+    WANDER_ACTION,
+    Activity,
+)
 from simulation.residents.manner import SIT
 from simulation.residents.needs import NEED_NAMES
 from simulation.residents.resident import Resident
@@ -112,6 +119,9 @@ class RoutineSystem:
         attend = laws.attendance(world, resident) if governed else None
         if attend is not None:
             scored.append(ScoredAction(attend.name, attend.score + self._noise(world), attend.target_id))
+        protest = world.politics.protests.candidate(world, resident) if governed else None
+        if protest is not None:
+            scored.append(ScoredAction(protest.name, protest.score + self._noise(world), item_id=protest.item_id))
         if world.happenings.is_stormy(world) and not world.under_roof(resident.tile):
             # The worse their nerves, the sooner they get out of it.
             wish = SHELTER_SCORE + 0.5 * need_urgency(resident, "stress")
@@ -183,6 +193,8 @@ class RoutineSystem:
                 activity = replace(roof, action=RETIRE_ACTION, minutes_left=RETIRE_MINUTES) if roof is not None else None
             elif candidate.name == ATTEND_ACTION:
                 activity = world.politics.laws.plan_attend(world, resident, candidate)
+            elif candidate.name == PROTEST_ACTION:
+                activity = world.politics.protests.plan(world, resident, candidate)
             elif candidate.name == VISIT_ACTION:
                 activity = world.merchants.plan(world, resident)
             elif candidate.name == SLEEP_ROUGH_ACTION:

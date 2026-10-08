@@ -280,8 +280,12 @@ class Voting:
     ) -> PoliticsResult:
         """The player puts something to the settlement. Somebody who may propose has to make
         it theirs: whoever of them is most for it, if any of them is. Then it waits to be
-        decided like any other. Nothing of it is done unless it passes."""
+        decided like any other. Nothing of it is done unless it passes.
+
+        What is the player's to run (S45) needs nobody to make it theirs: see `decree`."""
         proposal = self._draft(world, kind, PLAYER, law, degree, target, government, params)
+        if kind in world.registries.proposals.decrees:
+            return self.decree(world, proposal)
         error = self.obstacle(world, proposal) or self._waits(world, proposal)
         if error is not None:
             return PoliticsResult(False, error)
@@ -302,6 +306,34 @@ class Voting:
             ),
         )
         return self._lay(world, proposal, f"{sponsor.name} hace suya una propuesta: {proposal.text}")
+
+    def decree(self, world: "SimulationWorld", proposal: Proposal) -> PoliticsResult:
+        """A law, the end of one, or how the settlement trades, as the player says it (S45).
+
+        How it goes is the government's: where whoever leads decides alone, it is in force
+        there and then and nobody is asked. Where a council or everybody decides, they vote on
+        it as on anything, and it is done only if it carries. Whoever leads refuses nothing of it.
+        """
+        error = self.obstacle(world, proposal)
+        if error is not None:
+            return PoliticsResult(False, error)
+        state = world.government
+        definition = world.politics.leadership.definition(world)
+        if definition is not None and definition.approves == LEADER and state.leader in world.residents:
+            if any(self.matter(other) == self.matter(proposal) for other in state.proposals.values()):
+                return PoliticsResult(False, "Eso mismo está ya por decidir")
+            state.proposal_count += 1
+            proposal.proposal_id = f"proposal_{state.proposal_count}"
+            proposal.decides_at = world.clock.total_minutes
+            proposal.imposed = True
+            self._close(world, proposal, ACCEPTED, proposal.degree, [])
+            return PoliticsResult(True, f"Queda decretado: {proposal.text}", proposal.proposal_id)
+        error = self._waits(world, proposal)
+        if error is not None:
+            return PoliticsResult(False, error)
+        if not self.deciders(world):
+            return PoliticsResult(False, "No hay nadie aquí que pueda votarlo")
+        return self._lay(world, proposal, f"Se pone a votación: {proposal.text}")
 
     def _nobody_takes_it(self, world: "SimulationWorld", proposal: Proposal, asked: Resident | None) -> PoliticsResult:
         state = world.government
@@ -635,7 +667,9 @@ class Voting:
                     break
         leader = world.residents.get(state.leader or "")
         alone = len(deciders) == 1 and deciders[0] is leader
-        if status in PASSED and definition.veto and leader is not None and not leader.away and not alone:
+        # What the player runs is not for whoever leads to refuse.
+        decreed = proposal.by == PLAYER and proposal.kind in world.registries.proposals.decrees
+        if status in PASSED and definition.veto and leader is not None and not leader.away and not alone and not decreed:
             if self.stance(world, leader, proposal, degree) < 0:
                 status = VETOED
         return self._close(world, proposal, status, degree, ballots)
@@ -675,6 +709,8 @@ class Voting:
                 )
             )
         event_type, said = OUTCOMES[status]
+        if proposal.imposed:
+            said = "Queda decretado"
         present = [resident.resident_id for resident in world.politics.leadership.present(world)]
         proposer = proposal.sponsor if proposal.by == PLAYER else proposal.by
         subjects = [each for each in (proposer, proposal.target) if each]
@@ -687,7 +723,7 @@ class Voting:
                 data={
                     "proposal": proposal.proposal_id, "kind": proposal.kind, "status": status, "by": proposal.by,
                     "law": proposal.law, "degree": degree, "target": proposal.target,
-                    "government": proposal.government,
+                    "government": proposal.government, "imposed": proposal.imposed,
                 },
                 government=state.kind,
             ),
@@ -849,7 +885,7 @@ class Voting:
         politics = world.politics
         proposer = proposal.sponsor if proposal.by == PLAYER else proposal.by
         if proposal.kind == ENACT_LAW and proposal.law:
-            politics.laws.enact(world, proposal.law, degree, proposal.params, proposal.by, pushed)
+            politics.laws.enact(world, proposal.law, degree, proposal.params, proposal.by, pushed, proposal.imposed)
         elif proposal.kind == REPEAL_LAW and proposal.law:
             politics.laws.repeal(world, proposal.law)
         elif proposal.kind == CALL_ELECTION:
@@ -922,12 +958,17 @@ class Voting:
         state = world.government
         laws = world.politics.laws
         profile = world.politics.legitimacy.profile(world, resident)
+        # Only the kinds residents still raise: laws are the player's to run (S45), and what
+        # somebody cannot abide takes them to the square instead.
+        theirs = settings.residents_raise
         for law_id, law in world.registries.laws.laws.items():
             held = state.laws.get(law_id)
             if held is not None:
                 regard = laws.regard(world, resident, law_id, held.degree, held.params)
-                if regard <= settings.repeal_from:
+                if regard <= settings.repeal_from and REPEAL_LAW in theirs:
                     yield Idea(-regard, REPEAL_LAW, law=law_id)
+                continue
+            if ENACT_LAW not in theirs:
                 continue
             params = self._names_for(world, resident, law)
             if params is None:
@@ -939,7 +980,7 @@ class Voting:
             elif law.whim and self._whim(world, resident, law, params):
                 yield Idea(opinion.weigh(world, resident, law.whim_opinion, params), ENACT_LAW, law_id, degree, params=params)
         definition = world.politics.leadership.definition(world)
-        kinds = settings.kinds
+        kinds = {kind: values for kind, values in settings.kinds.items() if kind in theirs}
         call = kinds.get(CALL_ELECTION)
         if call is not None and call.motive and state.leader not in (None, resident.resident_id):
             since = world.clock.day - state.term_began

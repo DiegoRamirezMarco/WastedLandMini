@@ -85,8 +85,39 @@ class LawDefinition:
 
 
 @dataclass(frozen=True)
+class ProtestSettings:
+    """Taking to the square against a law in force (S45)."""
+
+    # The kind of object people gather at, how near it counts as being there, and the hours.
+    kind: str = "plaza"
+    reach: int = 3
+    hours: tuple[int, int] = (12, 15)
+    # How much somebody has to be against a law to go, how much a law counts that was put on
+    # them with nobody asked and one that was voted, and the days after which they give it up.
+    start: float = 0.3
+    imposed: float = 1.0
+    voted: float = 0.5
+    tire_days: int = 6
+    # What a day of it does where it is put up with, for everybody out: to unrest and to
+    # legitimacy. How authoritarian the settlement has to be for it to be leaned on instead,
+    # and what that leaves in whoever was there and adds to how authoritarian it is.
+    unrest: float = 12.0
+    legitimacy: float = -6.0
+    harsh_from: float = 60.0
+    cowed_fear: float = 6.0
+    cowed_resentment: float = 4.0
+    harsh_authoritarianism: float = 4.0
+    # What the law being done away with, or made milder, does: to the trust in the player of
+    # whoever was out against it, to what they hold against the government, and to legitimacy.
+    given_in_trust: float = 8.0
+    given_in_resentment: float = -6.0
+    given_in_legitimacy: float = 2.0
+
+
+@dataclass(frozen=True)
 class LawSettings:
     laws: dict[str, LawDefinition] = field(default_factory=dict)
+    protest: ProtestSettings = field(default_factory=ProtestSettings)
     # Keeping a law: how far somebody has to do as the government says to keep one that is no
     # trouble, what a burdensome one adds to that, how much what they make of it counts, how
     # much of the government's legitimacy goes into keeping what it passes, and how far the
@@ -228,6 +259,26 @@ def law_definition_from_data(law_id: str, data: Any) -> LawDefinition:
     return definition
 
 
+def protest_settings_from_data(data: Any) -> ProtestSettings:
+    defaults = ProtestSettings()
+    if not isinstance(data, dict):
+        return defaults
+    numbers = {
+        name: type(getattr(defaults, name))(data[name])
+        for name in vars(defaults)
+        if name in data and name not in ("kind", "hours", "start")
+    }
+    settings = ProtestSettings(
+        kind=str(data.get("kind", defaults.kind)),
+        hours=_hours(data["hours"], "The hours of a protest") if "hours" in data else defaults.hours,
+        start=float(data.get("from", defaults.start)),
+        **numbers,
+    )
+    if settings.reach < 0 or settings.tire_days < 1 or settings.start <= 0 or settings.hours[0] >= settings.hours[1]:
+        raise ValueError("A protest is within a reach of no less than nothing, for a day at least, in hours of one day")
+    return settings
+
+
 def law_settings_from_data(data: dict[str, Any]) -> LawSettings:
     defaults = LawSettings()
     keeping = data.get("keeping", {})
@@ -242,6 +293,7 @@ def law_settings_from_data(data: dict[str, Any]) -> LawSettings:
             raise ValueError(f"Law {law_id} cannot stand beside laws there are not: {unknown}")
     settings = LawSettings(
         laws=laws,
+        protest=protest_settings_from_data(data.get("protest")),
         keep_base=float(keeping.get("base", defaults.keep_base)),
         keep_burden=float(keeping.get("burden", defaults.keep_burden)),
         keep_regard=float(keeping.get("regard", defaults.keep_regard)),

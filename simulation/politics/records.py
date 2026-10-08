@@ -31,6 +31,19 @@ class LawInForce:
     by: str | None = None
     # Whether the player put it forward or spoke up for it.
     pushed: bool = False
+    # Whether it was put in force with nobody asked: a decree, where one person decides.
+    imposed: bool = False
+
+
+@dataclass
+class ProtestRecord:
+    """People taking to the square against a law in force: the days they have, running or
+    not, the last day they did, and who was there that day."""
+
+    law_id: str
+    days: int = 0
+    last_day: int = 0
+    who: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -74,6 +87,8 @@ class Proposal:
     ballots: list[Ballot] = field(default_factory=list)
     # Whether it was voted by a show of hands, so that who voted how is known.
     open_ballot: bool = True
+    # Whether it was the player's and went into force with nobody asked.
+    imposed: bool = False
 
 
 @dataclass

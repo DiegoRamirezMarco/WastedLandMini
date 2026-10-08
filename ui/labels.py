@@ -6,6 +6,7 @@ from simulation.items.item import ItemInstance
 from simulation.items.item_system import FOOD_CATEGORY, WATER_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
 from simulation.residents.activity import (
     ATTEND_ACTION,
+    PROTEST_ACTION,
     HEED_ACTION,
     LEAVE_ACTION,
     RETIRE_ACTION,
@@ -276,6 +277,8 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
         return "se recoge, como manda la ley"
     if activity.action == ATTEND_ACTION:
         return "está donde manda la ley" if not activity.path else "acude adonde manda la ley"
+    if activity.action == PROTEST_ACTION:
+        return "protesta en la plaza" if not activity.path else "va a la plaza a protestar"
     if activity.action == LEAVE_ACTION:
         return "se marcha del asentamiento"
     if activity.action == SLEEP_ROUGH_ACTION:

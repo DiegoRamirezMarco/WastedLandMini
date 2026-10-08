@@ -662,6 +662,8 @@ settlement is created, in `SimulationWorld.demo_world`.
   takes to approve (`approval`), the `leader_weight` and whether there is a `veto`; `term_days` (0 for no
   terms); `succession`, the ways the next leader comes to be in the order they are tried
   (`election`, `council`, `strongest`, `heir`, `following`); `abuse_tolerance` from 0 to 100;
+  `dissent` from 0 to 1, how freely people take to the square against a law under it (1 by
+  default, and 0 for one under which they do as they are told however much they hate it);
   the measures it `starts` with; and its `appeal`, how much each leaning of a resident counts
   for or against it. A kind with a leader needs a way of succession, and one without has none.
 - `roles` gives each role a `name` and, by gender, other `names`.
@@ -774,6 +776,15 @@ settlement is created, in `SimulationWorld.demo_world`.
 
 ## Proposals
 
+- `protest` in `data/laws.json` says how people take to the square against a law: the `kind`
+  of object they gather at and the `reach` that counts as being there, its `hours`, how much
+  somebody has to have against a law to go (`from`), how much a law counts that was `imposed`
+  and one that was `voted`, the `tire_days` after which they give it up, what a day of it does
+  to `unrest` and `legitimacy` where it is put up with, how authoritarian the settlement has
+  to be for it to be leaned on instead (`harsh_from`) and what that leaves (`cowed_fear`,
+  `cowed_resentment`, `harsh_authoritarianism`), and what giving in does (`given_in_trust`,
+  `given_in_resentment`, `given_in_legitimacy`).
+
 `data/proposals.json` holds what can be put to a settlement, and how deciding goes.
 
 - `kinds` lists them by ID: `enact_law`, `repeal_law`, `call_election`, `change_government`,
@@ -782,6 +793,12 @@ settlement is created, in `SimulationWorld.demo_world`.
   `opinion` and `bias` as a law has, `debate_hours` if it is talked over longer than usual,
   and a `motive` that brings a resident to raise it unasked. What a kind does when it passes
   is code: a new kind needs some.
+- `decrees` lists the kinds that are the player's to run: put by the player they need nobody
+  to make them theirs, are in force at once where one person decides, and are voted where a
+  council or everybody does. `residents_raise` lists the kinds a resident may raise unasked.
+  Left out, laws and how to trade are the player's and residents raise a vote on whoever
+  leads and another kind of government. With `decrees` empty and every kind in
+  `residents_raise`, everything goes through whoever may propose, as it did before.
 - `debate_hours`, `leader_hours`, `pending_limit`, `again_days`, `undo_days`, `rest_days` and `sore_days`
   say how long a proposal waits, how many wait at once, and how soon the same thing, the same
   resident, or the same resident with the same thing comes back. `raise_from` and `repeal_from` are what somebody has to make of a matter to

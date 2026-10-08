@@ -8,7 +8,7 @@ power is put up with. No kind has code of its own.
 from dataclasses import dataclass, field
 from typing import Any
 
-from simulation.politics.records import ElectionRecord, LawInForce, Proposal
+from simulation.politics.records import ElectionRecord, LawInForce, Proposal, ProtestRecord
 from simulation.residents.personality import Personality
 
 # What is measured of a settlement that has a government, each from 0 to 100 and by itself.
@@ -78,6 +78,9 @@ class GovernmentDefinition:
     succession: tuple[str, ...] = ()
     # How much abuse of power is put up with, from 0 to 100.
     abuse_tolerance: float = 50.0
+    # How freely people take to the square against a law under it, from 0, where they do as
+    # they are told however much they hate it, to 1.
+    dissent: float = 1.0
     # Measures a settlement starts with under it.
     starts: dict[str, float] = field(default_factory=dict)
     # What draws a resident to it: how much each of their leanings counts for or against.
@@ -230,6 +233,8 @@ class GovernmentState:
     recall: bool = False
     rigged_by: str | None = None
     rig_asked: bool = False
+    # Who is taking to the square against which law in force, by law ID.
+    protests: dict[str, ProtestRecord] = field(default_factory=dict)
     # What the player's word for a candidate adds with each resident they spoke to before the
     # vote that has been called: `[candidate ID, how much]`, by resident ID.
     backing: dict[str, list] = field(default_factory=dict)
@@ -260,6 +265,7 @@ def _government(government_id: str, data: Any, roles: dict[str, RoleDefinition])
         term_days=int(data.get("term_days", 0)),
         succession=tuple(str(way) for way in data.get("succession", [])),
         abuse_tolerance=float(data.get("abuse_tolerance", 50.0)),
+        dissent=float(data.get("dissent", 1.0)),
         starts=_numbers(data.get("starts", {}), f"What government {government_id} starts with"),
         appeal=_numbers(data.get("appeal", {}), f"The appeal of government {government_id}"),
     )
@@ -281,6 +287,8 @@ def _government(government_id: str, data: Any, roles: dict[str, RoleDefinition])
         raise ValueError(f"Government {government_id} starts with an unknown measure: one of {MEASURES}")
     if any(leaning not in LEANINGS for leaning in definition.appeal):
         raise ValueError(f"Government {government_id} appeals to an unknown leaning: one of {LEANINGS}")
+    if not 0.0 <= definition.dissent <= 1.0:
+        raise ValueError(f"Government {government_id} has a dissent outside 0 to 1")
     if not 0.0 <= definition.abuse_tolerance <= 100.0 or not 0.0 < definition.approval <= 1.0:
         raise ValueError(f"Government {government_id} has a tolerance outside 0 to 100, or an approval outside 0 to 1")
     if definition.term_days < 0:

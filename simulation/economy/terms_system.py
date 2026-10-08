@@ -166,6 +166,12 @@ class TermsSystem:
         singular = made.singular if made is not None else economy.credits_singular
         if world.government.kind is not None:
             voting = world.politics.voting
+            kind = RETURN_TO_BARTER if what == "barter" else ADOPT_CURRENCY
+            if kind not in world.registries.proposals.residents_raise:
+                # How the settlement trades is the player's to say (S45): they have nobody to put it to.
+                unheard = world.registries.proposals.aftermath["unheard_resentment"]
+                world.politics.legitimacy.profile(world, resident).adjust("resentment", unheard)
+                return TradeResult(False, f"{resident.name} no tiene a quién proponérselo")
             if what == "barter":
                 raised = voting.raise_as(world, resident, RETURN_TO_BARTER)
             else:

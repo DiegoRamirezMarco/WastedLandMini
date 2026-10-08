@@ -860,9 +860,7 @@ class PoliticsOfLawsTests(unittest.TestCase):
     def test_a_law_the_player_was_behind_is_held_to_their_account_day_by_day(self) -> None:
         world = _governed()
         self.assertTrue(world.propose(ENACT_LAW, law="rest_day").ok)
-        proposal = next(iter(world.government.proposals.values()))
-        world.politics.voting.decide(world, proposal)
-        self.assertEqual(proposal.status, ACCEPTED)
+        self.assertEqual(world.government.decided[-1].status, ACCEPTED)
         self.assertTrue(world.government.laws["rest_day"].pushed)
         raul = world.residents["raul"]
         standing = world.politics.influence.standing(world, raul)
@@ -875,7 +873,11 @@ class PoliticsOfLawsTests(unittest.TestCase):
         self.assertEqual(other.player_standing, {}, "one they had nothing to do with is none of their business")
 
     def test_whoever_leads_an_authoritarian_place_passes_what_takes_their_fancy(self) -> None:
+        # Where the data leaves laws to the residents: in the game's own they are the player's.
         world = _governed("personalist_rule")
+        world.registries = replace(
+            world.registries, proposals=replace(world.registries.proposals, decrees=(), residents_raise=(ENACT_LAW,))
+        )
         leader = world.residents[world.government.leader]
         self.assertGreaterEqual(world.government.measures["authoritarianism"], world.registries.laws.whim_from)
         leader.personality.sociability, leader.personality.aggression = 0.0, 100.0

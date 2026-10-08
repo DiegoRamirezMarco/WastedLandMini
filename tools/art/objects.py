@@ -259,8 +259,25 @@ def _guillotine() -> list[str]:
     return _tall(marks)
 
 
+def _plaza() -> list[str]:
+    """A post on a slab with a rag of a flag to it: where the square is."""
+    marks: dict[tuple[int, int], str] = {}
+    for y in range(3, 28):
+        marks.update({(6, y): "o", (7, y): "T", (8, y): "o"})
+    for y in range(4, 11):
+        for x in range(9, 15 - abs(7 - y) // 2):
+            marks[(x, y)] = "r"
+    for x in range(9, 15):
+        marks.update({(x, 3): "o", (x, 11): "o"})
+    marks.update({(6, 2): "o", (7, 2): "o", (8, 2): "o"})
+    for x in range(2, 14):
+        marks.update({(x, 27): "o", (x, 28): "s", (x, 29): "d", (x, 30): "o"})
+    return _tall(marks)
+
+
 def build() -> dict[str, pygame.Surface]:
     return {
+        "sprites/objects/plaza.png": paint(_plaza(), {**JUSTICE, "r": "ember"}),
         "sprites/objects/stocks.png": paint(STOCKS, JUSTICE),
         "sprites/objects/gallows.png": paint(_gallows(), JUSTICE),
         "sprites/objects/guillotine.png": paint(_guillotine(), JUSTICE),

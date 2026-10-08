@@ -44,6 +44,7 @@
         "election"
       ],
       "abuse_tolerance": 40,
+      "dissent": 0.7,
       "starts": {
         "authoritarianism": 45
       },
@@ -64,6 +65,7 @@
       "ballot": "secret",
       "term_days": 56,
       "abuse_tolerance": 30,
+      "dissent": 0.8,
       "starts": {
         "authoritarianism": 30
       },
@@ -79,6 +81,7 @@
       "votes": "everyone",
       "ballot": "open",
       "abuse_tolerance": 20,
+      "dissent": 1.0,
       "starts": {
         "authoritarianism": 10
       },
@@ -101,6 +104,7 @@
         "strongest"
       ],
       "abuse_tolerance": 65,
+      "dissent": 0.2,
       "starts": {
         "authoritarianism": 75
       },
@@ -118,6 +122,7 @@
       "ballot": "open",
       "approval": 0.75,
       "abuse_tolerance": 15,
+      "dissent": 1.0,
       "starts": {
         "authoritarianism": 15
       },
@@ -141,6 +146,7 @@
         "following"
       ],
       "abuse_tolerance": 80,
+      "dissent": 0.0,
       "starts": {
         "authoritarianism": 85
       },

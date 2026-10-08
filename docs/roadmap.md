@@ -3546,6 +3546,81 @@ Still open here:
 - Whoever stands idle on a stool's tile stands, and the stool is still drawn over their feet
 - Nothing of this has been seen on a real window by whoever made it
 
+### S45 — The player governs (needs S27, S28 and S38) — done
+The user's words: "Todo el tema de leyes castigos, moneda y tal aun que exista un cabecilla
+«representante mini» lo gestiona el jugador, asi damos un apartado mas jugable al jugador".
+Asked first, and answered:
+
+- **What is left to the residents depends on the government**, in the user's words: "si es
+  democracia todos tienen su voto, si es caudillaje acatan aun que lo odien, se pueden
+  manifestar contra leyes si no estan bien metidas". Not one of the three that were offered
+- **Whether somebody is guilty is still theirs to say**, and what they are given the player's
+  (S28, as it was)
+- **A protest is leaving the post and standing there**, a few hours each day the law stays in
+  force, and in the user's words "podemos crear una plaza central donde puedan protestar con
+  pancartas". The banners are P51's
+
+This is the third place where what the player says is done and not advised, after affecting a
+resident (S37) and the kind of government (S38), and it sets aside what S27 began with, that
+the player proposes and the settlement decides: for laws and for what the settlement trades
+with, the player now governs. Who leads, how each votes and what they make of it stay theirs.
+
+Built:
+- **Laws, doing away with one, a currency and going back to barter are the player's to run**
+  (`decrees` in `data/proposals.json`). Put by the player they need nobody to make them
+  theirs, and whoever leads refuses nothing of them
+- **How one comes into force is the government's.** Where whoever leads decides alone (a
+  mayor, a commander, a ruler) it is in force there and then, with nobody asked. Where a
+  council or everybody decides, they vote on it as on anything: it waits to be talked over,
+  the player may speak to whoever votes, and it is done only if it carries, milder if that is
+  what carries. With the seat empty it falls to a vote
+- **Residents no longer put laws to each other**, nor the end of one, nor how to trade, and
+  whoever leads has no whims: what they still raise unasked is a vote on whoever leads and
+  another kind of government (`residents_raise`). Whoever has had enough of how things are
+  traded has nobody to put it to, and holds that against the government
+- **A law remembers how it came in**: put on them with nobody asked, or voted
+- **Whoever is against a law enough goes out against it** (`simulation/politics/protest.py`).
+  At noon they leave a stroll or their post and stand in the square until three, each day it
+  stays in force. How much they have against it is what they make of the law: all of that
+  for one put on them, half for one that was voted, and by how freely people speak out under
+  the government they have (`dissent`, from 1 under an assembly or a commune to nothing under
+  a ruler, where they do as they are told however much they hate it)
+- **The square is a thing to put down** (`plaza`): free, in Urbanismo, and there is one in the
+  settlement that comes ready made. With none they gather where newcomers first stand
+- **Holding has a cost.** Where it is put up with, each day of it takes legitimacy and adds
+  to unrest, by how many stood there. Where the settlement is authoritarian enough they are
+  leaned on instead: it leaves fear and a grudge in whoever was there, and adds to how
+  authoritarian the place is
+- **Doing away with the law, or making it milder, is taken as having been heard**: whoever
+  stood there trusts the player more and holds less against the government, and legitimacy
+  gains a little. Milder, it is another law to them, and whoever still cannot abide it
+  starts again
+- **They give it up after six days for nothing**, and what they hold against it stays
+- Nobody goes who is a child, away, locked up or on their way out. Nothing of it is a roll
+- `protest_called`, `protest_held` and `protest_won` are political events, and a protest is
+  a fact that is seen and told
+- Saved: whether each law was put on them, and who is out against which. Save version 35
+
+Decided without asking:
+- A mayor counts as one person deciding, like a commander or a ruler: under all three a law
+  of the player's is in force at once. What tells them apart is how freely people speak out
+- The player may undo or change at once what they decreed at once: there is no wait where
+  nobody is asked. What was voted down is left alone for a week, as before
+- Throwing somebody out, a vote on whoever leads and another government are still put as
+  they were (S27): they are not laws, punishments or the currency
+- A protest is from twelve to three, which costs whoever goes an hour or two of their shift
+- With no word from anybody a protest wears itself out: nobody is punished for it, and
+  nothing worse comes of it. Trouble that grows is still S29
+
+Still open here:
+- None of it is on screen: P51. Until then a law is put with `ProposeCommand`, and nobody
+  carries a banner
+- Whoever leads is a representative in name: what they think of a law of the player's tells
+  on their own vote where there is one, and on nothing else
+- Nobody campaigns against a law before it is voted, and a council that votes a law in
+  against most of the settlement answers to nobody for it
+- The laws that need a court (S43) are still to be written, and are the player's too
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

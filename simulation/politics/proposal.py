@@ -16,6 +16,10 @@ EXPEL = "expel"
 ADOPT_CURRENCY, RETURN_TO_BARTER = "adopt_currency", "return_to_barter"
 # What a proposal may be. Each does one thing when it passes, and nothing if it does not.
 KINDS = (ENACT_LAW, REPEAL_LAW, CALL_ELECTION, CHANGE_GOVERNMENT, EXPEL, ADOPT_CURRENCY, RETURN_TO_BARTER)
+# What the player runs (S45): put by them it needs nobody to make it theirs, and where one
+# person decides it is in force there and then. And what residents still raise unasked.
+DECREES = (ENACT_LAW, REPEAL_LAW, ADOPT_CURRENCY, RETURN_TO_BARTER)
+RAISED_BY_RESIDENTS = (CALL_ELECTION, CHANGE_GOVERNMENT)
 # What may bring a resident to raise each kind unasked.
 MOTIVES = {
     CALL_ELECTION: ("loyalty_below", "trust_below", "days_since_vote"),
@@ -51,6 +55,9 @@ class ProposalDefinition:
 @dataclass(frozen=True)
 class ProposalSettings:
     kinds: dict[str, ProposalDefinition] = field(default_factory=dict)
+    # The kinds that are the player's to run, and the kinds a resident may raise unasked.
+    decrees: tuple[str, ...] = DECREES
+    residents_raise: tuple[str, ...] = RAISED_BY_RESIDENTS
     # Hours a proposal is talked over before those who decide it do, and before whoever leads
     # does when it is theirs alone to decide.
     debate_hours: int = 12
@@ -155,6 +162,8 @@ def proposal_settings_from_data(data: dict[str, Any]) -> ProposalSettings:
             str(kind): proposal_definition_from_data(str(kind), values)
             for kind, values in data.get("kinds", {}).items()
         },
+        decrees=tuple(str(kind) for kind in data.get("decrees", defaults.decrees)),
+        residents_raise=tuple(str(kind) for kind in data.get("residents_raise", defaults.residents_raise)),
         debate_hours=int(data.get("debate_hours", defaults.debate_hours)),
         leader_hours=int(data.get("leader_hours", defaults.leader_hours)),
         pending_limit=int(data.get("pending_limit", defaults.pending_limit)),
@@ -180,6 +189,9 @@ def proposal_settings_from_data(data: dict[str, Any]) -> ProposalSettings:
     )
     if settings.debate_hours < 0 or settings.leader_hours < 0 or settings.pending_limit < 1 or settings.margin < 0:
         raise ValueError("A proposal is talked over for no less than no time, one at least may wait, and no margin is negative")
+    unknown = sorted(set(settings.decrees + settings.residents_raise) - set(KINDS))
+    if unknown:
+        raise ValueError(f"Nothing is done by a proposal of these kinds: {unknown}")
     if not 0.0 <= settings.resistance_fade <= 1.0 or settings.history < 1:
         raise ValueError("Resistance wears off by a share from 0 to 1, and at least one decision is kept")
     return settings
