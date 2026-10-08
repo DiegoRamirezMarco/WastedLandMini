@@ -4666,20 +4666,31 @@ Still open here, of wear:
   the bar on each thing in the inventory that the user asked for
 - **A broken workshop is mended like any other post**, by the mechanic whose post it is
 
-### S65 — What goes off (needs S51 and S64) — planned
-From the user's answer about how things break (S55): "algunas comida y algunos consumibles que
-se vaya pochando que tenga un valor de pocharse a x velocidad dia".
-- **Some food and some other things that are used up go off**: how fast, by the day, is data
-  on each kind of thing, and most have none
-- What has gone off is lost, and is in the books as spoiled (S51)
-- How far gone a thing is shows where things are shown (P60)
+### S65 — What goes off (needs S51, S55 and S64) — planned
+From the answer of the user about how things break (S55): "algunas comida y algunos consumibles
+que se vaya pochando que tenga un valor de pocharse a x velocidad dia".
 
-Still to settle, to be asked before it is built:
-- Whether what is kept in a store keeps longer than what is not, and whether a better store
-  keeps it longer still
-- What becomes of what has gone off: it is lost, or it is still there and makes whoever eats
-  it ill
-- Which things go off, and how fast
+Asked on 2026-10-08, when S55 was reported, and answered:
+- **Food goes off more slowly in a new thing that runs on current**: "la comida se pocha mas
+  lento en un nuevo objeto que va con electricidad y es arcon refrigerado". Not one of the
+  options, which were about the store
+- **What has gone off becomes compost**, which the garden uses to give more
+- **What is fresh goes off, and what the player makes goes off if they say so**: vegetables
+  and stew in a few days; tins, water and scrap not at all; medicine in weeks. Where an item
+  is made in the game, whether it goes off and in how many days is chosen there
+
+What it comes to:
+- **How fast a kind of thing goes off, by the day, is data on it**, and most have none
+- **A refrigerated chest** is a new kind of thing that holds food, runs on current (S55) and,
+  while it has some, keeps what is in it much longer
+- **What has gone off is compost**: it is in the books as spoiled (S51), and compost is a
+  thing of its own that whoever works the garden uses up to grow more
+- How far gone a thing is shows where things are shown (P60), as how worn one is does
+
+Still to settle as it is built, and to be said when it is reported:
+- Whether the chest is where food is kept ahead of the store (S53), or a thing apart that the
+  player fills
+- How much compost does for the garden, and whether it is carried there or taken by itself
 
 ### P60 — Stores, rarity and current on screen (needs S53 to S55, S64 and S65) — planned
 - How much room there is, in the bar and on the store
@@ -4687,6 +4698,9 @@ Still to settle, to be asked before it is built:
   white, green, blue, red, purple and yellow, as the user said
 - The level of what stands and the way to make it better, from the thing itself. **When it is
   done it asks whether to draw it again**, as the user said
+- **Making a thing better is put to whoever holds it**, as the user answered on 2026-10-08:
+  whoever works at the post, or sleeps in the bed, and with nobody there the mechanic. Not
+  the recommendation, which was whoever is selected
 - What has no current, and what is broken down, marked where it stands, and **a switch on
   each thing that runs on current**
 - **How worn a thing is, as a bar on its square in the inventory**, as the user said, and how
