@@ -1,0 +1,221 @@
+{
+  "lists": {
+    "insults": {
+      "name": "Insultos",
+      "ask": "Necesito un buen insulto. ¿Cuál me enseñas?",
+      "words": [],
+      "patterns": [
+        "a quién llamaría \"{word}\"",
+        "la vez que le llamaron \"{word}\"",
+        "si \"{word}\" es un insulto o un cumplido"
+      ]
+    },
+    "compliments": {
+      "name": "Piropos",
+      "ask": "¿Qué se le dice a alguien que te gusta?",
+      "words": [],
+      "patterns": [
+        "a quién le diría \"{word}\"",
+        "la vez que le dijeron \"{word}\"",
+        "si decir \"{word}\" funciona"
+      ]
+    },
+    "foods": {
+      "name": "Comidas",
+      "ask": "¿Cuál es la mejor comida que ha habido nunca?",
+      "words": [],
+      "patterns": [
+        "el día que se comió {word} y se atragantó",
+        "lo que daría ahora por {word}",
+        "cómo se preparaba {word}"
+      ]
+    },
+    "cravings": {
+      "name": "Antojos",
+      "ask": "Tengo un antojo y no sé de qué. ¿De qué puede ser?",
+      "words": [],
+      "patterns": [
+        "el antojo que tiene de {word}",
+        "las ganas de {word} que le entran por la noche"
+      ]
+    },
+    "places": {
+      "name": "Sitios",
+      "ask": "¿Qué sitio hay ahí fuera que merezca la pena?",
+      "words": [],
+      "patterns": [
+        "aquella vez en {word}",
+        "cómo se llega a {word}",
+        "lo que quedará en pie de {word}"
+      ]
+    },
+    "dangers": {
+      "name": "Peligros",
+      "ask": "¿A qué hay que tenerle miedo de verdad?",
+      "words": [],
+      "patterns": [
+        "qué haría si aparece {word}",
+        "la noche que creyó oír {word}",
+        "cómo librarse de {word}"
+      ]
+    },
+    "subjects": {
+      "name": "Temas",
+      "ask": "Me he quedado sin conversación. ¿De qué se puede hablar?",
+      "words": [],
+      "patterns": [
+        "{word}",
+        "todo lo que sabe sobre {word}",
+        "lo que opina de {word}"
+      ]
+    },
+    "gossip": {
+      "name": "Cotilleos",
+      "ask": "Cuéntame un cotilleo, anda.",
+      "words": [],
+      "patterns": [
+        "lo de que {word}",
+        "si será verdad que {word}"
+      ]
+    }
+  },
+  "new_subjects": "subjects",
+  "phrases": {
+    "greeting": {
+      "name": "Saludo",
+      "when": "begin",
+      "ask": "¿Cómo saludo yo a la gente?"
+    },
+    "catchphrase": {
+      "name": "Muletilla",
+      "when": "any",
+      "ask": "Quiero una frase que sea muy mía. ¿Cuál?"
+    },
+    "glad": {
+      "name": "Cuando está contento",
+      "when": "glad",
+      "ask": "¿Qué digo cuando estoy contento?"
+    },
+    "low": {
+      "name": "Cuando está de bajón",
+      "when": "low",
+      "ask": "¿Qué digo cuando estoy de bajón?"
+    },
+    "angry": {
+      "name": "Cuando se enfada",
+      "when": "angry",
+      "ask": "¿Qué suelto cuando me enfado?"
+    }
+  },
+  "items": {
+    "food": [
+      "el día que se comió {an_item} y se atragantó",
+      "lo que daría ahora por {an_item}",
+      "la mejor manera de preparar {an_item}",
+      "{item}"
+    ],
+    "drink": [
+      "la noche que se bebió {an_item} de un trago",
+      "lo que daría ahora por {an_item}",
+      "{item}"
+    ],
+    "water": [
+      "la sed que pasó hasta dar con {an_item}",
+      "{item}"
+    ],
+    "tool": [
+      "lo que se puede hacer con {an_item}",
+      "la vez que perdió {an_item}",
+      "{item}"
+    ],
+    "material": [
+      "todo lo que saldría de {an_item}",
+      "dónde encontrar {an_item}",
+      "{item}"
+    ],
+    "medicine": [
+      "la vez que se curó con {an_item}",
+      "{item}"
+    ],
+    "vice": [
+      "la primera vez que probó {an_item}",
+      "lo que daría ahora por {an_item}",
+      "{item}"
+    ],
+    "default": [
+      "{item}",
+      "lo que haría con {an_item}",
+      "la vez que encontró {an_item}"
+    ]
+  },
+  "people": [
+    "{pj}",
+    "lo que anda haciendo {pj}",
+    "la última de {pj}",
+    "lo que opina de {pj}"
+  ],
+  "heard": [
+    "lo de que {fact}"
+  ],
+  "taken": {
+    "hated": {
+      "affection": -3.0,
+      "resentment": 2.0
+    },
+    "disliked": {
+      "affection": -1.5,
+      "resentment": 0.5
+    },
+    "liked": {
+      "affection": 2.0
+    },
+    "loved": {
+      "affection": 4.0,
+      "trust": 0.5
+    }
+  },
+  "relish": {
+    "hated": 0.0,
+    "disliked": 0.0,
+    "neutral": 1.0,
+    "liked": 1.3,
+    "loved": 1.6
+  },
+  "lines": {
+    "hated": "{listener} no soporta que {speaker} le hable sobre {subject}",
+    "disliked": "A {listener} no le hace gracia que {speaker} le hable sobre {subject}",
+    "liked": "A {listener} le gusta que {speaker} le hable sobre {subject}",
+    "loved": "A {listener} se le ilumina la cara cuando {speaker} le habla sobre {subject}"
+  },
+  "shows": 0.5,
+  "weights": {
+    "fond_from": 15,
+    "shunned": 0.25,
+    "favoured": 1.5,
+    "talked_of_from": 20,
+    "sore_from": 30,
+    "news": 0.3
+  },
+  "order": "with:talk",
+  "asks": {
+    "hour": 10,
+    "chance": 0.15,
+    "most": 3,
+    "lapse_hours": 24,
+    "subject_from": 20,
+    "nickname_from": 40,
+    "nickname": "¿Cómo llamo a {other}?",
+    "subject": "¿De qué hablo con {other}?"
+  },
+  "saying": {
+    "greet_minutes": 3,
+    "every": 6,
+    "alone_every": 60,
+    "minutes": 2,
+    "chance": 0.3,
+    "glad_from": 75,
+    "low_below": 30,
+    "angry_from": 70
+  },
+  "longest": 48
+}

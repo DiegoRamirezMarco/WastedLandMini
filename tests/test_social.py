@@ -272,15 +272,17 @@ class SocialLifeTests(unittest.TestCase):
 
 
 class SpokenLineTests(unittest.TestCase):
-    """Which line is said is a matter of words. Writing one changes nothing that happens."""
+    """Which line is said is a matter of words. Writing one changes nothing that happens.
 
-    def _world(self, chat: list[str]) -> SimulationWorld:
+    A talk is about something and quotes nobody (S58): the lines left are those of a quarrel."""
+
+    def _world(self, angry: list[str]) -> SimulationWorld:
         registries = builtin_registries()
-        return SimulationWorld.demo_world(seed=7, registries=replace(registries, dialogue={**registries.dialogue, "chat": chat}))
+        return SimulationWorld.demo_world(seed=7, registries=replace(registries, dialogue={**registries.dialogue, "angry": angry}))
 
     def test_writing_another_line_changes_nothing_that_happens(self) -> None:
-        written = list(builtin_registries().dialogue["chat"])
-        worlds = [self._world(written), self._world([*written, "Otra más.", "Y otra."]), self._world([])]
+        written = list(builtin_registries().dialogue["angry"])
+        worlds = [self._world(written), self._world(["Otra más.", "Y otra."]), self._world([])]
         for world in worlds:
             world.step(2 * MINUTES_PER_DAY)
         plain, wordy, silent = worlds
@@ -290,13 +292,14 @@ class SpokenLineTests(unittest.TestCase):
             self.assertEqual(other.rng.get_state(), plain.rng.get_state())
 
     def test_the_line_said_is_one_of_those_written_and_the_same_for_the_same_seed(self) -> None:
-        written = list(builtin_registries().dialogue["chat"])
+        written = list(builtin_registries().dialogue["angry"])
         first, second = self._world(written), self._world(written)
         for world in (first, second):
-            world.step(MINUTES_PER_DAY)
-        said = [line for line in first.event_log if "| chat_started |" in line]
+            world.step(2 * MINUTES_PER_DAY)
+        said = [line for line in first.event_log if "| argument_started |" in line]
         self.assertTrue(said)
         self.assertTrue(all(any(f'"{each}"' in line for each in written) for line in said))
+        self.assertTrue(all(" — " not in line for line in first.event_log if "| chat_started |" in line))
         self.assertEqual(first.event_log, second.event_log)
 
 

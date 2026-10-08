@@ -39,6 +39,9 @@ watches, advises and intervenes, but does not control them.
   shelter from, vermin in the pantry, and raiders by night for whoever is on watch to face. A radio gives word of some of it, to whoever listens and whoever they tell.
 - Relationships that deepen: friendships, adults who fall for each other and say so or do not
   dare, couples, affairs kept secret until someone finds out, jealousy and breakups.
+- Talk that is about something: a thing, somebody, a piece of news, or a word the player
+  gave when a resident asked for one. How whoever listens takes it, by tastes of their own,
+  tells on how the two get on, and the player can tell somebody what to talk about.
 - Day and night over a place that looks salvaged: fires in barrels, lamps by the doors, wrecks
   and scrap. What happens in the dark, away from them, is seen by almost nobody.
 - Close-up interaction view for important conversations and crises.

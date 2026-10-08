@@ -9,6 +9,7 @@ from simulation.economy.terms import TradeResult
 from simulation.housing.housing import HousingResult
 from simulation.justice.justice_system import JusticeResult
 from simulation.politics.government import PoliticsResult
+from simulation.social.talk import TalkResult
 from simulation.work.craft import CraftResult
 from simulation.work.research import ResearchResult
 from world.map import Tile
@@ -63,6 +64,26 @@ class CommandTarget(Protocol):
         ...
 
     def compost(self, object_id: str) -> SpoilResult:
+        ...
+
+    def add_word(self, list_id: str, text: str) -> TalkResult:
+        ...
+
+    def set_phrase(self, resident_id: str, phrase_id: str, text: str) -> TalkResult:
+        ...
+
+    def set_nickname(self, resident_id: str, other_id: str, text: str) -> TalkResult:
+        ...
+
+    def answer_ask(self, ask_id: str, text: str = "", subject: str | None = None, list_id: str | None = None) -> TalkResult:
+        ...
+
+    def dismiss_ask(self, ask_id: str) -> TalkResult:
+        ...
+
+    def talk_about(
+        self, resident_id: str, other_id: str, subject: str | None = None, text: str = "", list_id: str | None = None
+    ) -> TalkResult:
         ...
 
     def cancel_site(self, site_id: str) -> UrbanismResult:
@@ -337,6 +358,87 @@ class CompostCommand:
 
     def apply(self, world: CommandTarget) -> SpoilResult:
         return world.compost(self.object_id)
+
+
+@dataclass(frozen=True)
+class AddWordCommand:
+    """The player gives the settlement a word for one of its lists (S58): an insult, a place,
+    a subject. It is something to talk of from then on, with a taste to it for each resident.
+    The result says why not: no such list, nothing written, too long, or there already."""
+
+    list_id: str
+    text: str
+
+    def apply(self, world: CommandTarget) -> TalkResult:
+        return world.add_word(self.list_id, self.text)
+
+
+@dataclass(frozen=True)
+class SetPhraseCommand:
+    """The player gives a resident one of their own phrases: how they greet, what they keep
+    saying, what they say glad, low or angry. With nothing written it is taken back."""
+
+    resident_id: str
+    phrase_id: str
+    text: str
+
+    def apply(self, world: CommandTarget) -> TalkResult:
+        return world.set_phrase(self.resident_id, self.phrase_id, self.text)
+
+
+@dataclass(frozen=True)
+class SetNicknameCommand:
+    """The player says what one resident calls another. It is that one's name for them and
+    nobody else's, and the other way round is another matter. With nothing written they go
+    back to their name."""
+
+    resident_id: str
+    other_id: str
+    text: str
+
+    def apply(self, world: CommandTarget) -> TalkResult:
+        return world.set_nickname(self.resident_id, self.other_id, self.text)
+
+
+@dataclass(frozen=True)
+class AnswerAskCommand:
+    """The player gives a resident what they asked for (S58): `text` is the word, the phrase
+    or the name. Asked what to talk to somebody about, it is `subject`, one of the subjects
+    there are, or `text` for a word made up on the spot, which joins `list_id` or else the
+    list new subjects go into."""
+
+    ask_id: str
+    text: str = ""
+    subject: str | None = None
+    list_id: str | None = None
+
+    def apply(self, world: CommandTarget) -> TalkResult:
+        return world.answer_ask(self.ask_id, self.text, self.subject, self.list_id)
+
+
+@dataclass(frozen=True)
+class DismissAskCommand:
+    """The player leaves what a resident asked for unanswered. Nothing comes of it."""
+
+    ask_id: str
+
+    def apply(self, world: CommandTarget) -> TalkResult:
+        return world.dismiss_ask(self.ask_id)
+
+
+@dataclass(frozen=True)
+class TalkAboutCommand:
+    """The player tells a resident what to talk about with somebody, unasked: `subject`, or
+    `text` for a new word. They go and talk, as when told to, and bring it up."""
+
+    resident_id: str
+    other_id: str
+    subject: str | None = None
+    text: str = ""
+    list_id: str | None = None
+
+    def apply(self, world: CommandTarget) -> TalkResult:
+        return world.talk_about(self.resident_id, self.other_id, self.subject, self.text, self.list_id)
 
 
 @dataclass(frozen=True)

@@ -96,6 +96,37 @@ specific `meal_started` event so presentation can animate and sound the meal wit
 Starting an exchange emits `chat_started` or `argument_started` with both participants and the
 room. An argument's importance rises with the resentment between the two.
 
+### What is talked of
+
+- **A talk has a subject** (S58), where its kind says so (`"subject": true`: a chat, stories).
+  `TalkSystem.pick` settles it as the talk begins and both activities carry it: `about`, the
+  subject as `kind:name` (`item:stew`, `person:ines`, `word:insults.zopenco`,
+  `fact:fact_12`), `about_text`, the words for it, and `brought` on whoever brought it up.
+- **Whoever walks over brings it up**: what the player told them to talk to this person
+  about; or else, with `weights.news` plus half their sociability as the chance, the most
+  striking thing they know that the other does not; or else something they like out of what
+  they know, weighed by how much; or else any word; or nothing. What they know is what they
+  carry, what is kept that is everybody's or theirs, the people they feel `talked_of_from`
+  for or against, and the words of the lists. What they have seen the other dislike weighs
+  `shunned` of itself and what they have seen them like `favoured`.
+- **Whoever listens takes it** as one of the five reactions of a taste
+  (`TalkSystem.reaction`): a thing by the liking they would have for it
+  (`TasteSystem.fancy`, which makes no taste), a word by the taste tag it is
+  (`word_<list>.<word>`), somebody by whether the two of them stand the same way on them, and
+  something heard as it comes. At their end of the talk `taken` moves what they feel for
+  whoever brought it up by `taken` in the data, and `relish` scales the good of the talk
+  itself. Whoever brought it up comes away as from any talk, and tells the news if that is
+  what it was.
+- **Something of both their tastes shows** each time, to the player and to each other, so a
+  word is found out and listed like any other taste.
+- **The words are the player's**, kept in `world.words`: the words given for each list, each
+  resident's own phrases, what one calls another, what residents are waiting to be given
+  (`asks`) and what somebody was told to talk about (`told`). On the hour of `asks.hour`
+  each resident may ask for something, by a die of their own; an ask lapses after
+  `asks.lapse_hours` with nothing lost.
+- **None of it draws from the settlement's dice**: subjects, sentences, asks and what comes
+  out of somebody's own phrases (`TalkSystem.saying`) all come of `SimulationRNG.keyed`.
+
 ## Work
 
 - `data/jobs.json` defines each job: the kind of object that is its post, its shifts, the phrase

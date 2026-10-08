@@ -31,6 +31,7 @@ from simulation.social.interaction import InteractionDefinition, interaction_def
 from simulation.justice.settings import JusticeSettings, justice_settings_from_data
 from simulation.substances.substance import SubstanceSettings, substance_settings_from_data
 from simulation.tastes.settings import TasteSettings, taste_settings_from_data
+from simulation.social.talk_settings import TalkSettings, talk_settings_from_data
 from simulation.housing.decor import DecorSettings, decor_settings_from_data
 from simulation.housing.housing import HousingSettings, housing_settings_from_data
 from simulation.tutorial.tutorial import BUILDING, JOB, OBJECT, TutorialDefinition, tutorial_definition_from_data
@@ -190,6 +191,8 @@ class BuiltInRegistries:
     world_events: WorldEventSettings = field(default_factory=WorldEventSettings)
     # How tastes are made, how they are taken, and what they are called.
     tastes: TasteSettings = field(default_factory=TasteSettings)
+    # What talk is about: the lists of words, each resident's phrases, and how a subject is taken (S58).
+    talk: TalkSettings = field(default_factory=TalkSettings)
     # How time tells on people, and how families come about.
     family: FamilySettings = field(default_factory=FamilySettings)
     politics: PoliticsSettings = field(default_factory=PoliticsSettings)
@@ -317,6 +320,9 @@ class BuiltInRegistries:
         if work_path.is_file():
             registries.rush = rush_settings_from_data(_read_object(work_path).get("rush", {}))
             registries.wear = wear_settings_from_data(_read_object(work_path).get("wear", {}))
+        talk_path = root / "talk.json"
+        if talk_path.is_file():
+            registries.talk = talk_settings_from_data(_read_object(talk_path))
         tastes_path = root / "tastes.json"
         if tastes_path.is_file():
             registries.tastes = taste_settings_from_data(_read_object(tastes_path))
@@ -389,6 +395,9 @@ class BuiltInRegistries:
         unknown = sorted(set(self.spoilage.compost_on) - set(self.interactables.kinds()))
         if unknown:
             raise ValueError(f"Compost is put on kinds of object there are not: {unknown}")
+        group, _, name = self.talk.order.partition(":")
+        if self.talk.order and name not in self.affect.shared(group):
+            raise ValueError(f"Who is told what to talk about is told something there is not: {self.talk.order}")
         for rarity in self.rarities.tiers:
             if rarity.study is not None and rarity.study not in self.research.subjects:
                 raise ValueError(f"Rarity {rarity.rarity_id} is studied as a subject there is not: {rarity.study}")

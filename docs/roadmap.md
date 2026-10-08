@@ -4997,7 +4997,7 @@ Still open here:
 - A sentence cannot be changed once given, nor a prisoner let out early (S28)
 - The last step of the opening points at nothing on the screen now: it only says where saving is
 
-### S58 — Lines with holes in them (needs S2, S19 and S47) — planned
+### S58 — Lines with holes in them (needs S2, S19 and S47) — done
 The second layer: words and things. It is the first way of putting talk into words (S34): a
 line, not a murmur.
 
@@ -5055,6 +5055,101 @@ What it comes to:
   and the player picks a subject out of everything there is, or makes a new one
 - **Every word the player gives is a subject like any other**, with a taste to it for each
   resident, found out as their other tastes are
+
+What there is, of which nothing is on screen until P62:
+- **A talk is about something.** `chat` and `stories` carry `"subject": true` in
+  `data/social.json`, and whoever walks over brings a subject up: a thing (`item:stew`),
+  somebody (`person:ines`), a word of one of the lists (`word:insults.zopenco`) or something
+  heard (`fact:fact_12`). Both have it for as long as the talk lasts. The log says what
+  about, `Inés y Raúl charlan sobre lo que quedará en pie del Viejo Madrid`, and quotes nobody
+- **What they bring up**, in this order: what the player told them to talk to this person
+  about; or news the other has not heard, as often as a rumour was passed on before; or
+  something they like out of what they know, the likelier the more they like it: the things
+  they carry and those kept in the settlement that are everybody's or their own, the people
+  they feel strongly about, for or against, never the one in front of them, and the words
+  of the lists; or, caring for none of it, any word there is; or nothing, and then it is a
+  talk as talks were
+- **They learn what not to bring up.** What they have seen the other dislike weighs a
+  quarter of what it would, and what they have seen them like half as much again. What
+  they have not seen, they do not know
+- **Whoever listens takes it one of the five ways a taste is taken**, and it tells on what
+  they feel for whoever brought it up: a subject they hate takes 3 of affection, adds 2 of
+  resentment and leaves them none of the good of the talk; one they dislike 1.5 and 0.5, and
+  none of the good either; one they have nothing against leaves the talk what a talk has
+  always been; one they like adds 2 and a third more of the good; one they love 4, half a
+  point of trust and six tenths more. Whoever brought it up feels as after any talk
+- **A thing is taken by the taste they would have for it** and a word by a taste of its own.
+  **Somebody is taken by whether the two stand the same way on them**: to hear ill of
+  whoever they cannot stand either is welcome, and to hear it of a friend is not. Something
+  heard is taken as it comes, and is told by being the subject
+- **A word is a taste like any other**: a taste tag, `word_insults.zopenco`, with a leaning
+  for each resident, made the first time it comes up. Both what the listener makes of the
+  subject and what whoever brought it up does show a little each time, to the player and to
+  the other of the two, so it is found out and listed with the rest, called as it was
+  written, between quotes
+- **Eight lists of the settlement's**, as data in `data/talk.json`: `Insultos`, `Piropos`,
+  `Comidas`, `Antojos`, `Sitios`, `Peligros`, `Temas` and `Cotilleos`, each with what a
+  resident says to ask for a word and the patterns a word of it is talked of by. They come
+  empty. A word is up to 48 letters and is not put twice in a list, however it is written
+- **Five phrases of their own for each resident**: how they greet, what they keep saying, and
+  what they say glad, low and angry. What comes out over them is worked out for the screen:
+  the greeting as a talk begins, the rest now and then, oftener in company than alone
+- **What one calls another**, each way by itself, said where that one is the subject
+- **Residents ask.** At ten each day each has a chance in seven or so of asking for
+  something: a word for a list, a phrase they still lack, what to call somebody they feel
+  strongly about, or what to talk about with somebody they like. Up to three wait at once,
+  one each, and one that has waited a day is let go with nothing lost. Nobody asks while the
+  opening lasts
+- **Told what to talk about**, asked or unasked, a resident goes and talks to them, as when
+  told to (S50), and brings it up; where they cannot be told now it keeps for the next time
+  the two talk. It is any subject there is, or a word made up on the spot, which joins a list
+- **Six commands**: `AddWordCommand`, `SetPhraseCommand`, `SetNicknameCommand`,
+  `AnswerAskCommand`, `DismissAskCommand` and `TalkAboutCommand`. Three events:
+  `subject_taken`, `word_asked` and `word_given`
+- **None of it throws the settlement's dice**: what is brought up, how it is put and who asks
+  come of dice of their own
+- **Saved**, version 49: the words, the phrases, the names, what waits and what was told, and
+  on a talk under way what it is about
+- **Measured** over eighteen seeds of six weeks, with it and without: nobody dies either way, and what residents feel for each other ends where it did: 10.9 of affection against 10.5, 11.8 of resentment against 11.9, 7.9 pairs fond of each other against 6.9, 123 arguments against 121. A little more news goes round, 565 tellings against 521, and more of what people like is found out, 357 times against 275. No word had been given in either
+
+Decided without asking:
+- **The lists come empty**: the words are the player's, as was answered. A list can come with
+  words of its own, `words` in the data, for whoever mods one
+- **Eight lists out of the four pairs that were answered**, each pair split in two, since an
+  insult is not talked of as a compliment is, nor a place as a danger
+- **Only a chat and stories are about something.** A joke, a hug, an argument and the rest
+  are what they were, and a quarrel still quotes a line in the log
+- **The lines of `chat` in `data/dialogue.json` are said no more** where talk is about
+  something. The file is as it was: with no `data/talk.json` they are said as before
+- **News is the subject as often as it was told before**, three times in ten and more for the
+  sociable, and whoever brings a subject up tells nothing else at the end of it. Whoever
+  listened still may, as ever
+- **Somebody is taken by agreement**, and not by what the listener feels for them alone: two
+  who cannot stand a third are the closer for saying so
+- **They learn what not to bring up** from what they have seen, which was not asked for: it
+  is what lets two people get on better with time without the player
+- **What a resident knows of** is what they carry and what is kept that is everybody's or
+  theirs. What is somebody else's in a chest they do not talk of
+- **Guessing what they make of a thing makes no taste**: having it is still their first time
+- **How often they ask**, how long an ask waits, and that one let go costs nothing
+- **A phrase of their own comes out when they are alone too**, once an hour at most
+- **The names are used for the subject only**: the log still calls everybody by their name
+- **The numbers**, all of them in `data/talk.json`
+- **Three tests of a long run look at another seed.** Two looked for somebody having a drink
+  at the bar in the week of seed 3, and one for a fight that sends somebody to the clinic in
+  the fortnight of seed 42, and with talk about something neither happens in those. It is
+  the seed and not the rule: over eighteen seeds one week has no drink at the bar with it and
+  one without, and of twelve fortnights with every fight egged on one has nobody at the
+  clinic with it and none without, with 4.1 fights against 5.3. They look at seeds 18 and 9
+
+Still open here:
+- Nothing of it is on screen: the bubbles, the notices and the way to give words are P62
+- A word cannot be taken out of a list or put right once it is given
+- An argument is about nothing
+- Nothing keeps the same two from the same subject twice running, but what they have seen
+  of how it was taken
+- A word has no gender or number: the patterns are written to read with any
+- Nobody makes up a word, a phrase or a name by themselves
 
 ### S59 — Handed over, and found (needs S58 and S19) — planned
 - **A thing is put into a resident's hands by the player**, and how they take it is seen and

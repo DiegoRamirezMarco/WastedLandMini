@@ -37,6 +37,9 @@ class InteractionDefinition:
     # The use both go on to once it is over, each for themselves: `drink`, for having asked
     # somebody for one. Whoever was asked goes only if they care to.
     then_use: str | None = None
+    # Whether it is about something (S58): whoever starts it brings a subject up, and how
+    # the other takes it tells on what they feel for them.
+    subject: bool = False
 
 
 ROMANCE_KINDS = ("confession", "tryst", "breakup", "proposal")
@@ -82,4 +85,5 @@ def interaction_definition_from_data(interaction_id: str, data: dict[str, Any]) 
         doing=str(data["doing"]) if data.get("doing") else None,
         pastime=str(data["pastime"]) if data.get("pastime") else None,
         then_use=str(data["then_use"]) if data.get("then_use") else None,
+        subject=bool(data.get("subject", False)),
     )

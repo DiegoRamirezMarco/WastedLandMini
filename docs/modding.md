@@ -1279,6 +1279,10 @@ line that is reworded is simply spoken anew. `python -m tools.make_voices` has e
 }
 ```
 
+`subject` says that the exchange is about something (see `Talk`, below): whoever starts it
+brings a subject up, and how the other takes it tells on what they feel for them. Such an
+exchange quotes no line.
+
 `dialogue` names a list of lines in `data/dialogue.json`; one is picked for the event text.
 Lines can be written, changed and taken out freely: which one is said comes of a die of its
 own, and no number of lines changes what happens in a settlement with the same seed.
@@ -1294,6 +1298,69 @@ An exchange is part of a romance with `"romance"`: `confession` (at its end the 
 from what they feel), `tryst` (two residents alone: it needs the other to want it and nobody
 watching) or `breakup` (at its end the couple is over). In `relationship`, a positive `attraction`
 is scaled by the spark between the two instead of by their personalities.
+
+## Talk
+
+`data/talk.json` is what talk is about and the words the player is asked for. Without the
+file nothing is about anything, and a chat quotes a line as it used to.
+
+```json
+"lists": {
+  "places": {
+    "name": "Sitios",
+    "ask": "¿Qué sitio hay ahí fuera que merezca la pena?",
+    "words": [],
+    "patterns": ["aquella vez en {word}", "cómo se llega a {word}"]
+  }
+},
+"new_subjects": "subjects",
+"phrases": {
+  "greeting": {"name": "Saludo", "when": "begin", "ask": "¿Cómo saludo yo a la gente?"}
+},
+"items": {
+  "food": ["el día que se comió {an_item} y se atragantó", "{item}"],
+  "default": ["{item}", "lo que haría con {an_item}"]
+},
+"people": ["{pj}", "la última de {pj}"],
+"heard": ["lo de que {fact}"]
+```
+
+- **`lists`** are the lists of words the settlement keeps. `ask` is what a resident says to
+  ask for one more, `words` the ones it comes with (the built-in ones come with none: the
+  words are the player's) and `patterns` how a word of it is talked of, with `{word}` for
+  the word. `new_subjects` is the list a subject made up on the spot goes into.
+- **`phrases`** are the phrases each resident has of their own. `when` is when one comes
+  out: `begin` as a talk begins, `glad`, `low` or `angry` when that is how they are, and
+  `any` otherwise.
+- **`items`** is how a thing is talked of, by its category, with `default` for any other:
+  `{item}` reads `el guiso caliente` and `{an_item}` reads `un guiso caliente`. **`people`**
+  is how somebody is, with `{pj}`, and **`heard`** how something heard is, with `{fact}`.
+  Every pattern is read after `sobre`, and is best written so that it reads with a word of
+  any gender and number.
+- **`taken`** is what a subject does to what whoever listens feels for whoever brought it
+  up, by how they take it (`hated`, `disliked`, `neutral`, `liked`, `loved`); **`relish`**
+  is how much of the good of the talk itself comes to them, by the same; and **`lines`** is
+  how it is said, with `{listener}`, `{speaker}` and `{subject}`. A reaction with no line is
+  not said.
+- **`weights`**: `fond_from` is how much they have to like a thing or a word to bring it up,
+  `talked_of_from` how much they have to feel for somebody, `sore_from` how far two have to
+  stand on somebody for talk of them to be welcome or not, `news` the chance that news is
+  the subject before half of how sociable they are is added, and `shunned` and `favoured`
+  how much less and more they bring up what they have seen the other dislike and like.
+- **`asks`**: the `hour` residents think of asking at, the `chance` each has, how many wait
+  at `most`, after how many `lapse_hours` one is let go, how much they have to like somebody
+  to wonder what to talk to them about (`subject_from`) or feel for them to want a name for
+  them (`nickname_from`), and what they say to ask for those two.
+- **`saying`**: for how many `greet_minutes` of a talk the greeting is seen, `every` how many
+  minutes in company and `alone_every` how many alone a phrase may come out, for how many
+  `minutes` it is seen and with what `chance`, and the mood (`glad_from`, `low_below`) and
+  the stress (`angry_from`) that settle which.
+- **`order`** is what a resident is told when they are told what to talk about with
+  somebody, one of the orders of `data/affect.json`, and **`longest`** the most letters a
+  word or a phrase has. `shows` is how much of a taste shows each time (see `Tastes`).
+
+A word is a taste tag, `word_<list>.<word>`, with a leaning for each resident like any other
+tag.
 
 ## Friendship and romance
 

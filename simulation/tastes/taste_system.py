@@ -112,6 +112,21 @@ class TasteSystem:
         """How much a resident likes an item, by the tastes they have so far. Makes none."""
         return liking(self.profile(world, resident), definition, world.registries.tastes)
 
+    def fancy(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> float:
+        """How much a resident makes of an item they know of and may never have had: by the
+        tastes they have, and the leanings they would come to it with for the rest. Makes
+        none, so that having it is still their first time of it."""
+        settings = world.registries.tastes
+        mine = self.profile(world, resident)
+        whole = TasteProfile(dict(mine.categories), dict(mine.tags), dict(mine.items), dict(mine.people))
+        about = [(CATEGORY, definition.category), *((TAG, tag) for tag in definition.preference_tags)]
+        for kind, name in (*about, (ITEM, definition.item_id)):
+            if name not in whole.of(kind):
+                leaning = leaning_for(world.rng.seed, resident.resident_id, kind, name, settings)
+                if leaning is not None:
+                    whole.of(kind)[name] = Taste(leaning=leaning)
+        return liking(whole, definition, settings)
+
     def believed_liking(
         self, world: "SimulationWorld", observer: Resident, subject: Resident, definition: ItemDefinition
     ) -> float:
@@ -271,7 +286,7 @@ class TasteSystem:
         reaction = self.takes(world, resident, tag)
         effects = world.registries.tastes.effects_of(reaction)
         resident.adjust_mood(effects.mood)
-        self._shown(world, resident, key_of(TAG, tag), effects.shows, onlookers)
+        self.show(world, resident, key_of(TAG, tag), effects.shows, onlookers)
         return reaction
 
     # ----- what living does to a taste -----
@@ -370,7 +385,7 @@ class TasteSystem:
             moved = taste.value / 100.0 * settings.people_push
             if moved:
                 world.relationship(resident.resident_id, other.resident_id).adjust(definition.feeling, moved)
-            self._shown(world, resident, key_of(PEOPLE, definition.taste_id), settings.people_shows, [other.resident_id])
+            self.show(world, resident, key_of(PEOPLE, definition.taste_id), settings.people_shows, [other.resident_id])
 
     def heed(self, world: "SimulationWorld", resident: Resident) -> float:
         """How much being told what to do counts with a resident, beside anyone else: 1 for no more and no less."""
@@ -387,7 +402,7 @@ class TasteSystem:
         settings = world.registries.tastes
         for definition in settings.people.values():
             if self._concerns(definition, None, ADVICE):
-                self._shown(world, resident, key_of(PEOPLE, definition.taste_id), settings.people_shows)
+                self.show(world, resident, key_of(PEOPLE, definition.taste_id), settings.people_shows)
 
     def _show_reaction(
         self,
@@ -422,16 +437,23 @@ class TasteSystem:
             shown[key_of(CATEGORY, definition.category)] = shows * settings.category_share
         onlookers = list(onlookers)
         for key, amount in shown.items():
-            self._shown(world, resident, key, amount, onlookers)
+            self.show(world, resident, key, amount, onlookers)
 
     # ----- what is found out -----
 
-    def _shown(
-        self, world: "SimulationWorld", resident: Resident, key: str, shows: float, onlookers: Iterable[str] = ()
+    def show(
+        self,
+        world: "SimulationWorld",
+        resident: Resident,
+        key: str,
+        shows: float,
+        onlookers: Iterable[str] = (),
+        showing: str | None = None,
     ) -> None:
-        """Something of a taste has shown: to the player, and to the residents who were there."""
+        """Something of a taste has shown: to the player, and to the residents who were there.
+        It shows as it stands, or as `showing` where whoever says so knows how it was taken."""
         settings = world.registries.tastes
-        showing = self._band(world, resident, key)
+        showing = showing or self._band(world, resident, key)
         for observer_id in dict.fromkeys([PLAYER, *onlookers]):
             became = world.taste_knowledge.observe(observer_id, resident.resident_id, key, shows, settings, showing)
             if became is not None and observer_id == PLAYER:
@@ -498,6 +520,10 @@ class TasteSystem:
         if kind == ITEM:
             definition = world.registries.items.resolve(name)
             return f"{DEFINITE.get(definition.article, definition.article)} {definition.name}"
+        # A word the player gave is a taste like any other, and is called as they wrote it (S58).
+        word = world.talk.text_of_tag(world, name) if kind == TAG else None
+        if word is not None:
+            return f'"{word}"'
         return world.registries.tastes.name_of(kind, name) or name.replace("_", " ")
 
     # ----- other ways a taste shows -----
@@ -529,14 +555,14 @@ class TasteSystem:
             data={"resident_id": resident.resident_id, "taste": key},
         )
         world.emit_event(event, at=resident.tile)
-        self._shown(world, resident, key, settings.mention_shows, [partner.resident_id, *event.witnesses])
+        self.show(world, resident, key, settings.mention_shows, [partner.resident_id, *event.witnesses])
         return True
 
     def bought(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> None:
         """Someone has paid for a thing. If it is to their liking, that says something."""
         settings = world.registries.tastes
         if side_of(reaction_to(self.liking(world, resident, definition), settings)) > 0:
-            self._shown(world, resident, key_of(ITEM, definition.item_id), settings.purchase_shows)
+            self.show(world, resident, key_of(ITEM, definition.item_id), settings.purchase_shows)
 
     def refused(self, world: "SimulationWorld", resident: Resident, proposer: Resident, definition: ItemDefinition) -> None:
         """Someone will not take a thing in a swap because it is not to their liking."""
@@ -553,7 +579,7 @@ class TasteSystem:
             data={"resident_id": resident.resident_id, "item_id": definition.item_id},
         )
         world.emit_event(event, at=resident.tile)
-        self._shown(
+        self.show(
             world,
             resident,
             key_of(ITEM, definition.item_id),

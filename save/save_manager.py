@@ -48,6 +48,7 @@ from simulation.residents.personality import Personality
 from simulation.residents.resident import FACINGS, Resident
 from simulation.rng import SimulationRNG
 from simulation.social.relationship import Relationship
+from simulation.social.talk import ASK_KINDS, Ask, VocabularyState, Word
 from simulation.substances.substance import Habit, Intake
 from simulation.tastes.settings import REACTIONS
 from simulation.tastes.taste import KINDS, Taste, TasteProfile
@@ -164,7 +165,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 48
+    CURRENT_VERSION = 49
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -414,6 +415,7 @@ class SaveManager:
             "notices": dict(world.notices),
             "power_burnt": world.power_burnt,
             "dressed": dict(world.dressed),
+            "words": _words_to_data(world.words),
             "vacancies": dict(world.vacancies),
             "deaths": [vars(death) for death in world.deaths],
             "decisions": [_decision_to_data(decision) for decision in world.decisions.values()],
@@ -1125,6 +1127,8 @@ class SaveManager:
             for object_id, until in _object_or_empty(data.get("dressed")).items()
             if isinstance(until, int) and not isinstance(until, bool)
         }
+        # The words the player has given. None in a save from before (S58).
+        world.words = _words_from_data(data.get("words"))
         world.vacancies = {
             str(job_id): int(minute)
             for job_id, minute in _object_or_empty(data.get("vacancies")).items()
@@ -1595,7 +1599,66 @@ def _activity_to_data(activity: Activity | None) -> dict[str, Any] | None:
         "item_level": activity.item_level,
         "held_up": activity.held_up,
         "ordered": activity.ordered,
+        "about": activity.about,
+        "about_text": activity.about_text,
+        "brought": activity.brought,
+        "began_at": activity.began_at,
     }
+
+
+def _words_to_data(words: VocabularyState) -> dict[str, Any]:
+    return {
+        "lists": {list_id: [vars(word) for word in given] for list_id, given in words.lists.items()},
+        "phrases": {resident_id: dict(mine) for resident_id, mine in words.phrases.items()},
+        "nicknames": {resident_id: dict(mine) for resident_id, mine in words.nicknames.items()},
+        "asks": [vars(ask) for ask in words.asks],
+        "ask_count": words.ask_count,
+        "told": {resident_id: list(told) for resident_id, told in words.told.items()},
+    }
+
+
+def _words_from_data(data: Any) -> VocabularyState:
+    """The words the player has given, out of a save. Whatever of it is not as it should be
+    is left out, and a save from before there were any gives none."""
+    words = VocabularyState()
+    if not isinstance(data, dict):
+        return words
+    for list_id, given in _object_or_empty(data.get("lists")).items():
+        for word in given if isinstance(given, list) else []:
+            if isinstance(word, dict) and isinstance(word.get("word_id"), str) and isinstance(word.get("text"), str):
+                by, day = word.get("by"), word.get("day", 0)
+                words.lists.setdefault(str(list_id), []).append(
+                    Word(
+                        word["word_id"],
+                        word["text"],
+                        str(by) if by is not None else None,
+                        int(day) if isinstance(day, int) and not isinstance(day, bool) else 0,
+                    )
+                )
+    for name, kept in (("phrases", words.phrases), ("nicknames", words.nicknames)):
+        for resident_id, mine in _object_or_empty(data.get(name)).items():
+            if isinstance(mine, dict):
+                kept[str(resident_id)] = {str(key): str(text) for key, text in mine.items() if isinstance(text, str)}
+    for ask in data.get("asks", []) if isinstance(data.get("asks"), list) else []:
+        if isinstance(ask, dict) and ask.get("kind") in ASK_KINDS and all(
+            isinstance(ask.get(key), str) for key in ("ask_id", "resident_id", "what")
+        ):
+            since = ask.get("since", 0)
+            words.asks.append(
+                Ask(
+                    ask["ask_id"],
+                    ask["resident_id"],
+                    ask["kind"],
+                    ask["what"],
+                    int(since) if isinstance(since, int) and not isinstance(since, bool) else 0,
+                )
+            )
+    count = data.get("ask_count", 0)
+    words.ask_count = max(len(words.asks), int(count) if isinstance(count, int) and not isinstance(count, bool) else 0)
+    for resident_id, told in _object_or_empty(data.get("told")).items():
+        if isinstance(told, list) and len(told) == 2 and all(isinstance(each, str) for each in told):
+            words.told[str(resident_id)] = (told[0], told[1])
+    return words
 
 
 def _activity_from_data(data: Any) -> Activity | None:
@@ -1617,6 +1680,10 @@ def _activity_from_data(data: Any) -> Activity | None:
         item_level=max(1, _level_of({"level": data.get("item_level", 1)})),
         held_up=int(data.get("held_up", 0)),
         ordered=bool(data.get("ordered", False)),
+        about=str(data.get("about", "")),
+        about_text=str(data.get("about_text", "")),
+        brought=bool(data.get("brought", False)),
+        began_at=int(data.get("began_at", 0)),
     )
 
 

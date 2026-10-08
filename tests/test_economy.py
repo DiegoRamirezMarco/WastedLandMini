@@ -692,7 +692,8 @@ class EconomyDataAndSaveTests(unittest.TestCase):
 
 class WorkingEconomyTests(unittest.TestCase):
     def test_a_week_in_which_things_are_carried_worn_mended_earned_and_spent(self) -> None:
-        world = SimulationWorld.demo_world(seed=3)
+        # A week in which somebody has a drink at the bar: one seed in eighteen has none.
+        world = SimulationWorld.demo_world(seed=18)
         hoes = [_owned(world, farmer_id, "hoe") for farmer_id in ("raul", "ines")]
         worst = 100.0
         mended = 0

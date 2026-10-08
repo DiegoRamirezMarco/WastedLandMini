@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `48` |
+| `version` | `49` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -50,14 +50,17 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `tastes` | Per resident ID, their tastes under `category`, `tag`, `item` and `people`: each a name with its `leaning` and what has been `learned` |
 | `taste_seen_as` | The same way round as `taste_knowledge`: the reaction each taste looked like the last time it showed |
 | `taste_knowledge` | Per onlooker (`@player`, or a resident ID), per resident, per taste (`tag:sweet`, `item:stew`, `category:food`): how much of it has been seen |
+| `words` | The words the player has given (S58): `lists` (per list ID, each word with its `word_id`, `text`, `by`, the resident who asked for it or `null`, and the `day` it was given), `phrases` (per resident ID, their own by phrase ID), `nicknames` (per resident ID, what they call each other resident), `asks` (what residents wait to be given: `ask_id`, `resident_id`, `kind`, `what` and `since`), `ask_count` and `told` (per resident ID, who they were told to talk to and the subject) |
 | `ledger` | The settlement's books (S51): `day` (the day being written down, or `0` if they have not been opened), `opened_at` (the game minute they were opened at), `today` (per resource ID, what has come in, above nothing, and gone out, below it, by why: `made:farmer`, `eaten`, `other`), `days` (the same per day, for the last days kept) and `held` (per day, what the settlement had of each resource when it ended). Missing in an older save, which has nothing written |
 | `tutorial` | Where a new settlement is in its opening: `step` (a step ID from `data/tutorial.json`, or `null` once it is over or if it never had one), `since` (game minute the step began), `opened`, `acknowledged`, the `deeds` the player has done of what the step asks them to do themselves, and the IDs of the steps `done` |
 
 A resident's `activity` is `null` or `action`, `target_id` (an object ID, or a site ID), `partner_id` (a resident
 ID, when talking or walking over to talk), `intent` (the exchange they are set on having), the
 remaining `path` as tiles, `minutes_left`, `using`, `held_up` (minutes running that somebody
-in the way has kept them from a step along that path) and `ordered` (whether it is something
-the player told them to do).
+in the way has kept them from a step along that path), `ordered` (whether it is something
+the player told them to do), and for an exchange `began_at` (the game minute it began),
+`about` (its subject, as `kind:name`, or nothing), `about_text` (the words for it) and
+`brought` (whether it was this one who brought it up).
 
 A resident's `expedition` is `null` or `returns_at`, `finds`, `danger`, `find_at` and `fetch`.
 
@@ -85,6 +88,10 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 49** added `words`, and `about`, `about_text`, `brought` and `began_at` on an
+  activity (S58). A save from before has no words and no talk under way is about anything.
+  Whatever of `words` is not as it should be is left out: a word without its ID or its
+  text, a phrase that is no text, an ask of no known kind.
 - **Version 48** added `freshness` on every item, of a hundred, and `dressed`: the game
   minute until which each bed that has compost on it has, by object ID (S65). In a save from
   before everything is quite fresh and no bed has any. A freshness that is no number is

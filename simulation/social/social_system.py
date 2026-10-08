@@ -262,6 +262,8 @@ class SocialSystem:
             hostile = world.rng.random() < argument_chance(world, resident, partner)
             definition = world.registries.interactions[ARGUMENT_ID if hostile else CHAT_ID]
         minutes = world.rng.randint(*definition.minutes)
+        # What it is about, where it is about something: whoever came over brings it up (S58).
+        about, about_text = (world.talk.pick(world, resident, partner) if definition.subject else None) or ("", "")
         order = list(world.residents)
         partner_already_ticked = order.index(partner.resident_id) < order.index(resident.resident_id)
 
@@ -276,6 +278,10 @@ class SocialSystem:
                 # Whoever came for this exchange keeps it as their intent, so its end is theirs to settle.
                 intent=approach.intent if one is resident else None,
                 ordered=approach.ordered and one is resident,
+                about=about,
+                about_text=about_text,
+                brought=bool(about) and one is resident,
+                began_at=world.clock.total_minutes,
             )
             one.current_action = definition.interaction_id
             dx, dy = other.x - one.x, other.y - one.y
@@ -287,7 +293,9 @@ class SocialSystem:
 
         # Whatever the partner was stewing over is overtaken by this.
         world.interventions.cancel_for(world, partner.resident_id)
-        self._announce(world, resident, partner, definition, sought=approach.intent is not None)
+        self._announce(world, resident, partner, definition, sought=approach.intent is not None, about=about_text)
+        if about:
+            world.talk.brought_up(world, resident, partner, about)
         return resident.activity
 
     def _announce(
@@ -297,6 +305,7 @@ class SocialSystem:
         partner: Resident,
         definition: InteractionDefinition,
         sought: bool = False,
+        about: str = "",
     ) -> None:
         speaker, listener = resident, partner
         if definition.hostile and self._heat(world, partner, resident) > self._heat(world, resident, partner):
@@ -306,7 +315,10 @@ class SocialSystem:
         sides = LINE_DICE.get(definition.dialogue or "")
         if sides:
             world.rng.choice(range(sides))
-        if lines:
+        if about:
+            # A talk that is about something says what, and nobody is quoted (S58).
+            text = f"{text} sobre {about}"
+        elif lines:
             # Which line is a matter of words, and comes of a die that nothing else is thrown with.
             words = SimulationRNG.keyed(
                 world.rng.seed, "line", speaker.resident_id, listener.resident_id, world.clock.total_minutes
@@ -367,6 +379,10 @@ class SocialSystem:
                 # Done for the sake of it: each takes it as their taste for it has them.
                 taken = world.tastes.pastime(world, resident, definition.pastime, [partner.resident_id])
                 relish = world.registries.leisure.relief_of(taken)
+            if activity.about and not activity.brought:
+                # Whoever listened takes the subject as their taste for it has them (S58).
+                heard = world.talk.taken(world, resident, partner, activity.about)
+                relish *= world.registries.talk.relish.get(heard, 1.0)
             for feeling, delta in feeling_changes(definition, resident, partner, feelings, drawn, relish).items():
                 feelings.adjust(feeling, delta)
             if definition.hostile:
@@ -388,8 +404,12 @@ class SocialSystem:
                 ),
             )
             resident.adjust_mood(definition.emotional_value * 8.0)
-            if not definition.hostile:
+            if activity.about and activity.brought:
+                # What they brought up was all they had to tell, news or not.
+                world.talk.tell(world, resident, partner, activity.about)
+            elif not definition.hostile:
                 share_rumor(world, resident, partner)
+            if not definition.hostile:
                 world.items.after_exchange(world, resident, partner, definition)
                 world.tastes.take_to(world, resident, partner)
                 world.tastes.after_exchange(world, resident, partner)

@@ -18,6 +18,7 @@
     },
     "text": "{a} y {b} charlan",
     "dialogue": "chat",
+    "subject": true,
     "memory": "Charlé un rato con {other}.",
     "emotional_value": 0.3,
     "tags": [
@@ -373,7 +374,8 @@
     "tags": [
       "leisure"
     ],
-    "pastime": "stories"
+    "pastime": "stories",
+    "subject": true
   },
   "dance": {
     "hostile": false,

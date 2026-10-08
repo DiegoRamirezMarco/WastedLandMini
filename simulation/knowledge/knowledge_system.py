@@ -197,8 +197,8 @@ def react(world: "SimulationWorld", resident: Resident, fact: Fact, credibility:
             feelings.adjust(feeling, float(base) * share * strength)
 
 
-def share_rumor(world: "SimulationWorld", teller: Resident, listener: Resident) -> Rumor | None:
-    """Maybe have `teller` pass on the most striking thing they know that `listener` does not."""
+def striking_news(world: "SimulationWorld", teller: Resident, listener: Resident) -> Belief | None:
+    """The most striking thing `teller` knows that `listener` does not, and would tell them."""
     reactions = world.registries.event_settings.get("reactions", {})
     facts = world.knowledge.facts
 
@@ -223,13 +223,15 @@ def share_rumor(world: "SimulationWorld", teller: Resident, listener: Resident) 
     ]
     if not news:
         return None
-    if world.rng.random() >= 0.3 + teller.personality.sociability / 200.0:
-        return None
-    belief = max(
+    return max(
         news,
         key=lambda b: (facts[b.fact_id].importance * b.credibility, facts[b.fact_id].timestamp, b.fact_id),
     )
-    fact = facts[belief.fact_id]
+
+
+def pass_on(world: "SimulationWorld", teller: Resident, listener: Resident, belief: Belief) -> Rumor:
+    """Have `teller` tell `listener` something they know, as far as they are believed."""
+    fact = world.knowledge.facts[belief.fact_id]
     trust = world.relationship(listener.resident_id, teller.resident_id).trust
     credibility = belief.credibility * RUMOR_DECAY * max(0.3, min(1.0, 0.75 + trust / 200.0))
     rumor = Rumor(fact.text, teller.resident_id, list(fact.subject_ids), credibility, fact.fact_id)
@@ -247,3 +249,13 @@ def share_rumor(world: "SimulationWorld", teller: Resident, listener: Resident) 
         # Whoever is fond of gossip is the fonder of whoever brings it, and the other way about.
         world.tastes.take_to(world, listener, teller, RUMOR)
     return rumor
+
+
+def share_rumor(world: "SimulationWorld", teller: Resident, listener: Resident) -> Rumor | None:
+    """Maybe have `teller` pass on the most striking thing they know that `listener` does not."""
+    belief = striking_news(world, teller, listener)
+    if belief is None:
+        return None
+    if world.rng.random() >= 0.3 + teller.personality.sociability / 200.0:
+        return None
+    return pass_on(world, teller, listener, belief)

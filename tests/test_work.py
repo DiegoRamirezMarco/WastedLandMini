@@ -422,7 +422,8 @@ class SettlementLayoutTests(unittest.TestCase):
 
 class WorkingWeekTests(unittest.TestCase):
     def test_a_week_of_work_feeds_the_settlement(self) -> None:
-        world = SimulationWorld.demo_world(seed=3)
+        # A week in which somebody has a drink at the bar: one seed in eighteen has none.
+        world = SimulationWorld.demo_world(seed=18)
         hours = {resident_id: Counter() for resident_id in world.residents}
         for _ in range(7 * MINUTES_PER_DAY):
             world.step(1)

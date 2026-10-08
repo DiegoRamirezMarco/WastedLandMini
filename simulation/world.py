@@ -52,6 +52,7 @@ from simulation.rng import SimulationRNG
 from simulation.social.bonds import BondSystem
 from simulation.substances.substance_system import SubstanceSystem
 from simulation.social.relationship import Relationship
+from simulation.social.talk import TalkResult, TalkSystem, VocabularyState
 from simulation.tastes.knowledge import TasteKnowledge
 from simulation.tastes.taste import TasteProfile
 from simulation.tastes.taste_system import TasteSystem
@@ -211,6 +212,10 @@ class SimulationWorld:
     # What the settlement knows, and what it is working out.
     studies: ResearchState = field(default_factory=ResearchState)
     tastes: TasteSystem = field(default_factory=TasteSystem)
+    # What is talked of, and the words the player has given for it: the lists, each
+    # resident's phrases, what one calls another, and what they are waiting to be told (S58).
+    talk: TalkSystem = field(default_factory=TalkSystem)
+    words: VocabularyState = field(default_factory=VocabularyState)
     # What each resident likes and loathes, by resident ID. Kept apart from the resident.
     taste_profiles: dict[str, TasteProfile] = field(default_factory=dict)
     # What the player and each resident have found out of anyone's tastes.
@@ -253,6 +258,7 @@ class SimulationWorld:
         if self.clock.hour == 0 and self.clock.minute == 0:
             self.attributes.tick_day(self)
         self.justice.tick(self)
+        self.talk.tick(self)
         self.housing.tick(self)
         self.activities.begin_minute(self)
         for resident in list(self.residents.values()):
@@ -400,6 +406,32 @@ class SimulationWorld:
     def compost(self, object_id: str) -> SpoilResult:
         """Put compost on a bed of the garden, which gives more for some days (S65)."""
         return self.spoilage.dress(self, object_id)
+
+    def add_word(self, list_id: str, text: str) -> TalkResult:
+        """Put a word in one of the settlement's lists (S58)."""
+        return self.talk.add_word(self, list_id, text)
+
+    def set_phrase(self, resident_id: str, phrase_id: str, text: str) -> TalkResult:
+        """Give a resident one of their own phrases, or with nothing take it back."""
+        return self.talk.set_phrase(self, resident_id, phrase_id, text)
+
+    def set_nickname(self, resident_id: str, other_id: str, text: str) -> TalkResult:
+        """Say what one resident calls another, or with nothing that it is their name."""
+        return self.talk.set_nickname(self, resident_id, other_id, text)
+
+    def answer_ask(self, ask_id: str, text: str = "", subject: str | None = None, list_id: str | None = None) -> TalkResult:
+        """Give a resident the word, the phrase, the name or the subject they asked for."""
+        return self.talk.answer(self, ask_id, text, subject, list_id)
+
+    def dismiss_ask(self, ask_id: str) -> TalkResult:
+        """Leave what a resident asked for unanswered."""
+        return self.talk.dismiss(self, ask_id)
+
+    def talk_about(
+        self, resident_id: str, other_id: str, subject: str | None = None, text: str = "", list_id: str | None = None
+    ) -> TalkResult:
+        """Tell a resident what to talk about with somebody: a subject there is, or a new word."""
+        return self.talk.talk_about(self, resident_id, other_id, subject, text, list_id)
 
     def set_free_will(self, resident_id: str, free: bool) -> AffectResult:
         """Say whether a resident does anything of their own accord, or only what they are told."""

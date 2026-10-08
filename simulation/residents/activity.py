@@ -43,7 +43,9 @@ class Activity:
     `item_id` is the item involved: the kind of food while eating from a container, otherwise
     the one item instance being used or taken. `held_up` is how many minutes running they have
     not got a step further along `path`, for somebody being in the way. `ordered` says that it
-    is what the player told them to do, and not something of their own.
+    is what the player told them to do, and not something of their own. `about` is the
+    subject of a talk (S58) and `about_text` the words for it, `brought` says that it was
+    this one who brought it up, and `began_at` is the game minute the exchange began.
     """
 
     action: str
@@ -58,3 +60,7 @@ class Activity:
     item_level: int = 1
     held_up: int = 0
     ordered: bool = False
+    about: str = ""
+    about_text: str = ""
+    brought: bool = False
+    began_at: int = 0

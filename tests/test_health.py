@@ -257,7 +257,8 @@ class BrawlTests(unittest.TestCase):
         self.assertEqual(outcomes, {"hothead": "fight", "gentle": "walk_away"})
 
     def test_no_fight_ever_starts_without_a_chance_to_step_in(self) -> None:
-        world = SimulationWorld.demo_world(seed=42)
+        # A fortnight in which a fight sends somebody to the clinic: one seed in twelve has none.
+        world = SimulationWorld.demo_world(seed=9)
         for _ in range(14 * MINUTES_PER_DAY):
             world.step(1)
             for decision in list(world.decisions.values()):
