@@ -60,13 +60,14 @@ from simulation.tutorial.tutorial_system import TutorialSystem
 from simulation.work.craft import CraftResult, Discovery
 from simulation.work.craft_system import CraftSystem
 from simulation.work.construction import ConstructionSystem
+from simulation.work.upgrades import UpgradeSystem
 from simulation.work.expedition_system import ExpeditionSystem
 from simulation.work.research import ResearchResult, ResearchState, ResearchSystem
 from simulation.work.rush import RushSystem
 from simulation.work.salvage import Salvage, SalvageSystem
 from simulation.work.staffing import StaffingSystem
 from simulation.work.work_system import WORK_ACTION, WorkSystem
-from world.build import BUILDING_SITE, OBJECT_SITE, BuildSite
+from world.build import BUILDING_SITE, OBJECT_SITE, UPGRADE_SITE, BuildSite
 from world.interactable import Interactable, InteractableDefinition
 from world.map import Tile, TileMap
 from world.pathfinding import manhattan
@@ -189,6 +190,8 @@ class SimulationWorld:
     notices: dict[str, int] = field(default_factory=dict)
     urbanism: UrbanismSystem = field(default_factory=UrbanismSystem)
     construction: ConstructionSystem = field(default_factory=ConstructionSystem)
+    # How good what stands is, and the making of it better (S54).
+    upgrades: UpgradeSystem = field(default_factory=UpgradeSystem)
     # Ground marked out for what somebody has agreed to put up, by site ID.
     sites: dict[str, BuildSite] = field(default_factory=dict)
     site_count: int = 0
@@ -283,6 +286,13 @@ class SimulationWorld:
     def propose_object(self, kind: str, tile: Tile, resident_id: str, option_id: str) -> UrbanismResult:
         """Put it to a resident that they put an object up. They weigh it and decide for themselves."""
         return self.construction.propose(self, OBJECT_SITE, kind, tile, resident_id, option_id)
+
+    def propose_upgrade(self, object_id: str, resident_id: str, option_id: str) -> UrbanismResult:
+        """Put it to a resident that they make something that stands better. They weigh it
+        and decide for themselves, as with anything that is built."""
+        placed = self.interactables.get(object_id)
+        tile = (placed.x, placed.y) if placed is not None else (0, 0)
+        return self.construction.propose(self, UPGRADE_SITE, object_id, tile, resident_id, option_id)
 
     def propose_building(self, blueprint_id: str, tile: Tile, resident_id: str, option_id: str) -> UrbanismResult:
         """Put it to a resident that they put a building up. They weigh it and decide for themselves."""
@@ -699,6 +709,12 @@ class SimulationWorld:
             if self.notices.get(POWER_OUT_NOTICE) != self.clock.day:
                 self.notices[POWER_OUT_NOTICE] = self.clock.day
                 self.emit_event(DomainEvent("power_failed", POWER_EVENT_IMPORTANCE, "El generador se queda sin combustible"))
+            return
+        burning = next(
+            object_id for object_id, inventory in self.containers.items() if inventory is generator
+        )
+        if self.upgrades.spares_fuel(self, burning):
+            # A generator that has been made better gets more nights out of the same fuel (S54).
             return
         generator.take_unit(stack.instance_id)
         self.ledger.record(self, POWER_ITEM, -1, BURNT)

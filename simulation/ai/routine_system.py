@@ -78,7 +78,8 @@ class RoutineSystem:
             use = world.definition_of(placed).use
             if use is None or world.users_of(placed.object_id) >= use.capacity:
                 continue
-            if not world.work.open_to(world, resident, use):
+            if not world.work.open_to(world, resident, use) or world.upgrades.in_hand(world, placed.object_id):
+                # Nor is anything used while it is being made better (S54).
                 continue
             # What stands in somebody's house is theirs to use, and whoever they would have in.
             # Anybody else goes in for it only when they have to.
@@ -159,6 +160,8 @@ class RoutineSystem:
         their means and, where it serves something, not empty."""
         use = world.definition_of(placed).use
         if use is None or not world.work.open_to(world, resident, use):
+            return False
+        if world.upgrades.in_hand(world, placed.object_id):
             return False
         if not world.housing.may_use(world, resident, placed, use) and not world.housing.pressed(world, resident, placed, use):
             return False

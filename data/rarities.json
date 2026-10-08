@@ -1,0 +1,72 @@
+{
+  "tiers": {
+    "common": {
+      "name": "Común",
+      "color": [
+        236,
+        229,
+        212
+      ],
+      "better": 1.0
+    },
+    "uncommon": {
+      "name": "Poco común",
+      "color": [
+        104,
+        152,
+        84
+      ],
+      "better": 1.15,
+      "study": "fine_work"
+    },
+    "rare": {
+      "name": "Raro",
+      "color": [
+        62,
+        112,
+        150
+      ],
+      "better": 1.3,
+      "study": "skilled_work"
+    },
+    "epic": {
+      "name": "Épico",
+      "color": [
+        200,
+        64,
+        54
+      ],
+      "better": 1.5,
+      "study": "master_work"
+    },
+    "legendary": {
+      "name": "Legendario",
+      "color": [
+        150,
+        90,
+        170
+      ],
+      "better": 1.75,
+      "study": "great_work"
+    },
+    "mythic": {
+      "name": "Mítico",
+      "color": [
+        238,
+        190,
+        70
+      ],
+      "better": 2.0,
+      "built": false
+    }
+  },
+  "upgrade": {
+    "cost": {
+      "scrap": 3
+    },
+    "minutes": 180,
+    "kinds": [
+      "generator"
+    ]
+  }
+}

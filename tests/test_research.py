@@ -469,7 +469,9 @@ class ResearchScreenTests(unittest.TestCase):
         # What is still to be worked out has a row each. What is known is told in a line or two.
         rows = subject_rows(world)
         self.assertEqual({row.subject_id for row in rows}, set(world.registries.research.subjects) - set(STANDING))
-        self.assertEqual({row.status for row in rows}, {OPEN})
+        # Each rarity past the first waits for the one before it to have been studied (S54).
+        closed = {row.subject_id for row in rows if row.status != OPEN}
+        self.assertEqual(closed, {"skilled_work", "master_work", "great_work"})
         known = " ".join(known_lines(view.font, world, 290))
         self.assertTrue(all(world.registries.research.subjects[each].name in known for each in STANDING))
 

@@ -5,10 +5,12 @@ from typing import Any
 
 from world.map import Tile
 
-# What a site is for: a piece of furniture or other object, or a whole building.
+# What a site is for: a piece of furniture or other object, a whole building, or making
+# better something that already stands (S54), which is then the ID of that thing.
 OBJECT_SITE = "object"
 BUILDING_SITE = "building"
-SITE_KINDS = (OBJECT_SITE, BUILDING_SITE)
+UPGRADE_SITE = "upgrade"
+SITE_KINDS = (OBJECT_SITE, BUILDING_SITE, UPGRADE_SITE)
 
 
 @dataclass(frozen=True)

@@ -327,7 +327,7 @@ class ActivitySystem:
         if use is None or activity.target_id is None:
             resident.current_action = SHELTER_ACTION if activity.action == SHELTER_ACTION else "idle"
             return True
-        if not world.work.open_to(world, resident, use):
+        if not world.work.open_to(world, resident, use) or world.upgrades.in_hand(world, activity.target_id):
             return False
         if not world.trade.can_afford(world, resident, use, activity.target_id):
             return False
@@ -417,7 +417,9 @@ class ActivitySystem:
             rest = use.per_minute.get("tiredness", 0.0)
             if placed is not None and rest < 0:
                 # In a bed of their own, in a house that is comfortable, they rest the better.
-                extra = world.housing.rest_factor(world, resident, placed) - 1.0
+                # And in a bed that has been made better, better still (S54).
+                better = world.upgrades.better(world, placed.object_id)
+                extra = world.housing.rest_factor(world, resident, placed) * better - 1.0
                 if extra > 0:
                     resident.needs.apply({"tiredness": rest * extra})
             lowered = [use.until] if use.until else [need for need, delta in use.per_minute.items() if delta < 0]

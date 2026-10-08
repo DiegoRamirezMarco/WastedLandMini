@@ -170,6 +170,9 @@ class WorkSystem:
         job = self.job_of(world, resident)
         if job is None or resident.post_id not in world.interactables:
             return None
+        if world.upgrades.in_hand(world, resident.post_id):
+            # Nobody works at a post while it is being made better.
+            return None
         leaving = job.expedition is not None and resident.last_expedition_day != world.clock.day
         pressing = SETTING_OUT_NEED if leaving else PRESSING_NEED
         if world.activities.urgent_needs(world, resident, pressing):
@@ -239,6 +242,9 @@ class WorkSystem:
         job = self.job_of(world, resident)
         placed = world.interactables.get(activity.target_id or "")
         if job is None or placed is None or (job.outdoors and world.happenings.is_stormy(world)):
+            self._leave(resident)
+            return
+        if world.upgrades.in_hand(world, placed.object_id):
             self._leave(resident)
             return
         remaining = activity.minutes_left if activity.using else self.shift_minutes_left(world, resident, job)
@@ -468,6 +474,9 @@ class WorkSystem:
         """How many times as fast as a plain pair of hands a resident turns out what a job makes,
         with `tool` in them: what everything that tells on it comes to."""
         speed = self.tool_speed(world, job, tool) or 1.0 if tool is not None else 1.0
+        if resident.job_id == job.job_id:
+            # A post that has been made better is worked that much faster (S54).
+            speed *= world.upgrades.better(world, resident.post_id)
         # Short of an arm the work still gets done, in more minutes.
         speed *= world.health.work_pace(world, resident)
         speed *= self.mood_pace(resident)

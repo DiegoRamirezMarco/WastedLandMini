@@ -40,6 +40,7 @@ from simulation.work.expedition import ExpeditionSettings, expedition_settings_f
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
 from simulation.work.research import EFFECTS, JOB_PACE, ResearchSettings, research_settings_from_data
 from simulation.work.rush import RushSettings, rush_settings_from_data
+from simulation.work.upgrades import RaritySettings, rarity_settings_from_data
 from world.interactable import InteractableDefinition, interactable_definition_from_data
 from world.custom_content import load_custom_buildings, load_custom_interactables
 from world.map import TerrainDefinition
@@ -172,6 +173,7 @@ class BuiltInRegistries:
     resources: ResourceSettings = field(default_factory=ResourceSettings)
     # What pushing a post does, and what it risks.
     rush: RushSettings = field(default_factory=RushSettings)
+    rarities: RaritySettings = field(default_factory=RaritySettings)
     bonds: BondSettings = field(default_factory=BondSettings)
     expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
     # How building is gone about. What each thing takes is in its own definition.
@@ -295,6 +297,9 @@ class BuiltInRegistries:
         resources_path = root / "resources.json"
         if resources_path.is_file():
             registries.resources = resource_settings_from_data(_read_object(resources_path))
+        rarities_path = root / "rarities.json"
+        if rarities_path.is_file():
+            registries.rarities = rarity_settings_from_data(_read_object(rarities_path))
         work_path = root / "work.json"
         if work_path.is_file():
             registries.rush = rush_settings_from_data(_read_object(work_path).get("rush", {}))
@@ -354,6 +359,12 @@ class BuiltInRegistries:
                 unknown = sorted(set(units or ()) - set(self.resources.resources))
                 if unknown:
                     raise ValueError(f"Interactable {kind} keeps a resource there is not: {unknown}")
+        for rarity in self.rarities.tiers:
+            if rarity.study is not None and rarity.study not in self.research.subjects:
+                raise ValueError(f"Rarity {rarity.rarity_id} is studied as a subject there is not: {rarity.study}")
+        unknown = sorted(set(self.rarities.kinds) - set(self.interactables.kinds()))
+        if unknown:
+            raise ValueError(f"What can be made better names kinds of object there are not: {unknown}")
         for blueprint_id, building in self.buildings.items():
             if building.floor not in self.terrain:
                 raise ValueError(f"Building {blueprint_id} uses unknown floor terrain: {building.floor}")

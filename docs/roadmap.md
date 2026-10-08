@@ -4467,7 +4467,7 @@ Still open here:
 - **What comes from outside is not held at the gate** when there is no room, as the plan had it
 - The store has no sign over it and says nothing of how full it is where it stands: P60
 
-### S54 — Better things (needs S53 and S36) — planned
+### S54 — Better things (needs S53 and S36) — done
 Asked with S53. Three of the four answers were in the user's own words:
 - **All four that were offered can be made better**: posts, stores, beds and the generator
 - **Five levels, and a sixth that cannot be built.** "5, el 6 se consigue mediante las
@@ -4478,14 +4478,42 @@ Asked with S53. Three of the four answers were in the user's own words:
 - **It takes a site and having been studied**: "Obra y estudio". Not the recommendation, which
   was a site alone
 
-What it comes to:
-- **The six rarities are data**: what each is called, its colour, and how much better it makes
-  whatever has it
-- **Whatever stands has a level**, from common: a post makes faster, a store holds more, a bed
-  rests better, a generator burns less
-- **Making it better is a site on what already stands** (S16, S36), with what it takes carried
-  to it and worked on, once that rarity has been studied (S17). It is not used meanwhile
-- **Mythic is never built**: it is found (S64)
+What there is:
+- **The six rarities are data** (`data/rarities.json`): `Común`, `Poco común`, `Raro`, `Épico`,
+  `Legendario` and `Mítico`, each with the colour the user gave it and by how much whatever has
+  it does what it does better: 1, 1.15, 1.3, 1.5, 1.75 and 2
+- **Whatever stands has a level**, from 1, which is its place among them. Everything starts
+  common
+- **A post is worked that much faster**, by whoever holds it. **A store holds that much more.**
+  **A bed rests that much better**, over what the house it stands in already gives. **A
+  generator gets that many more nights out of its fuel**
+- **Making a thing better is a site on it** (S16, S36): put to somebody, who may say no; what
+  it takes carried to it and worked on; and it is one level better when it is done. The first
+  takes 3 of scrap and three hours, the second twice that, and so on
+- **Each rarity has to have been studied first** (S17): `Buen oficio`, `Oficio fino`,
+  `Maestría` and `Obra maestra`, each after the one before
+- **A thing is not used while it is being made better**: nobody works at the post, sleeps in
+  the bed or eats from it. A store goes on holding what it holds
+- **Mythic is never made here**: at legendary a thing says that better is only found (S64)
+- The save went to version 43: `level` on whatever stands. In a save from before everything
+  is common
+
+Decided without asking:
+- **Which things have levels follows from what they are**: whatever is the post of a job, a
+  store, or slept in. The generator is named in the data, where more can be
+- **A pantry has none.** It was among the stores the user was offered, before the store became
+  a thing of its own: it is where the store is taken from, and holds nothing of its own to
+  hold more of
+- **How much better each rarity is, and what it takes, are first guesses**
+- **Whoever is asked may say no**, as with anything built. It is not an order
+- **One thing is made better at a time, a level at a time**
+
+Still open here:
+- **There is no way of asking for it on screen yet**, nor of seeing how rare a thing is: P60
+- **Nothing asks whether to draw it again** when it is done, which the user asked for: P60
+- **A generator that gives more current** is what a better one should come to, once things run
+  on current (S55). Until then it burns less
+- Whether what a better post makes is better too is S64
 
 ### S64 — Rarer things (needs S54 and S47) — planned
 What the user's answers to S54 added, cut off as a milestone of its own. Asked what things that

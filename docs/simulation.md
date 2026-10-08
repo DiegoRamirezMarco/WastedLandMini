@@ -250,6 +250,22 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
   how much of it is `stored` in them and whether they are `full`. All three are nothing
   with no store.
 
+### Better things
+
+- **Whatever stands has a level, and a level is a rarity** (`simulation/work/upgrades.py`,
+  `data/rarities.json`): common, uncommon, rare, epic, legendary and mythic. Each says by
+  how much whatever has it does what it does better than a common one.
+- **What it is better at follows from what it is**: a post is worked faster by whoever
+  holds it, a store holds more, a bed rests better, a generator burns a unit of fuel on
+  fewer nights.
+- **Making a thing better is a site on it**, of a kind of its own: put to a resident, who
+  may refuse; what it takes carried to it and worked on like any site; and the thing is a
+  level better when it is done. Each level takes as many times the first as the level the
+  thing has. The rarity it would come to has to have been studied.
+- **It is not used meanwhile**: not worked at, not slept in, not eaten from. A store goes
+  on holding.
+- **The rarest is never made**: a rarity whose data says it is not built is only found.
+
 ## What comes from outside
 
 - **World events** are defined in `data/world_events.json`: how likely each is on a day it can

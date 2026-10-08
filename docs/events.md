@@ -58,6 +58,7 @@ Event types emitted so far:
 | `power_failed` | Night falls and the generator has no fuel (once a day) | 25 |
 | `dose_given` | Someone lying in care is given a unit of what that care uses up, with `item` in `data` | 10 |
 | `no_medicine` | Someone is lying in care and there is none to give them (once a day) | 40 |
+| `object_upgraded` | Something that stands has been made a level better, with `object_id`, its `kind`, the `level` it has now and its `rarity` in `data`. The site it was done at gives `site_laid` and `site_finished` as any does, with `kind` `upgrade` | 35 |
 | `store_full` | The stores have no room left for a resource (once a day for each), with `resource` and the `capacity` there is in `data` | 35 |
 | `resource_low` | The settlement's books say that what there is of a resource will last fewer days than `low_days`, or that there is none and it is being used (on the hour, once a day for each), with `resource`, `stock` and `days_left` in `data` | 35 |
 | `gift_given`, `trade_made` | Something changes hands after a friendly exchange | 20, 15 |

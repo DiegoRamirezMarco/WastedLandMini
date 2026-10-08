@@ -54,6 +54,9 @@ class CommandTarget(Protocol):
     def propose_building(self, blueprint_id: str, tile: Tile, resident_id: str, option_id: str) -> UrbanismResult:
         ...
 
+    def propose_upgrade(self, object_id: str, resident_id: str, option_id: str) -> UrbanismResult:
+        ...
+
     def cancel_site(self, site_id: str) -> UrbanismResult:
         ...
 
@@ -299,6 +302,21 @@ class RemoveBuildingCommand:
 
     def apply(self, world: CommandTarget) -> UrbanismResult:
         return world.remove_building(self.room_id)
+
+
+@dataclass(frozen=True)
+class ProposeUpgradeCommand:
+    """The player's proposal to a resident that they make something that stands better: a
+    post, a store, a bed, the generator (S54). It takes what that rarity has been found to
+    take, carried to it and worked on, and that rarity having been studied. They agree or
+    they do not. If they do, the result names the site, and the thing is not used meanwhile."""
+
+    object_id: str
+    resident_id: str
+    option_id: str = "encourage"
+
+    def apply(self, world: CommandTarget) -> UrbanismResult:
+        return world.propose_upgrade(self.object_id, self.resident_id, self.option_id)
 
 
 @dataclass(frozen=True)

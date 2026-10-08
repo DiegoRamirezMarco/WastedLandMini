@@ -20,7 +20,7 @@ from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.work.research import BUILD_PACE, NOT_KNOWN
 from simulation.work.salvage import SALVAGE_ACTION
 from simulation.work.work_system import HAUL_MINUTES, PRESSING_NEED
-from world.build import BUILDING_SITE, OBJECT_SITE, SITE_KINDS, BuildRule, BuildSite
+from world.build import BUILDING_SITE, OBJECT_SITE, SITE_KINDS, UPGRADE_SITE, BuildRule, BuildSite
 from world.map import Tile
 from world.pathfinding import NEIGHBOURS, find_path, manhattan
 from world.urbanism import UrbanismResult
@@ -39,7 +39,11 @@ BUILD_ACTIONS = (BUILD_ACTION, CARRY_ACTION, AWAIT_ACTION, FETCH_OUT_ACTION, SAL
 ADVICE = "encourage"
 NEEDS_BUILDING = "Eso hay que construirlo: propónselo a alguien"
 NOBODY_TO_ASK = "No hay a quién proponérselo"
-UNAVAILABLE = {OBJECT_SITE: "Ese tipo de objeto no está disponible", BUILDING_SITE: "Ese edificio no está disponible"}
+UNAVAILABLE = {
+    OBJECT_SITE: "Ese tipo de objeto no está disponible",
+    BUILDING_SITE: "Ese edificio no está disponible",
+    UPGRADE_SITE: "Eso no se puede mejorar",
+}
 SITE_EVENT_IMPORTANCE = 20
 CARRY_EVENT_IMPORTANCE = 5
 WAITING_IMPORTANCE = 30
@@ -129,6 +133,8 @@ class ConstructionSystem:
     # ----- what a thing takes -----
 
     def rule_for(self, world: "SimulationWorld", kind: str, what: str) -> BuildRule | None:
+        if kind == UPGRADE_SITE:
+            return world.upgrades.rule(world, what)
         if kind == BUILDING_SITE:
             building = world.registries.buildings.get(what)
             return building.build if building is not None else None
@@ -141,6 +147,8 @@ class ConstructionSystem:
 
     def thing(self, world: "SimulationWorld", kind: str, what: str) -> str | None:
         """What is being built, as it is named in a sentence. None for something no longer defined."""
+        if kind == UPGRADE_SITE:
+            return world.upgrades.thing(world, what)
         if kind == BUILDING_SITE:
             building = world.registries.buildings.get(what)
             return building.name if building is not None else None
@@ -171,11 +179,16 @@ class ConstructionSystem:
 
     def not_known(self, world: "SimulationWorld", kind: str, what: str) -> str | None:
         """Why this cannot be put up anywhere yet, for want of knowing how. None if it is known."""
+        if kind == UPGRADE_SITE:
+            # What has to be studied for it is among why a thing cannot be made better.
+            return None
         subject = world.research.lock_on(world, kind, what)
         return NOT_KNOWN.format(subject=subject.name) if subject is not None else None
 
     def site_error(self, world: "SimulationWorld", kind: str, what: str, tile: Tile) -> str | None:
         """Why this cannot be built there. None means it can."""
+        if kind == UPGRADE_SITE:
+            return world.upgrades.obstacle(world, what)
         if self.thing(world, kind, what) is None:
             return UNAVAILABLE[kind]
         unknown = self.not_known(world, kind, what)
@@ -290,6 +303,13 @@ class ConstructionSystem:
         """Work out the ground a site takes up. False if what it is a site for is no longer defined."""
         if site.kind not in SITE_KINDS or self.thing(world, site.kind, site.what) is None:
             return False
+        if site.kind == UPGRADE_SITE:
+            # The ground of what is being made better, which stands on it all the while.
+            placed = world.interactables[site.what]
+            site.x, site.y = placed.x, placed.y
+            site.tiles = placed.footprint(world.definition_of(placed))
+            site.blocks = world.definition_of(placed).blocks
+            return True
         site.tiles = world.urbanism.site_tiles(world, site.kind, site.what, (site.x, site.y))
         site.blocks = site.kind == BUILDING_SITE or world.registries.interactables.get(site.what).blocks
         return True
@@ -328,7 +348,10 @@ class ConstructionSystem:
         if not world.sites:
             return
         for site in list(world.sites.values()):
-            if self._ready(world, site):
+            if site.kind == UPGRADE_SITE and site.what not in world.interactables:
+                # What was being made better is no longer there.
+                self.cancel(world, site.site_id)
+            elif self._ready(world, site):
                 self._finish(world, site, None)
         if world.clock.minute != 0:
             return
@@ -817,11 +840,14 @@ class ConstructionSystem:
         """Stand what a site was for. False if it has to wait, for somebody being on ground it will shut off."""
         tile = (site.x, site.y)
         marked = set(site.tiles)
-        if site.blocks and any(not other.away and other.tile in marked for other in world.residents.values()):
+        raised = site.kind != UPGRADE_SITE
+        if raised and site.blocks and any(not other.away and other.tile in marked for other in world.residents.values()):
             return False
         thing = self.thing(world, site.kind, site.what)
         self._clear(world, site)
-        if site.kind == BUILDING_SITE:
+        if site.kind == UPGRADE_SITE:
+            entity_id = world.upgrades.finish(world, site)
+        elif site.kind == BUILDING_SITE:
             entity_id = world.urbanism.raise_building(world, site.what, tile)
         else:
             entity_id = world.urbanism.raise_object(world, site.what, tile)

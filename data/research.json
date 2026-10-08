@@ -151,6 +151,35 @@
           "lab_bench"
         ]
       }
+    },
+    "fine_work": {
+      "name": "Buen oficio",
+      "text": "Hacer las cosas un poco mejor de lo justo: lo que hay se puede dejar poco común.",
+      "minutes": 480
+    },
+    "skilled_work": {
+      "name": "Oficio fino",
+      "text": "Ajustar, reforzar y rematar: lo que hay se puede dejar raro.",
+      "minutes": 720,
+      "requires": [
+        "fine_work"
+      ]
+    },
+    "master_work": {
+      "name": "Maestría",
+      "text": "Lo que sabe hacer quien lleva años en ello: lo que hay se puede dejar épico.",
+      "minutes": 960,
+      "requires": [
+        "skilled_work"
+      ]
+    },
+    "great_work": {
+      "name": "Obra maestra",
+      "text": "Lo mejor que se puede hacer aquí con las manos: lo que hay se puede dejar legendario.",
+      "minutes": 1200,
+      "requires": [
+        "master_work"
+      ]
     }
   }
 }

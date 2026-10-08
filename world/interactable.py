@@ -102,6 +102,8 @@ class Interactable:
     kind: str
     x: int
     y: int
+    # How good it is, from 1: the place of its rarity among those there are (S54).
+    level: int = 1
 
     def footprint(self, definition: InteractableDefinition) -> list[Tile]:
         return [

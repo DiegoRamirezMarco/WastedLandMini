@@ -1069,6 +1069,31 @@ Two keys of a kind of object in `data/interactables.json`, both of which need
 - A kind is one or the other, and the resources are those of `data/resources.json`.
 - A map with no store on it works as it did before there were stores.
 
+## Rarities, and making things better
+
+`data/rarities.json` says how rare a thing can be and what making it rarer takes:
+
+```json
+{
+  "tiers": {
+    "common": {"name": "Común", "color": [236, 229, 212], "better": 1.0},
+    "uncommon": {"name": "Poco común", "color": [104, 152, 84], "better": 1.15, "study": "fine_work"},
+    "mythic": {"name": "Mítico", "color": [238, 190, 70], "better": 2.0, "built": false}
+  },
+  "upgrade": {"cost": {"scrap": 3}, "minutes": 180, "kinds": ["generator"]}
+}
+```
+
+- `tiers` are the rarities, the commonest first: a thing of level 1 has the first. Each has
+  a `name`, the `color` it is known by, and by how much it is `better`, which may not be
+  less than the one before.
+- `study` is the subject of `data/research.json` that has to be known before a thing can be
+  made that rare. `"built": false` is for a rarity that is never made, only found.
+- `upgrade` is what making a thing one level better takes for the first level: `cost` by the
+  tag of the items that will do, and `minutes` of work. The second takes twice that.
+- `kinds` names kinds of object that can be made better besides those that always can: the
+  post of any job, a store, and whatever is slept in.
+
 ## Wear, prices and the shop
 
 - An item wears out if its `properties` give it `wear`, the condition it loses per use out of 100:

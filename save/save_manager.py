@@ -160,7 +160,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 42
+    CURRENT_VERSION = 43
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -283,7 +283,7 @@ class SaveManager:
                 },
             },
             "interactables": [
-                {"id": placed.object_id, "kind": placed.kind, "x": placed.x, "y": placed.y}
+                {"id": placed.object_id, "kind": placed.kind, "x": placed.x, "y": placed.y, "level": placed.level}
                 for placed in world.interactables.values()
             ],
             "sites": [
@@ -1368,7 +1368,12 @@ class SaveManager:
         # Objects whose kind is no longer defined are dropped instead of breaking the save.
         world.interactables = {
             str(placed["id"]): Interactable(
-                str(placed["id"]), str(placed["kind"]), int(placed["x"]), int(placed["y"])
+                str(placed["id"]),
+                str(placed["kind"]),
+                int(placed["x"]),
+                int(placed["y"]),
+                # How good it is. In a save from before everything is common (S54).
+                max(1, min(world.registries.rarities.highest, _level_of(placed))),
             )
             for placed in saved
             if isinstance(placed, dict) and world.registries.interactables.find(str(placed.get("kind")))
@@ -1774,6 +1779,12 @@ def _memory_from_data(data: dict[str, Any]) -> Memory:
         timestamp=int(data.get("timestamp", 0)),
         location_id=str(location_id) if location_id is not None else None,
     )
+
+
+def _level_of(saved: dict[str, Any]) -> int:
+    """How good a thing that was saved is. Common in a save from before things had levels."""
+    level = saved.get("level", 1)
+    return level if isinstance(level, int) and not isinstance(level, bool) else 1
 
 
 def _text_or_none(value: Any) -> str | None:

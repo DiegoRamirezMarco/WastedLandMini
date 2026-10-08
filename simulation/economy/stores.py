@@ -36,7 +36,9 @@ class StoreSystem:
             placed = world.interactables.get(object_id)
             rule = world.definition_of(placed).store if placed is not None else None
             if rule is not None:
-                found.append((object_id, inventory, rule))
+                # A store that has been made better holds that much more (S54).
+                better = world.upgrades.better(world, object_id)
+                found.append((object_id, inventory, {name: round(units * better) for name, units in rule.items()}))
         return found
 
     def stands(self, world: "SimulationWorld") -> bool:
