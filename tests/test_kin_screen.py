@@ -509,7 +509,12 @@ class RestOfKinOnScreenTests(_Shell):
         lying = view.hitboxes["paco"]
         self.assertGreater(lying.width, lying.height, "lying, and not standing")
         self.assertLess(lying.height, standing.height)
-        self.assertEqual(len(view._rough), 1, "under a blanket")
+        # On a window it is the whole of them that is seen, going down to lie curled up on the
+        # ground (P49): there is no blanket over them any more.
+        self.assertIsNotNone(view._doll_for(paco))
+        self.assertEqual(view._rough, [])
+        rough = view.poses.rough
+        self.assertIn(view.bodies.characters["paco"].clip, (rough.down.clip, rough.asleep.clip))
 
     def _knock(self, together: bool = True) -> list:
         world = self.world
