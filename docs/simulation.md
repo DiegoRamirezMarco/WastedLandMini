@@ -312,6 +312,10 @@ room. An argument's importance rises with the resentment between the two.
 
 - **A site in somebody's charge is their work**, ahead of their own post: by day they carry to
   it and work on it until it stands, and are paid as for a post. Others lend a hand in spare time.
+- **A seat is taken if one is free.** Whoever goes to do something done sitting down, which
+  is whatever a kind of manner of sitting lists, uses the thing from a tile with a seat on it
+  if one beside it is free, and from the nearest free tile otherwise. Nothing else changes:
+  not what they get of it, nor how long it takes.
 - **With nothing to build with they sit by it and ask**, while there is something about that
   could be taken apart. The player tells them what: it is an order, and their task until done.
   What comes of it goes to the site, or to where such things are kept.

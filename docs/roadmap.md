@@ -3489,8 +3489,8 @@ Still open here:
 
 ### P50 — Sitting down, each their own way (needs P49) — done
 Asked with P47: where they sit, of four that could be marked, the user marked all four. By
-the fire and at the radio, eating, and drinking are here. On a stool if there is one is not:
-which seat is whose is for the simulation to say, and is a milestone of its own (S44).
+the fire and at the radio, eating, and drinking are here. On a stool if there is one is a
+milestone of its own (S44): where they go to sit is for the simulation to say.
 - **Sitting is a manner** (`data/manners.json`), kept with the resident and chosen in
   `Maneras` like their walk: a sixth row, `Sentarse`, with four to pick from. With their legs
   crossed and their hands on their knees; with their knees drawn up to their chest; leaning
@@ -3511,24 +3511,40 @@ which seat is whose is for the simulation to say, and is a milestone of its own 
   loads with everybody sitting their own way
 
 Still open here:
-- They sit on the ground, on the spot they stand on, stool or no stool, and facing whichever
-  way they last walked: not the fire, nor each other
+- They sit on the spot they stand on, facing whichever way they last walked: not the fire,
+  nor each other. A stool under them is S44
 - Whoever sits is seen to drop into it and to rise out of it by their springs alone: there is
   no sitting down as there is a lying down
 - Drinking, they sit with their hands empty: there is no clip of drinking
 - Seen from the front the small bodies shown without a window do not sit at all
 - Nothing of this has been seen on a real window by whoever made it
 
-### S44 — A seat of one's own (needs P50) — planned
+### S44 — A seat of one's own (needs P50) — done
 Asked with P47, and marked: whoever is at something done sitting down sits on a stool if
 there is one free beside it, and on the ground if not.
-- A stool is nobody's to use today: it is furniture that stands there. Whoever goes to rest,
-  eat or drink takes a free one within reach of what they are using, and has it until they
-  are done; two cannot have the same
-- Which seat is whose is the simulation's to say and to save, not the map's to guess: it
-  goes with the activity
-- On a stool they sit as on a chair, at its height, and not their own way of sitting on the
-  ground: one clip more
+- **A stool is a seat** (`"seat": true` in `data/interactables.json`): a kind of object says
+  whether it is something to sit on. It was furniture that stood there
+- **Whoever goes to rest, eat or drink takes a free seat beside what they use**, before the
+  nearest bare ground. Round the fire of a settlement just begun there is a stool on every
+  side, so nothing changes of where anybody goes there: it tells where the player has put
+  a stool on one side of something and not on the others
+- **A seat is whoever's stands on its tile.** Two cannot stand on one tile (S22), so two
+  cannot have one seat, and there is nothing to keep in a save or to go wrong on loading
+  one. It had been thought the activity would have to carry it
+- **On a stool anybody sits the same way**: hips at the height of it, thighs out ahead, shins
+  down to the ground, hands on their knees. Their own way of sitting is for the ground
+- **They are drawn in front of the stool they are on**, which stands on the same tile and
+  was drawn over the legs of whoever stood there
+- What is done sitting down is said once, by the kind of manner of sitting (`actions`), for
+  the simulation and for the map alike
+
+Still open here:
+- Only a stool beside the thing used is taken: the two by the bar of the starting settlement
+  stand a tile away from it, and nobody sits on them
+- They face whichever way they last walked, not the fire nor the table
+- A table is nothing to eat at: a stool by one is a stool by nothing
+- Whoever stands idle on a stool's tile stands, and the stool is still drawn over their feet
+- Nothing of this has been seen on a real window by whoever made it
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

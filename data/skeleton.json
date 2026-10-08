@@ -741,6 +741,10 @@
     "sit_squat": {
       "front": [{}],
       "side": [{"root": [0.2, 5.5], "spine": [-20, 0.95], "neck": -4, "skull": -4, "thigh_right": 118, "shin_right": -36, "foot_right": 0, "thigh_left": 110, "shin_left": -42, "foot_left": 0, "upper_arm_right": -12.7, "forearm_right": 69.3, "upper_arm_left": -27.6, "forearm_left": 56.5}]
+    },
+    "sit_stool": {
+      "front": [{}],
+      "side": [{"root": [-1.4, 1.5], "spine": [-4, 0.98], "skull": -3, "thigh_right": 80, "shin_right": -4, "foot_right": 0, "thigh_left": 72, "shin_left": -10, "foot_left": 0, "upper_arm_right": 23.1, "forearm_right": 36, "upper_arm_left": -3.5, "forearm_left": 30}]
     }
   },
   "doll": {

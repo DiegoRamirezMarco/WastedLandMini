@@ -4,12 +4,13 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
 from simulation.ai.crowd import spots_taken
-from simulation.ai.navigation import adjacent_spots
+from simulation.ai.navigation import adjacent_spots, seat_at
 from simulation.ai.utility_ai import DISTANCE_COST, ScoredAction, need_urgency, ranked
 from simulation.economy.merchant import VISIT_ACTION
 from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item_system import ITEM_ACTIONS, ItemSystem
 from simulation.residents.activity import ATTEND_ACTION, RETIRE_ACTION, SHELTER_ACTION, WANDER_ACTION, Activity
+from simulation.residents.manner import SIT
 from simulation.residents.needs import NEED_NAMES
 from simulation.residents.resident import Resident
 from simulation.social.bonds import TRYST, TRYST_ACTION
@@ -264,6 +265,10 @@ class RoutineSystem:
             passable = world.passable(also=spots)
         else:
             spots = adjacent_spots(world, resident, placed)
+            if world.registries.manners.during(SIT, use.action) is not None:
+                # What is done sitting down is done from a seat, if one stands free beside it:
+                # the nearest of those, before the nearest patch of ground.
+                spots.sort(key=lambda spot: seat_at(world, spot) is None)
             passable = world.passable()
         for spot in spots:
             path = find_path(resident.tile, spot, passable)

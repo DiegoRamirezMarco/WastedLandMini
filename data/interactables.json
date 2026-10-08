@@ -82,6 +82,7 @@
     "name": "taburete",
     "article": "un",
     "blocks": false,
+    "seat": true,
     "build": {
       "cost": {
         "scrap": 1

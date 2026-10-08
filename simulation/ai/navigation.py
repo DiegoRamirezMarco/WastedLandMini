@@ -29,6 +29,14 @@ def adjacent_spots(world: "SimulationWorld", resident: Resident, placed: Interac
     )
 
 
+def seat_at(world: "SimulationWorld", tile: Tile) -> Interactable | None:
+    """Something to sit on that stands on a tile, if there is one."""
+    for placed in world.interactables.values():
+        if (placed.x, placed.y) == tile and world.definition_of(placed).seat:
+            return placed
+    return None
+
+
 def path_beside(
     world: "SimulationWorld",
     resident: Resident,

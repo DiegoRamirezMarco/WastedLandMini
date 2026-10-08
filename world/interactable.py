@@ -83,6 +83,9 @@ class InteractableDefinition:
     build: BuildRule | None = None
     # What taking one apart gives. None for something nobody takes apart.
     salvage: SalvageRule | None = None
+    # Whether it is something to sit on: whoever is at something done sitting down, on the
+    # tile it stands on, sits on it and not on the ground.
+    seat: bool = False
 
 
 @dataclass
@@ -118,7 +121,10 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         urbanism_category=str(data.get("category", "furniture")),
         build=build_rule_from_data(f"interactable {kind}", data.get("build")),
         salvage=_salvage_from_data(kind, data.get("salvage")),
+        seat=bool(data.get("seat", False)),
     )
+    if definition.seat and (definition.blocks or definition.width * definition.height != 1):
+        raise ValueError(f"Interactable {kind} is a seat, so it takes up one tile and can be stood on")
     if definition.light < 0:
         raise ValueError(f"Interactable {kind} gives a negative amount of light")
     if definition.urbanism_category not in URBANISM_CATEGORIES:

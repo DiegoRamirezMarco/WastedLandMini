@@ -72,6 +72,9 @@ class Poses:
     pocket: Doing | None = None
     # Sleeping on the ground, for want of a bed. None where nothing is made of that either.
     rough: OnTheGround | None = None
+    # Sitting on something that is for sitting on, in place of one's own way of sitting on the
+    # ground. None where whoever has a seat under them sits as they would without.
+    seat: Doing | None = None
 
     def working(self, job_id: str | None, with_tool: bool) -> Doing:
         """How somebody at their post is shown, by their job and whether they have its tool in hand."""
@@ -119,7 +122,8 @@ def poses_from_data(data: dict[str, Any]) -> Poses:
         if not isinstance(said, dict) or not {"down", "asleep", "up"} <= said.keys():
             raise ValueError("Sleeping on the ground is lying down, lying there and getting up: it needs all three")
         rough = OnTheGround(*(_doing(said[part], f"Sleeping on the ground ({part})") for part in ("down", "asleep", "up")))
-    return Poses(handles, work, jobs, _doing(data.get("build"), "Building", work), pocket, rough)
+    seat = _doing(data["seat"], "Sitting on a seat") if "seat" in data else None
+    return Poses(handles, work, jobs, _doing(data.get("build"), "Building", work), pocket, rough, seat)
 
 
 def load_poses(path: Path = POSES_PATH) -> Poses:

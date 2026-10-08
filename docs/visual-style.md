@@ -483,6 +483,10 @@ each bone, and the game draws it in whatever pose it is in.
   they do; eating, the body sits and the arms eat over it, the way they eat. Their name and
   what is picked come down with their head, and go above a meal held higher than it. Seen
   from the front the small bodies shown without a window stand: they sit only from the side.
+- **On a stool they sit as anybody sits on one**: hips at the height of it, thighs out ahead,
+  shins down, hands on their knees. Whoever is on the tile a stool stands on, at something
+  done sitting down, is on it, and is drawn in front of it. With no stool they are on the
+  ground, their own way.
 - **Whoever sleeps on the ground curls up on it.** With no bed to go to, a doll squats, puts
   its hands to the ground, lets itself down and draws its knees up under it, its head by its
   hands; it lies so, breathing, and when it wakes it pushes itself up and stands. Lying down

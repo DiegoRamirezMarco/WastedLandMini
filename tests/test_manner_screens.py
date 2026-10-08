@@ -122,7 +122,7 @@ class MannersOnTheMapTests(_Shell):
             self.world.apply_command(SetMannerCommand("raul", "sit", manner.manner_id))
             for action in ("relax", "listen", "drink"):
                 raul.activity = Activity(action, minutes_left=30, using=True)
-                self.assertEqual(view._seat_of(raul), manner)
+                self.assertEqual(view._seat_of(raul), (manner.clip, manner.rate))
                 self.assertEqual(view._bearing(raul), (manner.clip, manner.rate, None))
                 self.assertEqual(self._clip_shown(), manner.clip, action)
                 body = view.bodies.characters["raul"]

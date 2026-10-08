@@ -121,9 +121,10 @@ from simulation.family.children import BED as BUNDLE_IN_BED
 from simulation.family.children import CARRIED as BUNDLE_CARRIED
 from simulation.family.children import SURFACE as BUNDLE_ON_SURFACE
 from simulation.family.children import Bundle
+from simulation.ai.navigation import seat_at
 from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item_system import USE_ITEM_ACTION
-from simulation.residents.manner import EAT, FIGHT, SIT, WALK, MannerDefinition
+from simulation.residents.manner import EAT, FIGHT, SIT, WALK
 from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
 from simulation.tastes.taste_system import FOUND_OUT_EVENT, REACTION_EVENT
 from simulation.work.construction import BUILD_ACTION, FINISHED_EVENT
@@ -2037,10 +2038,14 @@ class GlobalView:
         # A doll turns smoothly; the game's own bodies go from one kept picture to the next.
         character.stand(spot[0], spot[1], facing, clip, phase if doll is not None else index / frames, overlay)
 
+        # Whoever sits on something is in front of it, though it stands on the tile they are on.
+        on_seat = stride is None and self._seat_under(resident) is not None
+        depth = max(float(spot[1]), (y + 1) * TILE_SIZE + 0.5) if on_seat else float(spot[1])
+
         def draw() -> None:
             if doll is not None:
                 skeleton = character.skeleton if character.physical else self._posed_skeleton(resident.resident_id, character)
-                self._doll_draws.append((spot[1], doll, skeleton, None, grown, sole))
+                self._doll_draws.append((depth, doll, skeleton, None, grown, sole))
             elif character.physical:
                 # Reeling from a blow or knocked down: drawn joint by joint, wherever physics has them.
                 renderer.draw_limp(
@@ -2230,11 +2235,11 @@ class GlobalView:
         if activity.action == EAT_ACTION:
             clip, rate = self._way_of(resident, EAT)
             # The meal goes at the pace of eating, on a body that sits still under it.
-            return (seat.clip, rate, clip) if seat is not None else (clip, rate, None)
+            return (seat[0], rate, clip) if seat is not None else (clip, rate, None)
         work = self._work_of(resident)
         if work is not None:
             return (work[0].clip, work[0].rate, None)
-        return (seat.clip, seat.rate, None) if seat is not None else (IDLE_CLIP, 0.0, None)
+        return (*seat, None) if seat is not None else (IDLE_CLIP, 0.0, None)
 
     def _lower_in(self, plan, facing: str, clip: str) -> float:
         """How much lower than standing the top of a body is in a clip, as it begins it, in map pixels."""
@@ -2244,14 +2249,26 @@ class GlobalView:
             self._lower[key] = max(0.0, min(y for _, y in plan.pose(facing, clip).values()) - standing)
         return self._lower[key]
 
-    def _seat_of(self, resident: Resident) -> MannerDefinition | None:
-        """The way a resident sits, if what they are at is done sitting down: by a fire, at the
-        radio, eating, drinking. None for whoever is on their feet."""
+    def _seat_of(self, resident: Resident) -> tuple[str, float] | None:
+        """The clip a resident sits in, and how many turns of it a second, if what they are at
+        is done sitting down: by a fire, at the radio, eating, drinking. On a seat it is the
+        way anybody sits on one, and on the ground their own. None for whoever is on their feet."""
         activity = resident.activity
         if activity is None or not activity.using or activity.partner_id is not None:
             return None
         kind = self.world.registries.manners.during(SIT, activity.action)
-        return self.world.manner_of(resident, kind.kind_id) if kind is not None else None
+        if kind is None:
+            return None
+        on_seat = self.poses.seat
+        if on_seat is not None and seat_at(self.world, resident.tile) is not None:
+            return (on_seat.clip, on_seat.rate)
+        manner = self.world.manner_of(resident, kind.kind_id)
+        return (manner.clip, manner.rate) if manner is not None else None
+
+    def _seat_under(self, resident: Resident) -> Interactable | None:
+        """What a resident is sitting on, if they sit and it is not the ground: the seat that
+        stands on the tile they are on."""
+        return seat_at(self.world, resident.tile) if self._seat_of(resident) is not None else None
 
     def _work_of(self, resident: Resident) -> tuple[Doing, str | None] | None:
         """How the work a resident is at right now is shown, and what they are seen to do it with.

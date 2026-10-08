@@ -130,7 +130,7 @@ A minimal patch can change only the displayed name:
 ```
 
 Editable fields are `name`, `article`, `width`, `height`, `blocks`, `container`, `display_of`,
-`light`, `category`, `use` and `build`. `category` is `furniture` or `decor` and decides where the kind
+`light`, `category`, `seat`, `use` and `build`. `category` is `furniture` or `decor` and decides where the kind
 appears in the Urbanismo catalogue. A `use` object is itself patched field by field, so
 `{"id":"bed", "use":{"minutes":480}}` keeps the sleeping action and changes only its duration.
 Set `"use": null` to remove the use entirely. Every placed object of that kind receives the
@@ -185,6 +185,11 @@ A map (`data/maps/<id>.json`) is drawn with characters, one per tile:
 - `"light": 5` on an object kind makes it light that many tiles around it after dark. The built-in
   `lamp` kind needs generator fuel to shine; fires and other light kinds do not. A kind with no
   `use` is scenery; give it `"blocks": false` if it can be walked over.
+- `"seat": true` makes a kind something to sit on, as the built-in `stool` is: it has to take up
+  one tile and be walked over. Whoever goes to do something done sitting down (see Manners)
+  takes a free seat that stands beside what they use, before the nearest bare ground, and is
+  seen sitting on it for as long as they are at it. A seat is whoever's stands on its tile: two
+  cannot, and nothing of it is kept in a save.
 - A use with `"consumes": "water"` takes one shared item from the object's own container, just as
   food uses do. The built-in water tank is a container and consumes items in category `water`.
 
@@ -373,7 +378,10 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   the clip a doll goes through once, over whatever else it is doing, when its resident has
   more on them or less than a moment before, and its `rate`: the bones that clip moves do as
   it says meanwhile and the rest go on as they were, so move one arm and little else. Leave
-  it out and nothing is made of what goes into a pocket. `sleep_rough` is how a doll that
+  it out and nothing is made of what goes into a pocket. `seat` is the clip of whoever sits
+  on a seat, which is one pose as any way of sitting is, with the hips at the height of
+  it: on a seat nobody sits their own way of sitting on the ground. Leave it out and they
+  do. `sleep_rough` is how a doll that
   sleeps on the ground is shown, and needs all three of its parts: `down`, a clip done once
   from standing to lying; `asleep`, the clip of lying there; and `up`, done once from lying
   to standing. The last key of `down` and the first of `up` should be the pose of `asleep`.

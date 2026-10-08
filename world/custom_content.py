@@ -67,6 +67,7 @@ def _definition_data(definition: InteractableDefinition) -> dict[str, Any]:
         "display_of": definition.display_of,
         "light": definition.light,
         "category": definition.urbanism_category,
+        "seat": definition.seat,
         "build": build_rule_data(definition.build),
     }
 
