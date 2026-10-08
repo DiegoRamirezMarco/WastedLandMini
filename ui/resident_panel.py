@@ -17,11 +17,12 @@ from simulation.residents.resident import Resident
 from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
 from simulation.world import SimulationWorld
 from ui.dock import draw_face
-from ui.inventory_view import draw_condition
+from ui.inventory_view import draw_condition, draw_rarity
 from ui.labels import (
     NEED_LABELS,
     affordable_goods,
     condition_of,
+    rarity_color,
     NO_HABITS,
     NO_KIN,
     describe_action,
@@ -565,6 +566,8 @@ def _draw_item_grid(
         top = y + (index // ITEM_COLUMNS) * ITEM_CELL_HEIGHT
         box = pygame.Rect(left, top, cell - 2, ITEM_CELL_HEIGHT - 2)
         draw_panel(target, box, fill="shadow", border="iron")
+        # The border of its square is the colour of how rare it is (P60).
+        draw_rarity(target, box, rarity_color(world, item.level))
         corner = (box.centerx - size[0] // 2, box.y + 1)
         draw_item(target, icons, item.definition_id, pygame.Rect(corner, size))
         condition = condition_of(world, item)

@@ -93,6 +93,16 @@ def describe_vacancy(world: SimulationWorld, job_id: str) -> str | None:
     return f"vacante hace {hours} h" if hours >= 1 else "vacante"
 
 
+def rarity_color(world: SimulationWorld, level: int) -> tuple[int, int, int]:
+    """The colour a thing of a level is known by: that of its rarity (S54, S64)."""
+    return world.registries.rarities.of(level).color
+
+
+def rarity_name(world: SimulationWorld, level: int) -> str:
+    """What the rarity of a level is called."""
+    return world.registries.rarities.of(level).name
+
+
 def condition_of(world: SimulationWorld, item: ItemInstance) -> float | None:
     """The state of a thing that wears out, from 100 down to 0. None for things that never do."""
     wears = world.registries.items.resolve(item.definition_id).properties.get("wear", 0.0) > 0

@@ -7,7 +7,7 @@ from graphics.item_icons import ICON_SIZE, ItemIcons
 from graphics.palette import PALETTE
 from simulation.items.inventory import Inventory
 from simulation.world import SimulationWorld
-from ui.labels import condition_of, price_label, selling_use
+from ui.labels import condition_of, price_label, rarity_color, selling_use
 from ui.panel import draw_item, draw_panel
 
 ROW_HEIGHT = ICON_SIZE[1] + 2
@@ -38,6 +38,11 @@ def draw_condition(target: pygame.Surface, position: tuple[int, int], condition:
         pygame.draw.rect(target, PALETTE[condition_color(condition)], (bar.x, bar.y, filled, bar.height))
 
 
+def draw_rarity(target: pygame.Surface, square: pygame.Rect, color: tuple[int, int, int]) -> None:
+    """The border of the square of a thing, in the colour of how rare it is (P60)."""
+    pygame.draw.rect(target, color, square, 1)
+
+
 def draw_item_row(
     target: pygame.Surface,
     font: BitmapFont,
@@ -61,6 +66,7 @@ def draw_item_row(
             font.draw(target, "...", (x, y + 3), PALETTE["stone"])
             return
         draw_item(target, icons, item.definition_id, pygame.Rect(x, y, *ICON_SIZE))
+        draw_rarity(target, pygame.Rect(x - 1, y - 1, ICON_SIZE[0] + 2, ICON_SIZE[1] + 2), rarity_color(world, item.level))
         condition = condition_of(world, item)
         if condition is not None:
             draw_condition(target, (x, y), condition)
@@ -132,6 +138,7 @@ def draw_container_panel(
     for item in inventory.items:
         definition = world.registries.items.resolve(item.definition_id)
         draw_item(target, icons, item.definition_id, pygame.Rect(x, y, *ICON_SIZE))
+        draw_rarity(target, pygame.Rect(x - 1, y - 1, ICON_SIZE[0] + 2, ICON_SIZE[1] + 2), rarity_color(world, item.level))
         condition = condition_of(world, item)
         if condition is not None:
             draw_condition(target, (x, y), condition)

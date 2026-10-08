@@ -187,6 +187,8 @@ python -m simulation.headless --days 7 --seed 7
 - Lamps, the radio, the workshop, the laboratory and the tank run on current, which the
   generator gives while it has fuel: without it they stop, and whoever draws water goes to
   the well
+- The border of the square of a thing says how rare it is, and so how good: white, green,
+  blue, red, purple and yellow, from common to mythic. The bar under one says how worn it is
 - With nobody selected the panel on the right lists everybody: click a name to go to them. So
   does a click on anyone listed under a resident's relationships
 - While whoever is selected is talking with someone, the dock under the map shows the two of them

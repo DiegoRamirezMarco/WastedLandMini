@@ -4701,7 +4701,15 @@ Still to settle as it is built, and to be said when it is reported:
   player fills
 - How much compost does for the garden, and whether it is carried there or taken by itself
 
-### P60 — Stores, rarity and current on screen (needs S53 to S55, S64 and S65) — planned
+### P60 — Stores, rarity and current on screen (needs S53 to S55, S64 and S65) — under way
+Done so far, the first of its parts:
+- **The border of the square of a thing is the colour of its rarity**, in what a resident
+  carries, in a row of what somebody has on them and in what a container holds: white for
+  what is common, then green, blue, red, purple and yellow, as the user gave them
+- **How worn a thing is was there already**, as a bar under whatever wears (S13): it is what
+  the user asked for by `la barra de salud`, and is left as it was
+
+Still to do:
 - How much room there is, in the bar and on the store
 - **The border of a thing's square says how rare it is**, wherever things are shown in a grid:
   white, green, blue, red, purple and yellow, as the user said
