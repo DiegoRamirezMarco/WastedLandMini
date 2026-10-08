@@ -99,13 +99,49 @@ class MannersOnTheMapTests(_Shell):
         self.raul.activity = Activity("eat", "pantry_1", minutes_left=10, using=True, item_id="canned_beans")
         for manner in self.world.registries.manners.of_kind("eat"):
             self.world.apply_command(SetMannerCommand("raul", "eat", manner.manner_id))
-            self.assertEqual(self._clip_shown(), manner.clip)
+            # They eat sitting down, their own way of each: the body sits, and the arms eat over it.
+            seat = self.world.manner_of(self.raul, "sit")
+            self.assertEqual(self._clip_shown(), seat.clip)
+            self.assertEqual(self.view.bodies.characters["raul"].overlay, manner.clip)
+            self.assertEqual(self.view._bearing(self.raul), (seat.clip, manner.rate, manner.clip))
             self.assertEqual([entry[0] for entry in self.view._held], ["canned_beans"], "the meal is in the hand")
         self._fight()
         for manner in self.world.registries.manners.of_kind("fight"):
             self.world.apply_command(SetMannerCommand("raul", "fight", manner.manner_id))
             self.assertEqual(self._clip_shown(), manner.clip)
         self.assertEqual(self.view._held, [], "bare hands hold nothing")
+
+    def test_they_sit_their_own_way_by_the_fire_at_the_radio_eating_and_drinking(self) -> None:
+        view, raul = self.view, self.raul
+        # Seen from a side: from the front the game's own small bodies have no way of sitting.
+        raul.trail, raul.facing = [], "right"
+        view.render()
+        standing = view.hitboxes["raul"].copy()
+        self.assertIsNone(view._seat_of(raul), "with nothing to do they are on their feet")
+        for manner in self.world.registries.manners.of_kind("sit"):
+            self.world.apply_command(SetMannerCommand("raul", "sit", manner.manner_id))
+            for action in ("relax", "listen", "drink"):
+                raul.activity = Activity(action, minutes_left=30, using=True)
+                self.assertEqual(view._seat_of(raul), manner)
+                self.assertEqual(view._bearing(raul), (manner.clip, manner.rate, None))
+                self.assertEqual(self._clip_shown(), manner.clip, action)
+                body = view.bodies.characters["raul"]
+                self.assertIsNone(body.overlay)
+                self.assertFalse(body.idle, "sitting is something to be at: nobody fidgets out of it")
+                # Their name comes down with their head, and so does what is picked.
+                seated = view.hitboxes["raul"]
+                self.assertGreater(seated.top, standing.top, (manner.manner_id, action))
+                self.assertEqual(seated.bottom, standing.bottom)
+        # On the way there they walk, and at work, or with somebody, they are on their feet.
+        raul.activity = Activity("relax", path=[(raul.x + 1, raul.y)], minutes_left=3)
+        self.assertIsNone(view._seat_of(raul), "not sitting yet")
+        for activity in (Activity("work", using=True), Activity("sleep", using=True), Activity("chat", partner_id="tomas", using=True)):
+            raul.activity = activity
+            self.assertIsNone(view._seat_of(raul), activity.action)
+        raul.activity = None
+        view.render()
+        self.assertEqual(view.hitboxes["raul"], standing)
+        self.assertTrue(view.bodies.characters["raul"].clip == "idle")
 
     def test_a_walk_of_short_steps_takes_two_to_the_stride_and_ends_where_the_next_begins(self) -> None:
         self.raul.trail = [(self.raul.x - 2, self.raul.y), (self.raul.x - 1, self.raul.y), self.raul.tile]
@@ -190,8 +226,8 @@ class MannerEditorTests(_Shell):
         for index, box in enumerate(boxes):
             self.assertTrue(self.game.canvas.get_rect().contains(box), box)
             self.assertEqual(box.collidelist(boxes[index + 1 :]), -1, box)
-        self.assertEqual(len(editor.picker.rows), 5)
-        self.assertTrue(all(len(buttons) == 3 for _, _, buttons in editor.picker.rows))
+        self.assertEqual(len(editor.picker.rows), 6)
+        self.assertEqual([len(buttons) for _, _, buttons in editor.picker.rows], [3, 3, 3, 3, 3, 4])
         # Before anything is picked, what is lit is what is theirs by default.
         self.assertEqual(editor.chosen()["walk"], world.manner_of(raul, "walk").manner_id)
         for manner_id, manner in world.registries.manners.manners.items():

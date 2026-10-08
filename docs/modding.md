@@ -453,12 +453,16 @@ A resident's look is `assets/sprites/bodies/<resident_id>.png`, laid out as in
 
 ## Manners
 
-`data/manners.json` says in what ways a resident can walk, eat and fight. Each resident has one
+`data/manners.json` says in what ways a resident can walk, eat, fight and sit. Each resident has one
 of each kind: chosen by the player where the first resident is made or under `Maneras`, and
 otherwise one that is always the same for the same resident ID. A manner changes how a thing
 looks and nothing of what happens.
 
-- `kinds`: each with a `name` and the `occasion` on which it shows: `walk`, `eat` or `fight`.
+- `kinds`: each with a `name` and the `occasion` on which it shows: `walk`, `eat`, `fight` or
+  `sit`. Sitting is no doing of its own: a kind of it lists under `actions` what a resident has
+  to be at for it to show, such as `relax`, `listen`, `eat` or `drink`, the actions of the
+  objects used. While they eat sitting, the clip of their way of sitting is the body's and
+  that of their way of eating is laid over it: the bones an eating clip moves do as it says.
   A kind for fighting may have a `weapon_tag`: whoever fights with an item tagged so does it in
   their manner of that kind, and with any other weapon, or none, in their manner of the kind
   that has no `weapon_tag`. The game's own are `blade` for `knife` and `firearm` for `shoot`.
@@ -468,6 +472,10 @@ looks and nothing of what happens.
   `data/skeleton.json` that shows it, and a `rate`: turns of the clip a second, or for walking,
   turns to a step with each foot, which must be a whole number. The first manner of a kind is
   the one the screen that makes the first resident starts on.
+- A way of sitting is one key, a pose: what moves in it is the breath. Let the hips down with
+  `root` and turn the legs, for the feet are not kept on the ground under a body that sits;
+  none of it will be under the ground, whoever's body it is. Seen from the front the small
+  bodies of the game have no way of sitting, and a `front` of `[{}]` leaves them standing.
 - A new manner needs its clip in `data/skeleton.json`, for the `side` and for the `front`. The
   hand that holds things is the right one (the `held_item` anchor): a clip for a weapon moves
   that arm. An eating clip has the hand at the mouth a third of the way through, which is when

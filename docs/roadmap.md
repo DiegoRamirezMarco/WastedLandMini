@@ -3487,6 +3487,49 @@ Still open here:
 - The small bodies shown without a window still have their blanket
 - Nothing of this has been seen on a real window by whoever made it
 
+### P50 — Sitting down, each their own way (needs P49) — done
+Asked with P47: where they sit, of four that could be marked, the user marked all four. By
+the fire and at the radio, eating, and drinking are here. On a stool if there is one is not:
+which seat is whose is for the simulation to say, and is a milestone of its own (S44).
+- **Sitting is a manner** (`data/manners.json`), kept with the resident and chosen in
+  `Maneras` like their walk: a sixth row, `Sentarse`, with four to pick from. With their legs
+  crossed and their hands on their knees; with their knees drawn up to their chest; leaning
+  back on their hands with their legs out; squatting on their heels. Whoever was given none
+  has one of their own, as with the others
+- **It shows while they are at something done sitting down.** A kind of manner may say what a
+  resident has to be at for it to show (`actions`): resting by the fire, listening to the
+  radio, eating, drinking at the bar. On the way there they walk, and at work or with
+  somebody they are on their feet
+- **Eating, they sit and eat.** The body sits their way of sitting and the arms and the head
+  eat their way of eating, laid over it: twelve ways of having a meal out of four and three
+- **They sit still.** A way of sitting is one pose, and what moves is their breath. Nobody
+  fidgets out of it
+- **Their name comes down with their head**, by as much as their head is lower, and so does
+  what is picked. A meal held higher than the head of somebody sitting is not written over:
+  the name goes above it
+- No save changes hands: a manner of sitting is kept as the others are, and an older save
+  loads with everybody sitting their own way
+
+Still open here:
+- They sit on the ground, on the spot they stand on, stool or no stool, and facing whichever
+  way they last walked: not the fire, nor each other
+- Whoever sits is seen to drop into it and to rise out of it by their springs alone: there is
+  no sitting down as there is a lying down
+- Drinking, they sit with their hands empty: there is no clip of drinking
+- Seen from the front the small bodies shown without a window do not sit at all
+- Nothing of this has been seen on a real window by whoever made it
+
+### S44 — A seat of one's own (needs P50) — planned
+Asked with P47, and marked: whoever is at something done sitting down sits on a stool if
+there is one free beside it, and on the ground if not.
+- A stool is nobody's to use today: it is furniture that stands there. Whoever goes to rest,
+  eat or drink takes a free one within reach of what they are using, and has it until they
+  are done; two cannot have the same
+- Which seat is whose is the simulation's to say and to save, not the map's to guess: it
+  goes with the activity
+- On a stool they sit as on a chair, at its height, and not their own way of sitting on the
+  ground: one clip more
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

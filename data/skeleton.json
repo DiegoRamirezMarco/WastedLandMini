@@ -725,6 +725,22 @@
         {"at": 0.75, "root": [0.4, 4.2], "spine": [-34, 0.94], "neck": -6, "skull": -8, "upper_arm_right": 13.7, "forearm_right": 21.4, "upper_arm_left": 7, "forearm_left": 14.7},
         {"at": 1.0}
       ]
+    },
+    "sit_cross": {
+      "front": [{}],
+      "side": [{"root": [-0.6, 6.83], "spine": [-5, 0.97], "skull": -4, "thigh_right": 82, "shin_right": -100, "foot_right": -30, "thigh_left": 72, "shin_left": -112, "foot_left": -40, "upper_arm_right": 9.1, "forearm_right": 53.9, "upper_arm_left": -14.6, "forearm_left": 43.2}]
+    },
+    "sit_knees": {
+      "front": [{}],
+      "side": [{"root": [-1.2, 5.35], "spine": [-16, 0.95], "neck": -6, "skull": -10, "thigh_right": 128, "shin_right": -14, "foot_right": 0, "thigh_left": 120, "shin_left": -20, "foot_left": 0, "upper_arm_right": -0.5, "forearm_right": 82.6, "upper_arm_left": -18.2, "forearm_left": 70.4}]
+    },
+    "sit_sprawl": {
+      "front": [{}],
+      "side": [{"root": [-1.6, 5.22], "spine": 22, "neck": 6, "skull": 10, "thigh_right": 86, "shin_right": 80, "foot_right": 70, "thigh_left": 80, "shin_left": 62, "foot_left": 60, "upper_arm_right": -5.6, "forearm_right": 2, "upper_arm_left": -10.9, "forearm_left": -3.3}]
+    },
+    "sit_squat": {
+      "front": [{}],
+      "side": [{"root": [0.2, 5.5], "spine": [-20, 0.95], "neck": -4, "skull": -4, "thigh_right": 118, "shin_right": -36, "foot_right": 0, "thigh_left": 110, "shin_left": -42, "foot_left": 0, "upper_arm_right": -12.7, "forearm_right": 69.3, "upper_arm_left": -27.6, "forearm_left": 56.5}]
     }
   },
   "doll": {

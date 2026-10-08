@@ -1,4 +1,4 @@
-"""The ways a resident has of doing what everybody does: walking, eating, fighting. All of it data.
+"""The ways a resident has of doing what everybody does: walking, eating, fighting, sitting. All of it data.
 
 Which way is theirs changes nothing of what happens: it is how it looks, and it is kept with them.
 """
@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 # What a body is doing when a kind of manner shows.
-WALK, EAT, FIGHT = "walk", "eat", "fight"
-OCCASIONS = (WALK, EAT, FIGHT)
+WALK, EAT, FIGHT, SIT = "walk", "eat", "fight", "sit"
+OCCASIONS = (WALK, EAT, FIGHT, SIT)
 IDLE_CLIP = "idle"
 
 
@@ -23,6 +23,9 @@ class MannerKind:
     weapon_tag: str | None = None
     # Tag of something to put in the hand of whoever is shown trying the manner out.
     prop_tag: str | None = None
+    # What a resident has to be at for a kind that is no doing of its own to show: sitting is
+    # how they rest by a fire, or eat, and not something they do besides.
+    actions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -52,6 +55,12 @@ class MannerSettings:
         kinds = [kind for kind in self.kinds.values() if kind.occasion == occasion]
         armed = next((kind for kind in kinds if kind.weapon_tag is not None and kind.weapon_tag in tags), None)
         return armed or next((kind for kind in kinds if kind.weapon_tag is None), None)
+
+    def during(self, occasion: str, action: str) -> MannerKind | None:
+        """The kind of manner of an occasion that shows while a resident is at an action, if one does."""
+        return next(
+            (kind for kind in self.kinds.values() if kind.occasion == occasion and action in kind.actions), None
+        )
 
     def default(self, resident_id: str, kind_id: str) -> MannerDefinition | None:
         """The manner of someone who was never given one: always the same for the same ID, so
@@ -92,6 +101,7 @@ def manner_settings_from_data(data: dict[str, Any]) -> MannerSettings:
             occasion,
             str(weapon_tag) if weapon_tag is not None else None,
             str(prop_tag) if prop_tag is not None else None,
+            tuple(str(action) for action in values.get("actions", ())),
         )
     manners = {}
     for manner_id, values in data.get("manners", {}).items():

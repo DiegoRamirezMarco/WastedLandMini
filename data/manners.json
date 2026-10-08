@@ -4,7 +4,8 @@
     "eat": {"name": "Comer", "occasion": "eat", "prop_tag": "food"},
     "fight": {"name": "Pelear", "occasion": "fight"},
     "shoot": {"name": "Disparar", "occasion": "fight", "weapon_tag": "firearm"},
-    "knife": {"name": "Cuchillo", "occasion": "fight", "weapon_tag": "blade"}
+    "knife": {"name": "Cuchillo", "occasion": "fight", "weapon_tag": "blade"},
+    "sit": {"name": "Sentarse", "occasion": "sit", "actions": ["relax", "listen", "eat", "drink"]}
   },
   "manners": {
     "walk_steady": {
@@ -66,6 +67,22 @@
     "knife_overhand": {
       "kind": "knife", "name": "Puñalada", "clip": "knife_overhand", "rate": 1.0,
       "description": "El cuchillo en alto, y lo clava hacia abajo."
+    },
+    "sit_cross": {
+      "kind": "sit", "name": "Piernas cruzadas", "clip": "sit_cross", "rate": 0.2,
+      "description": "En el suelo, derecho, las piernas cruzadas y las manos en las rodillas."
+    },
+    "sit_knees": {
+      "kind": "sit", "name": "Recogido", "clip": "sit_knees", "rate": 0.2,
+      "description": "Las rodillas arriba, contra el pecho, y los brazos por delante."
+    },
+    "sit_sprawl": {
+      "kind": "sit", "name": "A sus anchas", "clip": "sit_sprawl", "rate": 0.2,
+      "description": "Echado atrás sobre las manos, con las piernas estiradas."
+    },
+    "sit_squat": {
+      "kind": "sit", "name": "En cuclillas", "clip": "sit_squat", "rate": 0.2,
+      "description": "Sobre los talones, sin llegar a sentarse, los brazos en las rodillas."
     }
   }
 }

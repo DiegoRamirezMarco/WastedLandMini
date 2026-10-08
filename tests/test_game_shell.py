@@ -1667,8 +1667,10 @@ class GameShellTests(unittest.TestCase):
 
         self.assertEqual(clip(), "idle")
         raul.activity = Activity("eat", "pantry_1", minutes_left=10, using=True, item_id="canned_beans")
-        # Eating, fighting and walking are done their own way: the clip is the one of their manner.
-        self.assertEqual(clip(), world.manner_of(raul, "eat").clip)
+        # Eating, fighting, walking and sitting are done their own way: the clips are those of
+        # their manners. They eat sitting down: the body sits, and eats with its arms over that.
+        self.assertEqual(clip(), world.manner_of(raul, "sit").clip)
+        self.assertEqual(view._bearing(raul)[2], world.manner_of(raul, "eat").clip)
         raul.activity = Activity("work", using=True)
         self.assertEqual(clip(), view.poses.working(raul.job_id, True).clip, "work is shown by what the work is")
         raul.activity = Activity("fight", partner_id="tomas", using=True)

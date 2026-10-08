@@ -312,6 +312,9 @@ class HeldOnTheMapTests(unittest.TestCase):
         from scenes.global_view import CLIP_RATES, EAT_CLIP
 
         self.view.time = (bite + phase) / CLIP_RATES[EAT_CLIP]
+        # Long enough since anybody looked for every body to be where its clip has it, and not
+        # on its way there: the game is paused here, and nothing would move it.
+        self.view.bodies.update(1.0, self.world)
         self.view.render()
         self.game.present()
         return self.game.screen
@@ -415,7 +418,9 @@ class HeldOnTheMapTests(unittest.TestCase):
         window = self._show(phase=0.6)
         self.assertTrue(self.game.layers.active and self.view._doll_draws)
         self.assertEqual([entry[0] for entry in self.view._held], ["canned_beans"])
-        self.assertEqual(self.game.canvas.get_at(self.view.viewport.center)[3], 0, "the map is on the window")
+        # Away from whoever is in the middle of it, and from what is written over them.
+        clear = (self.view.viewport.centerx + 40, self.view.viewport.centery + 30)
+        self.assertEqual(self.game.canvas.get_at(clear)[3], 0, "the map is on the window")
         sauce = pygame.mask.from_threshold(
             window.subsurface(self.game.layers.on_screen(self.view.viewport)), (*SAUCE, 255), NEAR
         )

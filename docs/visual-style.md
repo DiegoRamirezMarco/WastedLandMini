@@ -464,9 +464,10 @@ each bone, and the game draws it in whatever pose it is in.
 - Poses are clips of keyframes in the same file: how far each bone is turned from rest and,
   seen from the front, how much shorter it looks when it points at the viewer. Standing, walking,
   working, arguing, fighting and carrying are clips. Walking keeps step with the ground covered.
-- **Walking, eating and fighting are done each resident's own way.** There are three clips for
-  each, and three more for fighting with a knife and with a gun: which one a body goes through
-  is its resident's manner (`data/manners.json`). A weapon is seen in the hand while its owner
+- **Walking, eating, fighting and sitting are done each resident's own way.** There are three
+  clips for each of the first three, three more for fighting with a knife and with a gun, and
+  four ways of sitting: which one a body goes through is its resident's manner
+  (`data/manners.json`). A weapon is seen in the hand while its owner
   fights with it.
 - **Work looks like the work it is** (`data/poses.json`). In the garden whoever has a hoe
   takes it by the handle in both hands, raises it over their head, holds it there an instant
@@ -476,6 +477,12 @@ each bone, and the game draws it in whatever pose it is in.
 - **A tool is held by its handle** and turns with the hands that hold it: it is in them, not
   in front of them. The hoe is the resident's own, the item they carry, in the picture it has;
   the hammer is nobody's, and is there for the look of it. Walking, hands are empty of both.
+- **They sit down to rest, to eat and to drink**, each their own way (`data/manners.json`):
+  with their legs crossed, with their knees drawn up, leaning back on their hands with their
+  legs out, or squatting on their heels. By the fire, at the radio and at the bar that is all
+  they do; eating, the body sits and the arms eat over it, the way they eat. Their name and
+  what is picked come down with their head, and go above a meal held higher than it. Seen
+  from the front the small bodies shown without a window stand: they sit only from the side.
 - **Whoever sleeps on the ground curls up on it.** With no bed to go to, a doll squats, puts
   its hands to the ground, lets itself down and draws its knees up under it, its head by its
   hands; it lies so, breathing, and when it wakes it pushes itself up and stands. Lying down

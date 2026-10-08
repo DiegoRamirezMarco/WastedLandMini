@@ -782,11 +782,10 @@ class InteriorView:
         doll = view._doll_for(resident)
         # Somebody not yet grown has a smaller body under the head they were drawn with.
         grown = grown_share(view.world, resident)
-        clip, rate = view._way_of(resident, WALK) if stride is not None else view._clip_of(resident)
+        clip, rate, overlay = (*view._way_of(resident, WALK), None) if stride is not None else view._bearing(resident)
         turn = (stride if stride is not None else view.time) * rate
         renderer = view.bodies.renderer
         # As on the map, what they carry is in their pockets and their hands are free.
-        overlay = None
         if doll is not None:
             facing = view._side_facing(resident.resident_id, view._lean(resident) or facing)
             plan = doll.plan if doll.plan is not None else view.bodies.plan

@@ -24,6 +24,7 @@ NOTES_TEXT = (
     "Elige una manera de cada fila: se ve a la derecha, y queda puesta en cuanto la eliges.",
     "No cambia lo que hace ni lo bien que lo hace: solo cómo se le ve hacerlo.",
     "Disparar y Cuchillo se ven cuando pelea llevando un arma de esa clase.",
+    "Sentarse se ve cuando descansa junto al fuego, escucha la radio, come o bebe.",
     "Las flechas pasan al siguiente habitante. Esc vuelve al mapa.",
 )
 
