@@ -1,0 +1,74 @@
+{
+  "lowest": 1,
+  "highest": 10,
+  "middle": 5,
+  "spread": 3.5,
+  "founder_points": 33,
+  "inherit": 0.6,
+  "attributes": {
+    "strength": {
+      "name": "Fuerza",
+      "short": "FUE",
+      "text": "Lo que carga y lo que pega."
+    },
+    "constitution": {
+      "name": "Constitución",
+      "short": "CON",
+      "text": "Lo que aguanta: heridas, cansancio y años."
+    },
+    "dexterity": {
+      "name": "Destreza",
+      "short": "DES",
+      "text": "Lo finas que tiene las manos y lo que esquiva."
+    },
+    "mind": {
+      "name": "Mente",
+      "short": "MEN",
+      "text": "Lo que averigua y lo deprisa que aprende un oficio."
+    },
+    "senses": {
+      "name": "Sentidos",
+      "short": "SEN",
+      "text": "Lo lejos que ve y lo que encuentra ahí fuera."
+    },
+    "charisma": {
+      "name": "Carisma",
+      "short": "CAR",
+      "text": "Lo que arrastra a los demás, y lo que le siguen si manda."
+    }
+  },
+  "effects": {
+    "work_pace": 0.04,
+    "fight_strength": 0.08,
+    "fight_dodge": 0.05,
+    "toughness": 0.05,
+    "healing": 0.06,
+    "tiredness": 0.04,
+    "carry": 0.5,
+    "study": 0.06,
+    "learning": 0.08,
+    "sight": 0.4,
+    "finds": 0.06,
+    "danger": 0.05
+  },
+  "practice": {
+    "work": 0.00012,
+    "fight": 0.04,
+    "hurt": 0.03,
+    "lead": 0.01
+  },
+  "age": {
+    "from": 50,
+    "per_year": 0.08,
+    "of": ["strength", "constitution", "dexterity", "senses"]
+  },
+  "youth": {
+    "grown_at": 16,
+    "floor": 0.4,
+    "of": ["strength", "constitution"]
+  },
+  "injury": {
+    "of": ["strength", "dexterity"],
+    "share": 0.5
+  }
+}

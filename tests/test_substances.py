@@ -18,6 +18,7 @@ from simulation.substances.substance import Habit, substance_from_data, substanc
 from simulation.substances.substance_system import HABIT, TEMPTED
 from simulation.tastes.taste import PEOPLE, Taste
 from simulation.work.work_system import WORK_ACTION
+from simulation.residents.attributes import Attributes
 from simulation.world import SimulationWorld
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -38,6 +39,9 @@ def _content(world: SimulationWorld, *resident_ids: str) -> None:
 def _few(seed: int = 7) -> SimulationWorld:
     """Marta, Raúl and Lucía alone, content, with no jobs, no grudges and nothing put by."""
     world = SimulationWorld.demo_world(seed=seed)
+    # Everybody in the middle of every attribute: what is looked at here is told apart from it (S46).
+    for resident in world.residents.values():
+        resident.attributes = Attributes()
     for extra in [resident_id for resident_id in world.residents if resident_id not in ("marta", "raul", "lucia")]:
         del world.residents[extra]
     world.relationships.clear()
@@ -139,6 +143,8 @@ class EffectTests(unittest.TestCase):
         self.assertEqual(self.raul.health, 100.0)
         _take(self.world, self.raul, "liquor")
         self.assertEqual([(injury.kind, injury.severity) for injury in self.raul.injuries], [("intoxication", 6.0)])
+        # Coming through that has hardened them a little (S46): as they were, for what follows.
+        self.raul.attributes = Attributes()
         _take(self.world, self.raul, "syringe")
         self.assertEqual(self.raul.health, 90.0, "some harm whoever takes them at all")
         self.raul.injuries.append(Injury("cut", 65.0))
@@ -429,6 +435,8 @@ class MadeHereTests(unittest.TestCase):
         self.assertFalse(world.apply_command(PlaceObjectCommand("lab_bench", (14, 11))).ok)
         bench = world.urbanism.place_object(world, "lab_bench", (14, 11)).entity_id
         paco = world.residents["paco"]
+        # In the middle for the head the work goes by (S46), so that it takes what the data says.
+        paco.attributes = Attributes()
         self.assertTrue(world.staffing.assign(world, paco, "chemist"))
         _put_on_duty(world, "paco", minutes=400)
         for _ in range(380):

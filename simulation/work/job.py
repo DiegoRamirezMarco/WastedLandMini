@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from simulation.residents.attributes import ATTRIBUTES
 from simulation.work.expedition import ExpeditionRule, expedition_rule_from_data
 
 # Where a job's product goes when it stays in the worker's own post.
@@ -88,6 +89,9 @@ class JobDefinition:
     watch_for: str | None = None
     # Whether time at the post goes towards working out whatever the settlement is studying.
     research: bool = False
+    # The attribute the work goes by: whoever has more of it does it faster, and doing it
+    # raises it. None for work that anybody does as well as anybody else.
+    stat: str | None = None
 
 
 def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition:
@@ -137,6 +141,9 @@ def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition
         if tool.speed < 1.0:
             raise ValueError(f"Job {job_id} has a tool that slows the work down")
     wage = float(data["wage"]) if "wage" in data else None
+    stat = str(data["stat"]) if data.get("stat") else None
+    if stat is not None and stat not in ATTRIBUTES:
+        raise ValueError(f"Job {job_id} goes by an attribute there is not: one of {ATTRIBUTES}")
     if (wage is not None and wage < 0) or int(data.get("needed", 1)) < 0:
         raise ValueError(f"Job {job_id} needs a wage and a number of workers that are not negative")
     return JobDefinition(
@@ -159,4 +166,5 @@ def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition
         outdoors=bool(data.get("outdoors", False)),
         watch_for=str(data["watch_for"]) if "watch_for" in data else None,
         research=bool(data.get("research", False)),
+        stat=stat,
     )

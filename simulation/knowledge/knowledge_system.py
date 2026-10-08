@@ -3,6 +3,7 @@
 from collections.abc import Collection
 from typing import TYPE_CHECKING
 
+from simulation.residents.attributes import SENSES
 from simulation.events.event import DomainEvent
 from simulation.knowledge.fact import (
     SOURCE_PARTICIPANT,
@@ -47,7 +48,11 @@ def witnesses_of(world: "SimulationWorld", at: Tile, exclude: Collection[str] = 
         if resident.resident_id not in exclude
         and not resident.away
         and world.is_aware(resident)
-        and within_range(resident.tile, at, sight_range + world.work.sight_bonus(world, resident))
+        and within_range(
+            resident.tile,
+            at,
+            sight_range + world.work.sight_bonus(world, resident) + world.attributes.bonus(world, resident, SENSES, "sight"),
+        )
         and line_of_sight(resident.tile, at, opaque)
     ]
 

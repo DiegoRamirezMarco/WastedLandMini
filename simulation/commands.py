@@ -96,6 +96,7 @@ class CommandTarget(Protocol):
         traits: Sequence[str],
         manners: Mapping[str, str] | None = None,
         identity: Mapping[str, str] | None = None,
+        attributes: Mapping[str, float] | None = None,
     ) -> str | None:
         ...
 
@@ -648,10 +649,16 @@ class FoundResidentCommand:
     # Their `sex` (`m` or `f`), their `gender` (`m`, `f`, `nb` or `bi`) and who they are `drawn_to`
     # (`m`, `f` or `both`). What is left out follows from who they are.
     identity: Mapping[str, str] = field(default_factory=dict)
+    # Their strength, constitution, dexterity, mind, senses and charisma, from 1 to 10 (S46).
+    # What is left out is in the middle, and all six come to no more than there are points for.
+    # None for what the seed gives them, as it gives anybody.
+    attributes: Mapping[str, float] | None = None
 
     def apply(self, world: CommandTarget) -> str | None:
         """Returns the ID of whoever now lives there, or None if the settlement would not have them."""
-        return world.found_resident(self.name, self.age, self.personality, self.traits, self.manners, self.identity)
+        return world.found_resident(
+            self.name, self.age, self.personality, self.traits, self.manners, self.identity, self.attributes
+        )
 
 
 @dataclass(frozen=True)

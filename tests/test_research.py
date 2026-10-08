@@ -24,6 +24,7 @@ from simulation.work.research import (
     OPEN,
     research_settings_from_data,
 )
+from simulation.residents.attributes import Attributes
 from simulation.world import SimulationWorld
 from world.build import OBJECT_SITE
 
@@ -346,6 +347,8 @@ class EffectTests(unittest.TestCase):
             world = SimulationWorld.demo_world(seed=3)
             world.studies.known += known
             sergio = world.residents["sergio"]
+            # In the middle for senses, which tell on a trip too (S46).
+            sergio.attributes = Attributes()
             world.expeditions.set_out(world, sergio, world.registries.jobs["scavenger"])
             return sergio.expedition
 

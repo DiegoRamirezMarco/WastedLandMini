@@ -9,6 +9,7 @@ from simulation.ai.utility_ai import ScoredAction
 from simulation.events.event import DomainEvent
 from simulation.items.item import ItemInstance
 from simulation.residents.activity import Activity
+from simulation.residents.attributes import CONSTITUTION
 from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
 from simulation.residents.resident import Resident
 from simulation.work import hauling
@@ -237,7 +238,8 @@ class WorkSystem:
                     location_id=room.room_id if room is not None else None,
                 )
             )
-        resident.needs.apply(job.per_minute)
+        resident.needs.apply(self._toll(world, resident, job))
+        world.attributes.practise(world, resident, job.stat, "work")
         world.trade.pay_wage(world, resident, job)
         activity.minutes_left -= 1
         if job.produces is not None and not self._produce(world, resident, job, placed, activity.minutes_left):
@@ -320,6 +322,14 @@ class WorkSystem:
         if activity.minutes_left <= 0:
             self._leave(resident)
 
+    def _toll(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> dict[str, float]:
+        """What a minute of the job does to whoever does it: it tires a strong constitution less."""
+        tiring = job.per_minute.get("tiredness", 0.0)
+        if tiring <= 0.0:
+            return job.per_minute
+        spared = world.attributes.factor(world, resident, CONSTITUTION, "tiredness")
+        return {**job.per_minute, "tiredness": tiring * max(0.0, 2.0 - spared)}
+
     def _say_if_watching(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> None:
         """Say, once a night, that someone is at their post out of hours because of what they know is coming."""
         if job.watch_for is None or minutes_left_in_shift(job, world.clock.hour, world.clock.minute) > 0:
@@ -373,7 +383,7 @@ class WorkSystem:
             full = target is None or target.count(making) >= rule.max_stock
         else:
             target = resident.inventory
-            full = hauling.carried(resident, rule.item) >= rule.carry
+            full = hauling.carried(resident, rule.item) >= hauling.load(world, resident, rule)
         if target is None:
             return True
         if full:
@@ -386,6 +396,8 @@ class WorkSystem:
         speed *= world.trade.unpaid_pace(world, resident)
         speed *= world.substances.work_pace(world, resident)
         speed *= world.politics.work_pace(world, resident)
+        # Whoever has more of what the job goes by does it faster.
+        speed *= world.attributes.work_pace(world, resident, job)
         # What has been worked out about a trade makes it go faster.
         speed *= world.research.factor(world, f"{JOB_PACE}{job.job_id}")
         needed = math.ceil(rule.every_minutes / speed)

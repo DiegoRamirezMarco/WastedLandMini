@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from simulation.items.inventory import Inventory
 from simulation.items.item import ItemInstance
+from simulation.residents.attributes import STRENGTH
 from simulation.residents.resident import Resident
 from simulation.work.job import INTO_STATION, ProduceRule, SupplyRule
 from world.interactable import Interactable
@@ -68,6 +69,12 @@ def fetch_source(world: "SimulationWorld", rule: ProduceRule) -> str | None:
     return best[1] if best is not None else None
 
 
+def load(world: "SimulationWorld", resident: Resident, rule: ProduceRule | SupplyRule) -> int:
+    """How many units a resident carries in one trip of a job's: what the job says, and one
+    or two more or fewer for how strong they are."""
+    return max(1, rule.carry + world.attributes.bonus(world, resident, STRENGTH, "carry"))
+
+
 def errand(world: "SimulationWorld", resident: Resident, rule: ProduceRule, shift_minutes_left: int) -> str | None:
     """The container a worker should walk to now, to hand in what they carry or to fetch raw material.
 
@@ -75,7 +82,7 @@ def errand(world: "SimulationWorld", resident: Resident, rule: ProduceRule, shif
     material is fetched when they have none, while there is shift enough left to use it.
     """
     on_them = carried(resident, rule.item)
-    if rule.into != INTO_STATION and on_them > 0 and (on_them >= rule.carry or shift_minutes_left <= 0):
+    if rule.into != INTO_STATION and on_them > 0 and (on_them >= load(world, resident, rule) or shift_minutes_left <= 0):
         target = delivery_target(world, rule)
         if target is not None:
             return target
@@ -144,7 +151,7 @@ def supply_exchange(world: "SimulationWorld", resident: Resident, rule: SupplyRu
     stack = container.stack_of(rule.item, None)
     if stack is None or on_them is not None:
         return None
-    units = container.take_units(stack.instance_id, rule.carry)
+    units = container.take_units(stack.instance_id, load(world, resident, rule))
     world.stock(resident.inventory, rule.item, units, None)
     return f"coge {units} de {name} de {where}"
 
@@ -172,7 +179,7 @@ def exchange(world: "SimulationWorld", resident: Resident, rule: ProduceRule, pl
         if stack is None:
             return None
         definition_id = stack.definition_id
-        units = container.take_units(stack.instance_id, rule.carry)
+        units = container.take_units(stack.instance_id, load(world, resident, rule))
         world.stock(resident.inventory, definition_id, units, None)
         return f"coge {units} de {world.registries.items.resolve(definition_id).name} de {where}"
     return None

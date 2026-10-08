@@ -11,6 +11,7 @@ from simulation.registries import DATA_DIR, BuiltInRegistries
 from simulation.residents.activity import MOVE_TILES_PER_MINUTE, Activity
 from simulation.residents.needs import Needs
 from simulation.work.expedition import Expedition
+from simulation.residents.attributes import Attributes
 from simulation.world import SimulationWorld
 
 BAD_CUT = 30.0
@@ -20,8 +21,10 @@ def _world(chance: float | None = 1.0, seed: int = 7) -> SimulationWorld:
     """A quiet settlement. With `chance`, that is how likely a bad cut is to take a limb off."""
     world = SimulationWorld.demo_world(seed=seed)
     world.relationships.clear()
+    # Everybody in the middle of every attribute: what is looked at here is told apart from it (S46).
     for resident in world.residents.values():
         resident.needs = Needs(hunger=0, tiredness=0, social=0, stress=0)
+        resident.attributes = Attributes()
     if chance is not None:
         injuries = dict(world.registries.injuries)
         injuries["cut"] = replace(injuries["cut"], severs_chance=chance)
@@ -65,6 +68,8 @@ class LimbLossTests(unittest.TestCase):
         raul = world.residents["raul"]
         state = world.rng.get_state()
         world.health.hurt(world, raul, world.registries.injuries["cut"].severs_from - 1, "cut", "una prueba")
+        # Coming through the first has hardened them a little (S46): as they were, for the second.
+        raul.attributes = Attributes()
         world.health.hurt(world, raul, BAD_CUT, "fracture", "una prueba")
         self.assertEqual(raul.lost_limbs, [])
         self.assertEqual([event.event_type for event in world.history[-2:]], ["injured", "injured"])

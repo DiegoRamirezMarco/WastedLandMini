@@ -3621,6 +3621,61 @@ Still open here:
   against most of the settlement answers to nobody for it
 - The laws that need a court (S43) are still to be written, and are the player's too
 
+### S46 — What each is capable of (needs S26) — done
+The user's words: "vamos a agregarle estadisticas a los PJ: FUERZA CONSTITUCION DESTREZA MENTE
+SENTIDOS CARISMA. Estos podran influir en trabajos combate liderazgo vida etc". Asked first, and
+answered with the recommendation: from 1 to 10, the first resident's shared out by the player,
+everybody else's from the seed and their parents, and growing with use.
+
+- **Six attributes, as data** (`data/attributes.json`): strength, constitution, dexterity,
+  mind, senses and charisma, each with a name, three letters and a line on what it is for
+- **Five are kept with the resident, and charisma is not a sixth number.** It is the side of
+  their way of being that already went by that name (S26), read from 1 to 10: there is one
+  charisma, and what politics made of it is what it was
+- **Whoever comes has what the seed gives them**, always the same for the same settlement
+  and person, made the first time it is asked for. The nine who come ready made are as the
+  game says: Tomás strong, Vera with a good head, Paco with a poor one
+- **A child takes after whichever parents live here**: six parts in ten the middle of
+  theirs, the rest their own
+- **The first resident is as the player made them** (`FoundResidentCommand.attributes`): what
+  is left out is in the middle, and all six come to no more than there are points for, 33.
+  What is over is taken from each by how far above the lowest it is
+- **What each is good for is data** (`effects`), so much for each point either side of five:
+  - *Work*: every job goes by one of them (`stat` in `data/jobs.json`), and whoever has more
+    of it does the job four parts in a hundred faster a point. The garden and the water go
+    by strength, the kitchen and the workshop by dexterity, the cantina and the shop by
+    charisma, the watch and the handcart by senses, and the clinic, the desk and the
+    laboratory by mind
+  - *Strength*: what is dealt in a fight, and a unit more in a trip for every two points
+  - *Dexterity*: what is taken in a fight
+  - *Constitution*: how bad any injury comes out, how fast it mends, and how much work tires
+  - *Mind*: how fast things are worked out at the desk
+  - *Senses*: how far somebody sees, and what a trip outside brings back and risks
+  - *Charisma*: what it already did for loyalty and for votes (S26, S27)
+- **Use raises it**, more slowly the higher it is and never past ten: a minute at the post
+  for what the job goes by, a fight for the strength of whoever struck and the dexterity of
+  whoever was struck, an injury come through for constitution, a day of leading for
+  charisma. A point takes about three weeks of work from the middle
+- **Age and injuries take from what somebody can do today, not from what they have**: past
+  fifty the body gives a little each year, the head does not; a child has not all their
+  strength until sixteen; and whoever is hurt has less strength and dexterity until they mend
+- `attribute_grew` says when somebody comes to a whole point more
+- Saved with each resident. Save version 36
+
+Decided without asking:
+- Leadership stays the side of a way of being that it was (S26): how well others do under
+  somebody is not one of the six
+- An attribute is shown in whole points and kept in tenths and less, so that growing is slow
+- Somebody exiled who comes back is as capable as they left
+
+Still open here:
+- None of it is on screen: P52. Until then the first resident is given theirs by command
+- Children under ten have none until they walk (S25): what they will have is settled then
+- Nobody is turned down for a job, or put to one, for what they are capable of: staffing
+  (S8) does not look at it
+- A raid is answered as it was (S11): strength does not come into it
+- What each point does is a first guess
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

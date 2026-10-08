@@ -41,6 +41,7 @@ from simulation.politics.records import (
     PlayerStanding,
     Proposal,
 )
+from simulation.residents.attributes import OWN, Attributes
 from simulation.residents.personality import Personality
 from simulation.residents.resident import FACINGS, Resident
 from simulation.rng import SimulationRNG
@@ -127,6 +128,8 @@ FIRST_FAMILY_VERSION = 29
 # apart, and every trip is for whatever turns up.
 # Version 35 added whether a law was put in force with nobody asked, and who is out in the
 # square against which (S45). In a save from before every law was voted and nobody is out.
+# Version 36 added each resident's attributes (S46). In a save from before everybody has what
+# the settlement's seed gives them, the first time it is asked.
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 28
@@ -145,7 +148,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 35
+    CURRENT_VERSION = 36
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -302,6 +305,7 @@ class SaveManager:
                     "facing": resident.facing,
                     "needs": vars(resident.needs),
                     "personality": vars(resident.personality),
+                    "attributes": vars(resident.attributes) if resident.attributes is not None else None,
                     "mood": resident.mood,
                     "current_action": resident.current_action,
                     "activity": _activity_to_data(resident.activity),
@@ -474,6 +478,7 @@ class SaveManager:
                     charisma=float(personality_data.get("charisma", 50.0)),
                     leadership=float(personality_data.get("leadership", 50.0)),
                 ),
+                attributes=_attributes_from_data(world, resident_data.get("attributes")),
                 mood=float(resident_data.get("mood", 50.0)),
                 current_action=str(resident_data.get("current_action", "idle")),
                 facing=facing if facing in FACINGS else "down",
@@ -1535,6 +1540,15 @@ def _event_from_data(data: dict[str, Any]) -> DomainEvent:
         # A political event says under which government it happened, and stays one.
         return PoliticalEvent(**vars(event), government=_text_or_none(data.get("government")))
     return event
+
+
+def _attributes_from_data(world: SimulationWorld, data: Any) -> Attributes | None:
+    """What a resident is capable of, as it was saved. None for somebody out of a save from
+    before, or who was never asked: the seed gives them theirs when they are."""
+    if not isinstance(data, dict):
+        return None
+    settings = world.registries.attributes
+    return Attributes(**{name: settings.clamp(float(data.get(name, settings.middle))) for name in OWN})
 
 
 def _proposal_from_data(data: dict[str, Any]) -> Proposal:

@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING
 
+from simulation.residents.attributes import SENSES
 from simulation.ai.crowd import free_tile
 from simulation.events.event import DomainEvent
 from simulation.events.world_event import WEATHER
@@ -72,12 +73,17 @@ class ExpeditionSystem:
         now = world.clock.total_minutes
         minutes = world.rng.randint(*rule.minutes)
         # What has been worked out about going outside brings more back, and brings it back safer.
-        finds = round(world.rng.randint(*rule.finds) * world.research.factor(world, EXPEDITION_FINDS))
+        finds = round(
+            world.rng.randint(*rule.finds)
+            * world.research.factor(world, EXPEDITION_FINDS)
+            * world.attributes.factor(world, resident, SENSES, "finds")
+        )
+        wary = max(0.0, 2.0 - world.attributes.factor(world, resident, SENSES, "danger"))
         comes_on_something = world.rng.random() < settings.find_chance
         resident.expedition = Expedition(
             returns_at=now + minutes,
             finds=finds,
-            danger=rule.danger * world.research.factor(world, EXPEDITION_DANGER),
+            danger=rule.danger * world.research.factor(world, EXPEDITION_DANGER) * wary,
             find_at=now + minutes // 2 if comes_on_something else None,
         )
         resident.last_expedition_day = world.clock.day

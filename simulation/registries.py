@@ -22,6 +22,7 @@ from simulation.items.custom_content import load_custom_items
 from simulation.items.item import TASTE_TAG_PATTERN
 from simulation.items.registry import ItemRegistry
 from simulation.residents.manner import MannerSettings, manner_settings_from_data
+from simulation.residents.attributes import AttributeSettings, attribute_settings_from_data
 from simulation.residents.personality import Personality
 from simulation.social.bonds import BondSettings, bond_settings_from_data
 from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
@@ -155,6 +156,8 @@ class BuiltInRegistries:
     interactions: dict[str, InteractionDefinition] = field(default_factory=dict)
     decisions: dict[str, DecisionDefinition] = field(default_factory=dict)
     jobs: dict[str, JobDefinition] = field(default_factory=dict)
+    # What a resident is capable of, and what each of the six is good for.
+    attributes: AttributeSettings = field(default_factory=AttributeSettings)
     injuries: dict[str, InjuryDefinition] = field(default_factory=dict)
     # Limbs a resident can lose for good, by limb ID.
     limbs: dict[str, LimbDefinition] = field(default_factory=dict)
@@ -269,6 +272,9 @@ class BuiltInRegistries:
         bonds_path = root / "relationships.json"
         if bonds_path.is_file():
             registries.bonds = bond_settings_from_data(_read_object(bonds_path))
+        attributes_path = root / "attributes.json"
+        if attributes_path.is_file():
+            registries.attributes = attribute_settings_from_data(_read_object(attributes_path))
         economy_path = root / "economy.json"
         if economy_path.is_file():
             registries.economy = economy_settings_from_data(_read_object(economy_path))

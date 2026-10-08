@@ -13,6 +13,7 @@ from simulation.social.social_system import PURSUIT_MINUTES, TALK_ACTION, Social
 from simulation.work.hauling import carried
 from simulation.work.job import job_definition_from_data
 from simulation.work.work_system import WORK_ACTION, minutes_left_in_shift
+from simulation.residents.attributes import Attributes
 from simulation.world import SimulationWorld
 from world.pathfinding import find_path, manhattan
 from world.settlement import layout_from_data
@@ -24,8 +25,10 @@ def _settled(seed: int = 7) -> SimulationWorld:
     """The demo settlement with everyone content and no grudges, so only work drives the day."""
     world = SimulationWorld.demo_world(seed=seed)
     world.relationships.clear()
+    # Everybody in the middle of every attribute: what is looked at here is told apart from it (S46).
     for resident in world.residents.values():
         resident.needs = Needs(hunger=0, tiredness=0, social=0, stress=0)
+        resident.attributes = Attributes()
     return world
 
 

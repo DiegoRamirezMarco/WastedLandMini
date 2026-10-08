@@ -44,6 +44,7 @@ from simulation.memory.memory import Memory
 from simulation.politics.political_event import PoliticalEvent
 from simulation.politics.records import PLAYER
 from simulation.residents.activity import ACCUSE_DECISION, EXILE_BACK_DECISION, SERVE_ACTION, Activity
+from simulation.residents.attributes import OWN, Attributes
 from simulation.residents.personality import Personality
 from simulation.residents.resident import Resident
 from world.map import Tile
@@ -744,6 +745,7 @@ class JusticeSystem:
             "age": resident.age, "born": resident.born, "sex": resident.sex, "gender": resident.gender,
             "drawn_to": resident.drawn_to, "traits": list(resident.traits), "manners": dict(resident.manners),
             "personality": dict(vars(resident.personality)),
+            "attributes": dict(vars(world.attributes.of(world, resident))),
         }
 
     def _returns(self, world: "SimulationWorld") -> None:
@@ -825,6 +827,11 @@ class JusticeSystem:
             x=x,
             y=y,
             personality=Personality(**{k: float(v) for k, v in person.get("personality", {}).items() if k in known}),
+            attributes=(
+                Attributes(**{k: float(v) for k, v in person["attributes"].items() if k in OWN})
+                if isinstance(person.get("attributes"), dict)
+                else None
+            ),
             traits=[trait for trait in person.get("traits", []) if world.registries.traits.find(trait) is not None],
             manners=world.registries.manners.tidy(person.get("manners", {})),
             age=int(person.get("age", 30)),

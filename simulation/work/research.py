@@ -4,6 +4,7 @@ it out on their shift. What is known opens up things to build and makes other th
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from simulation.residents.attributes import MIND
 from simulation.events.event import DomainEvent
 from simulation.residents.resident import Resident
 from simulation.work.job import JobDefinition, SupplyRule
@@ -245,6 +246,7 @@ class ResearchSystem:
             return
         state = world.studies
         pace = world.health.work_pace(world, resident) * world.work.mood_pace(resident)
+        pace *= world.attributes.factor(world, resident, MIND, "study")
         state.progress[subject.subject_id] = state.progress.get(subject.subject_id, 0.0) + pace
         if state.progress[subject.subject_id] >= subject.minutes:
             self._finish(world, subject, resident)

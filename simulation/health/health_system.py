@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from simulation.events.event import DomainEvent
 from simulation.health.injury import Death, Injury, InjuryDefinition, LimbDefinition
 from simulation.items.item import ItemInstance
+from simulation.residents.attributes import CONSTITUTION, DEXTERITY, STRENGTH
 from simulation.residents.activity import MOVE_TILES_PER_MINUTE
 from simulation.residents.resident import Resident
 from simulation.social.interaction import InteractionDefinition
@@ -91,6 +92,7 @@ class HealthSystem:
             and self._dosed(world, resident, care)
         )
         resting = care is not None or not world.is_aware(resident)
+        mending = world.attributes.factor(world, resident, CONSTITUTION, "healing")
         for injury in resident.injuries:
             if injury.kind in wasting:
                 # Nothing mends while what brought it on goes on.
@@ -103,7 +105,7 @@ class HealthSystem:
                 rate = definition.treated_per_day
             else:
                 rate = definition.heal_per_day * (BED_REST_BONUS if resting else 1.0)
-            injury.severity -= rate / MINUTES_PER_DAY
+            injury.severity -= rate * mending / MINUTES_PER_DAY
         resident.injuries = [injury for injury in resident.injuries if injury.severity > 0]
 
     def _dosed(self, world: "SimulationWorld", resident: Resident, care: UseDefinition) -> bool:
@@ -201,6 +203,12 @@ class HealthSystem:
             return True
         low, high = definition.damage
         strength = (0.6 + attacker.personality.aggression / 125.0) * max(0.5, attacker.health / 100.0)
+        # A strong arm deals more, and quick feet take less of it.
+        attributes = world.attributes
+        strength *= attributes.factor(world, attacker, STRENGTH, "fight_strength")
+        strength *= max(0.0, 2.0 - attributes.factor(world, victim, DEXTERITY, "fight_dodge"))
+        attributes.practise(world, attacker, STRENGTH, "fight")
+        attributes.practise(world, victim, DEXTERITY, "fight")
         multiplier, tags = self.weapon_of(world, attacker)
         weapon = self.weapon_item(world, attacker)
         if weapon is not None:
@@ -221,10 +229,13 @@ class HealthSystem:
         """Give a resident an injury. Returns False if they died of it."""
         if kind not in world.registries.injuries:
             kind = DEFAULT_INJURY
+        # The same blow comes out worse in a weak constitution, and coming through it hardens.
+        amount *= max(0.0, 2.0 - world.attributes.factor(world, resident, CONSTITUTION, "toughness"))
         resident.injuries.append(Injury(kind, amount))
         if resident.health <= 0:
             self.die(world, resident, cause, by)
             return False
+        world.attributes.practise(world, resident, CONSTITUTION, "hurt")
         definition = world.registries.injuries.get(kind)
         room = world.room_at(resident.tile)
         details = {"amount": amount, "kind": kind, "by": by.resident_id if by is not None else None}

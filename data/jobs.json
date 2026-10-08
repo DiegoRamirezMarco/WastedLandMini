@@ -1,6 +1,7 @@
 {
   "farmer": {
     "name": "Huerto",
+    "stat": "strength",
     "station": "crop_bed",
     "shifts": [
       [
@@ -36,6 +37,7 @@
   },
   "cook": {
     "name": "Cocina",
+    "stat": "dexterity",
     "station": "cooking_pot",
     "shifts": [
       [
@@ -66,6 +68,7 @@
   },
   "bartender": {
     "name": "Cantina",
+    "stat": "charisma",
     "station": "bar",
     "shifts": [
       [
@@ -91,6 +94,7 @@
   },
   "guard": {
     "name": "Guardia",
+    "stat": "senses",
     "station": "guard_post",
     "shifts": [
       [
@@ -113,6 +117,7 @@
   },
   "medic": {
     "name": "Enfermería",
+    "stat": "mind",
     "station": "medicine_cabinet",
     "shifts": [
       [
@@ -139,6 +144,7 @@
   },
   "mechanic": {
     "name": "Taller",
+    "stat": "dexterity",
     "station": "workbench",
     "shifts": [
       [
@@ -165,6 +171,7 @@
   },
   "shopkeeper": {
     "name": "Tienda",
+    "stat": "charisma",
     "station": "shop_counter",
     "shifts": [
       [
@@ -185,6 +192,7 @@
   },
   "scavenger": {
     "name": "Rebusca",
+    "stat": "senses",
     "station": "handcart",
     "shifts": [
       [
@@ -210,6 +218,7 @@
   },
   "water_carrier": {
     "name": "Agua",
+    "stat": "strength",
     "station": "water_tank",
     "shifts": [
       [
@@ -233,6 +242,7 @@
   },
   "researcher": {
     "name": "Estudio",
+    "stat": "mind",
     "station": "study_desk",
     "shifts": [
       [
@@ -254,6 +264,7 @@
   },
   "chemist": {
     "name": "Laboratorio",
+    "stat": "mind",
     "station": "lab_bench",
     "shifts": [
       [

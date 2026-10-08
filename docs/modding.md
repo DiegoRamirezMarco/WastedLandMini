@@ -491,6 +491,22 @@ looks and nothing of what happens.
 - Nothing in the game is tagged `firearm` yet. Give an item that tag and a `damage` and it is
   fired the way its owner shoots.
 
+## Attributes
+
+`data/attributes.json` holds the six things a resident is capable of, and what each does.
+
+- `attributes` gives each of the six a `name`, a `short` of three letters and a `text`. There
+  are six and they are these: a pack cannot add a seventh.
+- `lowest`, `highest` and `middle` are the scale. `spread` is how far from the middle what
+  somebody is born with may fall, `inherit` the share of a child's that is the middle of its
+  parents', and `founder_points` what the first resident has to share out among the six.
+- `effects` says what a point either side of the middle changes: `work_pace`, `fight_strength`,
+  `fight_dodge`, `toughness`, `healing`, `tiredness`, `study`, `learning`, `finds` and `danger`
+  as a share, and `carry` and `sight` as so many units or tiles a point.
+- `practice` says what raises one: a minute of `work`, a `fight`, being `hurt`, a day to `lead`.
+- `age` (`from`, `per_year`, `of`), `youth` (`grown_at`, `floor`, `of`) and `injury` (`of`,
+  `share`) say what the years, growing up and being hurt take from, and how much.
+
 ## Jobs
 
 `data/jobs.json` defines the settlement's posts:
@@ -519,6 +535,9 @@ looks and nothing of what happens.
   when the receiving container holds fewer than `low`, and never while someone is being served
   at their post. `max_stock` stops it (99 unless set). `into` must be a container kind.
 - `per_minute` changes the worker's needs while on duty, and `sight_bonus` extends how far they see.
+- `stat` names the attribute the work goes by (`strength`, `constitution`, `dexterity`, `mind`,
+  `senses` or `charisma`): whoever has more of it does the job faster, and doing it raises it.
+  Left out, anybody does it as well as anybody else.
 - `"tool": {"tag": "hoe", "speed": 1.5}` makes the work that much faster for a worker carrying a
   working item with that tag. At least one item must have the tag.
 - `wage` is credits per hour on duty, in place of the settlement's `wage_per_hour`.

@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from simulation.health.injury import Injury
 from simulation.items.inventory import Inventory
 from simulation.residents.activity import Activity
+from simulation.residents.attributes import Attributes
 from simulation.residents.needs import Needs
 from simulation.residents.personality import Personality
 from simulation.substances.substance import Habit, Intake
@@ -21,6 +22,10 @@ class Resident:
     y: int = 0
     needs: Needs = field(default_factory=Needs)
     personality: Personality = field(default_factory=Personality)
+    # Strength, constitution, dexterity, mind and senses, from 1 to 10 (S46). None until they
+    # are first asked for, when the settlement's seed says what they were born with. Their
+    # charisma is the side of their way of being that goes by that name.
+    attributes: Attributes | None = None
     inventory: Inventory = field(default_factory=Inventory)
     # General spirits, separate from immediate stress. Low mood makes work slower and quarrels likelier.
     mood: float = 50.0

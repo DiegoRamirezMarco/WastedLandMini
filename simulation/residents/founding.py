@@ -52,6 +52,7 @@ def found_resident(
     traits: Sequence[str],
     manners: Mapping[str, str] | None = None,
     identity: Mapping[str, str] | None = None,
+    attributes: Mapping[str, float] | None = None,
 ) -> Resident | None:
     """Put the player's first resident just inside the gate.
 
@@ -83,6 +84,9 @@ def found_resident(
         credits=world.registries.economy.starting_credits if world.fund.currency(world) is not None else 0.0,
         last_worked=world.clock.total_minutes,
     )
+    if attributes is not None:
+        # As the player made them, out of the points there are to share out.
+        world.attributes.give(world, resident, attributes, points=True)
     given = identity or {}
     resident.sex, resident.gender = str(given.get("sex", "")), str(given.get("gender", ""))
     resident.drawn_to = str(given.get("drawn_to", resident.drawn_to))

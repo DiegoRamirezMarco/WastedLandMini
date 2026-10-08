@@ -36,8 +36,10 @@ from simulation.politics.politics_system import PoliticsSystem
 from simulation.politics.profile import PoliticalProfile
 from simulation.politics.records import Exile, PlayerStanding
 from simulation.registries import DEFAULT_MAP_ID, BuiltInRegistries, builtin_registries
+from simulation.residents.attribute_system import AttributeSystem
 from simulation.residents.founding import found_resident
 from simulation.residents.manner import MannerDefinition
+from simulation.residents.attributes import Attributes
 from simulation.residents.personality import Personality
 from simulation.residents.resident import Resident
 from simulation.rng import SimulationRNG
@@ -88,6 +90,7 @@ class SimulationWorld:
     rooms: dict[str, Room] = field(default_factory=dict)
     interactables: dict[str, Interactable] = field(default_factory=dict)
     activities: ActivitySystem = field(default_factory=ActivitySystem)
+    attributes: AttributeSystem = field(default_factory=AttributeSystem)
     interventions: InterventionSystem = field(default_factory=InterventionSystem)
     affect: AffectSystem = field(default_factory=AffectSystem)
     # Open chances for the player to advise a resident, by decision ID.
@@ -210,6 +213,8 @@ class SimulationWorld:
         self.lending.tick(self)
         self.family.tick(self)
         self.politics.tick(self)
+        if self.clock.hour == 0 and self.clock.minute == 0:
+            self.attributes.tick_day(self)
         self.justice.tick(self)
         self.housing.tick(self)
         self.activities.begin_minute(self)
@@ -325,9 +330,10 @@ class SimulationWorld:
         traits: Sequence[str],
         manners: Mapping[str, str] | None = None,
         identity: Mapping[str, str] | None = None,
+        attributes: Mapping[str, float] | None = None,
     ) -> str | None:
         """Take in the player's first resident. Returns their ID, or None if there is already someone."""
-        resident = found_resident(self, name, age, personality, traits, manners, identity)
+        resident = found_resident(self, name, age, personality, traits, manners, identity, attributes)
         return resident.resident_id if resident is not None else None
 
     def accuse(self, accused_id: str, fact_id: str | None = None) -> JusticeResult:
@@ -706,7 +712,14 @@ class SimulationWorld:
             "marta": 41, "raul": 38, "lucia": 27, "tomas": 45, "ines": 33, "vera": 52, "paco": 36, "nuria": 29,
             "sergio": 31,
         }
+        # What each is capable of: strength, constitution, dexterity, mind and senses.
+        capable = {
+            "marta": (4, 6, 6, 6, 5), "raul": (7, 6, 4, 4, 5), "lucia": (3, 5, 6, 5, 6), "tomas": (7, 7, 5, 4, 6),
+            "ines": (5, 6, 6, 5, 5), "vera": (4, 5, 6, 8, 6), "paco": (6, 6, 6, 3, 4), "nuria": (4, 4, 5, 7, 6),
+            "sergio": (5, 5, 7, 5, 7),
+        }
         for resident in residents:
+            resident.attributes = Attributes(*(float(value) for value in capable[resident.resident_id]))
             resident.age = ages[resident.resident_id]
             job_id, post_id, day_off = posts[resident.resident_id]
             resident.credits = world.registries.economy.starting_credits

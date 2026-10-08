@@ -17,6 +17,7 @@ from simulation.residents.personality import Personality
 from simulation.residents.resident import Resident
 from simulation.work.hauling import carried
 from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
+from simulation.residents.attributes import Attributes
 from simulation.world import SimulationWorld
 from world.pathfinding import manhattan
 
@@ -29,6 +30,9 @@ def _settled(seed: int = 7) -> SimulationWorld:
     world = SimulationWorld.demo_world(seed=seed)
     world.relationships.clear()
     _keep_content(world)
+    # Everybody in the middle of every attribute: what is looked at here is told apart from it (S46).
+    for resident in world.residents.values():
+        resident.attributes = Attributes()
     return world
 
 

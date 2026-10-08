@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `35` |
+| `version` | `36` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -32,7 +32,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `interactables` | Placed objects: `id`, `kind`, tile `x` and `y` |
 | `sites`, `site_count` | What is being built: `id`, `kind` (`object` or `building`), `what` (the object kind or blueprint ID), tile `x` and `y`, `in_charge` (the resident who agreed to it), `delivered` (units brought so far, per item definition), `progress` (minutes of work done) and `started_at`; and the counter behind site IDs |
 | `salvage` | What somebody has been told to take apart: `object_id`, `resident_id` and `progress` (minutes of work done) |
-| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them) |
+| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `attributes` (`strength`, `constitution`, `dexterity`, `mind` and `senses` from 1 to 10, or `null` for somebody not asked yet), `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them) |
 | `containers` | Per container object ID, the items inside |
 | `item_count` | Counter behind item IDs |
 | `thefts`, `theft_cooldowns`, `notices` | Record of every theft, with the `amount` of credit taken when it was not an item and `@fund` for a `victim_id` when it was the settlement's; last theft per resident; once-a-day notices already given |
@@ -82,6 +82,9 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 36** added `attributes` on a resident (S46). In an older save everybody has what
+  the settlement's seed gives them, the first time it is asked. What is out of bounds is
+  brought back in.
 - **Version 35** added `imposed` on a law in force and on a proposal, and `protests` inside
   `government` (S45). In an older save every law was voted and nobody is out against any.
   Somebody who is no longer there is dropped from a protest, and so is a protest against a
