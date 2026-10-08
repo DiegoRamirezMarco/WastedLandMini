@@ -125,7 +125,7 @@ class BodyRenderer:
         # Which of the game's own bodies someone with none of their own is drawn with.
         self.looks = looks if looks is not None else Looks(assets)
         self._skins: dict[str, BodySkin] = {}
-        self._turned: dict[tuple[int, int], Sprite] = {}
+        self._turned: dict[tuple, Sprite] = {}
         self._frames: dict[tuple, Frame] = {}
         # The picture of each skeleton that lies still, and the corner it is drawn from.
         self._settled: weakref.WeakKeyDictionary[Skeleton, Frame] = weakref.WeakKeyDictionary()
@@ -205,7 +205,10 @@ class BodyRenderer:
             if spec.kind == "strip":
                 self._draw_strip(target, bone, skin.strips[(view, spec.cell)], offset, mirrored)
             else:
-                self._draw_sprite(target, skeleton, bone, skin.sprites[(view, spec.cell, mirrored)], spec.anchor, offset)
+                sprites = skin.sprites
+                self._draw_sprite(
+                    target, skeleton, bone, sprites[(view, spec.cell, mirrored)], spec.anchor, offset, sprites[(view, spec.cell, False)]
+                )
 
     def _draw_strip(
         self, target: pygame.Surface, bone: Bone, strip: Strip, offset: tuple[int, int], mirrored: bool
@@ -231,6 +234,7 @@ class BodyRenderer:
         sprite: Sprite,
         anchor: str,
         offset: tuple[int, int],
+        unmirrored: Sprite | None = None,
     ) -> None:
         if anchor == "end":
             x, y = bone.b.x, bone.b.y
@@ -241,11 +245,23 @@ class BodyRenderer:
         # The sprite is drawn as the bone points at rest; it turns by however far the bone has.
         rest = self.plan.rest_angle(skeleton.view, skeleton.as_posed(bone.name))
         turn = wrapped(bone.angle - (-rest if skeleton.mirrored else rest))
-        steps = _nearest(turn / math.tau * TURN_STEPS) % TURN_STEPS
-        if steps:
+        steps = _nearest(turn / math.tau * TURN_STEPS, skeleton.mirrored) % TURN_STEPS
+        if steps and skeleton.mirrored and unmirrored is not None:
+            # A body facing the other way is the very mirror of one that does not, turned parts
+            # and all: the same part turned the other way and then put in a mirror, and not the
+            # mirrored part turned by itself, which comes out a pixel different here and there.
+            sprite = self._in_mirror(self._turn(unmirrored, -steps % TURN_STEPS))
+        elif steps:
             sprite = self._turn(sprite, steps)
         left = _nearest(x, skeleton.mirrored) - sprite.anchor[0] + offset[0]
         target.blit(sprite.image, (left, _nearest(y) - sprite.anchor[1] + offset[1]))
+
+    def _in_mirror(self, sprite: Sprite) -> Sprite:
+        key = (id(sprite), "mirror")
+        if key not in self._turned:
+            image = pygame.transform.flip(sprite.image, True, False)
+            self._turned[key] = Sprite(image, (image.get_width() - 1 - sprite.anchor[0], sprite.anchor[1]))
+        return self._turned[key]
 
     def _turn(self, sprite: Sprite, steps: int) -> Sprite:
         key = (id(sprite), steps)

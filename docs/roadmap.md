@@ -3161,6 +3161,10 @@ followed walks dragging their feet. "Muy cartoon" had been answered, and it was 
   out by a third
 - At rest, breathing and the shift of weight are plain to see, and a fidget comes every four to
   eleven seconds, where it came every seven to nineteen
+- The game's own small bodies lean as they walk now, since they go by the same clips, and that
+  showed that facing left they were not quite the mirror of facing right: a part mirrored and
+  then turned came out a pixel different from one turned and then mirrored. They are the very
+  mirror now
 
 Seen then, the user said "guay", and to bring it into `main`.
 

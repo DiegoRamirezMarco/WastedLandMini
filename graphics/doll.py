@@ -77,6 +77,12 @@ KEPT = rubber.Kept(48 * 1024 * 1024)
 _TOKENS = itertools.count()
 
 
+def forget_limbs() -> None:
+    """Let go of every bent limb that is kept: as when pygame is shut, which they do not outlive."""
+    BENT.clear()
+    KEPT.clear()
+
+
 def limb_turns(detail: float) -> int:
     """How many steps to a full turn a limb of rubber is kept turned in, at a size."""
     return min(MOST_LIMB_TURNS, max(FEWEST_LIMB_TURNS, round(detail * TURN_STEPS_PER_PIXEL / 12) * 12))
@@ -1005,6 +1011,9 @@ class DollStore:
         self._dolls: dict[str, Doll | None] = {}
         # How much bending of limbs a frame may be given, for whoever shows many dolls at once.
         self.allowance = rubber.Allowance()
+        # Limbs are kept bent for every doll together, past the end of any one store. They are
+        # pictures, and are let go of when pygame is shut rather than left to outlive it.
+        pygame.register_quit(forget_limbs)
 
     def new_frame(self) -> None:
         """Say that a frame has been shown: the next has its whole allowance of bending."""
