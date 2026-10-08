@@ -2,8 +2,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from simulation.ai.affect import AffectResult
+from simulation.ai.placing import GROUND, PlacingResult
 from simulation.economy.terms import TradeResult
+from simulation.family.children import Handed
 from simulation.housing.housing import HousingResult
+from simulation.items.handing import TO_RESIDENT, HandingResult
 from simulation.justice.justice_system import JusticeResult
 from simulation.politics.government import PoliticsResult
 from simulation.work.craft import CraftResult
@@ -72,6 +75,17 @@ class CommandTarget(Protocol):
         ...
 
     def set_free_will(self, resident_id: str, free: bool) -> AffectResult:
+        ...
+
+    def put_down(
+        self, resident_id: str, tile: Tile, on_kind: str = GROUND, on_id: str | None = None, does: str | None = None
+    ) -> PlacingResult:
+        ...
+
+    def hand_child(self, child_id: str, resident_id: str) -> Handed:
+        ...
+
+    def hand_item(self, item_id: str, to_kind: str, to_id: str, units: int | None = None) -> HandingResult:
         ...
 
     def scrap_item(self, item_id: str, option_id: str) -> UrbanismResult:
@@ -385,6 +399,62 @@ class SetFreeWillCommand:
 
     def apply(self, world: CommandTarget) -> AffectResult:
         return world.set_free_will(self.resident_id, self.free)
+
+
+@dataclass(frozen=True)
+class PutDownCommand:
+    """The player lets go of a resident they had picked up (S51). It is the order of affecting
+    a resident given another way: they are there at once, and what they were put on is what
+    they set about, as far as it can be done.
+
+    `tile` is where they were let go, and `on_kind` with `on_id` what or who was under them
+    there: an `object`, a `resident`, a `site`, a `room` or a `child` still in its blanket, by
+    its ID; nothing, for bare `ground`. Where that could come to more than one thing they
+    stand there until told which, and the `choices` of the result are what there is to say:
+    the same command again with one of them as `does` says it.
+    """
+
+    resident_id: str
+    tile: Tile
+    on_kind: str = GROUND
+    on_id: str | None = None
+    does: str | None = None
+
+    def apply(self, world: CommandTarget) -> PlacingResult:
+        return world.put_down(self.resident_id, self.tile, self.on_kind, self.on_id, self.does)
+
+
+@dataclass(frozen=True)
+class HandChildCommand:
+    """The player puts a child still in its blanket in the arms of somebody (S51). Whoever they
+    are to it, they carry it and feed it from then on, while they are there and in a state to."""
+
+    child_id: str
+    resident_id: str
+
+    def apply(self, world: CommandTarget) -> Handed:
+        return world.hand_child(self.child_id, self.resident_id)
+
+
+@dataclass(frozen=True)
+class HandItemCommand:
+    """The player moves a thing with their own hand (S51): into the hands of somebody, whose it
+    is from then on, or into something things are kept in, where it is still whose it was.
+
+    It is done whatever anybody makes of it. Whoever it is taken from to be given to another
+    takes it ill, by what it was worth to them, if they are there to see it go.
+    """
+
+    # The item, by its instance ID.
+    item_id: str
+    to_id: str
+    # `resident` or `container`.
+    to_kind: str = TO_RESIDENT
+    # How many of the stack. Left out, all of it.
+    units: int | None = None
+
+    def apply(self, world: CommandTarget) -> HandingResult:
+        return world.hand_item(self.item_id, self.to_kind, self.to_id, self.units)
 
 
 @dataclass(frozen=True)

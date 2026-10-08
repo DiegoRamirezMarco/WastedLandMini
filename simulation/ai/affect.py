@@ -35,6 +35,12 @@ NEED, WITH, INCITE, LEISURE, TASK, WORDS = "need", "with", "incite", "leisure", 
 GROUPS = (NEED, WITH, INCITE, LEISURE, TASK, WORDS)
 # The groups of what is done with somebody else.
 SHARED = (WITH, INCITE, LEISURE)
+# Using one thing in particular: what a resident is told by being put down on it (S51). It is
+# nowhere among what there is to say, since which thing is said by where they are put.
+USE, THING = "use", "thing"
+USE_THING = f"{USE}:{THING}"
+USE_LABEL = "Que use {target}"
+USE_NAME = "Usar"
 # What a resident can be told to get on with.
 TO_POST, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, STOP = (
     "to_post", "take_charge", "salvage", "take_job", "leave_job", "treat", "stop",
@@ -332,6 +338,10 @@ class AffectSystem:
         resident.current_action = "idle"
         return True
 
+    def leave_off(self, world: "SimulationWorld", resident: Resident) -> None:
+        """Have a resident drop what they are doing, and whoever they were doing it with."""
+        self._leave_off(world, resident)
+
     def _leave_off(self, world: "SimulationWorld", resident: Resident) -> None:
         """Have a resident drop what they are doing, and whoever they were doing it with."""
         activity = resident.activity
@@ -625,12 +635,69 @@ class AffectSystem:
             if not self._may_with(world, resident, shared, other):
                 return "Eso no se le puede decir ahora", ""
             return None, shared.label.replace("{target}", other.name)
+        if kind == USE_THING:
+            placed = world.interactables.get(target_id or "")
+            if placed is None or world.definition_of(placed).use is None:
+                return "Eso ya no está", ""
+            return None, USE_LABEL.replace("{target}", self._named(world, placed))
+        task = world.registries.affect.tasks.get(name) if group == TASK else None
+        if task is not None and self._about(world, resident, name, target_id):
+            return None, task.label.replace("{target}", self._target_name(world, target_id))
         option = next((each for each in self.options(world, resident.resident_id) if each.kind == kind), None)
         if option is None:
             return "Eso no se le puede decir ahora", ""
         if option.targets and target_id not in [each for each, _name in option.targets]:
             return "Hay que decir con quién, o con qué", ""
         return None, option.said(target_id)
+
+    def _about(self, world: "SimulationWorld", resident: Resident, name: str, target_id: str | None) -> bool:
+        """Whether a task can be about one thing in particular, whether or not it is among
+        the few nearest that are offered: a site that is not theirs yet, or something that can
+        be taken apart, whoever had been told to. It is what a resident is told by being put
+        down on it."""
+        if name == TAKE_CHARGE:
+            site = world.sites.get(target_id or "")
+            return site is not None and site.in_charge != resident.resident_id
+        if name == SALVAGE:
+            placed = world.interactables.get(target_id or "")
+            return placed is not None and world.salvaging.rule_of(world, placed) is not None
+        return False
+
+    def do_now(self, world: "SimulationWorld", resident_id: str, kind: str, target_id: str | None = None) -> AffectResult:
+        """Tell a resident to do something and have them set about it there and then, ahead of
+        whatever else they have been told: what they were at for having been told goes back
+        to wait its turn, and is taken up again after. It is how being put down on something
+        is an order (S51).
+        """
+        error = self.obstacle(world, resident_id)
+        if error is not None:
+            return AffectResult(False, error)
+        resident = world.residents[resident_id]
+        error, said = self._check(world, resident, kind, target_id)
+        if error is not None:
+            return AffectResult(False, error)
+        group, _, name = kind.partition(":")
+        activity, doing, ahead = resident.activity, resident.doing, list(resident.orders)
+        told = activity is not None and activity.ordered
+        self.interrupted(world, resident)
+        waiting = list(resident.orders)
+        failed = self._carry_out(world, resident, group, name, target_id)
+        if failed is not None:
+            # Nothing came of it: they are at what they were at, with the same things ahead.
+            resident.doing, resident.orders = doing, ahead
+            if activity is not None and resident.activity is activity:
+                activity.ordered = told
+            return AffectResult(False, failed)
+        if not (group == WORDS or (group == TASK and name == STOP)):
+            # Telling them one thing takes nothing from what waits, as dropping everything does.
+            resident.orders = waiting
+            self._taken_up(resident, Order(kind, target_id))
+        text = f"A {resident.name} se le dice: {said[0].lower()}{said[1:]}"
+        world.emit_event(
+            DomainEvent("order_given", ORDER_IMPORTANCE, text, [resident_id], data={"kind": kind, "target": target_id}),
+            at=resident.tile,
+        )
+        return AffectResult(True, text)
 
     def _taken_up(self, resident: Resident, order: Order) -> None:
         """Mark what a resident has just set about as something they were told to do."""
@@ -654,6 +721,15 @@ class AffectSystem:
             return None
         if group == NEED:
             placed = self._place_for(world, resident, settings.needs[name])
+            activity = routine.use(world, resident, placed) if placed is not None else None
+            if activity is None:
+                return nowhere
+            self._leave_off(world, resident)
+            resident.activity = activity
+            resident.current_action = "walking"
+            return None
+        if group == USE:
+            placed = world.interactables.get(target_id or "")
             activity = routine.use(world, resident, placed) if placed is not None else None
             if activity is None:
                 return nowhere
@@ -840,6 +916,8 @@ class AffectSystem:
             label, short, icon = settings.tasks[name].label, settings.tasks[name].name, settings.tasks[name].icon
         elif group == WORDS and name in settings.words:
             label, short, icon = settings.words[name].label, settings.words[name].name, settings.words[name].icon
+        elif order.kind == USE_THING:
+            label, short = USE_LABEL, USE_NAME
         said = label.replace("{target}", self._target_name(world, order.target_id))
         return QueuedOrder(order, said, short, group, tone, icon)
 

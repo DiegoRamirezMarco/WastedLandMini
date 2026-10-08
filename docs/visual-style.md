@@ -360,6 +360,15 @@ gradients and any colour.
 - A thing that wears out has a thin bar under its icon wherever it is listed: green while sound,
   yellow when worn, red when all but gone.
 - Important equipment should eventually be visually legible.
+- Whoever the player picks up hangs from the pointer by the scruff of the neck, in front of
+  everything, in the clip `dangle`: off the ground, knees bent and toes down, with the legs
+  trailing behind the hand as it goes and the arms out ahead when it stops short. Their name
+  stays over their head. On bare ground their shadow shows where they would come down,
+  ringed in the colour of a lamp, or of embers where they cannot be put.
+- What they would be put down on has a line round it in the same two colours, and a line of
+  words by the pointer says what would come of it. Nothing is painted over whoever hangs
+  there. A thing in the hand is seen faintly where it would stand, and a thing dragged out
+  of a panel is its small picture under the pointer.
 
 ### Day and night
 - The light follows the game clock: full day from 7:30 to 19:30, full night from 21:30 to 5:30, and

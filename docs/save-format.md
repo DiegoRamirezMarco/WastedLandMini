@@ -83,6 +83,9 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **With no new version**, each of `bundles` has `minded_by` (S51): the resident in whose
+  arms the player put the child, if anybody. In a save without it, and where whoever it names
+  no longer lives there, nobody sees to it but its parents.
 - **Version 38** added `doing`, `orders` and `free_will` on a resident, and `ordered` on their
   `activity` (S50). In an older save nobody has been told anything, and everybody does as
   they like.

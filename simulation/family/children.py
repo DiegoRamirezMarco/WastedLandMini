@@ -37,11 +37,19 @@ BIRTH_IMPORTANCE = 70
 GREW_IMPORTANCE = 50
 TAKEN_IN_IMPORTANCE = 65
 CHILD_DIED_IMPORTANCE = 90
+HANDED_EVENT = "child_handed"
+HANDED_IMPORTANCE = 20
 SEEN_IMPORTANCE = 30
 BIRTH_MEMORY = 85.0
 NEGLECT_CAUSE = "el abandono"
 # What marks a trait, in its data, as one nobody would wish on a child.
 FLAW = "flaw"
+
+
+@dataclass(frozen=True)
+class Handed:
+    ok: bool
+    message: str
 
 
 @dataclass
@@ -72,6 +80,9 @@ class Bundle:
     asking: str | None = None
     # Game minute at which somebody was last asked.
     asked_at: int = 0
+    # Whose arms the player has put it in, if anybody's: they see to it before its parents do,
+    # while they are there and in a state to (S51).
+    minded_by: str | None = None
 
     @property
     def tile(self) -> Tile:
@@ -271,16 +282,43 @@ class ChildSystem:
     # ----- seeing to a bundle -----
 
     def minder(self, world: "SimulationWorld", bundle: Bundle) -> Resident | None:
-        """Whoever is seeing to a bundle right now: the first of its parents who is here and in
-        a state to, those it was born to before those who took it in."""
-        for parent_id in world.family.kin.parents_of(world, bundle.child_id):
-            parent = world.residents.get(parent_id)
-            if parent is None or parent.away or not world.health.is_fit_for_work(parent):
-                continue
-            if world.substances.out_of_it(world, parent):
-                continue
-            return parent
+        """Whoever is seeing to a bundle right now: whoever the player put it in the arms of,
+        or else the first of its parents, those it was born to before those who took it in.
+        Whoever it is has to be here and in a state to."""
+        handed = [bundle.minded_by] if bundle.minded_by is not None else []
+        for minder_id in [*handed, *world.family.kin.parents_of(world, bundle.child_id)]:
+            minder = world.residents.get(minder_id)
+            if minder is not None and self.cannot_mind(world, minder) is None:
+                return minder
         return None
+
+    def cannot_mind(self, world: "SimulationWorld", resident: Resident) -> str | None:
+        """Why a resident is in no state to see to a bundle right now. None if they are."""
+        if resident.away:
+            return f"{resident.name} está fuera del asentamiento"
+        if not world.health.is_fit_for_work(resident) or world.substances.out_of_it(world, resident):
+            return f"{resident.name} no está para cuidar de nadie"
+        return None
+
+    def hand(self, world: "SimulationWorld", child_id: str, resident_id: str) -> "Handed":
+        """Put a bundle in the arms of a resident, whoever they are to it: they carry it and
+        feed it from now on, as a parent would, while they are there and in a state to. It
+        makes them nothing to it: with them gone, it is its parents' to see to again."""
+        bundle = world.bundles.get(child_id)
+        resident = world.residents.get(resident_id)
+        if bundle is None or resident is None:
+            return Handed(False, "Ya no está")
+        error = self.cannot_mind(world, resident)
+        if error is not None:
+            return Handed(False, error)
+        bundle.minded_by = resident_id
+        self._keep(world, bundle, resident)
+        text = f"{resident.name} coge en brazos a {bundle.name}"
+        world.emit_event(
+            DomainEvent(HANDED_EVENT, HANDED_IMPORTANCE, text, [resident_id], data={"child_id": child_id}),
+            at=resident.tile,
+        )
+        return Handed(True, text)
 
     def carried_by(self, world: "SimulationWorld", resident: Resident) -> list[Bundle]:
         """The bundles a resident has on their back."""

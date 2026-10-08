@@ -95,7 +95,8 @@ python -m simulation.headless --days 7 --seed 7
 
 ## Controls
 
-- Arrow keys or `WASD`, or drag the map with either mouse button: move the view over the settlement
+- Arrow keys or `WASD`, or drag the ground of the map with either mouse button: move the view
+  over the settlement
 - Selecting a resident makes the view follow them wherever they go, until you move it yourself
 - Mouse wheel, `+` / `-`, or the `-` `+` buttons at the top: zoom. Zoomed all the way out the
   whole settlement fits on screen, buildings have their roof on and residents are shown as faces
@@ -156,6 +157,15 @@ python -m simulation.headless --days 7 --seed 7
   how they feel about the others. Click a pantry or a crate to see what is inside and whose it is, or the shop's
   counter to see what is on sale and at what price
 - The pause, speed and zoom buttons at the top can also be clicked
+- Drag a resident to pick them up: they hang from the pointer, and whatever is under it lights
+  up and says what letting go there would do. They are there at once and set about it: work
+  at a post, or have it for their own; sleep in a bed, eat at the pantry, sit by the fire; take
+  a wreck apart; see to a site; go into a building. Let go beside somebody, the wheel opens on
+  what the two can do. Where it could be more than one thing, the wheel asks which
+- Drag a child in its blanket into the arms of somebody. Hold the button down a moment on a
+  thing that stands on the map and it comes up to be put somewhere else. Drag a thing out of
+  the panel of whoever carries it, or of what it is kept in, onto somebody or onto a crate:
+  with `Mayús`, only one of them. The other mouse button, or `Esc`, lets go with nothing done
 - When a resident is at breaking point, is asked to take a post nobody is doing, or has a matter
   of the heart to settle, a `!` appears over them. Someone outside the settlement who comes on a
   risky find is not on the map: the line at the top says who is asking, and `Tab` opens it. Click them or press `Tab` to hear them out, then press `1`-`4` or click to give

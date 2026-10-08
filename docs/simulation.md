@@ -318,6 +318,26 @@ room. An argument's importance rises with the resentment between the two.
   wait no longer is seen to all the same.
 - **It costs nothing**, and what is on offer follows from how things stand.
 
+### Put down where the player says
+
+- **The same order, given by where they are put** (`PutDownCommand`). A resident the player
+  picks up is there at once when let go: on the free tile nearest, beside what they were put
+  on, or on top of it where it is used from there.
+- **What they are put on is what they set about**: their post, in its hours; a post of
+  another job, which is theirs from then on, with whoever had it left without; what is used;
+  what can be taken apart; a site; a building, which they are then inside; a child lying
+  about. Beside somebody, they stand there until told what the two do. By anything else, they
+  pass the time. On bare ground they are simply there.
+- **More than one thing waits to be told which**: a thing that is a post and is used too.
+- **What cannot be done only puts them down**, and says why. What it would do can be asked
+  first, with nothing done.
+- **What they had been told is taken up again after.**
+- **A child still in its blanket can be put in the arms of anybody**
+  (`HandChildCommand`), who sees to it while they are there and in a state to.
+- **A thing can be put in the hands of anybody, or put away** (`HandItemCommand`). In
+  somebody's hands it is theirs. Whoever it was taken from for another takes it ill by what
+  it was worth to them, if they are there to see it go.
+
 ### Tasks, and taking things apart
 
 - **A site in somebody's charge is their work**, ahead of their own post: by day they carry to

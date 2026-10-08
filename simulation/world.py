@@ -4,6 +4,7 @@ from dataclasses import dataclass, field, replace
 from simulation.ai.activity_system import ActivitySystem
 from simulation.ai.affect import AffectOption, AffectResult, AffectSystem, QueuedOrder
 from simulation.ai.leisure import LeisureSystem
+from simulation.ai.placing import GROUND, Foreseen, PlacingResult, PlacingSystem
 from simulation.clock import SimulationClock
 from simulation.commands import SimulationCommand
 from simulation.events.decision import Decision
@@ -18,11 +19,12 @@ from simulation.economy.trade_system import TradeSystem
 from simulation.events.intervention_system import InterventionSystem
 from simulation.events.world_event import Upcoming, Weather
 from simulation.events.world_event_system import WorldEventSystem
-from simulation.family.children import Bundle, ChildSystem
+from simulation.family.children import Bundle, ChildSystem, Handed
 from simulation.family.family_system import SLEEP_ROUGH_ACTION, FamilySystem
 from simulation.family.kin import KinRecord
 from simulation.health.health_system import HealthSystem
 from simulation.health.injury import Death
+from simulation.items.handing import HandingResult, HandingSystem
 from simulation.items.inventory import Inventory
 from simulation.items.item import ItemInstance
 from simulation.items.item_system import ItemSystem
@@ -101,6 +103,8 @@ class SimulationWorld:
     interventions: InterventionSystem = field(default_factory=InterventionSystem)
     affect: AffectSystem = field(default_factory=AffectSystem)
     leisure: LeisureSystem = field(default_factory=LeisureSystem)
+    placing: PlacingSystem = field(default_factory=PlacingSystem)
+    handing: HandingSystem = field(default_factory=HandingSystem)
     # Open chances for the player to advise a resident, by decision ID.
     decisions: dict[str, Decision] = field(default_factory=dict)
     decision_count: int = 0
@@ -313,6 +317,28 @@ class SimulationWorld:
     def set_free_will(self, resident_id: str, free: bool) -> AffectResult:
         """Say whether a resident does anything of their own accord, or only what they are told."""
         return self.affect.set_will(self, resident_id, free)
+
+    def foresee_put_down(self, resident_id: str, tile: Tile, on_kind: str = GROUND, on_id: str | None = None) -> Foreseen:
+        """What putting a resident down somewhere would do, with nothing done."""
+        return self.placing.foresee(self, resident_id, tile, on_kind, on_id)
+
+    def put_down(
+        self, resident_id: str, tile: Tile, on_kind: str = GROUND, on_id: str | None = None, does: str | None = None
+    ) -> PlacingResult:
+        """Put a resident down somewhere. They are there at once, and set about what they were put on."""
+        return self.placing.put_down(self, resident_id, tile, on_kind, on_id, does)
+
+    def hand_child(self, child_id: str, resident_id: str) -> Handed:
+        """Put a child still in its blanket in the arms of somebody, who sees to it from then on."""
+        return self.children.hand(self, child_id, resident_id)
+
+    def foresee_hand_item(self, item_id: str, to_kind: str, to_id: str) -> str:
+        """What putting a thing in the hands of somebody, or in something things are kept in, would do."""
+        return self.handing.foresee(self, item_id, to_kind, to_id)
+
+    def hand_item(self, item_id: str, to_kind: str, to_id: str, units: int | None = None) -> HandingResult:
+        """Put a thing in the hands of somebody, whose it then is, or in something things are kept in."""
+        return self.handing.hand(self, item_id, to_kind, to_id, units)
 
     def order_salvage(self, resident_id: str, object_id: str) -> UrbanismResult:
         """Tell a resident to take something apart for what it is made of. It is their task until it is done."""

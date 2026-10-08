@@ -2049,38 +2049,75 @@ Still to settle:
 - Whether the player is shown how a vote is going to go before it is held, and what each
   resident makes of the player, or has to find both out
 
-### P27 — Picked up and put down (needs P10) — planned
-The user's idea: residents can be dragged and dropped, and where one is dropped is what they do.
+### P27 — Picked up and put down (needs P10, P57 and S51) — done
+The user's idea: residents can be dragged and dropped, and where one is dropped is what they
+do. Taken up on 2026-10-08 as "vamos a trabajar en el drag and drop, debe haber interacción
+con todo". What it does is S51. This is the mouse and what is seen.
 
-- **A resident is picked up with the mouse on the map and carried with the pointer**, their
-  body hanging from it as a paper doll's would (P10), and put down wherever the button is let go
-- **What they are dropped on is what they set about**, as far as it can be done:
-  - on a place of work, they work at it
-  - on another resident, the two have something to do with each other
-  - on a bed, they lie down and sleep
-  - on whatever else is used, they use it: the pot or the pantry to eat, the tank to drink,
-    the bar, the clinic's bed, a seat, the study desk, the radio
-  - on bare ground, they are simply there now
-- **What a drop would do is shown before the button is let go**: the thing under the pointer
-  lights up and says what will come of it, or that nothing will
-- The simulation gets it as a command like any other, by stable IDs, so that it runs headless
-  and can be tested without a screen: who, and on what or on whom
-- A drop that cannot be acted on puts them down and nothing else: a post that is not theirs to
-  take, a bed that is somebody else's, somebody who is asleep or out of the settlement
+Asked first, in two batches, and answered:
+- **What can be picked up**: all four that were offered. Residents, a child still in its
+  blanket, things that stand on the map, and things out of an inventory
+- **They are where they are put at once**, and do not walk there
+- **Where it could come to several things**, in the user's words: "el menú de afectar nuevo
+  pero con la persona que se le ha soltado". The wheel (P57) opens about whoever was put
+  down, already on the person they were put beside. A small menu of its own had been
+  recommended
+- **Put down on a post that is not theirs, it is theirs and whoever had it is left
+  without**: "Le da el puesto y echa al que estaba", over the post only if it stood free,
+  which had been recommended
+- **A thing that stands on the map comes up after the button is held on it a moment**, so
+  that dragging across the map goes on moving the view
+- **A thing taken from somebody for another changes hands, and sits ill**, over its simply
+  changing hands, which had been recommended
+- **Put down on a building, they are inside and no more.** That the house became theirs if
+  they had none had been recommended, and was not taken
+- **Time goes on while somebody is in the hand, and it costs them nothing**
 
-Still to settle, to be asked before it is built:
-- **Whether a drop is an order or a nudge.** Everywhere else residents decide for themselves and
-  the player advises (S4). Either a drop is the one place where the player's hand settles it, or
-  it puts the thing in front of them and they do it unless they have a strong reason not to
-- What two residents do when one is dropped on the other: what they would have done anyway by
-  what they feel for each other, or something the player picks as they let go
-- Whether dropping somebody on a place of work gives them the post, or only has them lend a
-  hand there this once
-- Whether they are where they are dropped at once, or walk there from where they were
-- Whether time stops while somebody is in the air
-- What being carried about is to them: nothing, or something that tells on their nerves and on
-  what they make of being told what to do (S20)
-- Whether a child's bundle can be picked up and handed to somebody the same way (S25)
+That a drop is an order and not a nudge was not asked again: it had been answered for
+affecting a resident (S37), of which this is another way.
+
+- **Somebody is picked up by dragging them**: they come off the map and hang from the
+  pointer by the scruff of the neck, with a clip of their own (`dangle`), their legs trailing
+  behind the hand as it goes and kicking a little when it is still. A click on them is still
+  a click. They stand listening meanwhile, as whoever is stopped does (S37)
+- **What is under them lights up and says what letting go would do**, in a line by the
+  pointer: what the hand is over, or else what their feet are over. Over bare ground it is
+  their shadow, ringed, on the tile they would come down on. In red where nothing would come
+  of it, with why
+- **Let go beside somebody, the wheel opens about them on what the two can do**, by what the
+  one feels for the other, with the other already chosen
+- **Let go on a thing that is a post and is used too, the wheel asks which**: to use it, or
+  for the post to be theirs. Shut with nothing chosen, they stay where they were put
+- **A child in its blanket is dragged into the arms of somebody**, off the ground or off a
+  back. Anywhere else it goes back where it was
+- **A thing that stands on the map is held a moment and then carried**: it is seen faintly
+  where it would stand, and is put down there if there is room, as in `Urbanismo`
+- **A thing carried or kept is dragged out of the panel it is listed in**: onto somebody on
+  the map or onto their name in the panel, whose it then is, or onto something things are
+  kept in. With `Mayús` held only one of a stack goes. A click on it still opens its drawing
+- **Near an edge of the map, carrying something moves the view**
+- **The other button, or `Esc`, lets go with nothing done**: it is back where it was. So is
+  whatever is let go off the map
+
+Decided without asking:
+- Whoever is carried is selected, and the view stops following them: it stays where it is put
+- Aiming is by the hand first and by the feet after: over bare ground they come down on
+  the tile whose foot is nearest their feet
+- Nothing is picked up while the wheel is open, nor from inside a building. Going inside
+  with something in the hand lets go of it
+- Whoever has come to trade and whoever knocks at the gate are nobody to carry about
+- A thing in the hand is not seen where it stood, only where it would stand
+
+Still open here:
+- **Inside a building nothing is picked up or put down.** The inside is a place of its own
+  (S40) with its own way of saying where things are, and wants its own work
+- A building cannot be picked up from the map: that is still `Urbanismo`
+- Nothing can be dragged onto whoever has come to trade, to sell it, nor onto the gate, to
+  send somebody out
+- Nothing of this has been seen on a real window by whoever made it: the frames it was
+  judged by were drawn without one, and how the body swings was judged by its three poses
+  and not in motion
+- The opening has no lesson for it
 
 ### S30 — What a thing is for, and what is in it (needs S19 and S20) — planned
 Content comes in four milestones, S30 to S33, and a screen, P28. They are the user's brief: keep
@@ -2546,8 +2583,8 @@ Still open here:
 - The user chose orders over advice and no cost over a cost, which is not how the rest of the
   game goes (S4, S27). If it turns out to make advising pointless, what an order costs is one
   number away: what the player is to a resident is already there (S27)
-- Dragging a resident and dropping them on something (P27) is the same order given another
-  way, and is not built
+- Dragging a resident and dropping them on something is the same order given another way:
+  it was built later, as S51 and P27
 - A resident cannot be told to do anything about a thing they loathe, to give somebody
   something, or to work out of hours
 
@@ -4114,6 +4151,81 @@ Still open here:
 - The faces offered are the eight nearest: anybody further is to be clicked on the map
 - Nothing of this has been seen on a real window by whoever made it: the frames it was
   judged by were drawn without one
+
+### S51 — Put down where the player says (needs S37, S48 and S50) — done
+What picking somebody up and putting them down (P27) does in the settlement, with no screen:
+who, where, and on what or on whom, by stable IDs.
+
+- **It is the order of affecting a resident, given another way** (S37): by where they are
+  put, and not by what is said to them. Whoever cannot be told anything cannot be picked up,
+  nor can whoever is serving a sentence
+- **They are there at once**: on the free tile nearest to where they were let go, beside
+  what they were put on, and where it is used from on top, on top of it
+- **What they are put on is what they set about**:
+  - on their own post, in its hours, they work
+  - on the post of another job, it is theirs from then on: that very one, and whoever had it
+    is left without a job, looking for one
+  - on what is used, they use it: a bed, the pantry, the tank, the bar, the fire, the radio,
+    a bed of the clinic. It is an order to use that very thing (`use:thing`), which is not
+    among what the wheel offers
+  - on what can be taken apart, they take it apart, whoever had been told to
+  - on a site, it is theirs to see to
+  - on a building, they are inside, and it is nobody's for that
+  - on a child lying about, they take it up
+  - beside somebody, they stand there until it is said what the two do
+  - on anything else there is, they pass the time beside it (`otherwise` in
+    `data/placing.json`), so that everything on the map comes to something
+  - on bare ground, they are simply there now
+- **Where it could come to more than one thing, they stand there until told which**: the
+  cooking pot, the bar and the tank are posts and are used too
+- **What cannot be done puts them down and no more**, and says why: a bed that is somebody
+  else's, a post out of its hours, a bar with nobody behind it, a house locked to them,
+  somebody asleep
+- **What they were told before is not lost**: what they were at for having been told goes
+  back to wait its turn, and they take it up again after (S50)
+- **What would come of it can be asked first**, with nothing done: what, where they would
+  stand, and why not
+- **A child still in its blanket is put in the arms of somebody**, whoever they are to it.
+  They carry it and feed it from then on, while they are there and in a state to, and it
+  makes them nothing to it: with them gone it is its parents' again. It is saved
+  (`minded_by`), and a save from before has nobody's arms but its parents'
+- **A thing is moved by the hand of the player**, all of its stack or so many of it: into
+  somebody's hands, whose it then is, or into something things are kept in, where it is
+  still whose it was
+- **Whoever a thing is taken from to be given to another takes it ill**, by what it was
+  worth to them: their nerves go up and they come to resent whoever was given it, one way,
+  and they remember it. Only if they are there to see it go: out of their own hands while
+  they are awake, or from somewhere they can see. What happens out of their sight they know
+  nothing of
+
+Done when: put down on bare ground a resident is there and nowhere on the way; on a bed that
+is theirs to use they are asleep in it, and on one that is not they are only put down; on a
+free post it is theirs, that very one; on a post that was somebody's that one is left
+without; on what is a post and is used too nothing is theirs until it is said; everything
+on the map comes to something; a child handed to somebody is carried by them and goes back
+to its parents when they are gone; a thing taken from somebody in front of them sits ill
+with them, more the more it was worth, and out of their sight does not; and the same drops
+on the same seed come out the same.
+
+Decided without asking:
+- How far from where they are let go a free tile is looked for: four tiles (`reach`)
+- What losing a thing does: from 4 to 22 of their nerves and from 4 to 26 of resentment,
+  the most for a thing worth 30 to them or more (`taken` in `data/placing.json`)
+- Whoever is left without their post thinks no less of anybody for it, as no order costs
+  anything (S37)
+- A thing put away in something things are kept in sits ill with nobody: it is still theirs
+- Nobody is put into a house that is locked to them: they are left at its door, as any
+  drop that cannot be acted on leaves them
+- A building that is theirs to go into is theirs to be put into, whatever whoever lives
+  there thinks of them: only a locked door keeps them out
+- No new save version: the one new field has a default
+
+Still open here:
+- Whoever loses a thing out of their sight never finds out, as they would a theft (S5)
+- Somebody put down beside whoever is asleep cannot be told to wake them
+- A child cannot be put down in a bed or on the ground by the player: whoever sees to it
+  would take it up again the minute after
+- A resident cannot be put down on the gate to be sent out, nor on whoever has come to trade
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

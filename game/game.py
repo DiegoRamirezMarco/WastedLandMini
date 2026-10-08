@@ -424,6 +424,9 @@ class Game:
         ):
             # Out of the drawing or the voice, not out of the game. The editor closes itself on the same key.
             return
+        if key == pygame.K_ESCAPE and self.scene_name == "global" and self.global_view.drag.active:
+            # With something in the hand, the key lets go of it: the settlement stays on show.
+            return
         if key == pygame.K_ESCAPE:
             # Out of the settlement, not out of the game: the menu is where that is done.
             self.open_menu()
@@ -474,6 +477,10 @@ class Game:
 
     def sync_scenes(self) -> None:
         """Follow requests from the scenes to switch between them."""
+        if self.scene_name != "global" and self.global_view.drag.active:
+            # Whatever was in the hand when the settlement went off the screen is back where
+            # it was: the button will not come up over the map.
+            self.global_view.drag.cancel()
         if self.scene_name == MENU_SCENE:
             self._follow_menu()
             return

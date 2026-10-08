@@ -33,10 +33,12 @@ from simulation.ai.affect import (
     TAKE_JOB,
     TASK,
     TREAT,
+    USE_THING,
     WITH,
     WORDS,
     AffectOption,
 )
+from simulation.ai.placing import OBJECT, PASTIME as STAY_BY, POST, TAKE_APART, USE, WORK
 from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
 from simulation.world import SimulationWorld
 from ui.labels import expression_of
@@ -81,6 +83,11 @@ BACK_LABEL = "Volver"
 CLOSE_LABEL = "Nada"
 ROOT_HINT = "Lo que le digas, lo hará"
 WHO_HINT = "¿Con quién? Elige una cara, o a alguien en el mapa"
+WHICH_HINT = "¿Qué hace aquí?"
+# The category of what is drunk from a tank.
+WATER = "water"
+# What each thing that being put down on something can come to goes by.
+PLACING_ICONS = {USE: "food", WORK: "work", POST: "people", TAKE_APART: "scrap", STAY_BY: "leisure"}
 NOTHING_TO_SAY = "No está para que se le diga nada"
 QUEUE_HINT = "{said} (clic: quitárselo)"
 QUEUE_NOW = "Ahora: "
@@ -125,14 +132,19 @@ class WheelState:
     branch: str | None = None
     kind: str | None = None
     person: str | None = None
+    # The thing they were put down on, while which of the things it can come to is being
+    # chosen (P27): then that is all the wheel is about.
+    thing: str | None = None
     # Where on the canvas whoever it is about stands: the ring is laid out about there.
     centre: tuple[int, int] = (0, 0)
 
     def show(self, about: str, branch: str | None = None, kind: str | None = None) -> None:
         self.open, self.about, self.branch, self.kind, self.person = True, about, branch, kind, None
+        self.thing = None
 
     def shut(self) -> None:
         self.open, self.about, self.branch, self.kind, self.person = False, None, None, None, None
+        self.thing = None
 
     def back(self) -> bool:
         """Go a step back in what is being chosen. False if there was nothing chosen to go back from."""
@@ -206,10 +218,41 @@ def _option_item(option: AffectOption, intent: Hashable, said: str) -> WheelItem
     return WheelItem(intent, option.name or option.label, _hint(option, said), icon_of(option), mark=MARKS.get(option.liked or ""))
 
 
+def put_down_intent(does: str) -> tuple[str, str]:
+    return ("put_down", does)
+
+
+def use_icon(world: SimulationWorld, object_id: str | None) -> str:
+    """What using a thing is, as far as an icon says: a drink of water, being mended, a
+    sleep, something to eat or drink, or a sit."""
+    placed = world.interactables.get(object_id or "")
+    use = world.definition_of(placed).use if placed is not None else None
+    if use is None:
+        return "work"
+    if use.consumes == WATER:
+        return "water"
+    if use.heals:
+        return "medicine"
+    if use.unaware:
+        return "moon"
+    return "food" if use.consumes is not None else "leisure"
+
+
 def wheel_view(world: SimulationWorld, resident_id: str, state: WheelState) -> WheelView:
     """What the wheel about a resident shows, by what has been chosen in it so far."""
     resident = world.residents.get(resident_id)
     name = resident.name if resident is not None else ""
+    placed = world.interactables.get(state.thing or "")
+    if placed is not None:
+        # Put down on something that can come to more than one thing: which is all there is to say.
+        icons = {**PLACING_ICONS, USE: use_icon(world, placed.object_id)}
+        items = [
+            WheelItem(put_down_intent(found.does), found.name, f"{name} {found.text}", icons.get(found.does, "work"))
+            for found in world.placing.choices(world, resident_id, OBJECT, placed.object_id)
+            if found.open
+        ]
+        close = WheelItem(CLOSE_INTENT, CLOSE_LABEL, "Nada, que se quede ahí", "close")
+        return WheelView(f"{name}: {world.definition_of(placed).name.lower()}", items, close, WHICH_HINT)
     options = world.affect_options(resident_id)
     back = WheelItem(BACK_INTENT, BACK_LABEL, BACK_LABEL, "back")
     chosen = next((option for option in options if option.kind == state.kind), None)
@@ -404,6 +447,9 @@ def queue_entries(area: pygame.Rect, world: SimulationWorld, resident_id: str | 
         found.append((WILL_INTENT, "lock", WILL_HELD_HINT, False))
     for index, queued in enumerate(ahead):
         icon = queued.icon if queued.icon in ui_art.GLYPHS else TONE_ICONS.get(queued.tone) or GROUP_ICONS.get(queued.group, "talk")
+        if queued.order.kind == USE_THING:
+            # Told by being put down on a thing (P27): it goes by what using that thing is.
+            icon = use_icon(world, queued.order.target_id)
         said = (QUEUE_NOW if queued.doing else "") + queued.said
         found.append((cancel_intent(index), icon, QUEUE_HINT.format(said=said), queued.doing))
     step = QUEUE_BUTTON + 3

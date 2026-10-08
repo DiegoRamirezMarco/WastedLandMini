@@ -514,19 +514,31 @@ class GameShellTests(unittest.TestCase):
             last = at
         view.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=window(end), button=1))
 
+    def _bare_ground(self, near: tuple[int, int]) -> tuple[int, int]:
+        """A canvas position on the map by another with nothing on it that could be picked up."""
+        view = self.game.global_view
+        return next(
+            (near[0] + dx, near[1] + dy)
+            for dy in (20, 28, 36, -20, -28)
+            for dx in (0, 12, -12, 24, -24)
+            if view._on_map((near[0] + dx, near[1] + dy)) and view.drag.what_at((near[0] + dx, near[1] + dy)) is None
+        )
+
     def test_dragging_with_the_left_button_moves_the_map_and_clicks_on_nothing(self) -> None:
         view = self.game.global_view
         view.centre_on_resident("raul")
         view.render()
         on_raul = view.hitboxes["raul"].center
+        ground = self._bare_ground(on_raul)
         before = list(view.camera)
-        # Pressed on a resident and pulled away: the map comes along, and nobody is selected.
-        self._drag(on_raul, (on_raul[0] - 60, on_raul[1] - 30))
+        # Pressed on bare ground and pulled away: the map comes along, and nobody is selected.
+        # Pressed on a resident, it is them that come along (P27), which has tests of its own.
+        self._drag(ground, (ground[0] - 60, ground[1] - 30))
         self.assertEqual(view.camera, [before[0] + 60, before[1] + 30])
         self.assertIsNone(view.hud.selected_id)
         # The mouse may go on over the menu: the map still follows it until the button comes up.
-        self._drag(on_raul, (view.viewport.left - 30, on_raul[1]))
-        self.assertEqual(view.camera[0], before[0] + 60 + (on_raul[0] - view.viewport.left + 30))
+        self._drag(ground, (view.viewport.left - 30, ground[1]))
+        self.assertEqual(view.camera[0], before[0] + 60 + (ground[0] - view.viewport.left + 30))
         # With the button up again, moving the mouse moves nothing.
         still = list(view.camera)
         view.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(400, 300), rel=(-80, -40), buttons=(0, 0, 0)))

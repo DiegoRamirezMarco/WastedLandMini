@@ -106,6 +106,11 @@ Event types emitted so far:
 | `order_queued`, `order_cancelled` | The same, told to somebody who is at something else they were told, so that it waits its turn; and one of them taken back. Each with `kind` and `target` in `data` | 10 |
 | `order_dropped` | Something a resident was told cannot be done when its turn comes, and is let go, with `kind` and `target` in `data` | 15 |
 | `will_changed` | A resident is told to do nothing of their own accord, or given their will back, with `free` in `data` | 20 |
+| `resident_placed` | The player puts a resident down somewhere, with the `tile`, what it was `on` (`ground`, `object`, `resident`, `site`, `room` or `child`), its `target` and what comes of it (`does`) in `data` | 15 |
+| `post_lost` | A resident is left without their post because the player put another down on it, with the `job`, the `post` and who it went `to` in `data` | 40 |
+| `child_handed` | The player puts a child still in its blanket in the arms of a resident, with the `child_id` in `data` | 20 |
+| `item_handed` | The player puts a thing in the hands of somebody, or away, with the `item` and where it went `to` in `data` | 15 |
+| `item_taken` | Whoever a thing was taken from to be given to another takes it ill, with the `stress` and the `resentment` it came to in `data` | 35 |
 | `leisure_started` | A resident sets about a pastime alone, with the `pastime` and how they take it (`reaction`, or nothing) in `data` | 6 |
 | `leisure_declined` | Somebody asked to go on somewhere with another does not care to | 12 |
 | `joke_started`, `hug_started`, `flirt_started`, `kiss_started`, `insult_started`, `cards_started`, `stories_started`, `dance_started`, `invite_drink_started` | Two residents start that exchange, as with any other in `data/social.json` | as the data says |

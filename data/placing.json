@@ -1,0 +1,21 @@
+{
+  "reach": 4,
+  "otherwise": "sit",
+  "use": "usará {thing}",
+  "uses": {
+    "sleep": "se acostará en {thing}",
+    "eat": "comerá de {thing}",
+    "drink_water": "beberá de {thing}",
+    "drink": "tomará algo en {thing}",
+    "relax": "se sentará junto a {thing}",
+    "rest": "se tumbará en {thing} a que le curen",
+    "listen": "escuchará {thing}",
+    "shop": "comprará algo en {thing}",
+    "repair": "llevará algo a arreglar a {thing}"
+  },
+  "taken": {
+    "stress": [4, 22],
+    "resentment": [4, 26],
+    "worth_most": 30
+  }
+}

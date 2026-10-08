@@ -55,6 +55,8 @@ from scenes.body_stage import (
     grown_share,
 )
 from audio.voice_player import VoicePlayer
+from scenes.dragging import BUNDLE as HELD_BUNDLE
+from scenes.dragging import DANGLE_CLIP, SOMEBODY, THING, DragController
 from scenes.hud import (
     BUILD_INTENT,
     FAMILY_INTENT,
@@ -114,12 +116,14 @@ from simulation.commands import (
     AffectCommand,
     CancelOrderCommand,
     HoldResidentCommand,
+    PutDownCommand,
     ReleaseResidentCommand,
     SetFreeWillCommand,
     ScrapItemCommand,
     SuggestJobCommand,
 )
 from simulation.ai.affect import SALVAGE, SHARED, TASK
+from simulation.ai.placing import OBJECT as ON_OBJECT
 from simulation.events.event import DomainEvent
 from simulation.events.world_event_system import GATE_DECISIONS
 from simulation.family.children import BED as BUNDLE_IN_BED
@@ -139,7 +143,7 @@ from simulation.work.craft_system import FOUND_EVENT
 from simulation.residents.activity import PROTEST_ACTION
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
-from skeleton.plan import IDLE_CLIP, builtin_plan
+from skeleton.plan import FACINGS, IDLE_CLIP, builtin_plan
 from skeleton.rig import Skeleton
 from ui.affect_wheel import AFFECT_INTENT, BACK_INTENT, CLOSE_INTENT, SOCIAL, TASKS, WILL_INTENT
 from ui.fund_board import BARTER_BACK, CURRENCY, RENAME, FundEntry
@@ -424,6 +428,11 @@ class GlobalView:
         # Where each resident was last drawn, for picking them with the mouse.
         self.hitboxes: dict[str, pygame.Rect] = {}
         self.container_hitboxes: dict[str, pygame.Rect] = {}
+        # Where everything that stands on the map was last drawn, each site that is marked
+        # out and each child in its blanket: what can be picked up, or put down on (P27).
+        self.object_boxes: dict[str, pygame.Rect] = {}
+        self.site_boxes: dict[str, pygame.Rect] = {}
+        self.bundle_boxes: dict[str, pygame.Rect] = {}
         # Decision the player asked to open by clicking a resident. The game shell picks it up.
         self.requested_decision: str | None = None
         self._read_layout()
@@ -481,6 +490,8 @@ class GlobalView:
         self._press: tuple[int, int] | None = None
         self._drag_last: tuple[int, int] | None = None
         self._dragging = False
+        # What the player has picked up with the mouse, if anything (P27).
+        self.drag = DragController(self)
         # Index into ZOOM_TILE_SIZES.
         self.zoom = DEFAULT_ZOOM
         # What is being drawn this frame: the visible part of the map at the size of its art, where
@@ -552,13 +563,23 @@ class GlobalView:
             # The wheel zooms towards whatever is under the mouse, one step per notch.
             steps = (event.y > 0) - (event.y < 0)
             self.set_zoom(self.zoom + steps, canvas_position(pygame.mouse.get_pos()))
+        elif self.drag.active and (
+            (event.type == pygame.MOUSEBUTTONDOWN and event.button == 3)
+            or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE)
+        ):
+            # The other button, or Esc, lets go of whatever is in the hand: it is back where it was.
+            self._sound("click")
+            self.drag.cancel()
+            self._press, self._drag_last, self._dragging = None, None, False
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and self.hud.wheel.open:
             # The other button goes a step back in the wheel, and out of it from its first step.
             self._sound("click")
             self._affect_back(close=False)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self.pointer = canvas_position(event.pos)
-            if self._on_map(self.pointer):
+            # A press on somebody, or on a thing, may be the start of picking it up (P27).
+            liftable = self.drag.press(self.pointer)
+            if liftable or self._on_map(self.pointer):
                 # On the map a press may be the start of a drag. It is a click once the button
                 # comes up without the mouse having gone anywhere.
                 self._press, self._drag_last, self._dragging = self.pointer, self.pointer, False
@@ -567,14 +588,21 @@ class GlobalView:
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             press, dragged = self._press, self._dragging
             self._press, self._drag_last, self._dragging = None, None, False
-            if press is not None and not dragged:
+            if self.drag.active:
+                self.pointer = canvas_position(event.pos)
+                self.drag.let_go()
+            elif press is not None and not dragged:
+                self.drag.pressed = None
                 self.click(press)
         elif event.type == pygame.MOUSEMOTION:
             self.pointer = canvas_position(event.pos)
             if self._press is not None and self._drag_last is not None:
                 if not self._dragging:
                     self._dragging = max(abs(self.pointer[axis] - self._press[axis]) for axis in (0, 1)) >= DRAG_START
-                if self._dragging:
+                    if self._dragging and not self.drag.moved() and not self._on_map(self._press):
+                        # It began off the map, on something that would not come up: it is nothing.
+                        self._press, self._drag_last, self._dragging = None, None, False
+                if self._dragging and not self.drag.active and self._drag_last is not None:
                     # Dragging pulls the map along with the mouse, from where it was pressed.
                     self.pan(self._drag_last[0] - self.pointer[0], self._drag_last[1] - self.pointer[1])
                     self._drag_last = self.pointer
@@ -596,6 +624,8 @@ class GlobalView:
         if self.inside is None:
             self._minimap_kept = self.hud.minimap_rect is not None
         self.inside = room_id
+        # Whatever was in the hand is back where it was: nothing is carried in there.
+        self.drag.cancel()
         # There is no map to find one's way on in there.
         self.hud.minimap_rect = None
         self._press, self._drag_last, self._dragging = None, None, False
@@ -786,6 +816,7 @@ class GlobalView:
         """The frame while a building is looked at from inside: the room where the map was, and everything round it."""
         self.hitboxes = {}
         self.container_hitboxes = {}
+        self.object_boxes, self.site_boxes, self.bundle_boxes = {}, {}, {}
         self.task_bars = {}
         self.placards = {}
         self.sign_boxes = {}
@@ -800,6 +831,7 @@ class GlobalView:
         self.hud.update(dt)
         self.hud.pointer = self.pointer
         self._keep_listening()
+        self.drag.update(dt)
         pressed = pygame.key.get_pressed()
         for (dx, dy), keys in SCROLL_KEYS.items():
             if any(pressed[key] for key in keys):
@@ -832,6 +864,15 @@ class GlobalView:
             share = 1.0 if abs(gap) <= FOLLOW_SNAP else min(1.0, FOLLOW_RATE * dt)
             self.camera[axis] += gap * share
         self.scroll(0, 0)
+
+    def tile_under(self, position: tuple[int, int]) -> Tile:
+        """The tile of the map that a canvas position is on."""
+        x, y = self._map_point(position)
+        return (int(x // TILE_SIZE), int(y // TILE_SIZE))
+
+    def tile_box(self, tile: Tile) -> pygame.Rect:
+        """Where a tile of the map is on the canvas."""
+        return self._canvas_rect(pygame.Rect(tile[0] * TILE_SIZE, tile[1] * TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
     def _on_map(self, position: tuple[int, int]) -> bool:
         """Whether a canvas position is on the map itself, with nothing of the HUD over it."""
@@ -1140,6 +1181,8 @@ class GlobalView:
             wheel.branch, wheel.kind, wheel.person = intent[1], None, None
         elif isinstance(intent, tuple) and intent[0] == "affect_person":
             self._affect_person(intent[1])
+        elif isinstance(intent, tuple) and intent[0] == "put_down":
+            self._put_down_as(intent[1])
         elif isinstance(intent, tuple) and intent[0] == "order_cancel":
             self._cancel_order(intent[1])
         elif isinstance(intent, tuple) and intent[0] == "affect":
@@ -1262,6 +1305,37 @@ class GlobalView:
             self.hud.wheel.show(resident_id, TASKS, salvage)
         else:
             self.hud.wheel.show(resident_id)
+
+    def ask_with(self, resident_id: str, other_id: str) -> None:
+        """Somebody has been put down beside another (P27): the wheel opens about them on what
+        the two can do, by what the one feels for the other. They stand there until it is said."""
+        self._ask(resident_id)
+        self.hud.wheel.branch, self.hud.wheel.person = SOCIAL, other_id
+
+    def ask_which(self, resident_id: str, thing_id: str) -> None:
+        """Somebody has been put down on a thing that can come to more than one thing (P27):
+        the wheel opens about them on which."""
+        self._ask(resident_id)
+        self.hud.wheel.thing = thing_id
+
+    def _ask(self, resident_id: str) -> None:
+        self.hud.select_resident(resident_id)
+        # The view stays where the player put them: it does not go after them.
+        self._selection_seen, self.following = resident_id, None
+        self._affected = resident_id
+        self._sound("open")
+        self.hud.wheel.show(resident_id)
+
+    def _put_down_as(self, does: str) -> None:
+        """Say which of the things it can come to whoever was put down on something does."""
+        wheel = self.hud.wheel
+        resident = self.world.residents.get(wheel.about or "")
+        if resident is None or wheel.thing is None:
+            return
+        result = self.world.apply_command(PutDownCommand(resident.resident_id, resident.tile, ON_OBJECT, wheel.thing, does))
+        self.hud.notify(result.message)
+        self._sound("order" if result.ok else "refuse")
+        self._close_wheel()
 
     def _close_wheel(self) -> None:
         """Shut the wheel. Whoever was stopped for it goes about their day, or on to what they were told."""
@@ -1511,6 +1585,8 @@ class GlobalView:
         # Objects, residents and buildings share one list so that whatever stands lower on screen is in front.
         draws: list[Draw] = []
         self._bundle_names: list[tuple[pygame.Surface, tuple[int, int]]] = []
+        # Children in their blankets are placed as they are come to, before anything is drawn.
+        self.bundle_boxes = {}
         self._rough: list[Standing] = []
         for room_id in self._closed:
             room = self.world.rooms[room_id]
@@ -1547,7 +1623,8 @@ class GlobalView:
             # Remove only where a drawing has paint. Clear corners continue to show the ground.
             self._erase_for_picture(area, picture)
         for placed in self._standing():
-            if (placed.x, placed.y) not in self._hidden:
+            # What is in the hand of the player is not where it stood.
+            if (placed.x, placed.y) not in self._hidden and not self.drag.carries(THING, placed.object_id):
                 draws.append(self._object_draw(placed))
         for site in self.world.sites.values():
             if (site.x, site.y) not in self._hidden:
@@ -1557,7 +1634,9 @@ class GlobalView:
                 # Whoever is outside the settlement is nowhere on its map.
                 continue
             # Someone under a roof is still found: their face is shown on it, as from afar.
-            unseen = self.overview or resident.tile in self._hidden
+            # Whoever is in the hand is out from under it.
+            carried = self.drag.carries(SOMEBODY, resident.resident_id)
+            unseen = self.overview or (resident.tile in self._hidden and not carried)
             draws.append(self._marker_draw(resident) if unseen else self._resident_draw(resident))
         visitor = self.visitor()
         if visitor is not None:
@@ -1575,6 +1654,8 @@ class GlobalView:
                 draws.append(self._remains_draw(remains))
         self.hitboxes = {}
         self.container_hitboxes = {}
+        self.object_boxes = {}
+        self.site_boxes = {}
         self.task_bars = {}
         self.placards = {}
         self._overlays = []
@@ -1613,12 +1694,14 @@ class GlobalView:
         self._draw_at_gate()
         for overlay in self._overlays:
             overlay()
+        self.drag.draw_on_map()
         self.canvas.set_clip(None)
 
         self._seat_wheel()
         self.hud.render()
         self._draw_minimap(region)
         self._draw_away()
+        self.drag.draw_over()
 
     def _draw_zone_names(self) -> None:
         """A sign over each named place, on the wall at its back, so that the map can be read."""
@@ -1980,7 +2063,7 @@ class GlobalView:
         shown: list[Standing] = []
         scale = self.layers.scale
         for placed in self._standing():
-            if (placed.x, placed.y) in self._hidden:
+            if (placed.x, placed.y) in self._hidden or self.drag.carries(THING, placed.object_id):
                 continue
             definition = self.world.definition_of(placed)
             goods = displayed_goods(self.world, placed) if definition.display_of is not None else []
@@ -2088,6 +2171,8 @@ class GlobalView:
                     self._blit(self.icons.small(definition_id), (area.left + dx, area.top + dy))
             if placed.object_id in self.world.containers:
                 self.container_hitboxes[placed.object_id] = self._canvas_rect(area)
+            if placed.object_id in self.world.interactables:
+                self.object_boxes[placed.object_id] = self._canvas_rect(area)
 
         return (bottom, 0, draw)
 
@@ -2105,6 +2190,7 @@ class GlobalView:
         done = self.world.construction.fraction_done(self.world, site)
 
         def draw() -> None:
+            self.site_boxes[site.site_id] = self._canvas_rect(area)
             rect = area.move(-self._scene_origin[0], -self._scene_origin[1])
             pygame.draw.rect(self._scene, PALETTE["ochre"], rect.inflate(-2, -2), 1)
             for corner in (rect.topleft, (rect.right - 3, rect.top), (rect.left, rect.bottom - 3), (rect.right - 3, rect.bottom - 3)):
@@ -2144,6 +2230,8 @@ class GlobalView:
             return self._rough_draw(resident)
         x, y, facing, stride = self._walk_state(resident)
         x += self.sway(resident)
+        # Whoever the player has picked up hangs from the pointer (P27).
+        carried = self.drag.carries(SOMEBODY, resident.resident_id)
         # Somebody not yet grown has a smaller body under the head they were drawn with.
         grown = grown_share(self.world, resident)
         if doll is not None:
@@ -2170,6 +2258,8 @@ class GlobalView:
 
         # What they carry is in their pockets: nothing is in their hands but what they are using.
         clip, rate, overlay = (*self._way_of(resident, WALK), None) if stride is not None else self._bearing(resident)
+        if carried:
+            clip, rate, overlay = DANGLE_CLIP, 0.0, None
         if stride is None and self._seat_of(resident) is not None:
             # Sitting, they are not as tall: their name comes down with their head.
             plan = doll.plan if doll is not None and doll.plan is not None else self.bodies.plan
@@ -2180,6 +2270,11 @@ class GlobalView:
         turn = (stride if stride is not None else self.time) * rate
         index = int(turn * frames) % frames
         phase = turn % 1.0
+        if carried:
+            # Their legs trail behind the hand as it goes: towards their back, if that is the way it goes.
+            view, _, mirrored, _ = FACINGS[facing]
+            phase = 1.0 - self.drag.swing if mirrored and view != "front" else self.drag.swing
+            index = min(frames - 1, int(phase * frames))
         # A doll that sleeps on the ground lies down on it, curled up, and gets up from it.
         rough = self._rough_pose(resident, stride) if doll is not None else None
         if rough is not None:
@@ -2199,7 +2294,10 @@ class GlobalView:
         character.lively = doll is not None
         # With nothing to do and nothing in hand it may fidget.
         character.at_ease = (
-            stride is None and self._meal_in_hand(resident) is None and self._weapon_in_hand(resident) is None
+            stride is None
+            and not carried
+            and self._meal_in_hand(resident) is None
+            and self._weapon_in_hand(resident) is None
         )
         self._pocketing(resident, character)
         # A doll turns smoothly; the game's own bodies go from one kept picture to the next.
@@ -2208,6 +2306,9 @@ class GlobalView:
         # Whoever sits on something is in front of it, though it stands on the tile they are on.
         on_seat = stride is None and self._seat_under(resident) is not None
         depth = max(float(spot[1]), (y + 1) * TILE_SIZE + 0.5) if on_seat else float(spot[1])
+        if carried:
+            # In the hand, they are in front of everything that stands on the map.
+            depth = math.inf
 
         def draw() -> None:
             if doll is not None:
@@ -2227,7 +2328,9 @@ class GlobalView:
                     picture, origin = self._small_frame(picture, origin, grown)
                 self._blit(picture, (spot[0] - origin[0], spot[1] - origin[1]))
             hitbox = self._canvas_rect(body)
-            self.hitboxes[resident.resident_id] = hitbox
+            if not carried:
+                # Whoever is in the hand is nobody to point at: what is under them is.
+                self.hitboxes[resident.resident_id] = hitbox
             held = len(self._held)
             if not character.physical:
                 self._hold_all(resident, facing, character.pose(), spot[1], turn, stride, (grown, sole), clip)
@@ -2239,7 +2342,7 @@ class GlobalView:
                 lambda: self._draw_overhead(resident, (hitbox.centerx, over), with_name=not asleep, resting=asleep)
             )
 
-        return (top + TILE_SIZE, 1, draw)
+        return (math.inf if carried else top + TILE_SIZE, 1, draw)
 
     def _building_draw(self, room: Room) -> Draw:
         """A building with its roof on. Whatever stands behind it is hidden by as much as it rises."""
@@ -2302,6 +2405,11 @@ class GlobalView:
         Carried, it is on the back of whoever has it: a little behind them and well up from the
         ground. Put down, it is on its tile, off the ground where that is a bed or a table.
         """
+        if self.drag.carries(HELD_BUNDLE, bundle.child_id):
+            # In the hand of the player, it is under the pointer and in front of everything.
+            point = self.drag.map_point()
+            if point is not None:
+                return (point[0], point[1] + BUNDLE_WIDTH / 2, math.inf)
         carrier = self.world.residents.get(bundle.carried_by or "") if bundle.place == BUNDLE_CARRIED else None
         if carrier is not None and not carrier.away:
             x, y, facing, _ = self._walk_state(carrier)
@@ -2340,9 +2448,12 @@ class GlobalView:
         else:
             small = self.bundle_shown(bundle, round(BUNDLE_WIDTH))
             draws.append((depth, 1, lambda: self._blit(small, (round(area[0]), round(area[1])))))
+        place = self._canvas_rect(pygame.Rect(round(area[0]), round(area[1]), round(area[2]), round(area[3])))
+        if not self.drag.carries(HELD_BUNDLE, bundle.child_id):
+            # Where it is, to be picked up by, or to put somebody down on (P27).
+            self.bundle_boxes[bundle.child_id] = place
         if bundle.place != BUNDLE_CARRIED:
             # Put down, it has its name over it: there is nobody's back to look for it on.
-            place = self._canvas_rect(pygame.Rect(round(area[0]), round(area[1]), round(area[2]), round(area[3])))
             name = self.font.render(bundle.name, PALETTE["bone"])
             self._bundle_names.append((name, (place.centerx - name.get_width() // 2, place.top - CELL_SIZE[1])))
 
@@ -2650,7 +2761,8 @@ class GlobalView:
             self._draw_overhead(resident, hitbox.midtop, with_name=False, resting=lying_in is not None, unseen=True)
 
         def draw() -> None:
-            self.hitboxes[resident.resident_id] = hitbox
+            if not self.drag.carries(SOMEBODY, resident.resident_id):
+                self.hitboxes[resident.resident_id] = hitbox
             self._overlays.append(overlay)
 
         return ((y + 1) * TILE_SIZE, 1, draw)
@@ -2659,7 +2771,12 @@ class GlobalView:
         """Position in tiles, facing and how far into a stride, part-way through the current minute.
 
         The stride goes from 0 to 1 over a step with each foot. It is None for someone standing still.
+        Whoever the player has picked up is where the pointer has them, hanging from it (P27).
         """
+        if self.drag.carries(SOMEBODY, resident.resident_id):
+            hanging = self.drag.standing(grown_share(self.world, resident))
+            if hanging is not None:
+                return (hanging[0], hanging[1], resident.facing, None)
         trail = resident.trail
         if len(trail) < 2:
             return (resident.x, resident.y, resident.facing, None)

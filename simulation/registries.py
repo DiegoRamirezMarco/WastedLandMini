@@ -6,6 +6,7 @@ from typing import Any
 
 from simulation.ai.affect import AffectSettings, affect_settings_from_data
 from simulation.ai.leisure import LeisureSettings, leisure_settings_from_data
+from simulation.ai.placing import PlacingSettings, placing_settings_from_data
 from simulation.economy.settings import EconomySettings, economy_settings_from_data
 from simulation.events.decision import DecisionDefinition, decision_definition_from_data
 from simulation.events.world_event import RAID, STRANGER, WorldEventSettings, world_event_settings_from_data
@@ -20,6 +21,7 @@ from simulation.health.injury import (
     limb_definition_from_data,
 )
 from simulation.items.custom_content import load_custom_items
+from simulation.items.handing import HandingSettings, handing_settings_from_data
 from simulation.items.item import TASTE_TAG_PATTERN
 from simulation.items.registry import ItemRegistry
 from simulation.residents.manner import MannerSettings, manner_settings_from_data
@@ -181,6 +183,9 @@ class BuiltInRegistries:
     # What the player can tell a resident they have stopped.
     affect: AffectSettings = field(default_factory=AffectSettings)
     leisure: LeisureSettings = field(default_factory=LeisureSettings)
+    # What comes of putting somebody down somewhere, and of a thing changing hands (S51).
+    placing: PlacingSettings = field(default_factory=PlacingSettings)
+    handing: HandingSettings = field(default_factory=HandingSettings)
     # The laws there are to pass, and how a settlement decides what is put to it.
     laws: LawSettings = field(default_factory=LawSettings)
     proposals: ProposalSettings = field(default_factory=ProposalSettings)
@@ -301,6 +306,14 @@ class BuiltInRegistries:
         leisure_path = root / "leisure.json"
         if leisure_path.is_file():
             registries.leisure = leisure_settings_from_data(_read_object(leisure_path))
+        placing_path = root / "placing.json"
+        if placing_path.is_file():
+            placing = _read_object(placing_path)
+            registries.placing = placing_settings_from_data(placing)
+            taken = placing.get("taken", {})
+            if not isinstance(taken, dict):
+                raise ValueError("'taken' in placing.json must be an object")
+            registries.handing = handing_settings_from_data(taken)
         laws_path = root / "laws.json"
         if laws_path.is_file():
             registries.laws = law_settings_from_data(_read_object(laws_path))
@@ -419,6 +432,8 @@ class BuiltInRegistries:
         for pastime_id in self.leisure.pastimes:
             if pastime_id in self.interactions:
                 raise ValueError(f"Pastime {pastime_id} has the name of an exchange between two")
+        if self.leisure.pastimes and self.placing.otherwise not in self.leisure.pastimes:
+            raise ValueError(f"Somebody put down by a thing is left at an unknown pastime: {self.placing.otherwise}")
         for law_id, law in self.laws.laws.items():
             named = [law.needs_kind] if law.needs_kind is not None else []
             for degree in law.degrees:

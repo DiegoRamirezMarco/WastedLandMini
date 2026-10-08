@@ -50,10 +50,35 @@ class StaffingSystem:
         ]
         return len(at_it) < self.needed(world, job) and self.free_post(world, job) is not None
 
-    def assign(self, world: "SimulationWorld", resident: Resident, job_id: str) -> bool:
-        """Give a resident a job and a free post for it, in place of any they had. False if there is none."""
+    def dismiss(self, world: "SimulationWorld", resident: Resident) -> None:
+        """Leave a resident without the job they had: what they carried for it is put away,
+        and they are somebody looking for one again."""
+        if resident.job_id is None:
+            return
+        if resident.activity is not None and resident.activity.action in WORK_ACTIONS:
+            resident.activity = None
+            resident.current_action = "idle"
+        self._put_down(world, resident)
+        resident.job_id, resident.post_id, resident.work_progress = None, None, 0
+        resident.seeks_work = True
+
+    def assign(self, world: "SimulationWorld", resident: Resident, job_id: str, post_id: str | None = None) -> bool:
+        """Give a resident a job and a free post for it, in place of any they had. False if there is none.
+
+        `post_id` names the post it is to be, which must be one of that job's and nobody's:
+        somebody who has the job already is moved to it.
+        """
         job = world.registries.jobs.get(job_id)
-        post_id = self.free_post(world, job) if job is not None else None
+        if job is not None and post_id is not None:
+            placed = world.interactables.get(post_id)
+            taken = any(each.post_id == post_id for each in world.residents.values())
+            if placed is None or placed.kind != job.station or taken:
+                return False
+            if resident.job_id == job_id:
+                resident.post_id = post_id
+                return True
+        else:
+            post_id = self.free_post(world, job) if job is not None else None
         if job is None or post_id is None or resident.job_id == job_id:
             return False
         previous = world.registries.jobs.get(resident.job_id or "")

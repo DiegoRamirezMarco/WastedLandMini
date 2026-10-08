@@ -530,6 +530,22 @@ class Hud:
                 return edit_item_intent(definition_id)
         return next((select_intent(resident_id) for row, resident_id in self._listed() if row.collidepoint(position)), None)
 
+    def item_at(self, position: tuple[int, int]) -> str | None:
+        """The item listed in the panel under a canvas position, by its own ID: one of what
+        whoever is selected carries, or of what is kept in what is selected."""
+        resident = self.world.residents.get(self.selected_id or "")
+        inventory = resident.inventory if resident is not None else self.world.containers.get(self.selected_container or "")
+        if inventory is None:
+            return None
+        return next(
+            (item.instance_id for (box, _), item in zip(self._inventory_items(), inventory.items) if box.collidepoint(position)),
+            None,
+        )
+
+    def listed(self) -> list[tuple[pygame.Rect, str]]:
+        """Residents named in the panel on the right, with where each is named."""
+        return self._listed()
+
     def _inventory_items(self) -> list[tuple[pygame.Rect, str]]:
         resident = self.world.residents.get(self.selected_id or "")
         if resident is not None:

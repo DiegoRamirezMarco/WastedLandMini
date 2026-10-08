@@ -363,6 +363,11 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   one and the next go by from the first to the second of `every` seconds, and each is gone
   through at `rate` turns a second. A fidget should be a clip marked `once` that starts and
   ends standing. `idle` itself stays one pose: dolls are measured by it.
+- `dangle` is the clip of whoever the player has picked up, hanging from the pointer. It is
+  marked `once` and is never played through: its first key has the legs trailing behind, its
+  middle one has them hanging straight, and its last has them ahead, and how fast the hand
+  goes across the map says where between them the body is. It wants keys for the `side` and
+  for the `front`, each with its `root` raised, so that no foot is kept on the ground.
 - **Work, as it is shown** (`data/poses.json`). None of it changes what happens: it is how
   what the simulation says is going on looks. `work` is the clip of any work and how many
   turns of it a second (`clip`, `rate`). `jobs` gives a job a look of its own: its `clip`
@@ -804,6 +809,26 @@ the wheel, and an `icon`: one of the game's icons, or a file of that name in
 
 A pastime with somebody is an exchange in `data/social.json` with a `pastime`, offered from
 `leisure` in `data/affect.json`. The two may not share a name.
+
+## Picking up and putting down
+
+`data/placing.json` holds how a resident the player picks up is put down, and what a thing
+changing hands does.
+
+- `reach` is how many tiles from where they are let go a free one is looked for.
+- `otherwise` is the pastime, from `data/leisure.json`, that somebody is left at beside a thing
+  there is nothing else to do with.
+- `uses` is what is said of using a thing before it is done, by the `action` of its use in
+  `data/interactables.json`, with `{thing}` where it is named: `"sleep": "se acostará en
+  {thing}"`. `use` is what is said of any other.
+- `taken` is what whoever a thing is taken from for another is the worse for: `stress` and
+  `resentment`, each the least and the most, and `worth_most`, what the thing has to be worth
+  to them for it to be the most.
+
+What comes of being put down on a thing follows from what the thing is, with nothing to
+write for it: the `station` of a job is a post, a thing with a `use` is used, one with a
+`salvage` is taken apart, and anything else is somewhere to pass the time. A thing from a
+pack is put down on like any other.
 
 ## Taking things apart
 

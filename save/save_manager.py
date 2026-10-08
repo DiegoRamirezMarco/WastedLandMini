@@ -937,6 +937,8 @@ class SaveManager:
                 refused=[str(each) for each in _list_or_empty(saved.get("refused"))],
                 asking=_text_or_none(saved.get("asking")),
                 asked_at=int(saved.get("asked_at", 0)),
+                # Nobody's arms but its parents', in a save from before it could be handed to anybody.
+                minded_by=minder if (minder := _text_or_none(saved.get("minded_by"))) in world.residents else None,
             )
             world.bundles[bundle.child_id] = bundle
 
