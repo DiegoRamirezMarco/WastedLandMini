@@ -416,6 +416,66 @@ class LivelyCharacterTests(unittest.TestCase):
         self.assertLess(math.dist(fast.local_pose()["hand_right"], held_out), math.dist(slow.local_pose()["hand_right"], held_out))
 
 
+class GestureTests(unittest.TestCase):
+    """Something done once over whatever else a body is doing: no window, no pictures."""
+
+    def setUp(self) -> None:
+        self.plan = builtin_plan()
+        self.rate = 2.0
+
+    def _walker(self, lively: bool = True) -> Character:
+        body = Character(self.plan)
+        body.lively = lively
+        body.stand(0, 0, "doll_right", "walk", 0.3)
+        return body
+
+    def test_a_gesture_moves_the_bones_its_clip_names_and_leaves_the_rest_to_what_was_going_on(self) -> None:
+        body = self._walker()
+        walking = self.plan.turned("doll", "walk", 0.3).bones
+        self.assertIn("pocket", self.plan.once)
+        body.gesture("pocket", self.rate)
+        self.assertEqual(body.gesturing, "pocket")
+        body.update(0.3 / self.rate)
+        aim = body.aim().bones
+        reaching = self.plan.sample("pocket", "doll", 0.3).bones
+        self.assertEqual(set(reaching), {"neck", "skull", "upper_arm_right", "forearm_right"})
+        for bone, turned in reaching.items():
+            self.assertEqual(aim[bone], turned, bone)
+        self.assertLess(aim["upper_arm_right"][0], 0.0, "the hand goes back to the hip")
+        for bone in ("thigh_left", "thigh_right", "upper_arm_left", "spine"):
+            self.assertEqual(aim.get(bone), walking.get(bone), f"{bone} goes on walking")
+
+    def test_it_is_done_once_at_its_own_pace_and_then_the_body_is_as_it_was(self) -> None:
+        body = self._walker()
+        body.gesture("pocket", self.rate)
+        body.update(0.4)
+        self.assertEqual(body.gesturing, "pocket")
+        # Another asked for meanwhile waits for nothing: the one under way is finished, and that is all.
+        body.gesture("fidget_shrug", self.rate)
+        self.assertEqual(body.gesturing, "pocket")
+        body.update(0.11)
+        self.assertIsNone(body.gesturing, "half a second at two turns a second")
+        self.assertEqual(body.aim().bones, self.plan.turned("doll", "walk", 0.3).bones)
+        # With the game going faster its gestures go faster, as its springs do.
+        body.pace = 4.0
+        body.gesture("pocket", self.rate)
+        body.update(0.13)
+        self.assertIsNone(body.gesturing)
+        body.gesture("pocket", 0.0)
+        self.assertIsNone(body.gesturing, "a gesture that takes for ever is none")
+
+    def test_only_a_body_shown_moving_smoothly_makes_gestures(self) -> None:
+        kept = self._walker(lively=False)
+        kept.gesture("pocket", self.rate)
+        self.assertIsNone(kept.gesturing, "one kept as a picture for each frame of its clip has none")
+        self.assertEqual(kept.aim().bones, self.plan.turned("doll", "walk", 0.3).bones)
+        body = self._walker()
+        body.gesture("pocket", self.rate)
+        body.lively = False
+        body.update(0.1)
+        self.assertIsNone(body.gesturing, "and one that stops being shown so lets go of it")
+
+
 class LifeTests(unittest.TestCase):
     """A body shown moving breathes, and with nothing to do it shifts its weight and fidgets."""
 

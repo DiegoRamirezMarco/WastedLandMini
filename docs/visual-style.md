@@ -333,8 +333,7 @@ gradients and any colour.
   (`insight`) follows for as long again. Taking a thing as any other shows nothing.
 - Animated objects and bobbing icons run on real time and stop while the game is paused.
 - While someone eats or uses an item, its icon floats over their head.
-- What a resident carries for their job is drawn in their hands, or on their back when they walk
-  away from the viewer: the item's icon at half size.
+- What a resident carries for their job is not seen on them: it is in their pockets.
 - What a drawn resident holds, and what anyone eats, is the item's picture as large as it was
   made, without the empty paper round it: 11 map pixels along its longer side, a little out in
   front of the hand, on the window itself where there is one. A larger picture is brought down
@@ -477,6 +476,10 @@ each bone, and the game draws it in whatever pose it is in.
 - **A tool is held by its handle** and turns with the hands that hold it: it is in them, not
   in front of them. The hoe is the resident's own, the item they carry, in the picture it has;
   the hammer is nobody's, and is there for the look of it. Walking, hands are empty of both.
+- **Nothing is in the hands but what is being used**: a meal, a weapon in a fight, a tool at
+  work. What a resident carries, the goods of their job among it, is in their pockets and they
+  walk as anybody does. When something goes in or comes out a doll puts a hand to its hip
+  and looks down at it, once, without stopping whatever else it is at.
 - A posed body is drawn once for each frame of each clip and kept. While nothing happens to it,
   showing it is one blit and no physics runs.
 - **A blow** throws the body off its pose and it reels back to it. **A hard one** knocks it

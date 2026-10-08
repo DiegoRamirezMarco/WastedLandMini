@@ -4,6 +4,7 @@
 - Physics runs on real time and is never saved. It must not touch the simulation's RNG or clock.
 - The body plan, its limits and its clips are data in `data/skeleton.json`. Code never names a particular joint or bone.
 - How a thing with a handle is held is the clip's to say (`grip`), and where the hands are is the body plan's (`anchors`). `SkeletonPlan.handle` gives a point and a way; what is held, and its picture, is nobody's business here.
+- A gesture (`Character.gesture`) is a clip gone through once over whatever else a lively body is doing: only the bones it names. It runs on real time at the pace of the body and is never saved. Whoever shows the body decides when.
 - A body that is merely posed runs no physics. A limp one that lies still goes to sleep.
 - A lively body follows its clips on springs (`skeleton/motion.py`): real time, never saved, moved only when the body is looked at. How loose each bone is (`motion`) and which legs keep their feet on the ground (`footing`) are data.
 - Springs work on a body facing the unmirrored way. Mirroring comes last, in `SkeletonPlan.place`.

@@ -324,10 +324,10 @@ between the feet, with `y` growing downwards. Angles are in degrees.
 - `clips`: for each view, a list of keyframes that are run through in a loop. A keyframe gives
   bones an angle from rest, or `[angle, scale]` to make one look shorter as well, and may shift
   the whole body with `root`. A positive angle swings a hanging limb to the right of the screen.
-  The game uses `idle`, `argue` and, over any of them, `carry`; walking, eating and fighting
-  use whichever clip the resident's manner names (see Manners below), and work whichever
-  `data/poses.json` names for it (see Work, as it is shown, below). A clip that is missing
-  stands still.
+  The game uses `idle` and `argue`; walking, eating and fighting use whichever clip the
+  resident's manner names (see Manners below), and work whichever `data/poses.json` names
+  for it (see Work, as it is shown, below). A clip that is missing stands still. `carry`,
+  arms held out for a load, is there for whoever wants it: the game lays it over nobody now.
 - Beside its views a clip may say how something with a handle is held while it goes on, with
   `grip`. `"hands": 2` has the handle run from the palm of the hand of the far side through
   that of the near one, which is the nearer to its far end: where the two hands go, the
@@ -369,7 +369,11 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   far end in hundredths of the picture's side, and how `long` that is in a hand, in the
   skeleton's own measure. A thing with a handle, held in a clip that has a `grip`, turns
   with the hands; any other is shown flat in the hand, as a meal is. A picture drawn anew
-  in the item editor is turned by the same handle: draw it along the same line.
+  in the item editor is turned by the same handle: draw it along the same line. `pocket` is
+  the clip a doll goes through once, over whatever else it is doing, when its resident has
+  more on them or less than a moment before, and its `rate`: the bones that clip moves do as
+  it says meanwhile and the rest go on as they were, so move one arm and little else. Leave
+  it out and nothing is made of what goes into a pocket.
 - `footing` keeps feet on the ground. A clip moves the whole body with `root`; in the `views`
   listed, a foot of one of the `legs` (a bone and the one that hangs from it) that the clip
   has on the ground stays where it stands, and the knee bends to let the body go. A leg too

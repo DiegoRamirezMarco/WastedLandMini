@@ -989,19 +989,36 @@ class GameShellTests(unittest.TestCase):
         hoe.condition = -3.0
         self.assertEqual(condition_of(world, hoe), 0.0)
 
-    def test_a_load_is_seen_in_the_hands_that_carry_it(self) -> None:
+    def test_what_is_carried_goes_into_a_pocket_and_is_not_in_the_hands(self) -> None:
         view, world = self.game.global_view, self.game.world
+        self._stand_together("raul")
         raul = world.residents["raul"]
         self.assertIsNone(view._load_of(raul), "his own hoe is not a load")
-        view.centre_on_resident("raul")
-        view.render()
-        body = view.hitboxes["raul"].copy()
-        empty_handed = pygame.image.tobytes(self.game.canvas.subsurface(body), "RGB")
+        body = view.bodies.characters["raul"]
+        self.assertIsNone(body.gesturing, "the first time they are looked at nothing has changed")
         world.stock(raul.inventory, "vegetables", 4, None)
         self.assertEqual(view._load_of(raul), "vegetables")
+        # As a doll, which is how anybody is seen on a window, they are seen to put it away.
+        body.lively = True
+        view._pocketing(raul, body)
+        self.assertEqual(body.gesturing, view.poses.pocket.clip)
         with self.assertNoLogs("graphics.assets", level="WARNING"):
             view.render()
-        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(body), "RGB"), empty_handed)
+        self.assertEqual(view._held, [], "what they took up is in their pockets, not in their hands")
+        self.assertIsNone(body.overlay, "and their arms are not held out for it")
+        self.assertEqual(body.clip, "idle")
+        # Handing it over is noticed too, and nothing is while what they carry stays as it is.
+        self.assertFalse(view.bodies.took_or_gave(raul))
+        raul.inventory.take_units(raul.inventory.stack_of("vegetables", None).instance_id, 3)
+        self.assertTrue(view.bodies.took_or_gave(raul))
+        self.assertFalse(view.bodies.took_or_gave(raul))
+        self.assertFalse(view.bodies.took_or_gave(world.residents["tomas"]), "never the first time somebody is looked at")
+        # Walking with it they walk as anybody does.
+        raul.trail = [(raul.x - 1, raul.y), raul.tile]
+        view.tick_progress = 0.5
+        view.render()
+        self.assertEqual(view._held, [])
+        self.assertIsNone(body.overlay)
 
     def test_the_shop_shelves_show_the_stock_and_empty_as_it_sells(self) -> None:
         view, world = self.game.global_view, self.game.world

@@ -690,6 +690,15 @@
         {"at": 0.78, "root": [0.7, 1.8], "spine": [-27, 0.93], "neck": -5, "skull": -10, "upper_arm_right": -28.9, "forearm_right": 80.4, "upper_arm_left": -43.1, "forearm_left": 68.3},
         {"at": 0.88, "root": [0.6, 1.5], "spine": [-23, 0.95], "neck": -4, "skull": -8, "upper_arm_right": -28.5, "forearm_right": 85.9, "upper_arm_left": -35.9, "forearm_left": 67.9}
       ]
+    },
+    "pocket": {
+      "once": true,
+      "side": [
+        {"at": 0.0, "upper_arm_right": 0, "forearm_right": 0},
+        {"at": 0.3, "neck": -4, "skull": -12, "upper_arm_right": -26, "forearm_right": 34},
+        {"at": 0.62, "neck": -5, "skull": -14, "upper_arm_right": -34, "forearm_right": 12},
+        {"at": 1.0, "upper_arm_right": 0, "forearm_right": 0}
+      ]
     }
   },
   "doll": {

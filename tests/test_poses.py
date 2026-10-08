@@ -107,6 +107,9 @@ class PosesDataTests(unittest.TestCase):
             known = self.registries.items.find(thing) is not None
             self.assertTrue(known or item_pictures.painted(thing), f"{thing} has a handle and no picture")
         self.assertEqual(poses.work.clip, PLAIN_WORK)
+        # What is done on taking something up or handing it over is done once, with one arm.
+        self.assertIn(poses.pocket.clip, self.plan.once)
+        self.assertGreater(poses.pocket.rate, 0.0)
 
     def test_work_is_shown_by_its_job_and_by_whether_its_tool_is_in_hand(self) -> None:
         poses = self.poses
@@ -127,6 +130,7 @@ class PosesDataTests(unittest.TestCase):
         self.assertIn(poses.build.clip, self.plan.grips)
 
     def test_what_is_not_said_is_plain_and_what_cannot_be_is_refused(self) -> None:
+        self.assertIsNone(poses_from_data({}).pocket, "where nothing is said of it, nothing is made of it")
         empty = poses_from_data({})
         self.assertEqual((empty.work.clip, empty.work.rate, empty.build.clip, empty.jobs, empty.handles), (PLAIN_WORK, 1.0, PLAIN_WORK, {}, {}))
         made = poses_from_data({"work": {"clip": "work", "rate": 2}, "jobs": {"farmer": {"tool": {"clip": "hoe"}}}})

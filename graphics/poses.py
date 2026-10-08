@@ -57,6 +57,9 @@ class Poses:
     jobs: dict[str, JobDoing] = field(default_factory=dict)
     # Building, and taking apart.
     build: Doing = Doing()
+    # What a body does, once, when something is put among what it carries or taken out of it.
+    # None where nothing is made of that.
+    pocket: Doing | None = None
 
     def working(self, job_id: str | None, with_tool: bool) -> Doing:
         """How somebody at their post is shown, by their job and whether they have its tool in hand."""
@@ -97,7 +100,8 @@ def poses_from_data(data: dict[str, Any]) -> Poses:
         bare = _doing(values, f"The work of {job_id}", work)
         tool = _doing(values["tool"], f"The work of {job_id} with its tool", bare) if "tool" in values else None
         jobs[str(job_id)] = JobDoing(bare, tool)
-    return Poses(handles, work, jobs, _doing(data.get("build"), "Building", work))
+    pocket = _doing(data["pocket"], "Putting away") if "pocket" in data else None
+    return Poses(handles, work, jobs, _doing(data.get("build"), "Building", work), pocket)
 
 
 def load_poses(path: Path = POSES_PATH) -> Poses:

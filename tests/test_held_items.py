@@ -394,13 +394,18 @@ class HeldOnTheMapTests(unittest.TestCase):
         self.assertFalse(self.view._held[0][2])
         self.assertTrue(all(crumb.x > 0 for crumb in self.view._held[0][4]))
 
-    def test_a_drawn_resident_carries_their_load_in_their_hands(self) -> None:
+    def test_what_a_drawn_resident_carries_is_in_their_pockets_and_they_are_seen_to_put_it_there(self) -> None:
         self._draw_raul()
         self.raul.activity = None
+        before = self._count(self._show(), SAUCE)
+        body = self.view.bodies.characters["raul"]
+        self.assertIsNone(body.gesturing)
         self.world.stock(self.raul.inventory, "canned_beans", 3, None)
         window = self._show()
-        self.assertEqual([(entry[0], entry[4]) for entry in self.view._held], [("canned_beans", [])])
-        self.assertGreater(self._count(window, SAUCE), 20)
+        self.assertEqual(self.view._held, [], "nothing is in their hands but what they are using")
+        self.assertEqual(self._count(window, SAUCE), before, "and nothing of it is to be seen")
+        self.assertIsNone(body.overlay, "their arms are not held out for it")
+        self.assertEqual(body.gesturing, self.view.poses.pocket.clip, "a hand goes to the pocket as they take it up")
 
     def test_whoever_nobody_has_drawn_has_their_meal_in_their_hand_on_the_window_too(self) -> None:
         # Nobody is drawn: he is the figure the game draws of him, on the window like a doll of his own.

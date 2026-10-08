@@ -785,8 +785,8 @@ class InteriorView:
         clip, rate = view._way_of(resident, WALK) if stride is not None else view._clip_of(resident)
         turn = (stride if stride is not None else view.time) * rate
         renderer = view.bodies.renderer
-        # Whoever carries something for their job holds their arms out for it, as on the map.
-        overlay = self._carrying() if view._load_of(resident) is not None else None
+        # As on the map, what they carry is in their pockets and their hands are free.
+        overlay = None
         if doll is not None:
             facing = view._side_facing(resident.resident_id, view._lean(resident) or facing)
             plan = doll.plan if doll.plan is not None else view.bodies.plan
@@ -800,11 +800,9 @@ class InteriorView:
                 character.plan = plan
             character.lively = True
             character.at_ease = (
-                stride is None
-                and overlay is None
-                and view._meal_in_hand(resident) is None
-                and view._weapon_in_hand(resident) is None
+                stride is None and view._meal_in_hand(resident) is None and view._weapon_in_hand(resident) is None
             )
+            view._pocketing(resident, character)
             character.stand(*ground_spot(x, y), facing, clip, turn % 1.0, overlay)
             pose = character.local_pose()
             skeleton.set_pose(pose)
@@ -863,12 +861,6 @@ class InteriorView:
 
         return (foot[1], draw, label)
 
-    @staticmethod
-    def _carrying() -> str:
-        from scenes.global_view import CARRY_CLIP
-
-        return CARRY_CLIP
-
     def in_hand(
         self,
         resident: Resident,
@@ -882,12 +874,12 @@ class InteriorView:
     ) -> list:
         """What somebody has in their hand, as the map would show it, from where their feet are:
         the meal they are at with the bites gone from it and the crumbs that fly, what they
-        fight with, the tool of the work they are at, or what they carry for their job. Empty
-        for empty hands. `grown` is how much of its size their body is shown at, about the
+        fight with, or the tool of the work they are at. Empty for empty hands, and for what
+        they merely carry. `grown` is how much of its size their body is shown at, about the
         ground at `sole`, and `clip` what their body is doing."""
         view = self.view
         kept, view._held = view._held, []
-        view._hold_all(resident, facing, pose, 0.0, turn, stride, (grown, sole), clip, view._load_of(resident))
+        view._hold_all(resident, facing, pose, 0.0, turn, stride, (grown, sole), clip)
         held, view._held = view._held, kept
         return held
 

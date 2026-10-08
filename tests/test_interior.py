@@ -351,14 +351,14 @@ class InsideABuildingTests(unittest.TestCase):
         hand, mouth = held[0][1], held[0][5]
         self.assertLess(hand[1], 0, "up off the floor, in their hand: it goes by where their feet are")
         self.assertLess(mouth[1], hand[1] + 12)
-        # It is drawn with them, and so is whatever they carry for their job.
+        # It is drawn with them.
         self.view.enter("south_house")
         self.view.render()
         self.assertIn("ines", self.view.hitboxes)
         ines.activity = Activity("wander", minutes_left=600, using=True)
         self.world.stock(ines.inventory, "scrap", 2, None)
         carried = self.view.interior.in_hand(ines, "right", plan.pose("right", "idle", 0.0), 0.0, None)
-        self.assertEqual([entry[0] for entry in carried], ["scrap"])
+        self.assertEqual(carried, [], "what they carry for their job is in their pockets, as on the map")
         self.view.render()
         # Whoever builds in there has a hammer in hand, held by its handle as on the map.
         ines.activity = Activity("build", using=True)

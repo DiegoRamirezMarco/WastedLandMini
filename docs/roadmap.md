@@ -991,7 +991,8 @@ Tried by hand, a meal drawn at 64×64 in the item editor was eight pixels across
 whatever had been drawn on it, and the crumbs of a bite were four squares of fixed colours.
 - **What is held is the picture as it was drawn**, not its 16×16 icon: without the empty paper
   round it, 11 map pixels along its longer side, on the window at the window's own resolution
-- **A drawn resident carries their load in their hands** the same way
+- **A drawn resident carries their load in their hands** the same way (until P48: it is in
+  their pockets now)
 - **A meal is seen going**: a bite out of its outline, on the side of the mouth, at each fifth of
   the way through
 - **Crumbs of the food's own colours**: chips of several shapes and sizes that are tossed up,
@@ -3431,6 +3432,30 @@ Still open here:
 - The other posts (kitchen, bar, clinic, workshop, desk) are still plain work
 - Taking a thing apart is not shown as work at all, as before
 - Nothing of this has been seen on a real window by whoever made it
+
+### P48 — What is carried is in the pockets (needs P47) — done
+Asked with P47. The user: "por ejemplo cuando cultivan van todos con la zanahoria en las
+manos, segun van cogiendo cosas que vaya a su inventario, no necesariamente se tiene que ver
+si no lo estan usando".
+- **Nothing is in the hands but what is being used**: a meal, a weapon in a fight, the tool
+  of the work in hand. The goods somebody carries for their job were shown in their hands,
+  with their arms held out for them all the way there: they are in their pockets, and are
+  not seen
+- **Whoever carries walks as anybody does**, and with nothing else to do may fidget as
+  anybody does
+- **A hand goes to the pocket** when something is taken up or handed over: a doll looks down
+  and puts its near hand to its hip, once, over whatever else it is doing. It is a gesture,
+  which is new: a clip gone through once over another, moving only the bones it names. The
+  body it is laid over goes on walking, or working
+- The small bodies the game shows without a window had the load as an icon beside them. It
+  is gone too
+
+Still open here:
+- Nothing tells from afar who is carrying goods any more: it is on their card
+- The same gesture does for taking out and for putting away, and for one thing as for six
+- A tool is not seen taken out when work begins nor put away when it ends: it is in the
+  hands, and then it is not
+- The clip of arms held out for a load (`carry`) is left in the data, and nothing uses it
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

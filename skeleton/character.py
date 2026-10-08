@@ -81,6 +81,9 @@ class Character:
         # says it has nothing to do and nothing in hand.
         self.life: Life | None = None
         self.at_ease = False
+        # Something a lively body does once over whatever else it is doing, as putting a hand in
+        # a pocket: the clip of it, how far through that it is, and how many turns of it a second.
+        self._gesture: tuple[str, float, float] | None = None
         # Seconds left of the present stagger or of lying knocked down, and how long the stagger is.
         self._left = 0.0
         self._span = STAGGER_SECONDS
@@ -115,6 +118,18 @@ class Character:
         self.x, self.y, self.facing = x, y, facing
         self.clip, self.phase, self.overlay = clip, phase, overlay
 
+    def gesture(self, clip: str, rate: float = 1.0) -> None:
+        """Have the body go once through a clip over whatever else it is doing: the bones that
+        clip moves do as it says meanwhile, and the rest go on as they were. Only a lively body
+        does, and one already at a gesture finishes it first."""
+        if self.lively and self._gesture is None and rate > 0.0:
+            self._gesture = (clip, 0.0, rate)
+
+    @property
+    def gesturing(self) -> str | None:
+        """The clip of the gesture the body is in the middle of, if it is."""
+        return self._gesture[0] if self._gesture is not None else None
+
     @property
     def idle(self) -> bool:
         """Whether it stands with nothing to do and nothing in hand, physics aside."""
@@ -128,12 +143,16 @@ class Character:
         """
         view = FACINGS[self.facing][0]
         life = self.life if self.lively else None
-        if life is None:
-            return self.plan.turned(view, self.clip, self.phase, self.overlay)
         settings = self.plan.life
-        clip, phase = (life.idling(settings) if self.idle else None) or (self.clip, self.phase)
+        clip, phase = self.clip, self.phase
+        if life is not None and self.idle:
+            clip, phase = life.idling(settings) or (clip, phase)
         frame = self.plan.turned(view, clip, phase, self.overlay)
-        if settings.breath is not None:
+        if self.lively and self._gesture is not None:
+            bones = dict(frame.bones)
+            bones.update(self.plan.sample(self._gesture[0], view, self._gesture[1]).bones)
+            frame = Keyframe(frame.root, bones)
+        if life is not None and settings.breath is not None:
             frame = added(frame, self.plan.sample(settings.breath, view, life.breath))
         return frame
 
@@ -213,8 +232,14 @@ class Character:
             self._owed = min(self._owed + seconds * self.pace, UNSEEN)
             if self.life is not None:
                 self.life.update(self.plan.life, seconds, self.idle and not self.physical)
-        elif self._motion.started:
-            self._motion = Motion()
+            if self._gesture is not None:
+                clip, phase, rate = self._gesture
+                phase += seconds * self.pace * rate
+                self._gesture = (clip, phase, rate) if phase < 1.0 else None
+        else:
+            self._gesture = None
+            if self._motion.started:
+                self._motion = Motion()
         skeleton = self.skeleton
         if skeleton is None:
             return

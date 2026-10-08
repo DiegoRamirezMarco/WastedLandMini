@@ -165,7 +165,6 @@ LEAN = 0.05
 WALK_CLIP = "walk"
 ARGUE_CLIP = "argue"
 FIGHT_CLIP = "fight"
-CARRY_CLIP = "carry"
 EAT_CLIP = "eat"
 EAT_ACTION = "eat"
 CLIP_RATES = {ARGUE_CLIP: 1.2, FIGHT_CLIP: 1.5, EAT_CLIP: 1.15}
@@ -232,7 +231,6 @@ SMOKE_SECONDS = 2.4
 # Health below which a resident is shown as hurt.
 HURT_HEALTH = 70.0
 # Where a load is drawn on a body frame, by the way the resident faces: in their arms, or on their back.
-LOAD_OFFSETS = {"down": (4, 12), "up": (4, 10), "left": (0, 12), "right": (8, 12)}
 SUGGESTION_REFUSED = "Ahora no se le puede proponer ese puesto"
 NOBODY_NEEDS_ATTENTION = "Nadie necesita atención ahora"
 ROOFS_ON = "Tejados puestos: se quitan al mirar dentro"
@@ -1998,8 +1996,8 @@ class GlobalView:
                 spot[0] + math.floor(left), spot[1] + math.floor(high), math.ceil(right - left), math.ceil(low) - math.floor(high)
             )
 
-        load = self._load_of(resident)
-        overlay = CARRY_CLIP if load is not None else None
+        # What they carry is in their pockets: nothing is in their hands but what they are using.
+        overlay = None
         clip, rate = self._way_of(resident, WALK) if stride is not None else self._clip_of(resident)
         renderer = self.bodies.renderer
         frames = renderer.frames(clip, facing)
@@ -2015,11 +2013,9 @@ class GlobalView:
         character.lively = doll is not None
         # With nothing to do and nothing in hand it may fidget.
         character.at_ease = (
-            stride is None
-            and load is None
-            and self._meal_in_hand(resident) is None
-            and self._weapon_in_hand(resident) is None
+            stride is None and self._meal_in_hand(resident) is None and self._weapon_in_hand(resident) is None
         )
+        self._pocketing(resident, character)
         # A doll turns smoothly; the game's own bodies go from one kept picture to the next.
         character.stand(spot[0], spot[1], facing, clip, turn % 1.0 if doll is not None else index / frames, overlay)
 
@@ -2040,17 +2036,10 @@ class GlobalView:
                     # The game's own small body is brought down whole, head and all.
                     picture, origin = self._small_frame(picture, origin, grown)
                 self._blit(picture, (spot[0] - origin[0], spot[1] - origin[1]))
-            if load is not None and doll is None:
-                dx, dy = LOAD_OFFSETS[facing]
-                self._blit(self.icons.small(load), (body.left + dx, body.top + dy))
             hitbox = self._canvas_rect(body)
             self.hitboxes[resident.resident_id] = hitbox
             if not character.physical:
-                # A doll carries its load in its hands, where the carrying clip holds them out.
-                self._hold_all(
-                    resident, facing, character.pose(), spot[1], turn, stride, (grown, sole), clip,
-                    load if doll is not None else None,
-                )
+                self._hold_all(resident, facing, character.pose(), spot[1], turn, stride, (grown, sole), clip)
             self._overlays.append(lambda: self._draw_overhead(resident, hitbox.midtop, with_name=True))
 
         return (top + TILE_SIZE, 1, draw)
@@ -2312,11 +2301,10 @@ class GlobalView:
         stride: float | None,
         about: tuple[float, tuple[float, float]],
         clip: str,
-        load: str | None = None,
     ) -> None:
         """Have whatever a resident has in hand shown: the meal they are at, with the bites gone
-        from it, what they fight with, the tool of the work they are at, or else the `load` they
-        carry. Nothing for empty hands. `stride` is None for somebody standing still."""
+        from it, what they fight with, or the tool of the work they are at. Nothing for empty
+        hands, and what they merely carry is not in them. `stride` is None for somebody standing still."""
         meal = self._meal_in_hand(resident)
         weapon = self._weapon_in_hand(resident) if stride is None else None
         tool = self._tool_in_hand(resident) if stride is None else None
@@ -2326,8 +2314,13 @@ class GlobalView:
             self._hold(weapon, facing, pose, ground, about=about)
         elif tool is not None:
             self._hold(tool, facing, pose, ground, about=about, clip=clip)
-        elif load is not None:
-            self._hold(load, facing, pose, ground, about=about)
+
+    def _pocketing(self, resident: Resident, character) -> None:
+        """Have a body put a hand to its pocket when its resident has taken something up or
+        handed it over since they were last looked at."""
+        pocket = self.poses.pocket
+        if self.bodies.took_or_gave(resident) and pocket is not None:
+            character.gesture(pocket.clip, pocket.rate)
 
     def _draw_held(self, target: pygame.Surface, origin: tuple[float, float], detail: float) -> None:
         """Draw what residents hold, and the crumbs of their meals, on a surface where a map pixel

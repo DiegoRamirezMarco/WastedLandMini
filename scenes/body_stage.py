@@ -106,6 +106,8 @@ class BodyStage:
         self._seed = seed
         rest = self.plan.rests["front"]
         self._struck = sorted(rest, key=lambda joint: rest[joint][1])[:STRUCK_JOINTS]
+        # How many things each resident had on them when they were last looked at.
+        self._carried: dict[str, int] = {}
 
     def character(self, resident: Resident, losing: str | None = None) -> Character:
         """The body of a resident, made the first time it is asked for, short of what they have lost.
@@ -125,6 +127,14 @@ class BodyStage:
             if limb in self.plan.parts and limb not in character.lost:
                 character.lost.append(limb)
         return character
+
+    def took_or_gave(self, resident: Resident) -> bool:
+        """Whether a resident has more on them, or less, than when they were last looked at:
+        something has gone into their pockets or come out of them. Never the first time."""
+        carried = sum(item.quantity for item in resident.inventory.items)
+        before = self._carried.get(resident.resident_id)
+        self._carried[resident.resident_id] = carried
+        return before is not None and before != carried
 
     def on_events(self, world: SimulationWorld, events: Iterable[DomainEvent]) -> None:
         """Show on the bodies what the simulation just did to them."""
