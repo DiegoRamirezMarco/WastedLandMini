@@ -4,6 +4,7 @@ Nothing here is gameplay. The simulation says who was hurt, who lost what and wh
 it, in real time and with randomness of its own, and none of it is saved.
 """
 
+import math
 import random
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -38,6 +39,9 @@ SEVER_SPEED = 0.4
 SEVER_SPIN = 9.0
 # Rows of a tile left below the feet of whoever stands on it.
 FEET_ABOVE_EDGE = 2
+# Real seconds after which somebody nobody has looked at is taken as found: whatever they are
+# at, they are not seen to begin it.
+UNSEEN_SECONDS = 0.5
 
 
 # Rows of a head left visible when a resident lies in a bed: hair and eyes above the blanket.
@@ -108,6 +112,13 @@ class BodyStage:
         self._struck = sorted(rest, key=lambda joint: rest[joint][1])[:STRUCK_JOINTS]
         # How many things each resident had on them when they were last looked at.
         self._carried: dict[str, int] = {}
+        # Seconds gone by for the bodies, as fast as the game is going, and in real time.
+        self.clock = 0.0
+        self._real = 0.0
+        # For each resident: whether they lay on the ground when last looked at, when by the
+        # bodies' clock they were seen to lie down or to get up, and when in real time they
+        # were last looked at.
+        self._rest: dict[str, tuple[bool, float, float]] = {}
 
     def character(self, resident: Resident, losing: str | None = None) -> Character:
         """The body of a resident, made the first time it is asked for, short of what they have lost.
@@ -135,6 +146,18 @@ class BodyStage:
         before = self._carried.get(resident.resident_id)
         self._carried[resident.resident_id] = carried
         return before is not None and before != carried
+
+    def rest(self, resident_id: str, lying: bool) -> tuple[bool, float]:
+        """Whether a resident lies on the ground, as whoever asks says, and for how many seconds
+        they have been seen to: since they were seen to lie down, or to get up. Somebody found
+        already lying, or already up, has been so for ever."""
+        known = self._rest.get(resident_id)
+        if known is None or self._real - known[2] > UNSEEN_SECONDS:
+            since = -math.inf
+        else:
+            since = self.clock if known[0] != lying else known[1]
+        self._rest[resident_id] = (lying, since, self._real)
+        return (lying, self.clock - since)
 
     def on_events(self, world: SimulationWorld, events: Iterable[DomainEvent]) -> None:
         """Show on the bodies what the simulation just did to them."""
@@ -197,9 +220,12 @@ class BodyStage:
         """Let real time pass for whatever is being moved by physics. The rest costs nothing."""
         for resident_id in [resident_id for resident_id in self.characters if resident_id not in world.residents]:
             del self.characters[resident_id]
+        pace = max(1.0, float(world.clock.speed))
+        self.clock += seconds * pace
+        self._real += seconds
         for character in self.characters.values():
             # A body on springs keeps up with its clips however fast the game is going.
-            character.pace = max(1.0, float(world.clock.speed))
+            character.pace = pace
             character.update(seconds)
         now = world.clock.total_minutes
         self.remains = [remains for remains in self.remains if remains.until > now]

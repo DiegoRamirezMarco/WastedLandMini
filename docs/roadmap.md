@@ -3457,6 +3457,36 @@ Still open here:
   hands, and then it is not
 - The clip of arms held out for a load (`carry`) is left in the data, and nothing uses it
 
+### P49 — Curled up on the ground to sleep (needs P48) — done
+Asked with P47: whoever sleeps on the ground, for want of a bed, curls up on it, and is seen
+to lie down and to get up. They were a blanket with a head out at one end.
+- **Lying down**: a doll squats, puts its hands to the ground ahead, lets itself down and
+  draws its knees up under it
+- **Curled up**: knees under the body, shins along the ground, the trunk laid over the
+  thighs and the head by the hands. It breathes there, as it does whatever it is at. There
+  is no blanket: it is the whole of them that is seen
+- **Getting up**: it pushes itself up, squats and stands
+- **Only what is seen to begin is shown beginning.** Somebody the view comes upon asleep is
+  found lying, and somebody who walks off the moment they wake is simply up: the walk is
+  not kept waiting. How long anybody has been seen to lie, or to be up, is the stage's to
+  keep, in real time and as fast as the game goes
+- **What is picked, and where the sign of sleep goes, is as low as they lie**
+- Inside a building it is the same
+- **None of a doll is ever under the ground.** A body is laid down by turning every bone of
+  it, by the build every doll starts from; one with longer limbs had its knees or its hands
+  in the earth. Wherever a pose would have a joint under the ground, the whole body is that
+  much higher
+- Tried first and thrown out: the figure turned right over with its back up and its limbs
+  under it, as one lying on their side is seen from above. On a map seen from the front it
+  stood on its hands and knees with its feet in the air
+
+Still open here:
+- It is a crouch laid down and not a body on its side: a figure drawn from the side has no
+  front to show
+- Children under ten are still bundles, and whoever lies in a bed is still a head on a pillow
+- The small bodies shown without a window still have their blanket
+- Nothing of this has been seen on a real window by whoever made it
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

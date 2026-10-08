@@ -476,6 +476,12 @@ each bone, and the game draws it in whatever pose it is in.
 - **A tool is held by its handle** and turns with the hands that hold it: it is in them, not
   in front of them. The hoe is the resident's own, the item they carry, in the picture it has;
   the hammer is nobody's, and is there for the look of it. Walking, hands are empty of both.
+- **Whoever sleeps on the ground curls up on it.** With no bed to go to, a doll squats, puts
+  its hands to the ground, lets itself down and draws its knees up under it, its head by its
+  hands; it lies so, breathing, and when it wakes it pushes itself up and stands. Lying down
+  and getting up are shown when they are seen to happen: somebody found asleep is found
+  lying, and somebody who walks off as they wake is simply up. The small bodies shown without
+  a window are a blanket with a head out at one end, as before.
 - **Nothing is in the hands but what is being used**: a meal, a weapon in a fight, a tool at
   work. What a resident carries, the goods of their job among it, is in their pockets and they
   walk as anybody does. When something goes in or comes out a doll puts a hand to its hip

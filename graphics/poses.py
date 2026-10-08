@@ -49,6 +49,16 @@ class JobDoing:
 
 
 @dataclass(frozen=True)
+class OnTheGround:
+    """How somebody who sleeps on the ground is shown: lying down on it, once; lying there; and
+    getting up from it, once."""
+
+    down: Doing
+    asleep: Doing
+    up: Doing
+
+
+@dataclass(frozen=True)
 class Poses:
     # By the ID of the item, or of the prop, that is held.
     handles: dict[str, Handle] = field(default_factory=dict)
@@ -60,6 +70,8 @@ class Poses:
     # What a body does, once, when something is put among what it carries or taken out of it.
     # None where nothing is made of that.
     pocket: Doing | None = None
+    # Sleeping on the ground, for want of a bed. None where nothing is made of that either.
+    rough: OnTheGround | None = None
 
     def working(self, job_id: str | None, with_tool: bool) -> Doing:
         """How somebody at their post is shown, by their job and whether they have its tool in hand."""
@@ -101,7 +113,13 @@ def poses_from_data(data: dict[str, Any]) -> Poses:
         tool = _doing(values["tool"], f"The work of {job_id} with its tool", bare) if "tool" in values else None
         jobs[str(job_id)] = JobDoing(bare, tool)
     pocket = _doing(data["pocket"], "Putting away") if "pocket" in data else None
-    return Poses(handles, work, jobs, _doing(data.get("build"), "Building", work), pocket)
+    rough = None
+    if "sleep_rough" in data:
+        said = data["sleep_rough"]
+        if not isinstance(said, dict) or not {"down", "asleep", "up"} <= said.keys():
+            raise ValueError("Sleeping on the ground is lying down, lying there and getting up: it needs all three")
+        rough = OnTheGround(*(_doing(said[part], f"Sleeping on the ground ({part})") for part in ("down", "asleep", "up")))
+    return Poses(handles, work, jobs, _doing(data.get("build"), "Building", work), pocket, rough)
 
 
 def load_poses(path: Path = POSES_PATH) -> Poses:

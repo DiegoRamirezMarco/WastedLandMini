@@ -1967,11 +1967,13 @@ class GlobalView:
         lying_in = self._lying_in(resident)
         if lying_in is not None:
             return self._lying_draw(resident, lying_in)
-        if self.sleeps_rough(resident):
+        doll = self._doll_for(resident)
+        asleep = self.sleeps_rough(resident)
+        if asleep and (doll is None or self.poses.rough is None):
+            # The small bodies of the game do not lie down: a blanket, and a head out at one end.
             return self._rough_draw(resident)
         x, y, facing, stride = self._walk_state(resident)
         x += self.sway(resident)
-        doll = self._doll_for(resident)
         # Somebody not yet grown has a smaller body under the head they were drawn with.
         grown = grown_share(self.world, resident)
         if doll is not None:
@@ -2003,6 +2005,16 @@ class GlobalView:
         frames = renderer.frames(clip, facing)
         turn = (stride if stride is not None else self.time) * rate
         index = int(turn * frames) % frames
+        phase = turn % 1.0
+        # A doll that sleeps on the ground lies down on it, curled up, and gets up from it.
+        rough = self._rough_pose(resident, stride) if doll is not None else None
+        if rough is not None:
+            clip, phase = rough
+        if asleep:
+            # Lying there it is no taller than it lies: that is what is picked, and its name is not over it.
+            body = pygame.Rect(
+                round(spot[0] - ROUGH_SIZE[0] / 2), round(spot[1] - ROUGH_SIZE[1] - 6), round(ROUGH_SIZE[0]), round(ROUGH_SIZE[1] + 6)
+            )
         character = self.bodies.character(resident)
         # A doll stands and moves by its own measures, so that it is as it was drawn. Physics is
         # left with whatever body it has in hand until it is done with it.
@@ -2017,7 +2029,7 @@ class GlobalView:
         )
         self._pocketing(resident, character)
         # A doll turns smoothly; the game's own bodies go from one kept picture to the next.
-        character.stand(spot[0], spot[1], facing, clip, turn % 1.0 if doll is not None else index / frames, overlay)
+        character.stand(spot[0], spot[1], facing, clip, phase if doll is not None else index / frames, overlay)
 
         def draw() -> None:
             if doll is not None:
@@ -2040,7 +2052,9 @@ class GlobalView:
             self.hitboxes[resident.resident_id] = hitbox
             if not character.physical:
                 self._hold_all(resident, facing, character.pose(), spot[1], turn, stride, (grown, sole), clip)
-            self._overlays.append(lambda: self._draw_overhead(resident, hitbox.midtop, with_name=True))
+            self._overlays.append(
+                lambda: self._draw_overhead(resident, hitbox.midtop, with_name=not asleep, resting=asleep)
+            )
 
         return (top + TILE_SIZE, 1, draw)
 
@@ -2449,6 +2463,23 @@ class GlobalView:
         """Whether a resident is asleep on the ground, for want of a bed."""
         activity = resident.activity
         return activity is not None and activity.using and activity.action == SLEEP_ROUGH_ACTION
+
+    def _rough_pose(self, resident: Resident, stride: float | None) -> tuple[str, float] | None:
+        """The clip somebody who sleeps on the ground is at, and how far through it: lying down
+        on it, lying there, or getting up again when they wake. None for anybody else, and for
+        whoever walks off as they wake: they are simply up. Only what is seen to begin is
+        shown beginning: somebody found asleep is found lying."""
+        rough = self.poses.rough
+        if rough is None:
+            return None
+        lying, seconds = self.bodies.rest(resident.resident_id, self.sleeps_rough(resident))
+        if lying:
+            done = seconds * rough.down.rate
+            if done < 1.0:
+                return (rough.down.clip, done)
+            return (rough.asleep.clip, min(seconds, 1e6) * rough.asleep.rate % 1.0)
+        done = seconds * rough.up.rate
+        return (rough.up.clip, done) if done < 1.0 and stride is None else None
 
     def rough_blanket(self, width: int, height: int) -> pygame.Surface:
         """The blanket over whoever sleeps on the ground, at a size, made once and kept."""

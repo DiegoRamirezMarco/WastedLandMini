@@ -495,12 +495,14 @@ class SkeletonPlan:
             positions[bone.end] = (start_x + math.sin(angle) * reach, start_y + math.cos(angle) * reach)
         if view in self.footing.views:
             self._plant(positions, frame.root, rest)
+            # However it lies, and however long its limbs, none of it is under the ground.
+            sunk = max(y for _, y in positions.values())
         else:
             # A body that does not bend its legs to go down cannot go down: where a pose would
-            # have any of it under the ground it stands on, it is the whole of it higher.
+            # have any of it lower than it stands, it is the whole of it higher.
             sunk = max(y for _, y in positions.values()) - max(y for _, y in rest.values())
-            if sunk > 0.0:
-                positions = {name: (x, y - sunk) for name, (x, y) in positions.items()}
+        if sunk > 0.0:
+            positions = {name: (x, y - sunk) for name, (x, y) in positions.items()}
         if not mirrored:
             return positions
         return {(other_side(name) if swapped else name): (-x, y) for name, (x, y) in positions.items()}

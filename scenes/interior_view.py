@@ -803,7 +803,10 @@ class InteriorView:
                 stride is None and view._meal_in_hand(resident) is None and view._weapon_in_hand(resident) is None
             )
             view._pocketing(resident, character)
-            character.stand(*ground_spot(x, y), facing, clip, turn % 1.0, overlay)
+            # Whoever sleeps on the floor in here lies down on it as they would outside.
+            rough = view._rough_pose(resident, stride)
+            clip, phase = rough if rough is not None else (clip, turn % 1.0)
+            character.stand(*ground_spot(x, y), facing, clip, phase, overlay)
             pose = character.local_pose()
             skeleton.set_pose(pose)
             reach = doll.standing(plan)

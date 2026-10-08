@@ -373,7 +373,16 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   the clip a doll goes through once, over whatever else it is doing, when its resident has
   more on them or less than a moment before, and its `rate`: the bones that clip moves do as
   it says meanwhile and the rest go on as they were, so move one arm and little else. Leave
-  it out and nothing is made of what goes into a pocket.
+  it out and nothing is made of what goes into a pocket. `sleep_rough` is how a doll that
+  sleeps on the ground is shown, and needs all three of its parts: `down`, a clip done once
+  from standing to lying; `asleep`, the clip of lying there; and `up`, done once from lying
+  to standing. The last key of `down` and the first of `up` should be the pose of `asleep`.
+  A body is laid down by turning every one of its bones: a bone a key does not name stays
+  as it stands. Leave `sleep_rough` out and whoever sleeps on the ground is a blanket with a
+  head at one end, as the small bodies are.
+- However a pose has a doll, none of it is under the ground: where a joint would be, the whole
+  body is that much higher. Lay a body down by the build every doll starts from, and one
+  with longer limbs still lies on the ground and not in it.
 - `footing` keeps feet on the ground. A clip moves the whole body with `root`; in the `views`
   listed, a foot of one of the `legs` (a bone and the one that hangs from it) that the clip
   has on the ground stays where it stands, and the knee bends to let the body go. A leg too
