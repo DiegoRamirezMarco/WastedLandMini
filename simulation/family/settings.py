@@ -64,6 +64,8 @@ class ChildSettings:
     # in, and the minutes between asking one resident and the next.
     neglect_minutes: int = 720
     ask_gap_minutes: int = 60
+    # How well a bundle the player put down has to be for whoever sees to it to leave it there.
+    taken_up_below: float = 50.0
     # Events that whoever sees them happen to a child is the worse for, and by how much.
     seen_events: tuple[str, ...] = ("work_started", "injured", "limb_lost", "substance_taken", "fight_started")
     seen_mood: float = 6.0
@@ -95,6 +97,7 @@ def _children(data: dict[str, Any]) -> ChildSettings:
         mend_per_minute=float(bundle.get("mend_per_minute", defaults.mend_per_minute)),
         neglect_minutes=int(bundle.get("neglect_minutes", defaults.neglect_minutes)),
         ask_gap_minutes=int(bundle.get("ask_gap_minutes", defaults.ask_gap_minutes)),
+        taken_up_below=float(bundle.get("taken_up_below", defaults.taken_up_below)),
         seen_events=tuple(str(event) for event in seen.get("events", defaults.seen_events)),
         seen_mood=float(seen.get("mood", defaults.seen_mood)),
         seen_stress=float(seen.get("stress", defaults.seen_stress)),

@@ -42,6 +42,7 @@ from scenes.body_stage import (
     ground_spot,
     grown_share,
 )
+from scenes.carrying import HANG, IN_HAND_DEPTH
 from settings import SCALE, TILE_SIZE
 from simulation.family.children import CARRIED as BUNDLE_CARRIED
 from simulation.family.children import GROUND as BUNDLE_ON_GROUND
@@ -387,6 +388,29 @@ class InteriorView:
             return (ON_WALL, ((x - layout.wall.x) // layout.cell, 0))
         return None
 
+    def tile_under(self, room: Room, position: tuple[int, int] | None) -> Tile | None:
+        """The tile of the map that a place on the canvas is over, where that is the floor of the room."""
+        spot = self.spot_under(room, position)
+        if spot is None or spot[0] != FLOOR:
+            return None
+        return (room.x + spot[1][0] // GROWTH, room.y + spot[1][1] // GROWTH)
+
+    def tile_box(self, room: Room, tile: Tile) -> pygame.Rect | None:
+        """Where on the canvas the floor of a tile of the map is, if it is in the room."""
+        if not room.contains(tile):
+            return None
+        layout = self.layout(room)
+        left, top = self._to_canvas(layout.spot(*self.place(room, tile[0], tile[1])))
+        right, bottom = self._to_canvas(layout.spot(*self.place(room, tile[0] + 1, tile[1] + 1)))
+        return pygame.Rect(left, top, right - left, bottom - top)
+
+    def hand_foot(self, layout: InteriorLayout) -> tuple[int, int]:
+        """Where the feet of whoever hangs from the pointer are, in pixels of the room."""
+        view = self.view
+        pointer = view.pointer or view.viewport.center
+        hang = round(HANG * layout.cell / TILE_SIZE)
+        return ((pointer[0] - view.viewport.x) * SCALE, (pointer[1] - view.viewport.y) * SCALE + hang)
+
     def held_place(self, room: Room, position: tuple[int, int] | None) -> tuple[int, int] | None:
         """Where the ornament in hand would go if it were put down at a place on the canvas: the
         cell its corner takes, with the pointer at its middle and all of it kept inside the room."""
@@ -584,13 +608,16 @@ class InteriorView:
                 if placed.object_id in world.containers:
                     labels.append(self._kept_in(room, layout, placed))
         for resident in world.residents.values():
-            if resident.away or not room.contains(resident.tile):
+            # Whoever is in the player's hand is in here with it, wherever the map has them.
+            if resident.away or not (room.contains(resident.tile) or view._in_hand(resident)):
                 continue
             depth, draw, label = self._resident(room, layout, resident)
             draws.append((depth, draw))
             labels.append(label)
         for bundle in world.bundles.values():
-            if room.contains(bundle.tile):
+            carrier = world.residents.get(bundle.carried_by or "")
+            with_hand = view._bundle_in_hand(bundle) or (carrier is not None and view._in_hand(carrier))
+            if room.contains(bundle.tile) or with_hand:
                 draws.append(self._bundle(room, layout, bundle))
         for site in world.sites.values():
             if room.contains((site.x, site.y)):
@@ -749,9 +776,15 @@ class InteriorView:
         view = self.view
         detail = layout.cell / TILE_SIZE
         carrier = view.world.residents.get(bundle.carried_by or "") if bundle.place == BUNDLE_CARRIED else None
-        if carrier is not None and room.contains(carrier.tile):
+        in_hand = view._bundle_in_hand(bundle)
+        if in_hand:
+            foot = self.hand_foot(layout)
+            middle, bottom, depth = foot[0], foot[1], IN_HAND_DEPTH
+        elif carrier is not None and (room.contains(carrier.tile) or view._in_hand(carrier)):
             x, y, facing, _ = view._walk_state(carrier)
             foot = layout.spot(*self.place(room, x + 0.5 + view.sway(carrier), y + 0.5))
+            if view._in_hand(carrier):
+                foot = self.hand_foot(layout)
             turned = view._doll_facing.get(carrier.resident_id, DOLL_FACINGS.get(facing, DOLL_FACINGS["right"]))
             back = BUNDLE_BEHIND if turned == DOLL_FACINGS["left"] or facing == "left" else -BUNDLE_BEHIND
             share = grown_share(view.world, carrier)
@@ -762,6 +795,10 @@ class InteriorView:
             middle, bottom, depth = foot[0], foot[1] - raised, foot[1] + 0.7
         picture = view.bundle_shown(bundle, max(4, round(BUNDLE_WIDTH * detail)))
         corner_of = (round(middle - picture.get_width() / 2), round(bottom - picture.get_height()))
+        if not in_hand:
+            # Where it is, for taking it up with the mouse.
+            size = (max(4, picture.get_width() // SCALE), max(4, picture.get_height() // SCALE))
+            view.bundle_boxes[bundle.child_id] = pygame.Rect(self._to_canvas(corner_of), size).inflate(2, 2)
 
         def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
             target.blit(picture, (corner[0] + corner_of[0], corner[1] + corner_of[1]))
@@ -771,18 +808,22 @@ class InteriorView:
     def _resident(self, room: Room, layout: InteriorLayout, resident: Resident):
         """Somebody in the room: how far down the floor they are, how to draw them, and what goes over their head."""
         view = self.view
+        # In the player's hand they hang from it, whatever they were at and wherever they were.
+        carried = view._in_hand(resident)
         x, y, facing, stride = view._walk_state(resident)
-        lying_in = view._lying_in(resident)
+        lying_in = None if carried else view._lying_in(resident)
         if lying_in is not None:
             return self._asleep(room, layout, resident, lying_in)
         # Whoever is under something reels here as they do on the map.
         column, row = self.place(room, x + 0.5 + view.sway(resident), y + 0.5)
-        foot = layout.spot(column, row)
+        foot = self.hand_foot(layout) if carried else layout.spot(column, row)
         detail = layout.cell / TILE_SIZE
         doll = view._doll_for(resident)
         # Somebody not yet grown has a smaller body under the head they were drawn with.
         grown = grown_share(view.world, resident)
         clip, rate, overlay = (*view._way_of(resident, WALK), None) if stride is not None else view._bearing(resident)
+        if carried:
+            clip, rate, overlay = IDLE_CLIP, 1.0, None
         turn = (stride if stride is not None else view.time) * rate
         renderer = view.bodies.renderer
         # As on the map, what they carry is in their pockets and their hands are free.
@@ -799,19 +840,26 @@ class InteriorView:
                 character.plan = plan
             character.lively = True
             character.at_ease = (
-                stride is None and view._meal_in_hand(resident) is None and view._weapon_in_hand(resident) is None
+                not carried
+                and stride is None
+                and view._meal_in_hand(resident) is None
+                and view._weapon_in_hand(resident) is None
             )
-            view._pocketing(resident, character)
+            if not carried:
+                view._pocketing(resident, character)
             # Whoever sleeps on the floor in here lies down on it as they would outside.
-            rough = view._rough_pose(resident, stride)
+            rough = None if carried else view._rough_pose(resident, stride)
             clip, phase = rough if rough is not None else (clip, turn % 1.0)
             character.stand(*ground_spot(x, y), facing, clip, phase, overlay)
             pose = character.local_pose()
             skeleton.set_pose(pose)
+            if carried:
+                # Held by the scruff of the neck, they swing from it as the hand moves.
+                view._hang(skeleton, (0.0, -HANG))
             reach = doll.standing(plan)
             # A smaller body is brought down about the ground its soles are on.
             sole = (0.0, reach[3])
-            held = self.in_hand(resident, facing, pose, turn, stride, grown, sole, clip)
+            held = [] if carried else self.in_hand(resident, facing, pose, turn, stride, grown, sole, clip)
             high = reach[1] * (HEAD_OF_HEIGHT + (1.0 - HEAD_OF_HEIGHT) * grown)
             box = pygame.Rect(
                 foot[0] + math.floor(reach[0] * detail),
@@ -821,7 +869,8 @@ class InteriorView:
             )
 
             def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
-                self._shadow(target, corner, foot, layout)
+                if not carried:
+                    self._shadow(target, corner, foot, layout)
                 draw_doll(
                     target, doll, plan, skeleton, (corner[0] + foot[0], corner[1] + foot[1]), detail,
                     view.dolls.allowance, grown, sole,
@@ -833,7 +882,7 @@ class InteriorView:
             index = int(turn * frames) % frames
             picture, origin = renderer.frame(resident.resident_id, facing, clip, index, (), overlay)
             pose = view.bodies.plan.pose(facing, clip, index / frames, overlay)
-            held = self.in_hand(resident, facing, pose, turn, stride, grown, clip=clip)
+            held = [] if carried else self.in_hand(resident, facing, pose, turn, stride, grown, clip=clip)
             # The game's own small body is brought down whole for whoever is not grown.
             detail *= grown
             size = (round(picture.get_width() * detail), round(picture.get_height() * detail))
@@ -851,7 +900,8 @@ class InteriorView:
             detail /= grown
 
             def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
-                self._shadow(target, corner, foot, layout)
+                if not carried:
+                    self._shadow(target, corner, foot, layout)
                 target.blit(shown, (corner[0] + corner_of[0], corner[1] + corner_of[1]))
                 self._show_held(target, held, (corner[0] + foot[0], corner[1] + foot[1]), detail)
 
@@ -861,10 +911,13 @@ class InteriorView:
         over = min(hitbox.top, self._to_canvas((box.left, min([box.top, *tops])))[1])
 
         def label() -> None:
+            if carried:
+                # Nobody is picked out from under the hand that holds them.
+                return
             view.hitboxes[resident.resident_id] = hitbox
             view._draw_overhead(resident, (hitbox.centerx, over), with_name=True)
 
-        return (foot[1], draw, label)
+        return (IN_HAND_DEPTH if carried else foot[1], draw, label)
 
     def in_hand(
         self,

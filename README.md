@@ -164,6 +164,17 @@ python -m simulation.headless --days 7 --seed 7
   half as much again, tire faster, and have a flame over them and their ring in red: any
   unit may end with them hurt, their tool broken or what they made lost, the likelier the
   more tired they are and the less the better they are at it
+- Press on somebody on the map and pull away with the button held: they come along, hanging
+  from the pointer, and time stands still until they are let go. What the hand is over is
+  picked out, and a caption says what would come of letting go there. Over a post it
+  becomes theirs, and it says what they would make of it; over a post somebody has, the
+  two change posts; over a bed, a pot, the tank or a seat, they use it; over somebody, the
+  wheel opens on what the two can do; over bare ground they are there, and go on with
+  their day. `Tab` goes on to whatever else could come of it. Let go over a building with
+  its roof on, it is gone into with them still in the hand, and a click puts them down in
+  there. The other button, or `Esc`, lets go of them where they were. A child in its
+  blanket is taken up the same way: over somebody it is theirs to carry, and anywhere
+  else it is laid down
 - With nobody selected the panel on the right lists everybody: click a name to go to them. So
   does a click on anyone listed under a resident's relationships
 - While whoever is selected is talking with someone, the dock under the map shows the two of them

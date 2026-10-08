@@ -36,10 +36,10 @@ GROUPS = (NEED, WITH, INCITE, LEISURE, TASK, WORDS)
 # The groups of what is done with somebody else.
 SHARED = (WITH, INCITE, LEISURE)
 # What a resident can be told to get on with.
-TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, STOP = (
-    "to_post", "push", "take_charge", "salvage", "take_job", "leave_job", "treat", "stop",
+TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, USE, STOP = (
+    "to_post", "push", "take_charge", "salvage", "take_job", "leave_job", "treat", "use", "stop",
 )
-TASKS = (TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, STOP)
+TASKS = (TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, USE, STOP)
 # Who an exchange can be had with: anybody, only somebody they are no couple with, or only their partner.
 ANYBODY, SINGLE, PARTNER = "anybody", "single", "partner"
 # What an exchange is, for whoever shows it: between friends, between two who are drawn to
@@ -312,7 +312,7 @@ class AffectSystem:
             return AffectResult(False, error)
         resident = world.residents[resident_id]
         self.interrupted(world, resident)
-        self._leave_off(world, resident)
+        self.leave_off(world, resident)
         resident.activity = Activity(HEED_ACTION, None, [], world.registries.affect.hold_minutes, using=True)
         resident.current_action = HEED_ACTION
         text = f"{resident.name} se queda pensando"
@@ -332,7 +332,7 @@ class AffectSystem:
         resident.current_action = "idle"
         return True
 
-    def _leave_off(self, world: "SimulationWorld", resident: Resident) -> None:
+    def leave_off(self, world: "SimulationWorld", resident: Resident) -> None:
         """Have a resident drop what they are doing, and whoever they were doing it with."""
         activity = resident.activity
         if activity is not None and activity.partner_id is not None and activity.using:
@@ -541,7 +541,20 @@ class AffectSystem:
             if definition is None or self._holding(world, resident, definition.item_id) is None:
                 return None
             return ((definition.item_id, f"{definition.article} {definition.name}"),)
+        # Using one thing in particular is never among what is offered: it is told by
+        # naming the thing, as by putting them down at it (P27).
         return None
+
+    def can_use(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> bool:
+        """Whether a resident can be told to use one thing in particular, as things stand: it
+        is used at all, it is open to them, and there is room at it."""
+        use = world.definition_of(placed).use
+        if use is None or USE not in world.registries.affect.tasks:
+            return False
+        theirs = resident.activity is not None and resident.activity.target_id == placed.object_id
+        if world.users_of(placed.object_id) - (1 if theirs else 0) >= use.capacity:
+            return False
+        return world.activities.routine.open_for(world, resident, placed)
 
     def _named(self, world: "SimulationWorld", placed: Interactable) -> str:
         definition = world.definition_of(placed)
@@ -566,12 +579,16 @@ class AffectSystem:
 
     # ----- saying it -----
 
-    def order(self, world: "SimulationWorld", resident_id: str, kind: str, target_id: str | None = None) -> AffectResult:
+    def order(
+        self, world: "SimulationWorld", resident_id: str, kind: str, target_id: str | None = None, now: bool = False
+    ) -> AffectResult:
         """Tell a resident to do something. They do it, as far as it can be done.
 
         `kind` is one of what `options` offers, and `target_id` who or what it is about, where
         it is about somebody or something. Told while they are at something else they were
         told, or have yet to get to, it waits its turn. A few words are said there and then.
+        With `now` it does not wait: what they were at for having been told goes back to the
+        head of what they have ahead of them, and this is done first.
         """
         error = self.obstacle(world, resident_id)
         if error is not None:
@@ -584,7 +601,9 @@ class AffectSystem:
         group, _, name = kind.partition(":")
         told = f"{said[0].lower()}{said[1:]}"
         at_once = group == WORDS or (group == TASK and name == STOP)
-        if not at_once and (self.busy(world, resident_id) or resident.orders):
+        if now:
+            self.interrupted(world, resident)
+        elif not at_once and (self.busy(world, resident_id) or resident.orders):
             if len(resident.orders) >= settings.most_orders:
                 return AffectResult(False, f"{resident.name} ya tiene bastante por delante")
             resident.orders.append(Order(kind, target_id))
@@ -619,6 +638,14 @@ class AffectSystem:
         """Whether something can be told a resident as things stand, as why not if it cannot,
         and what telling it says."""
         group, _, name = kind.partition(":")
+        if group == TASK and name == USE:
+            # It names the thing itself, which need not be the nearest of its kind.
+            placed = world.interactables.get(target_id or "")
+            if placed is None:
+                return "Hay que decir con quién, o con qué", ""
+            if not self.can_use(world, resident, placed):
+                return "Eso no se le puede decir ahora", ""
+            return None, world.registries.affect.tasks[USE].label.replace("{target}", self._named(world, placed))
         shared = world.registries.affect.shared(group).get(name)
         if shared is not None:
             # Who it is with need not be among the few that are offered: anybody it can be had with will do.
@@ -660,7 +687,7 @@ class AffectSystem:
             activity = routine.use(world, resident, placed) if placed is not None else None
             if activity is None:
                 return nowhere
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
             resident.activity = activity
             resident.current_action = "walking"
             return None
@@ -669,7 +696,7 @@ class AffectSystem:
             other = world.residents.get(target_id or "")
             if other is None:
                 return "Ya no está"
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
             resident.activity = routine.social.pursue(world, resident, other, order.interaction)
             resident.current_action = "walking"
             return None
@@ -677,19 +704,19 @@ class AffectSystem:
             activity = world.leisure.plan(world, resident, name)
             if activity is None:
                 return "Eso no se le puede decir"
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
             resident.activity = activity
             resident.current_action = "walking" if activity.path else "idle"
             return None
         if name == STOP:
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
             resident.orders.clear()
             return None
         if name == TO_POST:
             activity = world.work.plan(world, resident)
             if activity is None:
                 return nowhere
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
             resident.activity = activity
             resident.current_action = "walking"
             return None
@@ -704,42 +731,51 @@ class AffectSystem:
             if activity is None:
                 world.rush.ease(resident)
                 return nowhere
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
             resident.activity = activity
             resident.current_action = "walking"
             return None
         if name == LEAVE_JOB:
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
             world.rush.ease(resident)
             resident.job_id, resident.post_id, resident.work_progress = None, None, 0
             return None
         if name == TAKE_JOB:
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
             return None if world.staffing.assign(world, resident, target_id or "") else "Ese puesto ya no está libre"
         if name == TAKE_CHARGE:
             site = world.sites.get(target_id or "")
             if site is None:
                 return "Esa obra ya no está"
             site.in_charge = resident.resident_id
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
             self._set_to_task(world, resident)
             return None
         if name == SALVAGE:
             result = world.salvaging.order(world, resident.resident_id, target_id or "")
             if not result.ok:
                 return result.message
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
             activity = world.salvaging.plan(world, resident, ScoredAction(SALVAGE_ACTION, 1.0, target_id))
             if activity is not None:
                 resident.activity = activity
                 resident.current_action = "walking"
+            return None
+        if name == USE:
+            placed = world.interactables.get(target_id or "")
+            activity = routine.use(world, resident, placed) if placed is not None else None
+            if activity is None:
+                return nowhere
+            self.leave_off(world, resident)
+            resident.activity = activity
+            resident.current_action = "walking" if activity.path else resident.current_action
             return None
         if name == TREAT:
             placed = self._holding(world, resident, target_id or "")
             activity = routine.use(world, resident, placed) if placed is not None else None
             if activity is None:
                 return nowhere
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
             resident.activity = activity
             resident.current_action = "walking"
             return None
@@ -887,7 +923,7 @@ class AffectSystem:
             return AffectResult(False, "Eso ya no lo tiene por delante")
         taken = ahead[index]
         if taken.doing:
-            self._leave_off(world, resident)
+            self.leave_off(world, resident)
         else:
             del resident.orders[index - (1 if ahead[0].doing else 0)]
         text = f"A {resident.name} ya no se le pide: {taken.said[0].lower()}{taken.said[1:]}"

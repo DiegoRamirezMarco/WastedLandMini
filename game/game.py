@@ -410,6 +410,9 @@ class Game:
         if self.scene_name == "global" and self.global_view.typing:
             # Nor while a building is being given its name.
             return
+        if self.scene_name == "global" and self.global_view.carry is not None:
+            # Nor while somebody is in the player's hand: the map sees to what the keys do then.
+            return
         if key == pygame.K_ESCAPE and self.scene_name in (
             EDITOR_SCENE,
             BUILDING_SCENE,

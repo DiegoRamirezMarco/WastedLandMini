@@ -270,6 +270,10 @@
       "label": "Que se dé un gusto: {target}",
       "icon": "food"
     },
+    "use": {
+      "name": "Usar",
+      "label": "Que use {target}"
+    },
     "stop": {
       "name": "Dejarlo todo",
       "label": "Que deje lo que está haciendo, y lo que tenía por delante",

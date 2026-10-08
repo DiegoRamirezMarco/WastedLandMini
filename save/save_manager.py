@@ -153,7 +153,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 40
+    CURRENT_VERSION = 41
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -950,6 +950,7 @@ class SaveManager:
                 continue
             place = str(saved.get("place", "ground"))
             carrier = _text_or_none(saved.get("carried_by"))
+            keeper = _text_or_none(saved.get("keeper"))
             bundle = Bundle(
                 child_id=str(saved["child_id"]),
                 name=str(saved.get("name", saved["child_id"])),
@@ -976,6 +977,8 @@ class SaveManager:
                 refused=[str(each) for each in _list_or_empty(saved.get("refused"))],
                 asking=_text_or_none(saved.get("asking")),
                 asked_at=int(saved.get("asked_at", 0)),
+                keeper=keeper if keeper in world.residents else None,
+                set_down=bool(saved.get("set_down", False)),
             )
             world.bundles[bundle.child_id] = bundle
 

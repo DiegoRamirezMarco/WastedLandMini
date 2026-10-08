@@ -361,6 +361,33 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
   wait no longer is seen to all the same.
 - **It costs nothing**, and what is on offer follows from how things stand.
 
+### Picked up and put down
+
+- **The player takes somebody up and puts them down somewhere else** (P27). They are there
+  at once, whatever they were at, and what they are put down on is what they set about, as
+  an order done before any that waited. What they had been told before is still theirs to do.
+- **On a post that stands free, it is theirs**, in place of any they had, and they work at
+  it if they have a shift ahead of them. **On a post somebody has, the two change posts**,
+  and whoever changes with somebody who had none is left with none. Nobody's post is
+  changed while they are out of the settlement.
+- **On a thing that is used, they use it**: that very bed, pot, tank or radio, if it is open
+  to them as it would be had they walked to it. On a seat they sit. On what is lying about
+  they take it apart. On a site they take charge of it. On somebody, they are stood beside
+  them. On bare ground they are there, and go on with their day.
+- **A post is a post first.** Where more than one thing could come of it, whoever puts them
+  down says which, and with nothing said it is the first: the post, then the use, then only
+  being left beside it.
+- **Nobody is put where they could not have walked to**, nor where somebody else stands or
+  is making for. Put down on a thing they stand on the free tile beside it that is nearest to
+  where they were let go.
+- **Not everybody can be taken up**: whoever is out, has been thrown out, is making up
+  their mind about something, or is locked up or in the stocks stays where they are.
+- **A child who is still a bundle** is put in the arms of somebody grown and in a state to,
+  who carries and feeds it before its own do for as long as they can, or is laid down, where
+  it stays. Laid anywhere but a bed it is the worse for it, and whoever sees to it takes it
+  up again before it is half gone.
+- **What a drop would do can be asked without doing it**, and asking changes nothing.
+
 ### Tasks, and taking things apart
 
 - **A site in somebody's charge is their work**, ahead of their own post: by day they carry to

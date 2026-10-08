@@ -50,24 +50,82 @@ class StaffingSystem:
         ]
         return len(at_it) < self.needed(world, job) and self.free_post(world, job) is not None
 
-    def assign(self, world: "SimulationWorld", resident: Resident, job_id: str) -> bool:
-        """Give a resident a job and a free post for it, in place of any they had. False if there is none."""
+    def holder(self, world: "SimulationWorld", post_id: str) -> Resident | None:
+        """Whoever has an object as their post, if anybody has."""
+        return next((resident for resident in world.residents.values() if resident.post_id == post_id), None)
+
+    def job_at(self, world: "SimulationWorld", post_id: str) -> JobDefinition | None:
+        """The job an object is a post of, if it is one."""
+        placed = world.interactables.get(post_id)
+        if placed is None:
+            return None
+        return next((job for job in world.registries.jobs.values() if job.station == placed.kind), None)
+
+    def assign(
+        self, world: "SimulationWorld", resident: Resident, job_id: str, post_id: str | None = None
+    ) -> bool:
+        """Give a resident a job and a free post for it, in place of any they had. False if
+        there is none. With `post_id` it is that post and no other, which may be another of
+        the job they have."""
         job = world.registries.jobs.get(job_id)
-        post_id = self.free_post(world, job) if job is not None else None
-        if job is None or post_id is None or resident.job_id == job_id:
+        if job is not None and post_id is not None:
+            fits = self.job_at(world, post_id) is job and self.holder(world, post_id) is None
+            post_id = post_id if fits else None
+        elif job is not None and resident.job_id != job_id:
+            post_id = self.free_post(world, job)
+        if job is None or post_id is None:
             return False
         previous = world.registries.jobs.get(resident.job_id or "")
+        self._leave_post(world, resident)
+        if previous is job:
+            # Another post of the job they had: nothing else changes, and nothing is said.
+            resident.post_id = post_id
+            return True
+        resident.job_id, resident.post_id, resident.work_progress = job_id, post_id, 0
+        resident.seeks_work = False
+        text = f"{resident.name} se hace cargo de un puesto: {job.name}"
+        if previous is not None:
+            text = f"{resident.name} cambia de puesto: de {previous.name} a {job.name}"
+        self._say_changed(world, resident, text)
+        return True
+
+    def swap(self, world: "SimulationWorld", one: Resident, other: Resident) -> bool:
+        """Have two residents change posts: each takes the job and the post the other had.
+        Whoever changes with somebody who had none is left with none. False if there is
+        nothing to change."""
+        if one is other or (one.post_id is None and other.post_id is None):
+            return False
+        jobs = world.registries.jobs
+        before = {each.resident_id: (each.job_id, each.post_id) for each in (one, other)}
+        for each in (one, other):
+            self._leave_post(world, each)
+        for each, given in ((one, other), (other, one)):
+            had, (job_id, post_id) = jobs.get(each.job_id or ""), before[given.resident_id]
+            now = jobs.get(job_id or "")
+            if now is had:
+                each.post_id = post_id
+                continue
+            each.job_id, each.post_id, each.work_progress = job_id, post_id, 0
+            if now is None:
+                text = f"{each.name} deja su puesto: {had.name}"
+            elif had is None:
+                each.seeks_work = False
+                text = f"{each.name} se hace cargo de un puesto: {now.name}"
+            else:
+                text = f"{each.name} cambia de puesto: de {had.name} a {now.name}"
+            self._say_changed(world, each, text)
+        return True
+
+    def _leave_post(self, world: "SimulationWorld", resident: Resident) -> None:
+        """Have a resident stop working at the post they have, for being about to have another."""
         if resident.activity is not None and resident.activity.action in WORK_ACTIONS:
             resident.activity = None
             resident.current_action = "idle"
         self._put_down(world, resident)
         # A push is of the post they had: it does not go with them to another.
         world.rush.ease(resident)
-        resident.job_id, resident.post_id, resident.work_progress = job_id, post_id, 0
-        resident.seeks_work = False
-        text = f"{resident.name} se hace cargo de un puesto: {job.name}"
-        if previous is not None:
-            text = f"{resident.name} cambia de puesto: de {previous.name} a {job.name}"
+
+    def _say_changed(self, world: "SimulationWorld", resident: Resident, text: str) -> None:
         room = world.room_at(resident.tile)
         world.emit_event(
             DomainEvent(
@@ -79,7 +137,6 @@ class StaffingSystem:
             ),
             at=resident.tile,
         )
-        return True
 
     def tick(self, world: "SimulationWorld") -> None:
         """Once an hour, keep track of the jobs that are short of people and give notice of them."""

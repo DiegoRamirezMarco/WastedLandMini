@@ -4,6 +4,7 @@ from dataclasses import dataclass, field, replace
 from simulation.ai.activity_system import ActivitySystem
 from simulation.ai.affect import AffectOption, AffectResult, AffectSystem, QueuedOrder
 from simulation.ai.leisure import LeisureSystem
+from simulation.ai.placing import Placement, PlaceResult, PlacingSystem
 from simulation.clock import SimulationClock
 from simulation.commands import SimulationCommand
 from simulation.events.decision import Decision
@@ -102,6 +103,7 @@ class SimulationWorld:
     discovery_count: int = 0
     interventions: InterventionSystem = field(default_factory=InterventionSystem)
     affect: AffectSystem = field(default_factory=AffectSystem)
+    placing: PlacingSystem = field(default_factory=PlacingSystem)
     leisure: LeisureSystem = field(default_factory=LeisureSystem)
     # Open chances for the player to advise a resident, by decision ID.
     decisions: dict[str, Decision] = field(default_factory=dict)
@@ -301,6 +303,47 @@ class SimulationWorld:
         """Tell a resident to do something. It is an order: they do it, as far as it can be
         done, at once or when what they were told before it is done."""
         return self.affect.order(self, resident_id, kind, target_id)
+
+    def placements(
+        self,
+        resident_id: str,
+        object_id: str | None = None,
+        other_id: str | None = None,
+        site_id: str | None = None,
+        tile: Tile | None = None,
+    ) -> list[Placement]:
+        """What would come of putting a resident down on a thing, on somebody, on a site or
+        on a tile, the likeliest first. It changes nothing."""
+        return self.placing.options(
+            self, resident_id, object_id=object_id, other_id=other_id, site_id=site_id, tile=tile
+        )
+
+    def put_down(
+        self,
+        resident_id: str,
+        object_id: str | None = None,
+        other_id: str | None = None,
+        site_id: str | None = None,
+        tile: Tile | None = None,
+        do: str | None = None,
+    ) -> PlaceResult:
+        """Take a resident up and put them down somewhere else. They are there at once, and
+        set about what they were put down on, as an order."""
+        return self.placing.put(
+            self, resident_id, object_id=object_id, other_id=other_id, site_id=site_id, tile=tile, do=do
+        )
+
+    def bundle_placements(
+        self, child_id: str, other_id: str | None = None, object_id: str | None = None, tile: Tile | None = None
+    ) -> list[Placement]:
+        """What would come of putting a child's bundle down on somebody, on a thing or on a tile."""
+        return self.placing.bundle_options(self, child_id, other_id=other_id, object_id=object_id, tile=tile)
+
+    def put_bundle(
+        self, child_id: str, other_id: str | None = None, object_id: str | None = None, tile: Tile | None = None
+    ) -> PlaceResult:
+        """Put a child's bundle in the arms of somebody, or lay it down where it stays."""
+        return self.placing.put_bundle(self, child_id, other_id=other_id, object_id=object_id, tile=tile)
 
     def affect_people(self, resident_id: str) -> tuple[tuple[str, str], ...]:
         """Everybody a resident could be told to do something with right now, the nearest first."""

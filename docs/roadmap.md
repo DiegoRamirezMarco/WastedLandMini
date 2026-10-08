@@ -2049,40 +2049,96 @@ Still to settle:
 - Whether the player is shown how a vote is going to go before it is held, and what each
   resident makes of the player, or has to find both out
 
-### P27 — Picked up and put down (needs P10) — planned
+### P27 — Picked up and put down (needs P10) — done
 The user's idea: residents can be dragged and dropped, and where one is dropped is what they do.
 It is built with the layer of resources, after P59, as the user said on 2026-10-08: dropping
 somebody on a post is one of the two ways of putting them to it (S52).
 
-- **A resident is picked up with the mouse on the map and carried with the pointer**, their
-  body hanging from it as a paper doll's would (P10), and put down wherever the button is let go
-- **What they are dropped on is what they set about**, as far as it can be done:
-  - on a place of work, they work at it
-  - on another resident, the two have something to do with each other
-  - on a bed, they lie down and sleep
-  - on whatever else is used, they use it: the pot or the pantry to eat, the tank to drink,
-    the bar, the clinic's bed, a seat, the study desk, the radio
-  - on bare ground, they are simply there now
-- **What a drop would do is shown before the button is let go**: the thing under the pointer
-  lights up and says what will come of it, or that nothing will
-- The simulation gets it as a command like any other, by stable IDs, so that it runs headless
-  and can be tested without a screen: who, and on what or on whom
-- A drop that cannot be acted on puts them down and nothing else: a post that is not theirs to
-  take, a bed that is somebody else's, somebody who is asleep or out of the settlement
+Asked first, in two batches, and answered on 2026-10-08:
+- **They are where they are let go, at once.** They do not walk there
+- **Let go over somebody, the wheel opens on what the two can do** (`Social`, with who it is
+  with already said), with them stood beside the other
+- **Let go over a post somebody has, the two change posts**: each has the job and the post the
+  other had, and whoever changes with somebody who had none is left with none
+- **Let go over a building with its roof on, it is gone into with them still in the hand**, to
+  be put down in there with a click. Not the recommendation, which was to leave them at its door
+- **Time stands still while somebody is in the hand**, and goes on as it did when they are let go
+- **Being carried is nothing to them**: it tells on no nerves and on nothing they make of the player
+- **A child who is still a bundle is taken up the same way**: let go over somebody, they carry it
+  from then on; anywhere else, it is laid down and stays
+- **Let go over bare ground they are there and go on with their day**, and take up again what
+  they had been told to do
 
-Still to settle, to be asked before it is built:
-- **Whether a drop is an order or a nudge.** Everywhere else residents decide for themselves and
-  the player advises (S4). Either a drop is the one place where the player's hand settles it, or
-  it puts the thing in front of them and they do it unless they have a strong reason not to
-- What two residents do when one is dropped on the other: what they would have done anyway by
-  what they feel for each other, or something the player picks as they let go
-- Whether dropping somebody on a place of work gives them the post, or only has them lend a
-  hand there this once
-- Whether they are where they are dropped at once, or walk there from where they were
-- Whether time stops while somebody is in the air
-- What being carried about is to them: nothing, or something that tells on their nerves and on
-  what they make of being told what to do (S20)
-- Whether a child's bundle can be picked up and handed to somebody the same way (S25)
+What there is:
+- **A press on somebody on the map, pulled away with the button held, takes them up.** They hang
+  from the pointer by the scruff of the neck and swing as it moves, further at the feet than at
+  the head, in front of everything. From afar it is their face that goes with the hand. A press
+  that goes nowhere is still a click, and a pull on bare ground still moves the map
+- **What the hand is over is picked out, and a caption says what would come of letting go**:
+  the post and what they would make of it, as the board says it (P59), and `fuera de turno`
+  where they would not set to it there and then; who they would change posts with; `Dormir`,
+  `Comer`, `Beber`; `Con Raúl: elegir qué hacen`; `Dejar aquí`. A ring on the ground says where
+  they would be stood. Where they cannot be put it says why, in red
+- **`Tab` goes on to whatever else could come of it**, where more than one thing could: a pot
+  is the cook's post and is eaten from. A post is a post first, and after that what it is used
+  for, and after that only being left beside it
+- **What they are put down on is what they set about, as an order** (S37), done before
+  whatever they had waiting: a free post is theirs, and they work at it if they have a shift
+  ahead; a bed, a pot, a tank, the bar, the radio is used, that very one; a seat is sat on;
+  what is lying about is taken apart; a site is in their charge. Where nothing can come of it
+  they are left beside it: a bed that is somebody else's, a pot with nothing in it
+- **A hand at the edge of the map pulls the view along**, the keys that move it still do, and
+  the wheel still brings it nearer or further. Nothing else is opened meanwhile
+- **The other button, or `Esc`, lets go of them where they were.** So does letting go over a
+  panel. Whoever cannot be told anything cannot be taken up, nor whoever serves a sentence
+  where they are kept, and it says why
+- **Inside a building it is the same**: whoever is in there is taken up by pulling away from
+  them and put down on the floor, on a bed, on somebody. `I`, with somebody in the hand, goes
+  back out with them
+- **A child in its blanket is taken up off a back or from where it lies.** In the arms of
+  somebody grown who is in a state to, it is theirs to carry and to feed, before its own, for
+  as long as they can. Laid down, it stays: in a bed it comes to no harm, and anywhere else it
+  is the worse for it as it always was, still fed by whoever sees to it. Before it is half
+  gone they take it up again, and it is said
+- The simulation gets it as two commands, `PutDownCommand` and `PutBundleCommand`, by stable
+  IDs, and says what a drop would do without doing it (`SimulationWorld.placements`): it runs
+  and is tested with no screen
+
+Decided without asking:
+- **Dropping on a post gives it, for good**, as `Poner` on the board does. It was the reading
+  the user was given before the batch and did not correct
+- **Nobody is told to work out of hours** (S37): a post given at night is theirs, and they are
+  left to their evening
+- **The post of somebody who is out of the settlement is not changed behind their back**:
+  whoever is dropped on it is left beside it
+- **Nobody is put where they could not have walked to, nor on a tile somebody else stands on
+  or is making for.** Dropped on a thing, they stand on the free tile beside it that is nearest
+  the hand
+- **Somebody asleep, dropped on, only has the other left beside them**: no wheel opens
+- **Taking apart is what a drop on a wreck, tyres or junk does**, as its first thing. It is
+  said before the button is let go, and it can be taken back like any order
+- **A bundle handed to somebody stays theirs** until it is handed to somebody else, as long as
+  they can see to it. Only somebody grown, fit, sober and free is handed one
+- **A bundle laid down is taken up again at half its health** (`taken_up_below` in
+  `data/family.json`), so that nobody loses a child to having put it down and forgotten it.
+  With nobody to see to it, it is as it was: someone is asked to take it in (S25)
+- **What a use is called for short is data**: `label` on a `use` in `data/interactables.json`
+- **Using one thing in particular is an order of its own** (`task:use`, with the thing as what
+  it is about), so that it is saved, shown in what they have ahead of them, and gone back to
+  if they are stopped on the way. It is not in the wheel: S60 is where a thing gets its ring
+- The save went to version 41: `keeper` and `set_down` on a bundle
+
+Still open here:
+- **The hand hangs them, and no more.** They do not struggle, and a doll hangs in the clip it
+  stands in, swung about the hand: there is no clip of its own for being carried
+- **A thing under a roof that is on cannot be dropped on from the map**: the building is gone
+  into first. With roofs off (`T`) it can
+- **Inside, what is dropped on is the tile of the floor under the hand**, and whoever stands
+  there. The upper part of something tall counts as the floor behind it
+- **Nothing is dragged but people**: not things from one store to another, nor a tool into a
+  hand. Giving somebody something by hand is S59
+- Whether somebody should mind being carried about after all, once it has been played with.
+  What the player is to a resident is already there (S27), one number away
 
 ### S30 — What a thing is for, and what is in it (needs S19 and S20) — planned
 Content comes in four milestones, S30 to S33, and a screen, P28. They are the user's brief: keep
@@ -2549,7 +2605,7 @@ Still open here:
   game goes (S4, S27). If it turns out to make advising pointless, what an order costs is one
   number away: what the player is to a resident is already there (S27)
 - Dragging a resident and dropping them on something (P27) is the same order given another
-  way, and is not built
+  way. It is built
 - A resident cannot be told to do anything about a thing they loathe, to give somebody
   something, or to work out of hours
 

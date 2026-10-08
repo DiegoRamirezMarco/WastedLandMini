@@ -105,6 +105,10 @@ Event types emitted so far:
 | `leader_seat_empty` | Nobody can be found for the leader's seat | 60 |
 | `election_called`, `election_held` | A vote for a seat is called, with when it is held (`at`), and held, with the `winner`, whether they `kept` the seat, the `tally` as given out, whether it was `open`, and their `backers` after a show of hands | 50, 60 |
 | `resident_held` | The player stops a resident, who stands and listens | 10 |
+| `resident_placed` | The player takes a resident up and puts them down somewhere else, with the `kind` of thing that comes of it (`stand`, `person`, `post`, `swap`, `use`, `sit`, `site` or `salvage`), its `target`, and the tiles they went `from` and `to` in `data`. What they are told for it follows as `order_given`, and a post that changes hands as `job_changed` | 10 |
+| `bundle_handed` | The player puts a child's bundle in the arms of a resident, with `child_id` in `data` | 20 |
+| `bundle_set_down` | The player lays a child's bundle down, with `child_id` and the `place` (`bed`, `surface` or `ground`) in `data` | 20 |
+| `bundle_taken_up` | Whoever sees to a bundle the player laid down takes it up again, for its being the worse for it, with `child_id` in `data` | 20 |
 | `order_given` | The player tells a resident to do something, with the `kind` of thing and its `target` in `data` | 25 |
 | `order_queued`, `order_cancelled` | The same, told to somebody who is at something else they were told, so that it waits its turn; and one of them taken back. Each with `kind` and `target` in `data` | 10 |
 | `order_dropped` | Something a resident was told cannot be done when its turn comes, and is let go, with `kind` and `target` in `data` | 15 |

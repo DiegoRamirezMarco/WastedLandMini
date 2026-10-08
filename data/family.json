@@ -174,7 +174,8 @@
       "hunger_harm": 0.05,
       "mend_per_minute": 0.02,
       "neglect_minutes": 720,
-      "ask_gap_minutes": 60
+      "ask_gap_minutes": 60,
+      "taken_up_below": 50
     },
     "seen": {
       "events": [

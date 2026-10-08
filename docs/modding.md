@@ -584,6 +584,8 @@ looks and nothing of what happens.
 - `needed` is how many residents the job takes (1 unless set); with fewer it has a vacancy.
   `priority` says how much it is missed: a vacancy is offered to those in jobs of lower priority.
 - An object's use can require a job to be on duty with `"staffed_by": "bartender"`.
+- A use may have a `label`: what it is called for short where it is offered by name, as
+  when somebody is carried over the object (`Dormir`, `Comer`). Left out, it is `Usar`.
 
 Which resident has which job, and which day of the week they have off, is set where the
 settlement is created, in `SimulationWorld.demo_world`.
@@ -739,7 +741,8 @@ A job that is never to be pushed says `"rush": false`.
   one of their own, and how much `stress`); `parted_at_gate`; and `children`: the `chance` of
   one, `carried_weeks`, `fertile_until`, the `weeks` a child is a bundle for and the age it is
   `grown_at`, `names` by sex, `mix_spread` and `trait_chance`, how a `bundle` fares, and what is
-  made of a child's lot by whoever sees it (`seen`).
+  made of a child's lot by whoever sees it (`seen`). In `bundle`, `taken_up_below` is how well
+  a child the player laid down has to be for whoever sees to it to leave it where it lies.
 - `people` in the same file says who those the game has by name are: `sex` (`m` or `f`),
   `gender` (`m`, `f`, `nb` or `bi`, the same as `sex` if left out), `drawn_to` (`m`, `f` or
   `both`), and their `siblings` and `parents` by ID. `arrive_together` lists pairs of newcomers
@@ -821,8 +824,11 @@ the wheel, and an `icon`: one of the game's icons, or a file of that name in
 - `words` lists what is simply said to them: the `needs` it changes and what it does to
   their `mood`.
 - `tasks` lists each thing they can be told to get on with, as a label or as an object with
-  one: `to_post`, `take_charge`, `salvage`, `take_job`, `leave_job`, `treat` and `stop`.
-  What each does is code; one left out is not on offer.
+  one: `to_post`, `push`, `take_charge`, `salvage`, `take_job`, `leave_job`, `treat`, `use`
+  and `stop`. What each does is code; one left out is not on offer. `use` is using one
+  thing in particular, with `{target}` where the thing goes: it is not in the wheel, and is
+  what putting somebody down on a bed or a pot tells them. Left out, nobody put down on a
+  thing uses it.
 - `hold_minutes` is how long somebody who is stopped stands listening, and `most_targets` how
   many people or things are offered to choose among, the nearest first.
 - `most_orders` is how many things can wait for a resident to get to them. `wait_minutes` is

@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `40` |
+| `version` | `41` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -84,6 +84,10 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 41** added `keeper` and `set_down` on a bundle (P27). In an older save a bundle
+  is nobody's but its own to see to, and was not laid down by the player. A keeper who is no
+  longer a resident is forgotten. What a resident was told may now be `task:use`, with the
+  ID of the object as its `target_id`.
 - **Version 40** added `pushing_until` on a resident (S52): the game minute until which they
   are pushing their post. In an older save nobody is pushed.
 - **Version 39** added `ledger` (S51). In an older save nothing has been written down: the books
@@ -125,7 +129,8 @@ them after the map definition was loaded.
   days are, less than 1 for before it began), `sex`, `gender`, `drawn_to`, `expecting_with` and
   `due_day`, and `libido` among the sides of their personality; `kinship` (per person ID, living,
   dead or never let in: `name`, `gender`, `parents`, `adoptive`, `siblings` and `spouse`);
-  `bundles` (children under ten: who they are, where they are and how they fare); and
+  `bundles` (children under ten: who they are, where they are and how they fare, the
+  `keeper` the player handed each to, and whether it was `set_down` by the player); and
   `gate_party` (everyone waiting at the gate together). In an older save everyone has the date
   of birth that makes them the age they were, is who the game says or their ID makes them, is
   drawn to both, and is kin to nobody.

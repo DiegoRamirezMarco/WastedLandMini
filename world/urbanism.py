@@ -319,6 +319,14 @@ class UrbanismSystem:
         """Every tile marked out for something that is being put up."""
         return {tile for site in world.sites.values() for tile in site.tiles}
 
+    def within_reach(self, world: SimulationWorld) -> set[Tile]:
+        """Every tile somebody could walk to from where people come in, as things stand:
+        nowhere that is shut in, nor anything that stands in the way. Where nobody comes in
+        anywhere, every tile that can be stood on."""
+        open_ground = self._walkable(world) - self._blocked(world, list(world.interactables.values()))
+        reached = self._reached(world, open_ground)
+        return open_ground if reached is None else reached
+
     @staticmethod
     def _walkable(world: SimulationWorld) -> set[Tile]:
         """Every tile whose ground can be walked on, whatever stands on it. Not what a site has shut off."""

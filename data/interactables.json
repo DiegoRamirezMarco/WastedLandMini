@@ -7,6 +7,7 @@
     "use": {
       "action": "sleep",
       "text": "se echa a dormir",
+      "label": "Dormir",
       "minutes": 600,
       "per_minute": {
         "tiredness": -0.21,
@@ -33,6 +34,7 @@
     "use": {
       "action": "eat",
       "text": "come {item}",
+      "label": "Comer",
       "minutes": 20,
       "consumes": "food",
       "capacity": 2
@@ -51,6 +53,7 @@
     "use": {
       "action": "relax",
       "text": "se sienta junto a la hoguera",
+      "label": "Sentarse al fuego",
       "minutes": 60,
       "per_minute": {
         "social": -0.1,
@@ -120,6 +123,7 @@
     "use": {
       "action": "eat",
       "text": "come {item}",
+      "label": "Comer",
       "minutes": 20,
       "consumes": "food",
       "capacity": 3
@@ -140,6 +144,7 @@
     "use": {
       "action": "drink",
       "text": "toma algo en la cantina",
+      "label": "Tomar algo",
       "minutes": 45,
       "per_minute": {
         "stress": -0.3,
@@ -190,6 +195,7 @@
     "use": {
       "action": "repair",
       "text": "lleva {item} a arreglar",
+      "label": "Arreglar algo",
       "minutes": 90,
       "repairs": 2.0,
       "price": 4,
@@ -213,6 +219,7 @@
     "use": {
       "action": "shop",
       "text": "compra {item} en la tienda",
+      "label": "Comprar",
       "minutes": 5,
       "sells": true,
       "staffed_by": "shopkeeper",
@@ -264,6 +271,7 @@
     "use": {
       "action": "drink_water",
       "text": "bebe {item}",
+      "label": "Beber",
       "minutes": 8,
       "consumes": "water",
       "capacity": 3
@@ -295,6 +303,7 @@
     "use": {
       "action": "rest",
       "text": "se tumba en la enfermería",
+      "label": "Guardar cama",
       "minutes": 360,
       "position": "on",
       "heals": true,
@@ -387,6 +396,7 @@
     "use": {
       "action": "listen",
       "text": "escucha la radio",
+      "label": "Escuchar la radio",
       "minutes": 20,
       "per_minute": {
         "stress": -0.12
@@ -414,6 +424,7 @@
     "use": {
       "action": "shop",
       "text": "compra {item} en el laboratorio",
+      "label": "Comprar",
       "minutes": 5,
       "sells": true,
       "staffed_by": "chemist",

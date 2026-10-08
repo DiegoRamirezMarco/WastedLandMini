@@ -50,6 +50,8 @@ class UseDefinition:
     material_from: str | None = None
     # Whether this is listening to a radio, which gives word of what is on its way from outside.
     radio: bool = False
+    # What it is called for short, where using this is offered by name. Empty for none of its own.
+    label: str = ""
 
 
 @dataclass(frozen=True)
@@ -185,4 +187,5 @@ def _use_from_data(kind: str, data: dict[str, Any]) -> UseDefinition:
         material=str(data["material"]) if data.get("material") is not None else None,
         material_from=str(data["material_from"]) if data.get("material_from") is not None else None,
         radio=bool(data.get("radio", False)),
+        label=str(data.get("label", "")),
     )

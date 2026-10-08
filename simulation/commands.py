@@ -2,6 +2,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from simulation.ai.affect import AffectResult
+from simulation.ai.placing import PlaceResult
 from simulation.economy.terms import TradeResult
 from simulation.housing.housing import HousingResult
 from simulation.justice.justice_system import JusticeResult
@@ -66,6 +67,22 @@ class CommandTarget(Protocol):
         ...
 
     def affect_resident(self, resident_id: str, kind: str, target_id: str | None) -> AffectResult:
+        ...
+
+    def put_down(
+        self,
+        resident_id: str,
+        object_id: str | None = None,
+        other_id: str | None = None,
+        site_id: str | None = None,
+        tile: Tile | None = None,
+        do: str | None = None,
+    ) -> PlaceResult:
+        ...
+
+    def put_bundle(
+        self, child_id: str, other_id: str | None = None, object_id: str | None = None, tile: Tile | None = None
+    ) -> PlaceResult:
         ...
 
     def cancel_order(self, resident_id: str, index: int) -> AffectResult:
@@ -361,6 +378,45 @@ class AffectCommand:
 
     def apply(self, world: CommandTarget) -> AffectResult:
         return world.affect_resident(self.resident_id, self.kind, self.target_id)
+
+
+@dataclass(frozen=True)
+class PutDownCommand:
+    """The player takes a resident up and puts them down somewhere else (P27). They are
+    there at once, and what they are put down on is what they set about, as an order: on a
+    post, it is theirs; on somebody who has it, the two change posts; on a bed or a pot, they
+    use it; on a seat, they sit; on a site, they take charge of it; on bare ground, they are
+    there and go on with their day.
+
+    One of `object_id`, `other_id` and `site_id` names what or whom they are put down on, and
+    `tile` where the hand is: by itself it is whatever lies on that tile. `do` picks one of
+    the kinds of thing that could come of it, where more than one could, and with none it
+    is the first of what the world offers for it."""
+
+    resident_id: str
+    object_id: str | None = None
+    other_id: str | None = None
+    site_id: str | None = None
+    tile: Tile | None = None
+    do: str | None = None
+
+    def apply(self, world: CommandTarget) -> PlaceResult:
+        return world.put_down(self.resident_id, self.object_id, self.other_id, self.site_id, self.tile, self.do)
+
+
+@dataclass(frozen=True)
+class PutBundleCommand:
+    """The player takes up a child who is still a bundle and puts it in the arms of
+    somebody, who carries it from then on, or lays it down on a bed, on a thing or on the
+    ground, where it stays (P27)."""
+
+    child_id: str
+    other_id: str | None = None
+    object_id: str | None = None
+    tile: Tile | None = None
+
+    def apply(self, world: CommandTarget) -> PlaceResult:
+        return world.put_bundle(self.child_id, self.other_id, self.object_id, self.tile)
 
 
 @dataclass(frozen=True)

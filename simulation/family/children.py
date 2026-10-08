@@ -32,11 +32,14 @@ TAKE_IN = "take_in"
 CARRIED, BED, SURFACE, GROUND = "carried", "bed", "surface", "ground"
 PLACES = (CARRIED, BED, SURFACE, GROUND)
 BED_ACTION = "sleep"
+# Where a bundle that is put down is said to be left.
+PUT_WHERE = {BED: "en una cama", SURFACE: "a cubierto", GROUND: "en el suelo"}
 CONCEIVED_IMPORTANCE = 35
 BIRTH_IMPORTANCE = 70
 GREW_IMPORTANCE = 50
 TAKEN_IN_IMPORTANCE = 65
 CHILD_DIED_IMPORTANCE = 90
+HANDED_IMPORTANCE = 20
 SEEN_IMPORTANCE = 30
 BIRTH_MEMORY = 85.0
 NEGLECT_CAUSE = "el abandono"
@@ -72,6 +75,10 @@ class Bundle:
     asking: str | None = None
     # Game minute at which somebody was last asked.
     asked_at: int = 0
+    # Who the player handed it to, who sees to it before its own while they can (P27); and
+    # whether the player put it down where it lies, where it is left until it is the worse for it.
+    keeper: str | None = None
+    set_down: bool = False
 
     @property
     def tile(self) -> Tile:
@@ -271,16 +278,55 @@ class ChildSystem:
     # ----- seeing to a bundle -----
 
     def minder(self, world: "SimulationWorld", bundle: Bundle) -> Resident | None:
-        """Whoever is seeing to a bundle right now: the first of its parents who is here and in
-        a state to, those it was born to before those who took it in."""
-        for parent_id in world.family.kin.parents_of(world, bundle.child_id):
-            parent = world.residents.get(parent_id)
-            if parent is None or parent.away or not world.health.is_fit_for_work(parent):
-                continue
-            if world.substances.out_of_it(world, parent):
-                continue
-            return parent
+        """Whoever is seeing to a bundle right now: whoever the player handed it to, if they
+        are here and in a state to, and otherwise the first of its parents who is, those it
+        was born to before those who took it in."""
+        handed = (bundle.keeper,) if bundle.keeper else ()
+        for minder_id in (*handed, *world.family.kin.parents_of(world, bundle.child_id)):
+            minder = world.residents.get(minder_id)
+            if minder is not None and self.can_mind(world, minder):
+                return minder
         return None
+
+    def can_mind(self, world: "SimulationWorld", resident: Resident) -> bool:
+        """Whether a resident is here and in a state to see to a bundle."""
+        if resident.away or not world.health.is_fit_for_work(resident):
+            return False
+        return not world.substances.out_of_it(world, resident)
+
+    def hand_to(self, world: "SimulationWorld", bundle: Bundle, resident: Resident) -> None:
+        """The player puts a bundle in the arms of somebody: they carry it from now on, and
+        see to it before its own do, for as long as they can."""
+        bundle.keeper, bundle.set_down = resident.resident_id, False
+        bundle.carried_by, bundle.place = resident.resident_id, CARRIED
+        bundle.x, bundle.y = resident.x, resident.y
+        bundle.left, bundle.refused, bundle.asking = 0, [], None
+        world.emit_event(
+            DomainEvent(
+                "bundle_handed",
+                HANDED_IMPORTANCE,
+                f"{resident.name} se queda con {bundle.name} en brazos",
+                [resident.resident_id],
+                data={"child_id": bundle.child_id},
+            ),
+            at=resident.tile,
+        )
+
+    def leave_at(self, world: "SimulationWorld", bundle: Bundle, tile: Tile, in_bed: bool = False) -> None:
+        """The player puts a bundle down on a tile: in a bed, or else on a table or some such
+        under a roof, or else on the ground. It lies there until it is the worse for it."""
+        bundle.set_down, bundle.carried_by = True, None
+        bundle.x, bundle.y = tile
+        bundle.place = BED if in_bed else SURFACE if world.under_roof(tile) else GROUND
+        world.emit_event(
+            DomainEvent(
+                "bundle_set_down",
+                HANDED_IMPORTANCE,
+                f"A {bundle.name} se le deja {PUT_WHERE[bundle.place]}",
+                data={"child_id": bundle.child_id, "place": bundle.place},
+            ),
+            at=tile,
+        )
 
     def carried_by(self, world: "SimulationWorld", resident: Resident) -> list[Bundle]:
         """The bundles a resident has on their back."""
@@ -311,13 +357,31 @@ class ChildSystem:
     def _keep(self, world: "SimulationWorld", bundle: Bundle, minder: Resident) -> None:
         """Have whoever sees to a bundle carry it, lay it beside them when they sleep, and feed it."""
         bundle.left, bundle.refused, bundle.asking = 0, [], None
+        settings = self.settings(world)
+        if bundle.set_down and bundle.health > settings.taken_up_below:
+            # Left where the player put it down. It is fed there all the same.
+            if bundle.hunger >= settings.feed_from:
+                bundle.hunger = 0.0
+                minder.needs.apply(settings.feed_cost)
+            return
+        if bundle.set_down:
+            bundle.set_down = False
+            world.emit_event(
+                DomainEvent(
+                    "bundle_taken_up",
+                    HANDED_IMPORTANCE,
+                    f"{minder.name} recoge a {bundle.name}, que no estaba bien donde estaba",
+                    [minder.resident_id],
+                    data={"child_id": bundle.child_id},
+                ),
+                at=bundle.tile,
+            )
         bundle.x, bundle.y = minder.x, minder.y
         asleep = not world.is_aware(minder)
         placed = world.interactables.get(minder.activity.target_id or "") if minder.activity is not None else None
         in_bed = asleep and placed is not None and world.definition_of(placed).use is not None
         bundle.carried_by = None if asleep else minder.resident_id
         bundle.place = CARRIED if not asleep else BED if in_bed else GROUND
-        settings = self.settings(world)
         if bundle.hunger >= settings.feed_from:
             bundle.hunger = 0.0
             minder.needs.apply(settings.feed_cost)

@@ -519,14 +519,17 @@ class GameShellTests(unittest.TestCase):
         view.centre_on_resident("raul")
         view.render()
         on_raul = view.hitboxes["raul"].center
+        # Beside him, on the ground. Pressed on him it would be he that came along (P27).
+        beside = (on_raul[0] - 24, on_raul[1])
+        self.assertIsNone(view._grab_at(beside))
         before = list(view.camera)
-        # Pressed on a resident and pulled away: the map comes along, and nobody is selected.
-        self._drag(on_raul, (on_raul[0] - 60, on_raul[1] - 30))
+        # Pressed on the ground and pulled away: the map comes along, and nobody is selected.
+        self._drag(beside, (beside[0] - 60, beside[1] - 30))
         self.assertEqual(view.camera, [before[0] + 60, before[1] + 30])
         self.assertIsNone(view.hud.selected_id)
         # The mouse may go on over the menu: the map still follows it until the button comes up.
-        self._drag(on_raul, (view.viewport.left - 30, on_raul[1]))
-        self.assertEqual(view.camera[0], before[0] + 60 + (on_raul[0] - view.viewport.left + 30))
+        self._drag(beside, (view.viewport.left - 30, beside[1]))
+        self.assertEqual(view.camera[0], before[0] + 60 + (beside[0] - view.viewport.left + 30))
         # With the button up again, moving the mouse moves nothing.
         still = list(view.camera)
         view.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(400, 300), rel=(-80, -40), buttons=(0, 0, 0)))

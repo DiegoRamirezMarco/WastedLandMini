@@ -85,6 +85,14 @@ def ground_spot(x: float, y: float) -> tuple[int, int]:
     )
 
 
+def spot_tile(x: float, y: float) -> tuple[float, float]:
+    """Where, in tiles, somebody stands whose feet are at a map pixel: `ground_spot` the other way."""
+    return (
+        (x - (TILE_SIZE - FRAME_SIZE[0]) // 2 - FRAME_ORIGIN[0]) / TILE_SIZE,
+        (y - TILE_SIZE + FEET_ABOVE_EDGE + FRAME_SIZE[1] - FRAME_ORIGIN[1]) / TILE_SIZE,
+    )
+
+
 @dataclass
 class Remains:
     """A dead body or a part of one, falling or lying where it fell."""
