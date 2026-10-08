@@ -4177,7 +4177,7 @@ Still open here:
 The user, on 2026-10-08: "intentemos plantear como darle ese toque tomodatchi life (los dialogos
 modulares con variables puestas por el jugador y los objetos)-> sims (todo el tema de
 interacciones) -> fallout shelter (gestion de recursos hipervitaminado)". It comes in three
-layers, each laid over what there is: what the settlement lives on (S51 to S57, S64, P58 to P61
+layers, each laid over what there is: what the settlement lives on (S51 to S57, S64, S65, P58 to P61
 and P27), words and things (S58, S59 and P62), and what is done with things and with each other
 (S60 to S63 and P63).
 
@@ -4517,29 +4517,71 @@ Still open here:
 
 ### S64 — Rarer things (needs S54 and S47) — planned
 What the user's answers to S54 added, cut off as a milestone of its own. Asked what things that
-are carried have a rarity, and where it comes from, they ticked every option and wrote "Todos":
-- **What a better post makes is as rare as the post**: food that fills more, a tool that lasts
-- **What is brought from outside may be rare**, the rarer the less often, and mythic only so
-- **A tool or a weapon is made rarer at the workshop**, by the mechanic, with scrap and time
-- Things of one kind and two rarities are kept apart, and each is worth what it is
+are carried have a rarity, and where it comes from, they ticked every option and wrote "Todos".
+Asked again on 2026-10-08, after S54, what it does and how it comes:
+- **It does everything that was offered**: food and drink fill more, tools are faster and last
+  longer, weapons hit harder, and it is worth more in trade. And in their own words: "Tambien es
+  mas caro de vender y de comprar"
+- **A tool or a weapon is made rarer by being mended at a better workshop**: a level each time,
+  up to the workshop's own, with a unit of scrap more. Making the workshop better is what opens it
+- **What comes from outside is seldom rare, and oftener for a risk taken**: nearly all of it
+  common, and when whoever is out goes on at something worth a risk (S12) the odds are better.
+  Mythic hardly ever
+
+What it comes to:
+- **What a better post makes is as rare as the post**
+- **Things of one kind and two rarities are kept apart**, and each is worth what it is
+- The border of its square says how rare a thing is (P60)
 
 ### S55 — Current, and things that break down (needs S54 and S15) — planned
-- **Some things run on current**: what each draws and what a generator gives is data
-- **A post wears and breaks down**, and stands idle until the mechanic has mended it with scrap
-- A push can end with the post broken down (S52)
+Asked on 2026-10-08, with S64 and after it, in two batches, and answered:
+- **With no current, what runs on it stops.** Not the recommendation, which was that it only
+  lose what current gave it over working without
+- **The workshop, the laboratory and the water tank run on current**, besides the lamps and
+  the radio. Of the tank, in the user's words: "El deposito / bomba va con electricidad, para
+  la version de sin electricidad crearemos el pozo". So there is a **well**, a new thing, where
+  water is drawn with no current
+- **The player switches each thing on and off.** Each draws what it draws, and when more is
+  asked for than there is, what was switched on last goes off
+- **The generator burns by what is switched on**: the more that runs, the more fuel a day
+- **Things wear with use and break by accident**, as recommended, and more, in the user's
+  words: "objetos desgaste y accidentes (que en el inventario se vea la barra de salud) algunas
+  comida y algunos consumibles que se vaya pochando que tenga un valor de pocharse a x
+  velocidad dia". How worn a thing is shows in the inventory (P60), and what goes off is S65
+
+What it comes to:
+- **What a thing draws and what a generator gives are data**, and whether a thing is switched on
+  is saved
+- **A well** is the post of drawing water by hand: slower, and needing nothing
+- **A post wears as it is worked**, breaks down when it is worn out or when a push goes wrong
+  (S52), and stands idle until the mechanic has mended it with scrap
+- A better generator gives more current (S54)
+
+### S65 — What goes off (needs S51 and S64) — planned
+From the user's answer about how things break (S55): "algunas comida y algunos consumibles que
+se vaya pochando que tenga un valor de pocharse a x velocidad dia".
+- **Some food and some other things that are used up go off**: how fast, by the day, is data
+  on each kind of thing, and most have none
+- What has gone off is lost, and is in the books as spoiled (S51)
+- How far gone a thing is shows where things are shown (P60)
 
 Still to settle, to be asked before it is built:
-- Whether a thing with no current loses something it had over working without, or stops
-- Which things run on current
-- Whether things wear with use, or only break by accident
+- Whether what is kept in a store keeps longer than what is not, and whether a better store
+  keeps it longer still
+- What becomes of what has gone off: it is lost, or it is still there and makes whoever eats
+  it ill
+- Which things go off, and how fast
 
-### P60 — Stores, rarity and current on screen (needs S53 to S55 and S64) — planned
+### P60 — Stores, rarity and current on screen (needs S53 to S55, S64 and S65) — planned
 - How much room there is, in the bar and on the store
 - **The border of a thing's square says how rare it is**, wherever things are shown in a grid:
   white, green, blue, red, purple and yellow, as the user said
 - The level of what stands and the way to make it better, from the thing itself. **When it is
   done it asks whether to draw it again**, as the user said
-- What has no current, and what is broken down, marked where it stands
+- What has no current, and what is broken down, marked where it stands, and **a switch on
+  each thing that runs on current**
+- **How worn a thing is, as a bar on its square in the inventory**, as the user said, and how
+  far gone what goes off is
 
 ### S56 — Errands, and the box (needs S51 and S39) — planned
 - **An errand is a thing to be brought about, as data**, measured against how the settlement
