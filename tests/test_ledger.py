@@ -165,6 +165,8 @@ class EntryTests(unittest.TestCase):
         # What the kitchen cooks is food made of food: as much goes into the pot as comes out of it.
         self.assertEqual(first["food"]["used:cook"], -first["food"][f"{MADE}:cook"])
         self.assertEqual(world.ledger.reason_name(world, f"{MADE}:farmer"), "Huerto")
+        self.assertEqual(world.ledger.reason_name(world, "used:cook"), "Cocina: lo que gasta")
+        self.assertEqual(world.ledger.reason_name(world, "found:cook"), "Traído de fuera")
         self.assertEqual(world.ledger.reason_name(world, EATEN), "Comido")
 
     def test_what_counts_as_no_resource_is_not_written_down(self) -> None:

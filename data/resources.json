@@ -32,5 +32,9 @@
     "stolen": "Robado",
     "taken": "Se lo llevan",
     "other": "Sin explicar"
+  },
+  "sourced": {
+    "made": "{source}",
+    "used": "{source}: lo que gasta"
   }
 }

@@ -16,7 +16,7 @@ from graphics.item_icons import ICON_SIZE as ITEM_ICON_SIZE
 from graphics.item_icons import ItemIcons
 from graphics.palette import PALETTE
 from graphics.screen_layers import ScreenLayers
-from graphics.ui_art import band_hue
+from graphics.ui_art import GLYPHS, band_hue
 from graphics.ui_skin import WindowSkin
 from settings import SPEEDS
 from simulation.events.event import DomainEvent
@@ -58,7 +58,6 @@ from ui.labels import (
     describe_weather,
     expression_of,
     known_forecasts,
-    settlement_counts,
     settlement_stock,
     spoken_line,
 )
@@ -66,6 +65,7 @@ from ui.layout import Layout, layout_for
 from ui.research_board import PANEL_WIDTH as RESEARCH_WIDTH
 from ui.research_board import draw_research_board, research_board_height, study_buttons
 from ui.panel import draw_item, draw_panel, set_skin
+from ui.resource_bar import Chip, draw_chips, draw_tip, resource_chips, tip_lines, tip_rect
 from ui.resident_panel import (
     KIN_TAB,
     LIFE_TAB,
@@ -103,6 +103,8 @@ MENU_TILE = 18
 MENU_GAP = 4
 # How large the icons of the bar on top are shown.
 TOP_ICON = 11
+# The icon a figure of the bar goes by when the game has no picture by the name it was given.
+PLAIN_ICON = "scrap"
 # The longest a date is in the plaque at the head of the bar, which is made wide enough for it.
 WIDEST_DATE = "28 sep 2226"
 # The plate behind the entry of the menu that is open, and behind the one the pointer is on.
@@ -259,6 +261,8 @@ class Hud:
         self.wheel = WheelState()
         # Where the pointer is, for what lights up under it.
         self.pointer: tuple[int, int] | None = None
+        # The figures of the bar on top, as last laid out: what there is of each thing, and how it stands.
+        self.chips: list[Chip] = []
         # At most one of these is set: the resident or the container whose panel is showing.
         self.selected_id: str | None = None
         self.selected_container: str | None = None
@@ -693,6 +697,9 @@ class Hud:
                 self.drawable, band_hue("stores"), self.faces,
             )
         draw_queue(self.canvas, self.font, self.skin, self.queue_entries(), self.pointer)
+        tip = self.resource_tip()
+        if tip is not None:
+            draw_tip(self.canvas, self.font, *tip)
         view = self.wheel_shown()
         if view is not None:
             entries = wheel_entries(self.wheel.centre, self.wheel_area(), view)
@@ -714,6 +721,9 @@ class Hud:
     def _top_icon(self, name: str, x: int) -> None:
         """One of the icons of the bar on top: as fine as the window shows it, or else the game's own small one."""
         place = pygame.Rect(x, 2, TOP_ICON, TOP_ICON)
+        if name not in GLYPHS and name != COIN_ICON and not self.skin.has_own(name):
+            # A resource of a pack may name a picture the game has not: it goes by a plain one.
+            name = PLAIN_ICON
         if name == COIN_ICON:
             # The fund is counted under the settlement's own coin, as it was drawn.
             self.show_coin(place)
@@ -732,6 +742,17 @@ class Hud:
                 return
         small = self.assets.image(icon_path(COIN_ICON), size=ICON_SIZE)
         self.canvas.blit(small, small.get_rect(center=place.center))
+
+    def resource_tip(self) -> tuple[pygame.Rect, list[tuple[str, str]]] | None:
+        """What is said of the figure of the bar the pointer rests on, and where: for a resource,
+        who makes it and what uses it up. None while it rests on none."""
+        if self.pointer is None:
+            return None
+        chip = next((chip for chip in self.chips if chip.contains(self.pointer)), None)
+        if chip is None:
+            return None
+        lines = tip_lines(self.world, chip)
+        return tip_rect(self.font, chip, lines, self.layout.map), lines
 
     def _menu_active(self, intent: Hashable) -> bool:
         if intent == ROSTER_INTENT:
@@ -769,11 +790,9 @@ class Hud:
             controls = self.pause_button.rect.unionall([button.rect for button in self.speed_buttons])
             pygame.draw.rect(self.canvas, PALETTE["glow"], controls.inflate(4, 2), 1)
 
-        x = self.counts_left
-        for icon, figure in settlement_counts(self.world):
-            self._top_icon(icon, x)
-            self.font.draw(self.canvas, figure, (x + TOP_ICON + 3, 2), PALETTE["bone"])
-            x += TOP_ICON + 3 + self.font.width(figure) + 10
+        self.chips = resource_chips(self.font, self.world, self.counts_left, self.counts_right, 2, TOP_ICON)
+        draw_chips(self.canvas, self.font, self.chips, self._top_icon, TOP_ICON, self.lit)
+        x = self.chips[-1].rect.right + 10 if self.chips else self.counts_left
         weather = describe_weather(self.world)
         if weather is not None and x + self.font.width(weather) < self.counts_right:
             self.font.draw(self.canvas, weather, (self.counts_right - self.font.width(weather), 2), PALETTE["sand"])

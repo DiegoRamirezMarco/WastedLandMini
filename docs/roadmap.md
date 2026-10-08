@@ -4207,13 +4207,42 @@ Still open here:
   still are: four weeks of storms and raiders (`test_dark_and_danger`), three nights of curfew
   (`test_laws`) and ten weeks of medicine and light (`test_sustenance`)
 
-### P58 — A bar that says how long it will last (needs S51) — planned
-- **Each resource in the bar says what there is, whether it is going up or down and by how
-  much a day**, and how many days are left where it is going down
-- **Red where too few days are left**
-- **Resting the pointer on one says who makes it and what uses it up**
-- **How the settlement's spirits stand**, as the mean of everybody's, at the end of the bar.
-  It is shown and does nothing
+### P58 — A bar that says how long it will last (needs S51) — done
+- **Each resource in the bar says what there is, and which way it is going**
+  (`ui/resource_bar.py`): a small arrow, up in green or down in red, and how much a day. With
+  nothing to tell either way there is no arrow. What there is counts what is on its way in
+  somebody's hands and at the gate, as the books do (S51)
+- **How many days it will last**, where it is going down and that is under a month: `12d`,
+  and `<1d` under one
+- **Red, and blinking, where it will not last two days**
+- **Resting the pointer on one says who makes it and what uses it up**, a day: the garden,
+  the kitchen and what was brought from outside, what was eaten, what the kitchen took,
+  what was sold; what that comes to; and how long what there is will last at that pace
+- **A reading taken before a whole day is written is said more quietly**, and said to be
+  rough where it is pointed at
+- **How the settlement's spirits stand**, at the end of the bar: a face and a measure of the
+  mean of everybody's who is there. Pointed at, it says the figure and names whoever is
+  lowest. It is shown and does nothing
+- **With less room, less is said**: first how long things will last, save of what is running
+  low, and then which way they are going. What there is is always said
+- **The resources shown are those the data names**, in its order, each by the icon it says. A
+  picture the game has not goes by a plain one
+- A face for spirits among the game's icons, drawn at the resolution of the window and small
+  for where there is none, to be replaced by `illustrations/ui/icons/mood.png`
+
+Decided without asking:
+- The arrows are a few dots of the canvas, as the letters are, and not pictures of the window:
+  they go with the letters when those are made fine (P36)
+- The same job making a thing and using it up is said twice: `Cocina`, and `Cocina: lo que
+  gasta`. How each reason is called where a job is known is data (`sourced`)
+- What is said of a figure goes under the bar, over the map, and over whatever panel is open
+  in that corner
+
+Still open here:
+- There is no room in the bar for how much there is room for: it comes with S53
+- What draws water is called `Agua`, as the job is, under what is said of water
+- Nothing of this has been seen on a real window by whoever made it: the frames it was judged
+  by were drawn without one
 
 ### S52 — Work that is seen, pushed and given out (needs S51, S46 and S50) — planned
 - **How fast somebody works is worked out in one place**, from what it already went by: the

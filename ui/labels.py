@@ -3,7 +3,7 @@
 from simulation.family.calendar import MONTH_NAMES
 from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item import ItemInstance
-from simulation.items.item_system import FOOD_CATEGORY, WATER_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
+from simulation.items.item_system import FOOD_CATEGORY, STEAL_ACTION, USE_ITEM_ACTION
 from simulation.residents.activity import (
     ATTEND_ACTION,
     PROTEST_ACTION,
@@ -323,9 +323,6 @@ PARTNER = "Pareja"
 ANGRY_STRESS = 70.0
 LOW_HEALTH = 70.0
 PRESSING_NEED = 85.0
-SCRAP_TAG = "scrap"
-FUEL_TAG = "fuel"
-MEDICINE_TAG = "medicine"
 # The icon the fund is counted under in the bar: the settlement's coin.
 COIN_ICON = "coin"
 
@@ -553,26 +550,29 @@ def settlement_counts(world: SimulationWorld) -> list[tuple[str, str]]:
         for placed in world.interactables.values()
         if (use := world.definition_of(placed).use) is not None and use.action == BED_USE_ACTION
     )
-    food = water = scrap = fuel = medicine = 0
-    for definition_id, quantity in settlement_stock(world):
-        definition = world.registries.items.resolve(definition_id)
-        food += quantity if definition.category == FOOD_CATEGORY else 0
-        water += quantity if definition.category == WATER_CATEGORY else 0
-        scrap += quantity if SCRAP_TAG in definition.tags else 0
-        fuel += quantity if FUEL_TAG in definition.tags else 0
-        medicine += quantity if MEDICINE_TAG in definition.tags else 0
-    counts = [
-        ("people", f"{len(world.residents)}/{beds}"),
-        ("food", str(food)),
-        ("water", str(water)),
-        ("energy", str(fuel)),
-        ("medicine", str(medicine)),
-        ("scrap", str(scrap)),
+    # What the settlement lives on, as its books count it: in the stores, in hand and at the gate.
+    held = world.ledger.stock(world)
+    counts = [("people", f"{len(world.residents)}/{beds}")]
+    counts += [
+        (resource.icon, str(held[resource_id])) for resource_id, resource in world.registries.resources.resources.items()
     ]
     if world.fund.currency(world) is not None:
         # Where it counts in coin, what the fund holds, beside what it has in things.
         counts.append((COIN_ICON, str(int(world.trading.fund))))
     return counts
+
+
+def settlement_mood(world: SimulationWorld) -> float | None:
+    """How the settlement's spirits stand: the mean of everybody's who is there, from 0 to 100.
+    None with nobody there."""
+    moods = [resident.mood for resident in world.residents.values() if not resident.away]
+    return sum(moods) / len(moods) if moods else None
+
+
+def lowest_spirits(world: SimulationWorld) -> Resident | None:
+    """Whoever in the settlement is lowest in spirits. None with nobody there."""
+    there = [resident for resident in world.residents.values() if not resident.away]
+    return min(there, key=lambda resident: (resident.mood, resident.resident_id), default=None)
 
 
 def settlement_stock(world: SimulationWorld) -> list[tuple[str, int]]:

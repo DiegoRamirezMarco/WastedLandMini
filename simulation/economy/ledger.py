@@ -65,8 +65,10 @@ class ResourceSettings:
     kept_days: int = 7
     # With fewer days left than this, a resource is running low.
     low_days: float = 2.0
-    # What each reason is called where it is shown.
+    # What each reason is called where it is shown, and what it is called where what a thing
+    # came of is known, with `{source}` where the name of that goes: the job that made it.
     reasons: dict[str, str] = field(default_factory=dict)
+    sourced: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -146,6 +148,7 @@ def resource_settings_from_data(data: dict[str, Any]) -> ResourceSettings:
         kept_days=int(data.get("kept_days", defaults.kept_days)),
         low_days=float(data.get("low_days", defaults.low_days)),
         reasons={str(reason): str(name) for reason, name in data.get("reasons", {}).items()},
+        sourced={str(reason): str(name) for reason, name in data.get("sourced", {}).items()},
     )
     if settings.window_days < 1 or settings.kept_days < settings.window_days or settings.low_days < 0:
         raise ValueError("The pace of things goes by a day or more, no more than are kept, and low is not below none")
@@ -311,13 +314,14 @@ class LedgerSystem:
         return next((line for line in self.report(world) if line.resource_id == resource_id), None)
 
     def reason_name(self, world: "SimulationWorld", why: str) -> str:
-        """What a reason is called where it is shown: the job a thing came of where there was
-        one, and otherwise what the data calls it."""
+        """What a reason is called where it is shown: by the job a thing came of where there
+        was one and the data has a way of saying so, and otherwise what the data calls it."""
+        settings = self.settings(world)
         reason, _, source = why.partition(":")
         job = world.registries.jobs.get(source)
-        if job is not None:
-            return job.name
-        return self.settings(world).reasons.get(reason, reason)
+        if job is not None and reason in settings.sourced:
+            return settings.sourced[reason].replace("{source}", job.name)
+        return settings.reasons.get(reason, reason)
 
     def _warn(self, world: "SimulationWorld") -> None:
         for line in self.report(world):

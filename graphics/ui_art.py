@@ -507,6 +507,14 @@ def _unlock(p: Pen) -> None:
     p.box(18.7, 30, 3.6, 8.5, 1, p.cut)
 
 
+def _face(p: Pen) -> None:
+    p.circle(24, 24, 20)
+    p.circle(16.5, 19.5, 3.1, p.cut)
+    p.circle(31.5, 19.5, 3.1, p.cut)
+    p.arc(24, 23.5, 10.5, 28, 152, 3.4, p.cut)
+    p.arc(24, 24, 15.8, 198, 252, 2.6, p.light)
+
+
 GLYPHS: dict[str, Glyph] = {
     "people": _people,
     "work": _hammer,
@@ -538,6 +546,7 @@ GLYPHS: dict[str, Glyph] = {
     "close": _close,
     "stop": _stop,
     "unlock": _unlock,
+    "mood": _face,
 }
 # The colour each icon is, where it stands alone or on a tile of its own.
 HUES: dict[str, Color] = {
@@ -571,6 +580,7 @@ HUES: dict[str, Color] = {
     "close": (128, 138, 142),
     "stop": (206, 78, 84),
     "unlock": (108, 168, 96),
+    "mood": (244, 198, 78),
 }
 # What is cut into an icon that stands alone, where it is not simply dark.
 CUTS: dict[str, Color] = {"medicine": (206, 58, 54)}

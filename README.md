@@ -105,6 +105,13 @@ python -m simulation.headless --days 7 --seed 7
 - The screen is the map with a bar on top, a menu on the left, a panel on the right and a dock
   underneath. The menu opens the job board, the stores (what is everyone's, added up) and the
   log, puts the minimap away, and goes back to the list of residents
+- The bar on top counts what the settlement lives on: food, water, fuel, medicine and scrap,
+  whatever is nobody's own, in a store or on its way to one. Beside each, an arrow and a
+  figure say whether it is going up or down and by how much a day, and where it is going
+  down, how many days it will last: `1d`. What will not last two days is in red, and blinks.
+  Rest the pointer on one to see who makes it and what uses it up. At the end of the bar, a
+  face and a measure say how the settlement's spirits stand, and resting on it names
+  whoever is lowest
 - The minimap in the corner shows everyone as a dot, blinking if they need attention. Click it
   to go there. `N` puts it away, or brings it back
 - Whoever is outside the settlement waits as a face in the top left corner; click it to select

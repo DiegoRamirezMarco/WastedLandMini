@@ -354,6 +354,16 @@ ICONS = {
         "mmm.....",
         "........",
     ],
+    "mood": [
+        "..oooo..",
+        ".oyyyyo.",
+        "oykyykyo",
+        "oyyyyyyo",
+        "oykyykyo",
+        "oyykkyyo",
+        ".oyyyyo.",
+        "..oooo..",
+    ],
 }
 
 

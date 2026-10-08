@@ -993,8 +993,9 @@ kept:
   the picture it goes by in the bar.
 - `window_days` is how many of the last days the pace of things is worked out from, `kept_days`
   how many are kept, and `low_days` how few days a resource has to have left to be running low.
-- `reasons` is what each reason a thing comes in or goes out is called where it is shown. What
-  a job made is called by the job's name.
+- `reasons` is what each reason a thing comes in or goes out is called where it is shown.
+  `sourced` is what a reason is called where the job a thing came of is known, with
+  `{source}` for the job's name: `"made": "{source}"` has what the garden made called `Huerto`.
 - Nothing is a resource that is not named here: take one out and it is no longer counted, add
   one and it is.
 
