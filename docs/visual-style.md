@@ -141,19 +141,32 @@ illustrations/                   free of the style contract: see Illustrations
 A resident whose body has been drawn is no longer pixel art. They are a paper doll: one drawing,
 cut apart where the body bends, each part laid along its bone and turned as the bone turns.
 
-- **Two canvases of a fixed size.** The body is 384×384 and the head 192×192, sixteen pixels of
+- **Two canvases of a fixed size.** The body is 400×384 and the head 192×192, sixteen pixels of
   drawing to one of the skeleton's. The figure is seen from the side, facing right. The body's
-  paper was 320 wide once: a drawing of that size is still read, and its parts are put where
-  the wider paper has them, each as it was drawn.
-- **A guide to draw over.** Each part has a place on the body's canvas: trunk, hips, neck, upper
-  arms, forearms, hands, thighs, shins and feet. The trunk stops at the shoulders and the neck
-  comes out of it, a part of its own, so that the head does not sit on the body. Below the waist
-  the hips are a part too, which the legs are jointed to. The guide shows two things for each. A
-  slim **example**, a rounded strip from one joint to the next, with a dot at each joint. And the
-  frame of its **zone**, which is how far the part may be drawn: about twice as wide as the
-  example and longer at both ends, so that a body can be made stout, or any odd shape. The limbs
-  of the near side are tinted one colour and those of the far side another. The parts are set
-  apart from each other, so that each can be drawn whole.
+  paper was 320 wide once and then 384: a drawing of either size is still read, and its parts
+  are put where today's paper has them, each as it was drawn.
+- **The paper.** Each part has a place on the body's canvas: trunk, hips, neck, upper arms,
+  forearms, hands, thighs, shins and feet. The trunk is in the middle with the neck coming out
+  of it and the hips under it. An arm hangs at either side from the height of the trunk's
+  shoulders, the far one on the left and the near one on the right, and the legs stand under
+  the trunk the same way round. Every part has a **zone**, which is how far it may be drawn:
+  about twice as wide as the figure and longer at both ends, so that a body can be made
+  stout, or any odd shape. A hand has room past its fingertips, a foot under its sole and
+  ahead of its toe, and the trunk well out to both sides.
+- **A guide to draw over.** The guide is quiet, so that the drawing is what is seen. It shows
+  the paper in **pieces**, which is how it moves: an arm from the shoulder to the fingertips
+  is one, a leg down to the toe is one, and the trunk with the hips and the neck is one. A
+  piece is lightly tinted, the near side of the body in `sand`, the far side in `teal` and
+  the middle in `stone`, with one thin line round all of it and none round its parts. Where
+  it bends it is crossed by a line of dots, and each joint is a small ring in `ember`. Names
+  are written on it in the colour of the piece, with no patch behind them: each part up the
+  edge of its zone, and which side of the body a limb is on over it or beside its foot.
+- **The plain figure.** Under it all lies an artist's figure: no clothes and no face, a chest
+  and hips in one shape with a waist, limbs that taper, mittens for hands, a wedge for a foot
+  and a head with a chin, so that it faces a way. It has a soft line round it, a band of shade
+  along its back, and its far limbs are a little darker. It is pale on the guide, to be drawn
+  over and not copied. What each part of it is comes from the data (`shape`), and it is drawn
+  by `graphics/mannequin.py`.
 - **Cutting.** Between its two joints a part takes everything painted in its zone. Past a joint
   it turns about, it takes only a round end, centred on the joint and as wide as the limb was
   painted there. Two parts that meet at a joint so end in the same circle: bent, they show no gap
@@ -211,9 +224,9 @@ cut apart where the body bends, each part laid along its bone and turned as the 
 - `Dibujar` in the menu, or `F2`, opens it on whoever is selected. Time stops while it is open.
 - The two canvases are shown at two window pixels to one of the drawing's, over the guide, with
   the doll going through its clips beside them, cut again after every stroke.
-- Tools: the palette's colours, four widths of brush, a rubber and a bucket; undo, clear, and a
-  plain mannequin in the resident's colours to start from. The guide can go under the drawing,
-  over it, or away.
+- Tools: the palette's colours, four widths of brush, a rubber and a bucket; undo, clear, and
+  the plain figure in the resident's colour to start from, which is what they were shown as
+  until then. The guide can go under the drawing, over it, or away.
 - Saving writes both drawings to `illustrations/dolls/<resident_id>/`, and the resident walks the
   map as their doll at once. The files are ordinary PNGs: they can be touched up in any program.
 
@@ -384,8 +397,10 @@ art any more (P41). It draws everything by code, in one hand, at the size it is 
   of a cell. It gives what is under whoever is in the thing and what is over them, how far it
   stands above the far edge of its ground, where what it shows off goes, and where a head goes.
 - **Buildings** (`graphics/building_pictures.py`), **the ground** (`graphics/ground_pictures.py`),
-  **items** (`graphics/item_pictures.py`) and **whoever nobody has drawn**
-  (`graphics/stand_ins.py`) are drawn the same way.
+  **items** (`graphics/item_pictures.py`) are drawn the same way.
+- **Whoever nobody has drawn** (`graphics/stand_ins.py`) is the plain figure of the guide in a
+  colour of their own, that of what their body wears on its trunk, with the thick dark line
+  the rest has. It has no clothes and no face: who they are is for whoever draws them to say.
 - **Order**: floors first, then everything that stands, people among it, by how far down the
   map its foot is.
 - **A drawing of the player's own** takes the place of the game's on the map, file by file, as

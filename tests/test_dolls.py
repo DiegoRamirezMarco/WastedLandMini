@@ -9,6 +9,7 @@ from unittest import mock
 import pygame
 
 from graphics import hose as rubber
+from graphics.cartoon import LINE
 from graphics.doll import (
     BODY_CANVAS,
     DOLL_FACINGS,
@@ -21,7 +22,9 @@ from graphics.doll import (
     template_from_data,
 )
 from graphics.illustrations import Illustrations
+from graphics.mannequin import figures, tones_of
 from graphics.palette import PALETTE
+from graphics.stand_ins import DARKEST, figure_color, stand_in
 from scenes.hud import DRAW_INTENT
 from settings import SCALE, SCREEN_HEIGHT, SCREEN_WIDTH
 from simulation.health.injury import Injury
@@ -33,6 +36,11 @@ RED, BLUE = (220, 30, 30), (30, 60, 220)
 
 def _painted(surface: pygame.Surface) -> int:
     return pygame.mask.from_surface(surface).count()
+
+
+def _plain(template, color=RED, line=None) -> dict[str, pygame.Surface]:
+    """The plain figure on every canvas, all of one colour unless its line is given another."""
+    return figures(template, tones_of(color, line or color))
 
 
 class DollTemplateTests(unittest.TestCase):
@@ -112,42 +120,48 @@ class DollTemplateTests(unittest.TestCase):
             self.assertLess(below_waist, drawn_to, side)
 
     def test_zones_only_overlap_where_two_parts_are_jointed(self) -> None:
-        masks = {bone: pygame.mask.from_surface(self.template.mask(bone)) for bone, spec in self.template.parts.items() if not spec.whole}
+        parts = {bone: spec for bone, spec in self.template.parts.items() if not spec.whole}
+        masks = {bone: pygame.mask.from_surface(self.template.mask(bone)) for bone in parts}
+        # What is a part's own is its zone as far as the joints it is cut at.
+        regions = {bone: pygame.mask.from_surface(self.template.region(bone)) for bone in parts}
         for bone, mask in masks.items():
             width, height = self.template.canvases[BODY_CANVAS]
             self.assertEqual(mask.get_bounding_rects()[0].clip(pygame.Rect(0, 0, width, height)), mask.get_bounding_rects()[0], bone)
-            for other, other_mask in masks.items():
+            for other in masks:
                 ends = lambda name: {self.plan.bones[name].start, self.plan.bones[name].end}
                 jointed = bool(ends(bone) & ends(other))
                 if bone < other and not jointed:
-                    self.assertEqual(mask.overlap_area(other_mask, (0, 0)), 0, (bone, other))
+                    self.assertEqual(regions[bone].overlap_area(regions[other], (0, 0)), 0, (bone, other))
             lower = [other for other in masks if self.plan.bones[bone].end == self.plan.bones[other].start]
             for other in lower:
                 self.assertGreater(mask.overlap_area(masks[other], (0, 0)), 0, f"{bone} and {other} must overlap at their joint")
 
-    def test_every_zone_leaves_room_round_the_example_to_draw_a_stouter_or_odder_body(self) -> None:
+    def test_every_zone_leaves_room_round_the_figure_to_draw_a_stouter_or_odder_body(self) -> None:
+        drawn = {canvas: pygame.mask.from_surface(figure) for canvas, figure in _plain(self.template).items()}
         for bone, spec in self.template.parts.items():
             if spec.whole:
-                # A head has its whole canvas, and its example leaves room all round for hair or a hat.
+                # A head has its whole canvas, and its figure leaves room all round for hair or a hat.
                 width, height = self.template.canvases[spec.canvas]
                 self.assertGreater(min(spec.end[0], width - spec.end[0], spec.end[1]), spec.radius * 1.7, bone)
+                self.assertLess(drawn[spec.canvas].count(), width * height / 2, bone)
                 continue
             self.assertGreaterEqual(spec.reach, spec.radius * 1.9, f"{bone} can be drawn about twice as wide")
-            zone = pygame.mask.from_surface(self.template.mask(bone))
-            example = pygame.mask.from_surface(self.template.example(bone, RED))
-            self.assertEqual(example.overlap_area(zone, (0, 0)), example.count(), f"the example of {bone} is inside its zone")
-            self.assertGreater(zone.count(), example.count() * 1.8, bone)
+            own = pygame.mask.from_surface(self.template.region(bone))
+            figure = drawn[spec.canvas].overlap_area(own, (0, 0))
+            self.assertGreater(figure, 50, f"there is something of the figure in {bone}")
+            self.assertGreater(own.count(), figure * 1.8, bone)
 
     def test_there_is_a_neck_between_the_shoulders_and_the_head(self) -> None:
         neck, trunk = self.template.parts["neck"], self.template.parts["spine"]
         self.assertEqual(neck.start, trunk.end, "it comes out of the trunk where the shoulders are")
         self.assertLess(neck.radius, trunk.radius / 2, "and is a good deal thinner")
-        # The trunk's example stops just above the shoulders, so the neck's shows over it.
-        top_of_trunk = pygame.mask.from_surface(self.template.example("spine", RED)).get_bounding_rects()[0].top
-        top_of_neck = pygame.mask.from_surface(self.template.example("neck", BLUE)).get_bounding_rects()[0].top
-        self.assertGreater(top_of_trunk - top_of_neck, self.template.unit)
-        # Put together, the head clears the shoulders by the length of the neck: there is skin to see between them.
-        doll = Doll(self.template, self.template.mannequin({**{bone: RED for bone in self.template.parts}, "neck": BLUE}))
+        # Put together, the head clears the shoulders by the length of the neck: there is something to see between them.
+        drawings = _plain(self.template)
+        neck_drawn = pygame.mask.from_surface(drawings[BODY_CANVAS]).overlap_mask(
+            pygame.mask.from_surface(self.template.region("neck")), (0, 0)
+        )
+        neck_drawn.to_surface(drawings[BODY_CANVAS], setcolor=(*BLUE, 255), unsetcolor=None)
+        doll = Doll(self.template, drawings)
         skeleton = Skeleton(self.plan, "doll_right")
         skeleton.set_pose(self.plan.pose("doll_right"))
         picture = pygame.Surface((400, 500), pygame.SRCALPHA)
@@ -160,13 +174,12 @@ class DollTemplateTests(unittest.TestCase):
         self.assertLess(box.top, chest_y - detail, "and rises well above the shoulders")
         self.assertLess(box.width, trunk.radius * 2)
 
-    def test_the_guide_marks_every_zone_and_the_mannequin_fills_them_all(self) -> None:
+    def test_the_guide_marks_every_zone_and_the_plain_figure_has_every_part(self) -> None:
         for canvas, size in self.template.canvases.items():
             guide = self.template.guide(canvas)
             self.assertEqual(guide.get_size(), size)
-            self.assertGreater(_painted(guide), size[0] * size[1] // 6)
-        figure = self.template.mannequin({bone: RED for bone in self.template.parts})
-        doll = Doll(self.template, figure)
+            self.assertGreater(_painted(guide), size[0] * size[1] // 8)
+        doll = Doll(self.template, _plain(self.template))
         self.assertEqual(set(doll.parts), set(self.template.parts))
 
 
@@ -340,7 +353,7 @@ class DollCuttingTests(unittest.TestCase):
         self.assertIsNone(doll.placed("thigh_left", False, detail, 0.0), "nothing was drawn there")
 
     def test_facing_the_other_way_the_doll_is_the_same_drawing_in_a_mirror(self) -> None:
-        figure = self.template.mannequin({bone: RED for bone in self.template.parts})
+        figure = _plain(self.template)
         # Something on one side only, to tell the two ways apart.
         foot = self.template.parts["foot_right"]
         pygame.draw.circle(figure[BODY_CANVAS], BLUE, (foot.end[0] + 6, foot.end[1] + 6), 8)
@@ -361,7 +374,7 @@ class DollCuttingTests(unittest.TestCase):
         self.assertLess(blue(pictures["left"]), 200)
 
     def test_a_doll_short_of_a_limb_is_drawn_without_it(self) -> None:
-        doll = Doll(self.template, self.template.mannequin({bone: RED for bone in self.template.parts}))
+        doll = Doll(self.template, _plain(self.template))
         counts = []
         for lost in ((), ("arm_right",), ("arm_right", "leg_left")):
             skeleton = Skeleton(self.plan, "doll_right", lost)
@@ -375,7 +388,7 @@ class DollCuttingTests(unittest.TestCase):
     def test_a_store_cuts_a_doll_once_from_what_is_on_disk_and_only_if_the_body_was_drawn(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            figure = self.template.mannequin({bone: RED for bone in self.template.parts})
+            figure = _plain(self.template)
             for body_id, canvases in (("raul", (BODY_CANVAS, HEAD_CANVAS)), ("marta", (HEAD_CANVAS,))):
                 for canvas in canvases:
                     path = root / doll_path(body_id, canvas)
@@ -681,26 +694,38 @@ class RubberLimbTests(unittest.TestCase):
         self.assertEqual(template_from_data({key: value for key, value in data.items() if key != "hoses"}).hoses, ())
 
     def test_the_figure_to_start_from_has_no_line_across_a_limb_and_whole_hands_and_feet(self) -> None:
-        figure = self.template.mannequin({bone: RED for bone in self.template.parts})[BODY_CANVAS]
+        figure = _plain(self.template, RED, BLUE)[BODY_CANVAS]
         x = round(self.upper.start[0])
-        for y in range(round(self.upper.start[1]), round(self.fore.end[1])):
-            self.assertEqual(tuple(figure.get_at((x, y)))[:3], RED, f"no line crosses the arm at {y}")
-        # A foot is cut along the ankle, and a hand ends where its zone does: their examples are
-        # drawn whole on the side that is theirs, and not half cut away.
+        hand = self.template.parts["hand_right"]
+        for y in range(round(self.upper.start[1]), round(hand.start[1]) + 4):
+            self.assertNotEqual(tuple(figure.get_at((x, y)))[:3], BLUE, f"no line crosses the arm at {y}")
+        # A hand and a foot are drawn whole, with the line all round them, on the side of the
+        # joint that is theirs: nothing of either is left flat where its zone ends.
+        line = pygame.mask.from_threshold(figure, (*BLUE, 255), (1, 1, 1, 255))
+        drawn = pygame.mask.from_surface(figure)
         for bone in ("foot_left", "hand_left"):
-            example = pygame.mask.from_surface(self.template.example(bone, RED))
-            own = pygame.mask.from_surface(self.template.cut_mask(bone, self.template.example(bone, RED)))
-            self.assertGreaterEqual(example.overlap_area(own, (0, 0)), example.count() * 0.99, bone)
-            box = example.get_bounding_rects()[0]
-            end = self.template.parts[bone].end
-            tip = (box.right - 1, box.centery) if bone == "foot_left" else (box.centerx, box.bottom - 1)
-            corner = (box.right - 1, box.bottom - 1)
-            self.assertTrue(example.get_at(tip) or example.get_at((tip[0] - 1, tip[1] - 1)), f"{bone} reaches its end at {end}")
-            self.assertFalse(example.get_at(corner), f"the end of {bone} is round")
+            spec = self.template.parts[bone]
+            own = pygame.mask.from_surface(self.template.region(bone))
+            box = drawn.overlap_mask(own, (0, 0)).get_bounding_rects()[0]
+            zone = own.get_bounding_rects()[0]
+            self.assertGreater(box.left, zone.left, bone)
+            self.assertLess(box.right, zone.right, bone)
+            self.assertLess(box.bottom, zone.bottom, bone)
+            # Its far end is past its last joint, and has the line round it.
+            if bone == "foot_left":
+                self.assertGreater(box.right, spec.end[0], bone)
+                edge = [(box.right - 1, y) for y in range(box.top, box.bottom)]
+            else:
+                self.assertGreater(box.bottom, spec.end[1], bone)
+                edge = [(x, box.bottom - 1) for x in range(box.left, box.right)]
+            self.assertTrue(any(line.get_at(at) for at in edge), f"the end of {bone} has its line")
 
     def test_what_two_parts_that_do_not_meet_both_reach_goes_with_one_of_them(self) -> None:
-        # The measures every doll starts from bring the hips down to the very top of the legs.
-        built = self.template.built(self.template.starting())
+        # Hips made a little longer than a doll starts with come down over the very top of the legs.
+        build = self.template.starting()
+        build.joints["hips.end"] = build.joints.get("hips.end", 0.0) + 0.5
+        self.assertTrue(self.template.takes(build))
+        built = self.template.built(build)
         hips, zone = (pygame.mask.from_surface(built.mask(bone)) for bone in ("hips", "thigh_left"))
         shared = hips.overlap(zone, (0, 0))
         thigh = built.parts["thigh_left"]
@@ -720,7 +745,7 @@ class RubberLimbTests(unittest.TestCase):
 
         def draw(template):
             given.append(template)
-            return template.mannequin({bone: RED for bone in template.parts})
+            return _plain(template)
 
         doll = store.stand_in("nobody", draw)
         started = self.template.built(self.template.starting())
@@ -848,6 +873,37 @@ class DollEditorTests(unittest.TestCase):
         editor.release()
         self.assertEqual(tuple(self._show().get_at(spot))[:3], RED)
         self.assertEqual(self.game.canvas.get_at((body.x + 160, body.y + 80))[3], 0, "the canvas is clear over the drawing")
+
+    def test_whoever_nobody_has_drawn_is_a_plain_figure_of_a_colour_of_their_own_with_no_face(self) -> None:
+        game, view = self.game, self.game.global_view
+        self._show()
+        template = game.dolls.template.built(game.dolls.template.starting())
+        colours_of = lambda drawing: {
+            tuple(drawing.get_at((x, y)))[:3]
+            for x in range(drawing.get_width())
+            for y in range(drawing.get_height())
+            if drawing.get_at((x, y))[3]
+        }
+        skin = view.bodies.renderer.skin("paco")
+        tones = tones_of(figure_color(skin), LINE)
+        for canvas, drawing in stand_in(template, skin).items():
+            # Nothing is worn and nothing is drawn on it: one colour, its shade, and the line round it.
+            self.assertLessEqual(colours_of(drawing), {tones.fill, tones.shade, tones.far, tones.far_shade, tones.line}, canvas)
+            self.assertIn(tones.fill, colours_of(drawing))
+            self.assertIn(tones.line, colours_of(drawing))
+        own = {body_id: figure_color(view.bodies.renderer.skin(body_id)) for body_id in game.world.residents}
+        self.assertGreater(len(set(own.values())), 1, "they are told apart by their colour")
+        self.assertTrue(all(sum(color) >= DARKEST for color in own.values()), "and none is too dark for its line to show")
+        doll = view._doll_of("paco")
+        self.assertIsNone(game.dolls.get("paco"))
+        self.assertEqual(set(doll.parts), set(template.parts))
+        # It is what the editor gives to start a drawing of them from.
+        editor = self._open("paco")
+        self._click(editor.mannequin_button.rect.center)
+        for canvas, drawing in stand_in(editor.template, skin).items():
+            self.assertEqual(
+                pygame.image.tobytes(editor.drawings[canvas], "RGBA"), pygame.image.tobytes(drawing, "RGBA"), canvas
+            )
 
     def test_a_saved_drawing_is_cut_into_a_doll_that_walks_the_map_and_gives_them_a_face(self) -> None:
         game, view = self.game, self.game.global_view

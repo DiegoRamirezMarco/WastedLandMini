@@ -126,7 +126,8 @@ python -m simulation.headless --days 7 --seed 7
   is in it. `Salir` or `I` goes back out. It is a first try of the look: nothing can be
   placed in there yet
 - Everything the game shows of the settlement it draws itself, in thick lines and flat colour:
-  the ground, the buildings, the furniture, what is carried, and whoever nobody has drawn.
+  the ground, the buildings, the furniture and what is carried. Whoever nobody has drawn is a
+  plain figure with no face, in a colour of their own.
   Whatever you draw in the editors takes its place on the map
 - `Space`: pause / resume
 - `1` `2` `3`: game speed x1, x4, x16

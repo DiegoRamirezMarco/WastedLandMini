@@ -23,10 +23,11 @@ from graphics.doll import (
     draw_doll,
     unsided,
 )
-from graphics.doll_guide import label_spots, reference
+from graphics.doll_guide import NOTE_INK, build_guide, label_spots, name_ink, piece_spots, piece_zones, reference
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
+from graphics.stand_ins import stand_in
 from scenes.scene import canvas_position
 from simulation.residents.manner import OCCASIONS
 from simulation.world import SimulationWorld
@@ -97,12 +98,8 @@ PART_NAMES = {
     "hand": "mano", "thigh": "muslo", "shin": "pierna", "foot": "pie",
 }
 SIDE_NAMES = {"_left": "DETRÁS", "_right": "DELANTE"}
-# Parts whose name does not go up their left edge: one is too thin for it, the other lies flat.
-NAMES_BESIDE = ("neck",)
-NAMES_BELOW = ("foot",)
-# The first and last part of a limb, over and under which the side it is on is written.
-LIMB_TOPS = ("upper_arm",)
-LIMB_BOTTOMS = ("foot",)
+# A name goes up the left edge of its part, beside the figure, if the zone leaves it this much room there.
+NAME_MARGIN = 4
 FACING_NOTE = "mira a la derecha >>"
 NECK_NOTE = "aquí gira sobre el cuello"
 EXAMPLE_PREVIEW = "Así se mueve el ejemplo"
@@ -121,8 +118,8 @@ PREVIEW_CLIPS = ("walk", "idle", "work", "fight")
 PREVIEW_SECONDS = 4.0
 SAVED_TEXT = "Guardado: ya anda así por el asentamiento"
 NOTES_TEXT = (
-    "Cada zona es una pieza: lo que pintes dentro se mueve con ella. Las rayas rojas son los cortes, por donde se dobla.",
-    "El muñeco de debajo es un ejemplo para fijarte o calcar. Naranja: delante. Azul: detrás.",
+    "Cada zona de color es una pieza: lo que pintes dentro se mueve con ella. Se dobla por las líneas de puntos.",
+    "El maniquí de debajo es solo una referencia para calcar. Naranja: delante. Azul: detrás.",
     "Las formas se sueltan de un tirón; el polígono, esquina a esquina. Ctrl+Z deshace, Esc vuelve sin guardar.",
 )
 
@@ -366,53 +363,70 @@ class DollEditor:
         return None
 
     def _named_guide(self, canvas: str) -> pygame.Surface:
-        """The guide of a canvas with every part named on it, and the side of the body each limb is on."""
-        guide = self.template.guide(canvas)
-        width, height = guide.get_size()
-        ink = PALETTE["ink"]
+        """The guide of a canvas with every part named on it, and the side of the body each limb is on.
 
+        Names are written in the colour of their piece, straight on the guide.
+        """
+        zones = piece_zones(self.template, canvas)
+        guide = build_guide(self.template, canvas, zones)
+        width, height = guide.get_size()
+        font = self.font
         written: list[pygame.Rect] = []
 
-        def write(text: str, position: tuple[int, int], upright: bool = False, yielding: bool = False) -> bool:
+        def write(
+            text: str, position: tuple[int, int], ink: tuple[int, int, int], upright: bool = False, yielding: bool = False
+        ) -> bool:
             """Write a name on the guide. One that is `yielding` is left out where another already is."""
-            label = self.font.render(text, ink)
+            label = font.render(text, ink)
             if upright:
                 label = pygame.transform.rotate(label, 90)
             spot = label.get_rect(topleft=position).clamp(guide.get_rect())
             if yielding and spot.inflate(4, 2).collidelist(written) >= 0:
                 return False
             written.append(spot)
-            backing = pygame.Surface(spot.inflate(2, 2).size, pygame.SRCALPHA)
-            backing.fill((*PALETTE["paper"], 170))
-            guide.blit(backing, spot.inflate(2, 2))
             guide.blit(label, spot)
             return True
 
-        for bone, spot in label_spots(self.template, canvas).items():
-            side = next((suffix for suffix in SIDE_NAMES if bone.endswith(suffix)), "")
-            part = bone.removesuffix(side)
-            name = PART_NAMES.get(part, part)
-            if part in NAMES_BESIDE:
-                write(name, (spot.right + 4, spot.top + 8))
-            elif part in NAMES_BELOW:
-                write(name, (spot.left + 4, spot.bottom - LINE_HEIGHT))
-            elif spot.height >= self.font.width(name) + 2:
-                # Up its left edge, where the figure leaves room. A part made too short for its name goes without.
-                write(name, (spot.left + 3, spot.centery - self.font.width(name) // 2), upright=True)
-            if side and part in LIMB_TOPS:
-                # Over the round end the game gives a limb where nothing else begins.
-                top = spot.top - round(self.template.parts[bone].radius) - LINE_HEIGHT - 10
-                write(SIDE_NAMES[side], (spot.centerx - self.font.width(SIDE_NAMES[side]) // 2, top))
-            if side and part in LIMB_BOTTOMS:
-                write(SIDE_NAMES[side], (spot.centerx - self.font.width(SIDE_NAMES[side]) // 2, spot.bottom + 3))
-        whole = [spec for spec in self.template.parts.values() if spec.canvas == canvas and spec.whole]
-        for spec in whole:
-            x = round(spec.start[0]) - self.font.width(NECK_NOTE) // 2
-            write(NECK_NOTE, (x, round(spec.start[1]) + 7))
-        # Which way it faces goes at the foot of the paper, or at its head where the foot is taken.
-        middle = (width - self.font.width(FACING_NOTE)) // 2
-        for y in (4, height - LINE_HEIGHT - 2) if whole else (height - LINE_HEIGHT - 2, 4):
-            if write(FACING_NOTE, (middle, y), yielding=True):
+        spots = label_spots(self.template, canvas)
+        boxes = piece_spots(self.template, canvas, zones)
+        for piece, box in boxes.items():
+            ink = name_ink(piece[0])
+            for bone in piece:
+                spot, spec = spots[bone], self.template.parts[bone]
+                name = PART_NAMES.get(unsided(bone), unsided(bone))
+                if abs(spec.end[0] - spec.start[0]) > abs(spec.end[1] - spec.start[1]):
+                    # A part that lies flat, as a foot does, is named along the foot of its zone.
+                    write(name, (spot.left + 4, spot.bottom - LINE_HEIGHT), ink)
+                elif spec.reach - spec.radius < LINE_HEIGHT + NAME_MARGIN:
+                    # Too thin a zone to be named in beside the figure, as a neck's: the name goes beside it.
+                    write(name, (spot.right + 4, spot.centery - LINE_HEIGHT // 2), ink)
+                elif spot.height >= font.width(name) + 2:
+                    # Up its left edge, where the figure leaves room. A part made too short for its name goes without.
+                    write(name, (spot.left + 3, spot.centery - font.width(name) // 2), ink, upright=True)
+            side = next((suffix for suffix in SIDE_NAMES if piece[0].endswith(suffix)), "")
+            if not side:
+                continue
+            # Which side of the body a limb is on goes over it, or, where another piece is in the
+            # way, beside its far end and away from the middle of the paper.
+            title, wide = SIDE_NAMES[side], font.width(SIDE_NAMES[side])
+            over = pygame.Rect(box.centerx - wide // 2, box.top - LINE_HEIGHT - 2, wide, LINE_HEIGHT)
+            if over.top >= 0 and over.collidelist([other for each, other in boxes.items() if each != piece]) < 0:
+                write(title, over.topleft, ink)
+            elif box.centerx < width / 2:
+                write(title, (box.left - wide - 5, box.bottom - LINE_HEIGHT - 2), ink)
+            else:
+                write(title, (box.right + 5, box.bottom - LINE_HEIGHT - 2), ink)
+        for spec in self.template.parts.values():
+            if spec.canvas == canvas and spec.whole:
+                write(NECK_NOTE, (round(spec.start[0]) - font.width(NECK_NOTE) // 2, round(spec.start[1]) + 7), NOTE_INK)
+        # Which way it faces goes at the head of the paper, or else at its foot or in a corner:
+        # wherever no piece and no name is in the way.
+        wide = font.width(FACING_NOTE)
+        left, middle, right = 4, (width - wide) // 2, width - wide - 4
+        top, bottom = 4, height - LINE_HEIGHT - 2
+        taken = list(boxes.values())
+        for place in ((middle, top), (middle, bottom), (left, top), (right, top), (left, bottom), (right, bottom)):
+            if pygame.Rect(place, (wide, LINE_HEIGHT)).collidelist(taken) < 0 and write(FACING_NOTE, place, NOTE_INK, yielding=True):
                 break
         return guide
 
@@ -445,25 +459,8 @@ class DollEditor:
         self._cut()
 
     def mannequin(self) -> None:
-        """Fill every zone with a plain figure in the colours the resident has worn until now."""
-        skin = self.bodies.skin(self.resident_id)
-
-        def strip(cell: str, end: int) -> tuple[int, int, int]:
-            return skin.strips[("side", cell)].colors[end]
-
-        def middle(cell: str) -> tuple[int, int, int]:
-            sprite = skin.sprites[("side", cell, False)]
-            return tuple(sprite.image.get_at(sprite.anchor))[:3]
-
-        colors = {"spine": middle("torso"), "skull": middle("head"), "neck": middle("head"), "hips": strip("thigh", 0)}
-        for side in ("_left", "_right"):
-            colors[f"upper_arm{side}"] = strip("upper_arm", 0)
-            colors[f"forearm{side}"] = strip("forearm", -1)
-            colors[f"hand{side}"] = strip("forearm", -1)
-            colors[f"thigh{side}"] = strip("thigh", 0)
-            colors[f"shin{side}"] = strip("thigh", 0)
-            colors[f"foot{side}"] = strip("shin", -1)
-        for name, figure in self.template.mannequin(colors).items():
+        """Fill every zone with the plain figure they have been shown as until now, to draw over or change."""
+        for name, figure in stand_in(self.template, self.bodies.skin(self.resident_id)).items():
             self._remember(name)
             self.drawings[name] = figure
         self._cut()

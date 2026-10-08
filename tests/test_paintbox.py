@@ -1,5 +1,6 @@
 """Shapes laid down in one go, any colour to pick, and room on the paper: what the drawing screens share."""
 
+import math
 import os
 import tempfile
 import unittest
@@ -7,11 +8,22 @@ from pathlib import Path
 
 import pygame
 
-from graphics.doll import BODY_CANVAS, HEAD_CANVAS, DollBuild, DollStore, build_path, doll_path, load_template
+import json
+
+from graphics.doll import (
+    BODY_CANVAS,
+    HEAD_CANVAS,
+    DollBuild,
+    DollStore,
+    build_path,
+    doll_path,
+    load_template,
+    template_from_data,
+)
 from graphics.illustrations import Illustrations
 from graphics.palette import PALETTE
 from settings import SCALE
-from skeleton.plan import builtin_plan
+from skeleton.plan import PLAN_PATH, builtin_plan
 from ui.paintbox import (
     BOX_TOOL,
     CLOSE_WITHIN,
@@ -161,36 +173,109 @@ class RoomOnThePaperTests(unittest.TestCase):
             self.assertLessEqual(far_leg[1], near_leg[0], "the legs do not run into each other")
             width, height = template.canvases[BODY_CANVAS]
             self.assertTrue(all(0 <= x <= width and 0 <= y <= height for spec in template.parts.values() if not spec.whole for x, y in spec.zone()))
-        # So an arm can be made a good deal longer without reaching a leg.
+        # So an arm can be made a good deal longer without reaching a leg, and a foot too
+        # without reaching the other.
         self.assertTrue(self.template.takes(DollBuild(joints={"hand.end": 4.0})))
-        self.assertTrue(self.template.takes(DollBuild(joints={"upper_arm.end": 3.0, "forearm.end": 3.0})))
+        self.assertTrue(self.template.takes(DollBuild(joints={"upper_arm.end": 2.5, "forearm.end": 2.5})))
+        self.assertTrue(self.template.takes(DollBuild(joints={"foot.end": 1.5})))
 
-    def test_a_drawing_made_on_the_narrower_paper_is_laid_out_anew_and_nothing_of_it_is_resized(self) -> None:
-        former = self.template.former
-        self.assertIsNotNone(former)
-        self.assertLess(former.canvases[BODY_CANVAS][0], self.template.canvases[BODY_CANVAS][0])
-        for build in (DollBuild(), self.template.starting(), DollBuild(joints={"shin.end": -1.0, "upper_arm.start": -0.5})):
-            was, now = former.built(build), self.template.built(build)
-            old = pygame.Surface(former.canvases[BODY_CANVAS], pygame.SRCALPHA)
-            marks = {}
-            for index, (bone, spec) in enumerate(was.parts.items()):
-                if spec.canvas != BODY_CANVAS:
-                    continue
-                # A mark of its own in the middle of every part, as it was laid out then.
-                color = (20 + index * 13, 200 - index * 9, 40 + index * 5)
-                middle = (round((spec.start[0] + spec.end[0]) / 2), round((spec.start[1] + spec.end[1]) / 2))
-                pygame.draw.circle(old, color, middle, 5)
-                marks[bone] = color
-            adopted = self.template.adopted(BODY_CANVAS, old, build)
-            self.assertEqual(adopted.get_size(), self.template.canvases[BODY_CANVAS])
-            for bone, color in marks.items():
-                spec = now.parts[bone]
-                middle = (round((spec.start[0] + spec.end[0]) / 2), round((spec.start[1] + spec.end[1]) / 2))
-                self.assertEqual(tuple(adopted.get_at(middle))[:3], color, f"{bone} is where it goes now")
-            # As much paint as there was, but for a pixel on a cut: taken apart and put down, never stretched.
-            self.assertAlmostEqual(
-                pygame.mask.from_surface(adopted).count(), pygame.mask.from_surface(old).count(), delta=len(marks)
-            )
+    def test_a_drawing_made_on_a_paper_of_before_is_laid_out_anew_and_nothing_of_it_is_resized(self) -> None:
+        formers = self.template.formers
+        self.assertEqual(len(formers), 2, "the paper has been laid out anew twice")
+        sizes = [former.canvases[BODY_CANVAS] for former in formers]
+        self.assertGreater(self.template.canvases[BODY_CANVAS][0], sizes[0][0], "each time wider than the time before")
+        self.assertGreater(sizes[0][0], sizes[1][0])
+        for former in formers:
+            for build in (DollBuild(), self.template.starting(), DollBuild(joints={"shin.end": -1.0, "upper_arm.start": -0.5})):
+                was, now = former.built(build), self.template.built(build)
+                old = pygame.Surface(former.canvases[BODY_CANVAS], pygame.SRCALPHA)
+                marks = {}
+                for index, (bone, spec) in enumerate(was.parts.items()):
+                    if spec.canvas != BODY_CANVAS:
+                        continue
+                    # A mark of its own in the middle of every part, as it was laid out then.
+                    color = (20 + index * 13, 200 - index * 9, 40 + index * 5)
+                    middle = (round((spec.start[0] + spec.end[0]) / 2), round((spec.start[1] + spec.end[1]) / 2))
+                    pygame.draw.circle(old, color, middle, 5)
+                    marks[bone] = color
+                adopted = self.template.adopted(BODY_CANVAS, old, build)
+                self.assertEqual(adopted.get_size(), self.template.canvases[BODY_CANVAS])
+                for bone, color in marks.items():
+                    spec = now.parts[bone]
+                    middle = (round((spec.start[0] + spec.end[0]) / 2), round((spec.start[1] + spec.end[1]) / 2))
+                    self.assertEqual(tuple(adopted.get_at(middle)), (*color, 255), f"{bone} is where it goes now")
+                # As much paint as there was, but for a pixel on a cut: taken apart and put down, never stretched.
+                self.assertAlmostEqual(
+                    pygame.mask.from_surface(adopted).count(), pygame.mask.from_surface(old).count(), delta=len(marks)
+                )
+
+    def test_a_part_is_moved_by_whole_pixels_and_cut_by_the_zone_it_had_then(self) -> None:
+        latest, oldest = self.template.formers
+        unit = self.template.unit
+        for bone, spec in self.template.parts.items():
+            for former in (latest, oldest):
+                was = former.parts[bone]
+                self.assertAlmostEqual(math.dist(was.start, was.end), math.dist(spec.start, spec.end), 6, bone)
+            # From the paper before this one every part goes down on the very pixels it was drawn on.
+            for now, then in zip((*spec.start, *spec.end), (*latest.parts[bone].start, *latest.parts[bone].end)):
+                self.assertAlmostEqual(now - then, round(now - then), 6, f"{bone} would be put down between two pixels")
+            self.assertEqual((oldest.parts[bone].reach, oldest.parts[bone].ends), (latest.parts[bone].reach, latest.parts[bone].ends))
+            if spec.whole:
+                continue
+            # What was a part's own then is its own now: nothing drawn on a paper of before is left out of today's.
+            was = latest.parts[bone]
+            then, now = (pygame.mask.from_surface(each.region(bone)) for each in (latest, self.template))
+            by = (round(spec.start[0] - was.start[0]), round(spec.start[1] - was.start[1]))
+            self.assertEqual(now.overlap_area(then, by), then.count(), bone)
+        hand = "hand_left"
+        self.assertLess(latest.parts[hand].ends[1], self.template.parts[hand].ends[1], "a hand has more room now")
+        # Drawn past the end of the zone a hand had then, though inside today's, it was nobody's: it is left behind.
+        was = latest.parts[hand]
+        old = pygame.Surface(latest.canvases[BODY_CANVAS], pygame.SRCALPHA)
+        pygame.draw.circle(old, RED, (round(was.end[0]), round(was.end[1] - unit * 0.5)), 4)
+        stray = (round(was.end[0]), round(was.end[1] + was.ends[1] + unit * 0.5))
+        pygame.draw.circle(old, BLUE, stray, 4)
+        adopted = self.template.adopted(BODY_CANVAS, old, DollBuild())
+        # What is to be seen of a colour: paint of it that is not clear.
+        painted = pygame.mask.from_surface(adopted)
+        seen = lambda color: painted.overlap_area(pygame.mask.from_threshold(adopted, (*color, 255), (1, 1, 1, 255)), (0, 0))
+        self.assertGreater(seen(RED), 30)
+        self.assertEqual(seen(BLUE), 0)
+
+    def test_laid_out_anew_a_piece_keeps_unseen_the_colour_it_had_beside_it_and_no_other(self) -> None:
+        former = self.template.formers[0]
+        was, now = former.parts["thigh_left"], self.template.parts["thigh_left"]
+        old = pygame.Surface(former.canvases[BODY_CANVAS], pygame.SRCALPHA)
+        # A leg drawn wider than its zone: what is past the edge of it is nobody's, and is cut off.
+        middle = (was.start[1] + was.end[1]) / 2
+        pygame.draw.rect(old, RED, pygame.Rect(was.start[0] - was.reach - 12, middle - 6, was.reach * 2 + 24, 12))
+        adopted = self.template.adopted(BODY_CANVAS, old, DollBuild())
+        y = round(middle + now.start[1] - was.start[1])
+        inside = (round(now.start[0] - was.reach + 3), y)
+        beside = (round(now.start[0] - was.reach - 3), y)
+        self.assertEqual(tuple(adopted.get_at(inside)), (*RED, 255))
+        # Cut off, it is not seen. Its colour is still there, so that the leg made smaller has
+        # no dark edge where it was cut.
+        self.assertEqual(tuple(adopted.get_at(beside)), (*RED, 0))
+        # Far from any piece the paper is as nobody had ever drawn on it.
+        self.assertEqual(tuple(adopted.get_at((2, adopted.get_height() - 2))), (0, 0, 0, 0))
+        arm = self.template.parts["upper_arm_right"]
+        self.assertEqual(tuple(adopted.get_at((round(arm.start[0]), round(arm.end[1])))), (0, 0, 0, 0))
+
+    def test_two_papers_of_before_cannot_be_of_the_same_size_nor_of_today_s(self) -> None:
+        data = json.loads(PLAN_PATH.read_text(encoding="utf-8"))["doll"]
+        latest, oldest = data["former"]
+        self.assertEqual(len(template_from_data({**data, "former": latest}).formers), 1, "one alone need not be in a list")
+        self.assertEqual(template_from_data({key: value for key, value in data.items() if key != "former"}).formers, ())
+        for wrong in (
+            [latest, {**oldest, "canvases": latest["canvases"]}],
+            [{**latest, "canvases": data["canvases"]}],
+            [{**latest, "zones": {"tail": {"reach": 1}}}],
+            [{**latest, "from": {"tail": [1, 1]}}],
+            ["the one before"],
+        ):
+            with self.assertRaises(ValueError):
+                template_from_data({**data, "former": wrong})
 
     def test_a_drawing_already_on_today_s_paper_or_of_any_other_size_is_left_alone(self) -> None:
         current = pygame.Surface(self.template.canvases[BODY_CANVAS], pygame.SRCALPHA)
@@ -201,7 +286,10 @@ class RoomOnThePaperTests(unittest.TestCase):
         self.assertIs(self.template.adopted(HEAD_CANVAS, head, DollBuild()), head)
 
     def test_the_store_hands_out_old_drawings_laid_out_for_today_and_leaves_their_files_as_they_are(self) -> None:
-        former = self.template.former
+        for former in self.template.formers:
+            self._check_the_store_with_a_drawing_on(former)
+
+    def _check_the_store_with_a_drawing_on(self, former) -> None:
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             path = root / doll_path("old", BODY_CANVAS)

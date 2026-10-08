@@ -3213,6 +3213,55 @@ Still open here:
 - A limb cut off the body, a forearm with its hand, is shown in its parts as it falls
 - At the nearest zoom with many dolls in sight, more turned pictures are wanted than are kept
 
+### P46 — The paper laid out anew, a quiet guide and a plain figure (needs P45) — done
+The user, with P45: "el esquema donde se dibujan los pj habria que darle un labado de cara
+tambien para que se ajuste todo mejor y el diseño de ejemplo sea algo mejor". Asked before
+designing:
+- **The paper: laid out anew** ("Papel nuevo"). Parts may be moved and their zones resized,
+  and what is already drawn has to be carried over. Keeping every part where it was had been
+  recommended
+- **The example: a neutral mannequin** ("Maniquí neutro"). A plain artist's figure with no
+  clothes and no face, so as not to steer what is drawn. Whoever nobody has drawn is shown as
+  one, in a colour. An ordinary person better drawn had been recommended
+- **What fitted worst: the look of it all** ("Aspecto general"): colours, weight of lines,
+  names, how well it reads
+
+What was done:
+- **The paper** is a unit wider, 400×384. Arms hang from the height of the trunk's shoulders
+  and not from above them. A hand has twice the room past its fingertips, a foot more under
+  its sole and ahead of its toe, arms are a little wider and the trunk a good deal. Legs are
+  as far apart as they were: a foot can still be made twice as long before it reaches the other
+- **What was drawn is carried over**, never edited: a drawing of the size the paper had is
+  taken apart as it was cut then and laid out as today's each time it is read, and saved on
+  the new paper only when it is next saved from the editor. The five dolls drawn on the paper
+  of P20 are shown exactly as they were, pixel for pixel, standing, walking and fighting. The
+  three from the paper before that one look the same, to within the edge of a part
+- **More than one paper of before** (`doll.former` is a list, the latest first). Each is told
+  by its size and says how it differed from the one after it, zones and all. Two of one size
+  are refused
+- **A piece taken to its new place keeps unseen the colours it had beside it.** A part made
+  smaller or turned takes a little of what lies past its edge: with nothing there the edge
+  went dark, and with what another piece had left there it took that colour
+- **The guide is quiet.** A limb is one zone from where it is joined on to its fingers or its
+  toes, as it moves since P45, and the trunk one with the hips and the neck; each is lightly
+  tinted with one thin line round it. Dots where it bends and a small ring at each joint take
+  the place of the red dashes and the dark dots. Names are in the colour of their piece,
+  with no patch behind them, and the side of the body a leg is on moves out of the way of
+  the trunk
+- **One plain figure** (`graphics/mannequin.py`) in place of three: the clothed one under the
+  guide, the strips the editor gave to start from, and the figure with hair and a face that
+  whoever nobody had drawn was shown as. It is pale under the guide and of one colour, that
+  of what they wear on their trunk, on the map. What each part of it is comes from the data
+  (`shape`, which was `wears`)
+
+Still open here:
+- A drawing made on the first paper, the narrowest, has its near leg put down four tenths of
+  a pixel off, as it has been since P20: that paper and the next were not a whole pixel apart
+  there
+- What had been painted outside every zone, which was never shown, is no longer on the paper
+  once a drawing is laid out anew
+- Nothing of this has been seen on a real window by whoever made it
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

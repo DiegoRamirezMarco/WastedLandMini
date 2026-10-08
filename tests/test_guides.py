@@ -10,7 +10,7 @@ import pygame
 from graphics.assets import ASSETS_DIR, AssetStore
 from graphics.building_art import BUILDING_PARTS, DOOR_PART, INSIDE_PART, ROOF_PART, WALLS_PART
 from graphics.doll import BODY_CANVAS, HEAD_CANVAS, Doll, load_template
-from graphics.doll_guide import INK, SHIRT, SKIN, cuts, label_spots, reference
+from graphics.doll_guide import GUIDE_TONES, cuts, label_spots, piece_spots, piece_zone, pieces, reference
 from graphics.illustrations import Illustrations
 from graphics.object_art import ObjectArtStore
 from graphics.object_sprites import ObjectSprites
@@ -73,14 +73,18 @@ class DollGuideTests(unittest.TestCase):
             region = _mask(self.template.region(bone))
             self.assertEqual(region.overlap_area(kept, (0, 0)), region.count(), bone)
 
-    def test_the_figure_under_the_guide_is_a_drawing_to_go_by_and_not_patches_of_colour(self) -> None:
+    def test_the_figure_under_the_guide_is_a_plain_one_with_no_clothes_and_no_face(self) -> None:
         body, head = reference(self.template, BODY_CANVAS), reference(self.template, HEAD_CANVAS)
+        tones = GUIDE_TONES
         for figure in (body, head):
             colours = _colours(figure)
-            self.assertIn(INK, colours, "it has a dark line round it")
-            self.assertIn(SKIN, colours)
-            self.assertGreaterEqual(len(colours), 4, "and more than a colour or two")
-        self.assertIn(SHIRT, _colours(body))
+            self.assertIn(tones.line, colours, "it has a line round it")
+            self.assertIn(tones.fill, colours)
+            self.assertIn(tones.shade, colours, "and shade on it, to tell its build by")
+            # Nothing is worn and nothing is drawn on it: there is no colour but its own.
+            self.assertLessEqual(colours, {tones.fill, tones.shade, tones.far, tones.far_shade, tones.line})
+        self.assertIn(tones.far, _colours(body), "what is on the far side of the body is darker")
+        self.assertNotIn(tones.far, _colours(head))
         # Every part has something of it, and nothing of it lies where no part could take it.
         allowed = pygame.Mask(self.template.canvases[BODY_CANVAS])
         for bone, spec in self.template.parts.items():
@@ -91,11 +95,51 @@ class DollGuideTests(unittest.TestCase):
             allowed.draw(_mask(self.template.cut_mask(bone, body)), (0, 0))
         painted = _mask(body)
         self.assertEqual(painted.overlap_area(allowed, (0, 0)), painted.count())
-        # It faces right: the eye is ahead of the middle of the head.
+        # It faces right all the same: its chin is ahead of the middle of the head.
         skull = self.template.parts["skull"]
-        white = pygame.mask.from_threshold(head, (*PALETTE["paper"], 255), (1, 1, 1, 255))
-        self.assertGreater(white.count(), 0)
-        self.assertGreater(white.get_bounding_rects()[0].centerx, skull.end[0])
+        box = _mask(head).get_bounding_rects()[0]
+        chin = pygame.Mask(head.get_size())
+        chin.draw(pygame.Mask((head.get_width(), box.height // 6), fill=True), (0, box.bottom - box.height // 6))
+        self.assertGreater(_mask(head).overlap_mask(chin, (0, 0)).centroid()[0], skull.end[0] + skull.radius * 0.1)
+
+    def test_a_limb_is_one_piece_on_the_guide_from_where_it_is_joined_on_to_its_end(self) -> None:
+        found = pieces(self.template, BODY_CANVAS)
+        for limb in LIMBS:
+            self.assertIn(limb, found)
+        rest = [piece for piece in found if piece not in LIMBS]
+        self.assertEqual(len(rest), 1, "and the trunk is one with the hips and the neck")
+        self.assertEqual(sorted(bone for piece in found for bone in piece), sorted(label_spots(self.template, BODY_CANVAS)))
+        self.assertEqual(pieces(self.template, HEAD_CANVAS), [])
+        for piece in found:
+            zone = piece_zone(self.template, piece)
+            self.assertEqual(len(zone.connected_components()), 1, f"no line parts {piece}")
+            for bone in piece:
+                region = _mask(self.template.region(bone))
+                self.assertEqual(zone.overlap_area(region, (0, 0)), region.count(), bone)
+        # No piece is on another's, with the measures a doll starts from either.
+        built = self.template.built(self.template.starting())
+        zones = [piece_zone(built, piece) for piece in pieces(built, BODY_CANVAS)]
+        for index, zone in enumerate(zones):
+            for other in zones[index + 1 :]:
+                self.assertLessEqual(zone.overlap_area(other, (0, 0)), 4 * self.template.unit)
+        canvas = pygame.Rect((0, 0), built.canvases[BODY_CANVAS])
+        self.assertTrue(all(canvas.contains(box) for box in piece_spots(built, BODY_CANVAS).values()))
+
+    def test_the_guide_marks_where_a_piece_bends_and_every_joint(self) -> None:
+        bare = pygame.Surface(self.template.canvases[BODY_CANVAS], pygame.SRCALPHA)
+        guide = self.template.guide(BODY_CANVAS)
+        figure = reference(self.template, BODY_CANVAS)
+        for limb in LIMBS:
+            for bone in limb[1:]:
+                joint = self.template.parts[bone].start
+                at = (round(joint[0]), round(joint[1]))
+                # A ring at the joint, which is not of the figure's colours, and dots out to the edge of its zone.
+                self.assertNotEqual(guide.get_at(at), figure.get_at(at), bone)
+                reach = self.template.reach_at(self.template.parts[bone], joint)
+                across = range(round(joint[0] - reach) + 2, round(joint[0] - reach * 0.75))
+                rows = [guide.get_at((x, y)) for x in across for y in (at[1] - 1, at[1], at[1] + 1)]
+                self.assertGreater(len({tuple(pixel) for pixel in rows}), 1, f"{bone} is marked where it begins")
+        self.assertEqual(bare.get_size(), guide.get_size())
 
     def test_the_figure_can_be_cut_and_put_together_like_any_drawing(self) -> None:
         doll = Doll(self.template, {name: reference(self.template, name) for name in self.template.canvases})

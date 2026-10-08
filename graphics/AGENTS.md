@@ -4,6 +4,8 @@
 - A posed body is drawn once per frame of its clip and kept. Only a body that physics is moving is drawn joint by joint.
 - A paper doll is laid over its skeleton part by part every frame. Its arms and legs are limbs of rubber (`graphics/hose.py`): the parts named together under `doll.hoses` are one piece, the last of them a hand or a foot that keeps its shape. Which parts those are is data; code never names one.
 - A limb is kept as two pictures, each by what it alone changes with: the part that bends, and the hand or foot with the joint that gives. Do not make one depend on the other's shape: a hand turns all the time.
+- The plain figure (`graphics/mannequin.py`) is the one figure there is: pale under the guide, in a resident's colour for whoever nobody has drawn, and what the editor gives to start from. It has no clothes and no face. Do not draw another beside it.
+- The doll's paper is told by its size. Laying it out anew means a new size, the layout of today put at the head of `doll.former`, every part moved by whole pixels and left with all that was its own; drawings already made are never edited, they are laid out anew each time they are read.
 - Bending needs numpy and must stay optional: without it, or with a bone of the limb gone, the jointed parts are drawn. Bent limbs are kept and shown again; only so many new ones are bent in a frame.
 - Missing custom assets must have a safe fallback.
 - Follow the style contract in `docs/visual-style.md`: draw on the internal canvas, take colours from `graphics/palette.py`, load images through `AssetStore`.

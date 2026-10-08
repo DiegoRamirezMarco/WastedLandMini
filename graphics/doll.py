@@ -22,12 +22,10 @@ import pygame
 
 from graphics import hose as rubber
 from graphics.illustrations import Illustrations
-from graphics.palette import PALETTE
 from skeleton.plan import PLAN_PATH, SIDES, SkeletonPlan, wrapped
 from skeleton.rig import Bone, Skeleton
 
 Point = tuple[float, float]
-Color = tuple[int, int, int]
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +45,11 @@ DOLL_VIEW = "doll"
 DOLL_FACINGS = {"right": "doll_right", "left": "doll_left"}
 # Reaching this far, a half of the canvas is all of it.
 FAR = 4096
-# Parts on the far side of the body are tinted on the guide in one colour, the near side in another.
-GUIDE_NEAR = PALETTE["sand"]
-GUIDE_FAR = PALETTE["teal"]
-GUIDE_MIDDLE = PALETTE["dust"]
-GUIDE_JOINT = PALETTE["ember"]
 # Pixels either side of a joint over which a limb is measured to see how wide it is drawn there.
 JOINT_BAND = 2
+# Pixels round a piece of a drawing laid out anew over which it keeps the colours it had beside it,
+# unseen: a part made smaller or turned takes a little of what lies just past its edge.
+BESIDE = 8
 # Pixels to one of the skeleton's at which a doll is laid out to see how much room it takes.
 BOX_DETAIL = 4.0
 # A limb of rubber is turned as a whole in steps, as many to a full turn as leave its far end
@@ -179,16 +175,16 @@ class JointHandle:
 class PartSpec:
     """Where one part is drawn on its canvas, along a line from one joint to the next.
 
-    The example is the slim figure the guide shows. The zone is how far the part may be drawn: a
-    good deal wider and longer, so that a body can be made stout, or any odd shape, and still be
-    cut into its parts.
+    The radius is that of the slim figure the guide shows. The zone is how far the part may be
+    drawn: a good deal wider and longer, so that a body can be made stout, or any odd shape, and
+    still be cut into its parts.
     """
 
     bone: str
     canvas: str
     start: Point
     end: Point
-    # Half the width of the example.
+    # Half the width of the figure the guide shows.
     radius: float
     # Half the width of the zone, and how far it goes beyond the first joint and beyond the second.
     reach: float = 0.0
@@ -200,8 +196,8 @@ class PartSpec:
     # Nor is it cut round at its second joint, though another part starts there: the shoulders of the
     # trunk are left as drawn, with the neck coming out of them.
     free_end: bool = False
-    # What the part is on the example figure the guide shows: a sleeve, a shoe, a head.
-    wears: str = ""
+    # What the part is on the plain figure the guide shows: a chest, a hand, a foot.
+    shape: str = ""
 
     def zone(self) -> list[Point]:
         """The corners of the zone: a box along the part, wider than it and reaching past both joints."""
@@ -229,9 +225,10 @@ class DollTemplate:
     # The measures a doll nobody has drawn yet starts from. The parts above say where the guide's
     # joints are before any measures: drawings made before there were measures are cut by those.
     start: DollBuild = field(default_factory=DollBuild)
-    # The template as it was before its paper was last laid out anew, if it ever was: drawings
-    # kept from then are of that size, with their parts where it had them.
-    former: "DollTemplate | None" = None
+    # The template as it was each time before its paper was laid out anew, the latest first:
+    # drawings kept from then are of the size it had, with their parts where it had them. A
+    # paper is known by its size, so no two have the same.
+    formers: "tuple[DollTemplate, ...]" = ()
     # The limbs of rubber: for each, its parts from the trunk outwards, which are drawn in one line.
     hoses: tuple[tuple[str, ...], ...] = ()
     # How much of such a limb each bend takes up, from a corner at 0 to the whole limb in one curve
@@ -247,26 +244,36 @@ class DollTemplate:
     def adopted(self, canvas: str, drawing: pygame.Surface, build: DollBuild) -> pygame.Surface:
         """A drawing as this template lays its paper out, whichever way it was laid out when drawn.
 
-        One of the size the paper used to be is taken apart as it was cut then, and each part put
+        One of a size the paper used to be is taken apart as it was cut then, and each part put
         where it goes now. Nothing of anybody's is drawn again or resized. Any other is left as it is.
         """
-        former = self.former
-        if former is None or drawing.get_size() == self.canvases.get(canvas):
+        if drawing.get_size() == self.canvases.get(canvas):
             return drawing
-        if drawing.get_size() != former.canvases.get(canvas):
+        former = next((each for each in self.formers if drawing.get_size() == each.canvases.get(canvas)), None)
+        if former is None:
             return drawing
         was, now = former.built(build), self.built(build)
-        moved = pygame.Surface(self.canvases[canvas], pygame.SRCALPHA)
+        # Parts moved by as much go as one piece, as those of a limb do, which meet at its joints.
+        pieces: dict[tuple[int, int], pygame.mask.Mask] = {}
         for bone, spec in now.parts.items():
             if spec.canvas != canvas:
                 continue
-            piece = drawing.copy()
-            keep = pygame.Surface(piece.get_size(), pygame.SRCALPHA)
-            keep.fill((255, 255, 255, 0))
-            keep.blit(was.cut_mask(bone, drawing), (0, 0), special_flags=pygame.BLEND_RGBA_MAX)
-            piece.blit(keep, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             before = was.parts[bone]
-            moved.blit(piece, (round(spec.start[0] - before.start[0]), round(spec.start[1] - before.start[1])))
+            by = (round(spec.start[0] - before.start[0]), round(spec.start[1] - before.start[1]))
+            own = pygame.mask.from_surface(was.cut_mask(bone, drawing))
+            pieces.setdefault(by, pygame.Mask(drawing.get_size())).draw(own, (0, 0))
+        moved = pygame.Surface(self.canvases[canvas], pygame.SRCALPHA)
+        # First the colours beside each piece, which go along with it and are then made clear.
+        for by, own in pieces.items():
+            moved.blit(_taken(drawing, _grown(own, BESIDE), solid=True), by)
+        clear = pygame.Surface(moved.get_size(), pygame.SRCALPHA)
+        clear.fill((255, 255, 255, 0))
+        moved.blit(clear, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        # Then the pieces themselves, each where it goes now and over whatever was put there.
+        for by, own in pieces.items():
+            room = own.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(255, 255, 255, 255))
+            moved.blit(room, by, special_flags=pygame.BLEND_RGBA_MULT)
+            moved.blit(_taken(drawing, own), by, special_flags=pygame.BLEND_RGBA_ADD)
         return moved
 
     def starting(self) -> DollBuild:
@@ -469,110 +476,36 @@ class DollTemplate:
         """Paint the zone of a part, or with `width` only its edge."""
         pygame.draw.polygon(target, color, spec.zone(), width)
 
-    def _capsule(self, target: pygame.Surface, spec: PartSpec, color: tuple[int, ...]) -> None:
-        """Paint the example of a part: a rounded strip from one joint to the next."""
-        radius = round(spec.radius)
-        pygame.draw.line(target, color, spec.start, spec.end, radius * 2 + 1)
-        pygame.draw.circle(target, color, spec.start, radius)
-        pygame.draw.circle(target, color, spec.end, radius)
-
     def guide(self, canvas: str) -> pygame.Surface:
-        """What is shown under a canvas to draw over: every part in a zone of its own, the cuts
-        between them, a dot at each joint, and a figure to take as a reference."""
+        """What is shown under a canvas to draw over: every piece in a zone of its own, marked
+        where it bends, and a plain figure to take as a reference."""
         from graphics.doll_guide import build_guide
 
         return build_guide(self, canvas)
 
-    def example(
-        self,
-        bone: str,
-        color: Color,
-        outline: Color | None = None,
-        edge: int | None = None,
-        stout: float = 1.0,
-        inside: bool = False,
-    ) -> pygame.Surface:
-        """The slim example of one part on a clear canvas, kept inside its zone.
 
-        The trunk's stops at the shoulders, so that the neck shows between it and the head.
-        `edge` is how wide the line round it is, where it has one and it is not the usual,
-        and `stout` how many times as thick as the example the part is made. With `inside`
-        it is only what is within that line, the line itself being left for another to draw.
-        """
-        own = spec = self.parts[bone]
-        if stout != 1.0 and not spec.whole:
-            spec = replace(spec, radius=min(spec.radius * stout, spec.reach or spec.radius * stout))
-        if not spec.whole:
-            way, keep = _direction(own), self._kept(own, True)
-            if keep is not None and abs(keep[0] * way[0] + keep[1] * way[1]) < 0.5:
-                # It is cut along its length and not across it, as a foot is under the ankle: only
-                # one side of that cut is the part's own. Its example is the half that lies there,
-                # made round, and not a whole of which the other half would be cut away.
-                half = spec.radius / 2
-                spec = replace(
-                    spec,
-                    radius=half,
-                    start=(spec.start[0] + keep[0] * half, spec.start[1] + keep[1] * half),
-                    end=(spec.end[0] + keep[0] * half, spec.end[1] + keep[1] * half),
-                )
-            beyond = spec.radius - spec.ends[1]
-            if beyond > 0 and not any(other.start == own.end for other in self.sharing(own, own.end)):
-                # Nothing goes on from its far end: that end is drawn as far back as lets it stay
-                # round inside its zone, where it would be cut off flat.
-                back = min(beyond, math.dist(spec.start, spec.end) * 0.9)
-                spec = replace(spec, end=(spec.end[0] - way[0] * back, spec.end[1] - way[1] * back))
-        surface = pygame.Surface(self.canvases[spec.canvas], pygame.SRCALPHA)
-        edge = (edge if edge is not None else max(1, self.unit // 8)) if outline is not None or inside else 0
-        if spec.whole:
-            centre, radius = spec.end, round(spec.radius)
-            if outline is not None:
-                pygame.draw.circle(surface, outline, centre, radius)
-            pygame.draw.circle(surface, color, centre, radius - edge)
-            return surface
-        if outline is not None:
-            self._capsule(surface, spec, (*outline, 255))
-        self._capsule(surface, replace(spec, radius=spec.radius - edge), (*color, 255))
-        surface.blit(self.mask(bone), (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-        return surface
+def _grown(mask: pygame.mask.Mask, by: int) -> pygame.mask.Mask:
+    """A mask reaching so many pixels further every way."""
+    wide = pygame.Mask(mask.get_size())
+    for shift in range(-by, by + 1):
+        wide.draw(mask, (shift, 0))
+    grown = pygame.Mask(mask.get_size())
+    for shift in range(-by, by + 1):
+        grown.draw(wide, (0, shift))
+    return grown
 
-    def mannequin(
-        self,
-        colors: dict[str, Color],
-        outline: Color = PALETTE["ink"],
-        edge: int | None = None,
-        stout: dict[str, float] | None = None,
-    ) -> dict[str, pygame.Surface]:
-        """A plain figure filling every zone, in the colours given by bone: something to start a drawing from.
 
-        `stout` makes some parts thicker than the slim figure of the guide, by how many times, by
-        the name of the part without its side.
-        """
-        drawings = {name: pygame.Surface(size, pygame.SRCALPHA) for name, size in self.canvases.items()}
-        limbs = {bone: limb for limb in self.hoses for bone in limb}
-        thick = {bone: (stout or {}).get(unsided(bone), 1.0) for bone in self.parts}
-        drawn: set[str] = set()
-        for bone, spec in self.parts.items():
-            if bone in drawn:
-                continue
-            limb = limbs.get(bone, (bone,))
-            drawn.update(limb)
-            sheet = drawings[spec.canvas]
-            if len(limb) > 1:
-                # A limb of rubber is one piece: the line goes round all of it, and not across
-                # it where one of its parts ends and the next begins.
-                for part in limb:
-                    sheet.blit(self.example(part, outline, stout=thick[part]), (0, 0))
-                for part in limb:
-                    color = colors.get(part, GUIDE_MIDDLE)
-                    sheet.blit(self.example(part, color, None, edge, thick[part], inside=True), (0, 0))
-                continue
-            sheet.blit(self.example(bone, colors.get(bone, GUIDE_MIDDLE), outline, edge, thick[bone]), (0, 0))
-            if spec.whole:
-                # An eye, on the side it faces.
-                radius = round(spec.radius)
-                eye = (spec.end[0] + radius * 0.45, spec.end[1] - radius * 0.1)
-                pygame.draw.circle(drawings[spec.canvas], outline, eye, max(2, radius // 8))
-        return drawings
+def _taken(drawing: pygame.Surface, mask: pygame.mask.Mask, solid: bool = False) -> pygame.Surface:
+    """What of a drawing is under a mask, and nothing of it elsewhere. With `solid` its colours
+    there are all to be seen, also where nothing was drawn."""
+    piece = drawing.copy()
+    if solid:
+        seen = pygame.Surface(piece.get_size(), pygame.SRCALPHA)
+        seen.fill((0, 0, 0, 255))
+        piece.blit(seen, (0, 0), special_flags=pygame.BLEND_RGBA_MAX)
+    under = mask.to_surface(setcolor=(255, 255, 255, 255), unsetcolor=(0, 0, 0, 0))
+    piece.blit(under, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    return piece
 
 
 def _direction(spec: PartSpec) -> Point:
@@ -631,20 +564,20 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
             (values["from"][0] * unit, values["from"][1] * unit),
             (values["to"][0] * unit, values["to"][1] * unit),
             radius * unit,
-            # Without a reach of its own, a part may be drawn no wider than its example.
+            # Without a reach of its own, a part may be drawn no wider than the figure of the guide.
             float(values.get("reach", radius)) * unit,
             (float(ends[0]) * unit, float(ends[1]) * unit),
             bool(values.get("whole", False)),
             bool(values.get("free_start", False)),
             bool(values.get("free_end", False)),
-            str(values.get("wears", "")),
+            str(values.get("shape", "")),
         )
     start = build_from_data(data.get("build"))
     hoses = tuple(tuple(str(bone) for bone in limb) for limb in data.get("hoses", ()))
     bends = data.get("hose") or {}
     _check_hoses(hoses, parts, float(bends.get("tip", 0.35)) > 0)
     return DollTemplate(
-        unit, canvases, parts, start, _former(unit, canvases, parts, start, data.get("former")),
+        unit, canvases, parts, start, _formers(unit, canvases, parts, start, data.get("former")),
         hoses, float(bends.get("round", 1.0)), float(bends.get("volume", 0.0)), float(bends.get("tip", 0.35)),
     )
 
@@ -671,29 +604,49 @@ def _check_hoses(hoses: tuple[tuple[str, ...], ...], parts: dict[str, PartSpec],
                 raise ValueError(f"The parts of a limb of rubber that bend must be drawn in one line: {before}, {after}")
 
 
-def _former(
+def _formers(
     unit: int, canvases: dict[str, tuple[int, int]], parts: dict[str, PartSpec], start: DollBuild, data: Any
-) -> DollTemplate | None:
-    """The template as it was laid out before: the same parts, as long, from where they used to start."""
-    if not isinstance(data, dict):
-        return None
-    sizes = dict(canvases)
-    for name, size in (data.get("canvases") or {}).items():
-        if name not in canvases:
-            raise ValueError(f"The doll's former layout has an unknown canvas: {name}")
-        sizes[str(name)] = (int(size[0] * unit), int(size[1] * unit))
-    was = dict(parts)
-    for bone, point in (data.get("from") or {}).items():
-        if bone not in parts:
-            raise ValueError(f"The doll's former layout places an unknown part: {bone}")
-        spec = parts[bone]
-        # Both ends are moved by the same amount, worked out the same way for every part of a limb,
-        # so that parts which meet at a joint now met at the very same point then.
-        back = (spec.start[0] - point[0] * unit, spec.start[1] - point[1] * unit)
-        was[str(bone)] = replace(
-            spec, start=(spec.start[0] - back[0], spec.start[1] - back[1]), end=(spec.end[0] - back[0], spec.end[1] - back[1])
-        )
-    return DollTemplate(unit, sizes, was, start)
+) -> tuple[DollTemplate, ...]:
+    """The template as its paper was laid out before, the latest first.
+
+    Each is told by how it differed from the one that came after it: the size of its paper, where
+    its parts used to start, and the zones that were smaller. The parts are the same and as long.
+    """
+    layouts = [data] if isinstance(data, dict) else list(data or ())
+    found: list[DollTemplate] = []
+    sizes, was = dict(canvases), dict(parts)
+    for layout in layouts:
+        if not isinstance(layout, dict):
+            raise ValueError("A former layout of the doll's paper must say how it differed")
+        sizes, was = dict(sizes), dict(was)
+        for name, size in (layout.get("canvases") or {}).items():
+            if name not in canvases:
+                raise ValueError(f"The doll's former layout has an unknown canvas: {name}")
+            sizes[str(name)] = (int(size[0] * unit), int(size[1] * unit))
+        for bone, zone in (layout.get("zones") or {}).items():
+            if bone not in parts:
+                raise ValueError(f"The doll's former layout gives a zone to an unknown part: {bone}")
+            spec = was[bone]
+            ends = zone.get("ends")
+            was[str(bone)] = replace(
+                spec,
+                reach=float(zone["reach"]) * unit if "reach" in zone else spec.reach,
+                ends=(float(ends[0]) * unit, float(ends[1]) * unit) if ends else spec.ends,
+            )
+        for bone, point in (layout.get("from") or {}).items():
+            if bone not in parts:
+                raise ValueError(f"The doll's former layout places an unknown part: {bone}")
+            spec = was[bone]
+            # Both ends are moved by the same amount, worked out the same way for every part of a limb,
+            # so that parts which meet at a joint now met at the very same point then.
+            back = (spec.start[0] - point[0] * unit, spec.start[1] - point[1] * unit)
+            was[str(bone)] = replace(
+                spec, start=(spec.start[0] - back[0], spec.start[1] - back[1]), end=(spec.end[0] - back[0], spec.end[1] - back[1])
+            )
+        if sizes == canvases or any(sizes == other.canvases for other in found):
+            raise ValueError(f"A former layout of the doll's paper is told by its size, and two have the same: {sizes}")
+        found.append(DollTemplate(unit, sizes, was, start))
+    return tuple(found)
 
 
 def load_template(path: Path = PLAN_PATH) -> DollTemplate:

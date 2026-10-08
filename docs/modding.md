@@ -356,18 +356,21 @@ between the feet, with `y` growing downwards. Angles are in degrees.
 - `doll`: how a body is drawn by hand. `unit` is the pixels of a drawing to one of the skeleton's;
   `canvases` gives the size of the body's and the head's in those units; and each entry of `parts`
   is a bone with the canvas it is drawn on and the two points it runs `from` and `to`. `radius`
-  is half the width of the slim example the guide shows. `reach` is half the width of the zone
+  is half the width of the slim figure the guide shows. `reach` is half the width of the zone
   the part may be drawn in and `ends` how far that zone goes beyond each joint; give them room,
-  so that people can draw other builds than the example. `wears` says what the part is on the
-  figure the guide shows, so that it is drawn as one: `skin`, `sleeve`, `hand`, `shirt`, `waist`,
-  `leg`, `shin`, `shoe` or `head`; anything else is a plain rounded strip. `whole` is for a part
-  that is everything on its canvas. Every other part is cut round at the joints it shares, but for
+  so that people can draw other builds than the figure's. `shape` says what the part is on the
+  plain figure the guide shows and whoever nobody has drawn is shown as: `neck`, `chest`,
+  `pelvis`, `upper_arm`, `forearm`, `hand`, `thigh`, `shin`, `foot` or `head`; anything else is
+  a plain rounded strip. `whole` is for a part that is everything on its canvas. Every other
+  part is cut round at the joints it shares, but for
   `free_start`, a part that does not turn about its first joint, and `free_end`, one left as
   drawn at its second though another starts there, as the trunk at the shoulders. In the game a
   bone that a part is drawn for is as long as the part is on its paper, whatever the `doll` view
   says: of that view the game keeps where the bones between are, the ones that join a limb to
   the trunk, and how high the feet stand. Every part must have its turn in the `doll` order, and
-  zones may only overlap where two parts share a joint.
+  what is a part's own, its zone as far as the joints it is cut at, may only be on another's
+  where the two share a joint. On the guide a limb of `doll.hoses` is one piece, and so is
+  whatever else is joined together: lay the paper out so that no piece is on another.
 - `doll.hoses` lists the limbs of rubber: for each, its parts from the trunk outwards, such as
   an upper arm, its forearm and its hand. They are kept in one piece, where other parts are
   pinned at a joint. The parts of one must be drawn one after the other on the same canvas,
@@ -390,10 +393,17 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   moved (`skull.start`, where a head sits on its neck); and `attach` how far from where the
   `doll` view has them the bones that join a limb on end (`clavicle`, `pelvis`). Names carry no
   side: both arms are one. Measures a doll cannot have are ignored whole.
-- `doll.former` says how the paper was laid out before it was last changed: the size its
-  `canvases` had, and where each part that has since been moved used to run `from`. A drawing of
-  that size is taken apart as it was cut then and each part put where it goes now. Change the
-  layout again and the layout before this one can no longer be read: redraw or re-save first.
+- `doll.former` says how the paper was laid out before, each time it was changed, the latest
+  first: one entry, or a list of them. Each tells how it differed from the layout that came
+  after it: the size its `canvases` had, where each part that has since been moved used to run
+  `from`, and under `zones` the `reach` and the `ends` of each part whose zone was another.
+  A drawing of the size of one of them is taken apart as it was cut then and each part put
+  where it goes now, with nothing of it drawn again or resized. A paper is told by its size,
+  so a new layout needs a size no layout before it had. It should move every part by a whole
+  number of drawing pixels and leave each all that was its own, its zone as far as the joints
+  it is cut at: what was drawn then would otherwise be put down between two pixels, or cut
+  off. To lay the paper out anew, put what `canvases` and the parts say today at the head of
+  `former` and then change them.
 - `doll.build`, in `data/skeleton.json`, is the same three tables: the measures every doll
   starts from. Whoever has not been drawn yet is given them, and `Medidas de partida` goes back
   to them. The `from` and `to` of the parts stay as they are under them: a drawing kept without
