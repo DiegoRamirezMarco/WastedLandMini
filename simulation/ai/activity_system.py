@@ -415,6 +415,11 @@ class ActivitySystem:
         if use is not None:
             resident.needs.apply(use.per_minute)
             placed = world.interactables.get(activity.target_id or "")
+            trained_out = False
+            if use.trains is not None and placed is not None:
+                # A minute at a thing to train at (S57), and no longer than it has to teach.
+                world.attributes.train(world, resident, placed)
+                trained_out = not world.attributes.learns_at(world, resident, placed)
             rest = use.per_minute.get("tiredness", 0.0)
             if placed is not None and rest < 0:
                 # In a bed of their own, in a house that is comfortable, they rest the better.
@@ -426,6 +431,8 @@ class ActivitySystem:
             lowered = [use.until] if use.until else [need for need, delta in use.per_minute.items() if delta < 0]
             relieved = bool(lowered) and all(getattr(resident.needs, need, 0.0) <= 0.0 for need in lowered)
             if (use.per_minute or use.heals) and self.urgent_needs(world, resident, ignoring=use.per_minute):
+                relieved = True
+            if trained_out:
                 relieved = True
             if use.heals and resident.health >= RECOVERED_HEALTH and not world.substances.seen_through(world, resident, use):
                 # Mended, and with nobody seeing them through anything, they get up.

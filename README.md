@@ -194,6 +194,10 @@ python -m simulation.headless --days 7 --seed 7
   current, and what goes off is put in it by itself
 - Compost is kept in the `Almacén`. Click a bed of the garden and press `Abonar`: it gives
   more for three days
+- Weights, a chess table, a target, a skipping rope, a dummy and a log are things to train
+  at, one for each of the six attributes: build them from `Urbanismo`, under `Entreno`. Nobody uses them
+  unasked: tell somebody from the wheel, under the tasks, with `Entrenar`, or put them down
+  on one. A common one takes an attribute up to 6, and each rarity past it a point further
 - The border of the square of a thing says how rare it is, and so how good: white, green,
   blue, red, purple and yellow, from common to mythic. The bar under one says how worn it is
 - Click a post, a bed, the store, the generator or anything that runs on current to see

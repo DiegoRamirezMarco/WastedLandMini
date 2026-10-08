@@ -27,6 +27,8 @@ UPGRADE_LABEL = "Mejorar"
 POWER_LABEL = "Corriente"
 DRAW_LABEL = "Dibujar"
 COMPOST_LABEL = "Abonar"
+TRAINS = "Para entrenar {attribute}: hasta {cap}"
+TRAINS_FURTHER = "Mejor, llegaría a {cap}"
 CHILLS = "Enfría: lo que guarda dura {times} veces más"
 NOT_CHILLING = "No enfría: {why}"
 DRESSED = "Abonado: da más hasta el día {day}"
@@ -147,6 +149,22 @@ def _current_lines(world: SimulationWorld, placed: Interactable) -> list[Line]:
     return lines
 
 
+def _training_lines(world: SimulationWorld, placed: Interactable) -> list[Line]:
+    """What is said of a thing to train at (S57): what it is for, and how far it takes it."""
+    name = world.attributes.trains(world, placed)
+    if name is None:
+        return []
+    attributes = world.attributes
+    known = world.registries.attributes.attributes
+    cap = attributes.train_cap(world, placed)
+    lines = [Line(TRAINS.format(attribute=known[name].name.lower(), cap=f"{cap:g}"))]
+    better = Interactable(placed.object_id, placed.kind, placed.x, placed.y, placed.level + 1)
+    further = attributes.train_cap(world, better)
+    if further > cap and world.upgrades.next(world, placed) is not None:
+        lines.append(Line(TRAINS_FURTHER.format(cap=f"{further:g}"), PALETTE["stone"]))
+    return lines
+
+
 def _chill_lines(world: SimulationWorld, placed: Interactable) -> list[Line]:
     """What is said of a thing that keeps what is in it from going off (S65)."""
     chill = world.definition_of(placed).chill
@@ -231,6 +249,7 @@ def object_view(
     rarity = world.upgrades.rarity(world, placed)
     said = [Line(definition.name.capitalize(), rarity.color), Line(f"Calidad: {rarity.name.lower()}", rarity.color)]
     said += _post_lines(world, placed) + _current_lines(world, placed) + _chill_lines(world, placed)
+    said += _training_lines(world, placed)
     said += _store_lines(world, placed)
     composting, can_compost = _compost_lines(world, placed)
     bettering, can_better = _upgrade_lines(world, placed)

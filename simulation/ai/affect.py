@@ -36,10 +36,10 @@ GROUPS = (NEED, WITH, INCITE, LEISURE, TASK, WORDS)
 # The groups of what is done with somebody else.
 SHARED = (WITH, INCITE, LEISURE)
 # What a resident can be told to get on with.
-TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, USE, STOP = (
-    "to_post", "push", "take_charge", "salvage", "take_job", "leave_job", "treat", "use", "stop",
+TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, USE, TRAIN, STOP = (
+    "to_post", "push", "take_charge", "salvage", "take_job", "leave_job", "treat", "use", "train", "stop",
 )
-TASKS = (TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, USE, STOP)
+TASKS = (TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, USE, TRAIN, STOP)
 # Who an exchange can be had with: anybody, only somebody they are no couple with, or only their partner.
 ANYBODY, SINGLE, PARTNER = "anybody", "single", "partner"
 # What an exchange is, for whoever shows it: between friends, between two who are drawn to
@@ -541,15 +541,34 @@ class AffectSystem:
             if definition is None or self._holding(world, resident, definition.item_id) is None:
                 return None
             return ((definition.item_id, f"{definition.article} {definition.name}"),)
+        if name == TRAIN:
+            # The things there are to train at that still have something to teach them (S57).
+            names = world.registries.attributes.attributes
+            about = []
+            for placed in world.interactables.values():
+                trained = world.attributes.trains(world, placed)
+                if trained is None or not world.attributes.learns_at(world, resident, placed):
+                    continue
+                if not self.can_use(world, resident, placed, TRAIN):
+                    continue
+                said = f"{world.definition_of(placed).name} ({names[trained].name.lower()})"
+                about.append((manhattan(resident.tile, (placed.x, placed.y)), placed.object_id, said))
+            return tuple(
+                (each, f"{said}, a {distance} pasos") for distance, each, said in sorted(about)[: settings.most_targets]
+            ) or None
         # Using one thing in particular is never among what is offered: it is told by
         # naming the thing, as by putting them down at it (P27).
         return None
 
-    def can_use(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> bool:
+    def can_use(self, world: "SimulationWorld", resident: Resident, placed: Interactable, task: str = USE) -> bool:
         """Whether a resident can be told to use one thing in particular, as things stand: it
-        is used at all, it is open to them, and there is room at it."""
+        is used at all, it is open to them, and there is room at it. `task` is the order
+        it would be told by."""
         use = world.definition_of(placed).use
-        if use is None or USE not in world.registries.affect.tasks:
+        if use is None or task not in world.registries.affect.tasks:
+            return False
+        if use.trains is not None and not world.attributes.learns_at(world, resident, placed):
+            # A thing to train at has nothing for whoever is already as good as it makes anybody (S57).
             return False
         theirs = resident.activity is not None and resident.activity.target_id == placed.object_id
         if world.users_of(placed.object_id) - (1 if theirs else 0) >= use.capacity:
@@ -638,6 +657,16 @@ class AffectSystem:
         """Whether something can be told a resident as things stand, as why not if it cannot,
         and what telling it says."""
         group, _, name = kind.partition(":")
+        if group == TASK and name == TRAIN:
+            # Training is at one thing in particular, and only as far as it has to teach (S57).
+            placed = world.interactables.get(target_id or "")
+            if placed is None or world.attributes.trains(world, placed) is None:
+                return "Hay que decir con quién, o con qué", ""
+            if not world.attributes.learns_at(world, resident, placed):
+                return f"{resident.name} ya no aprende más ahí: hace falta uno mejor", ""
+            if not self.can_use(world, resident, placed, TRAIN):
+                return "Eso no se le puede decir ahora", ""
+            return None, world.registries.affect.tasks[TRAIN].label.replace("{target}", self._named(world, placed))
         if group == TASK and name == USE:
             # It names the thing itself, which need not be the nearest of its kind.
             placed = world.interactables.get(target_id or "")
@@ -761,7 +790,7 @@ class AffectSystem:
                 resident.activity = activity
                 resident.current_action = "walking"
             return None
-        if name == USE:
+        if name in (USE, TRAIN):
             placed = world.interactables.get(target_id or "")
             activity = routine.use(world, resident, placed) if placed is not None else None
             if activity is None:

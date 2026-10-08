@@ -1015,6 +1015,154 @@ def refrigerated_chest(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
     return stage.picture()
 
 
+# ----- things to train at (S57) -----
+
+
+def weights(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A bar with discs at each end on a low rack, and a dumbbell on the ground by it: strength."""
+    stage = Stage((1, 1), 46, cell, depth)
+    s = stage.under
+    stage.shadow(4, 92, 70)
+    floor = stage.front - 6
+    iron: Color = (78, 82, 92)
+    for x in (22, 66):
+        s.box(x, floor - 48, 12, 48, DARK_METAL, 2)
+    bar = floor - 52
+    s.stroke([(6, bar), (94, bar)], LINE, 8)
+    s.stroke([(8, bar - 1), (92, bar - 1)], METAL, 3.4)
+    for x, wide, tall, color in ((0, 16, 46, iron), (11, 12, 32, RED), (84, 16, 46, iron), (77, 12, 32, RED)):
+        s.oval(x, bar - tall / 2, wide, tall, color, 255, outline=True)
+    # A dumbbell on the ground in front.
+    low = floor - 8
+    s.stroke([(40, low), (62, low)], LINE, 7)
+    s.stroke([(42, low - 1), (60, low - 1)], METAL, 3)
+    for x in (32, 58):
+        s.oval(x, low - 10, 12, 20, iron, 255, outline=True)
+    return stage.picture()
+
+
+def chess_table(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A small table with a board on it and a game half played: mind."""
+    stage = Stage((1, 1), 44, cell, depth)
+    s = stage.under
+    stage.shadow()
+    floor = stage.front - 6
+    for x in (14, 74):
+        s.box(x, floor - 40, 12, 40, darker(WOOD, 0.25), 2)
+    top = floor - 76
+    s.block(6, top, 88, 36, 10, WOOD, 4)
+    # The board, seen a little from above: four squares by four, dark and pale.
+    left, far = 22, top + 6
+    s.shade(left - 3, far - 3, 62, 30, LINE, 255, 2)
+    for row in range(4):
+        for column in range(4):
+            s.shade(left + column * 14, far + row * 6, 14, 6, PAPER if (row + column) % 2 else (88, 70, 60))
+    # A few pieces standing on it.
+    for x, y, color in ((29, far + 6, PAPER), (57, far + 4, (44, 40, 44)), (43, far + 18, PAPER), (71, far + 22, (44, 40, 44))):
+        s.stroke([(x, y), (x, y - 12)], LINE, 10)
+        s.stroke([(x, y), (x, y - 12)], color, 5.5)
+    return stage.picture()
+
+
+def target(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A round target of straw on three legs, with an arrow in it: senses."""
+    stage = Stage((1, 1), 92, cell, depth)
+    s = stage.under
+    stage.shadow(14, 72, 60)
+    floor = stage.front - 6
+    middle = floor - 74
+    for x in (26, 74):
+        s.stroke([(50, middle + 10), (x, floor)], LINE, 7)
+        s.stroke([(50, middle + 10), (x, floor)], WOOD, 3.4)
+    s.stroke([(50, middle + 20), (50, floor - 6)], LINE, 7)
+    s.stroke([(50, middle + 20), (50, floor - 6)], darker(WOOD, 0.2), 3.4)
+    for size, color in ((76, PAPER), (58, RED), (40, PAPER), (24, RED), (10, YELLOW)):
+        s.oval(50 - size / 2, middle - size / 2, size, size, color, 255, outline=size in (76, 10))
+    # An arrow, a little off the middle.
+    s.stroke([(58, middle - 6), (84, middle - 26)], LINE, 4.6)
+    s.stroke([(58, middle - 6), (84, middle - 26)], PALE_WOOD, 2)
+    s.poly([(80, middle - 30), (90, middle - 30), (86, middle - 20)], GREEN)
+    return stage.picture()
+
+
+def skipping_rope(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A post with a peg, and a rope with two red handles hung on it over a mat: dexterity."""
+    stage = Stage((1, 1), 84, cell, depth)
+    s = stage.under
+    stage.shadow(8, 84, 60)
+    floor = stage.front - 6
+    # The mat it is skipped on.
+    s.box(8, floor - 14, 84, 14, (86, 118, 150), 4)
+    s.shade(12, floor - 11, 76, 3, lighter((86, 118, 150), 0.3), 255, 1.5)
+    post = floor - 110
+    s.box(45, post, 10, 100, WOOD, 3)
+    s.box(38, floor - 14, 24, 8, darker(WOOD, 0.2), 3)
+    s.stroke([(50, post + 14), (66, post + 10)], LINE, 6)
+    s.stroke([(50, post + 14), (66, post + 10)], DARK_METAL, 2.6)
+    # The rope, hung by its middle and falling in two loops, with its handles at the ends.
+    rope = (222, 196, 140)
+    for side in (-1, 1):
+        points = [(64, post + 11), (64 + side * 16, post + 40), (64 + side * 12, post + 66), (64 + side * 20, post + 84)]
+        s.stroke(points, LINE, 6)
+        s.stroke(points, rope, 2.6)
+        s.box(60 + side * 20, post + 82, 9, 20, RED, 3)
+    return stage.picture()
+
+
+def dummy(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A sack of straw on a pole with arms of stick and a face painted on it, to talk to: charisma."""
+    stage = Stage((1, 1), 104, cell, depth)
+    s = stage.under
+    stage.shadow(14, 72, 60)
+    floor = stage.front - 6
+    top = floor - 132
+    s.box(46, floor - 60, 8, 60, WOOD, 2)
+    s.box(34, floor - 8, 32, 8, darker(WOOD, 0.2), 3)
+    # The arms, the body in an old coat, and the head.
+    s.stroke([(14, top + 62), (86, top + 62)], LINE, 7)
+    s.stroke([(16, top + 62), (84, top + 62)], PALE_WOOD, 3)
+    s.box(28, top + 46, 44, 54, (112, 96, 132), 8)
+    s.stroke([(50, top + 50), (50, top + 98)], darker((112, 96, 132), 0.4), 2)
+    for y in (top + 62, top + 78):
+        s.oval(46, y, 7, 7, YELLOW, 255, outline=True)
+    s.oval(26, top, 48, 50, CANVAS, 255, outline=True)
+    # The face somebody painted on the sack: two eyes, red cheeks and a wide smile.
+    for x in (38, 56):
+        s.oval(x, top + 16, 7, 9, LINE)
+    for x in (30, 60):
+        s.oval(x, top + 28, 10, 7, RED, 150)
+    s.arc(50, top + 26, 13, 25, 155, RED, 3.4)
+    for x in (30, 44, 60):
+        s.stroke([(x, top + 4), (x + 4, top - 6)], YELLOW, 3)
+    return stage.picture()
+
+
+def training_log(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A thick log stood on end with a rag tied round it where heads meet it, and the dents to show for it: constitution."""
+    stage = Stage((1, 1), 88, cell, depth)
+    s = stage.under
+    stage.shadow(12, 76, 80)
+    floor = stage.front - 6
+    top = floor - 118
+    bark: Color = (128, 92, 62)
+    s.box(26, top + 10, 48, 108, bark, 8)
+    for x in (36, 52, 64):
+        s.stroke([(x, top + 30), (x - 2, top + 60), (x + 2, top + 104)], darker(bark, 0.3), 2)
+    s.oval(26, top, 48, 22, PALE_WOOD, 255, outline=True)
+    s.oval(36, top + 5, 28, 11, darker(PALE_WOOD, 0.14), 255)
+    s.oval(44, top + 8, 12, 5, darker(PALE_WOOD, 0.3), 255)
+    # The rag tied round it at the height of a forehead, with its knot.
+    s.box(24, top + 36, 52, 16, RED, 4)
+    s.poly([(74, top + 40), (88, top + 34), (84, top + 46)], RED)
+    s.poly([(74, top + 46), (90, top + 52), (80, top + 56)], RED)
+    # A dent in the rag, and the stars of whoever made it.
+    s.oval(42, top + 40, 16, 8, darker(RED, 0.35), 255)
+    for x, y in ((14, top + 24), (84, top + 14)):
+        s.stroke([(x - 5, y), (x + 5, y)], YELLOW, 2.6)
+        s.stroke([(x, y - 5), (x, y + 5)], YELLOW, 2.6)
+    return stage.picture()
+
+
 PAINTERS: dict[str, Painter] = {
     "bed": bed,
     "pantry": pantry,
@@ -1057,6 +1205,12 @@ PAINTERS: dict[str, Painter] = {
     "warehouse": warehouse,
     "well": well,
     "refrigerated_chest": refrigerated_chest,
+    "weights": weights,
+    "chess_table": chess_table,
+    "target": target,
+    "skipping_rope": skipping_rope,
+    "dummy": dummy,
+    "training_log": training_log,
 }
 # The ground each is drawn for, in cells: a kind whose data says otherwise keeps the art there was.
 FOOTPRINTS: dict[str, tuple[int, int]] = {

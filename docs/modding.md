@@ -513,7 +513,16 @@ looks and nothing of what happens.
 - `effects` says what a point either side of the middle changes: `work_pace`, `fight_strength`,
   `fight_dodge`, `toughness`, `healing`, `tiredness`, `study`, `learning`, `finds` and `danger`
   as a share, and `carry` and `sight` as so many units or tiles a point.
-- `practice` says what raises one: a minute of `work`, a `fight`, being `hurt`, a day to `lead`.
+- `practice` says what raises one: a minute of `work`, a `fight`, being `hurt`, a day to `lead`,
+  a minute to `train` at a thing for it.
+- `training` says how far a thing to train at takes an attribute: `cap` for a common one,
+  and `per_level` more for each rarity past it.
+- A kind of object in `data/interactables.json` is a thing to train at when its `use` has
+  `"trains"` with the ID of one of the six. Give it a `label`, which is what putting somebody
+  down on it says, and a `per_minute` that tires. To have it made better, and so teach
+  further, name the kind under `upgrade.kinds` in `data/rarities.json`. `"category":
+  "training"` puts it under `Entreno` in the catalogue of `Urbanismo`, beside `furniture`
+  and `decor`.
 - `age` (`from`, `per_year`, `of`), `youth` (`grown_at`, `floor`, `of`) and `injury` (`of`,
   `share`) say what the years, growing up and being hurt take from, and how much.
 

@@ -18,6 +18,7 @@ from simulation.rng import SimulationRNG
 if TYPE_CHECKING:
     from simulation.work.job import JobDefinition
     from simulation.world import SimulationWorld
+    from world.interactable import Interactable
 
 GREW_EVENT = "attribute_grew"
 GREW_IMPORTANCE = 20
@@ -125,9 +126,18 @@ class AttributeSystem:
         span = settings.highest - settings.lowest
         resident.personality.charisma = round((made[CHARISMA] - settings.lowest) / span * 100.0, 1)
 
-    def practise(self, world: "SimulationWorld", resident: Resident, name: str | None, what: str, times: float = 1.0) -> None:
+    def practise(
+        self,
+        world: "SimulationWorld",
+        resident: Resident,
+        name: str | None,
+        what: str,
+        times: float = 1.0,
+        cap: float | None = None,
+    ) -> None:
         """Have a resident gain a little of an attribute by using it: the higher they are, the
-        less each time. It is said when it comes to a whole point more."""
+        less each time, and with `cap` no further than that. It is said when it comes to a
+        whole point more."""
         settings = self.settings(world)
         amount = settings.practice.get(what, 0.0) * times
         if name is None or amount <= 0.0:
@@ -135,6 +145,8 @@ class AttributeSystem:
         before = self.raw(world, resident, name)
         room = (settings.highest - before) / max(0.1, settings.highest - settings.middle)
         after = settings.clamp(before + amount * max(0.0, room))
+        if cap is not None:
+            after = max(before, min(after, cap))
         if after == before:
             return
         if name == CHARISMA:
@@ -154,6 +166,39 @@ class AttributeSystem:
                     data={"resident_id": resident.resident_id, "attribute": name, "level": int(after + 1e-9)},
                 )
             )
+
+    # ----- training (S57) -----
+
+    def trains(self, world: "SimulationWorld", placed: "Interactable | None") -> str | None:
+        """The attribute a thing is for practising. None for what is for nothing of the kind."""
+        use = world.definition_of(placed).use if placed is not None else None
+        return use.trains if use is not None and use.trains in ATTRIBUTES else None
+
+    def train_cap(self, world: "SimulationWorld", placed: "Interactable") -> float:
+        """How far a thing to train at takes an attribute: so far for a common one, and
+        further for each rarity past it, up to the highest there is."""
+        settings = self.settings(world)
+        return settings.clamp(settings.train_cap + settings.train_per_level * (max(1, placed.level) - 1))
+
+    def learns_at(self, world: "SimulationWorld", resident: Resident, placed: "Interactable | None") -> bool:
+        """Whether a resident still has something to gain at a thing to train at."""
+        name = self.trains(world, placed)
+        return name is not None and self.raw(world, resident, name) < self.train_cap(world, placed) - 1e-9
+
+    def train(self, world: "SimulationWorld", resident: Resident, placed: "Interactable") -> None:
+        """A minute at a thing to train at: a little more of what it is for, as far as it goes."""
+        self.practise(world, resident, self.trains(world, placed), "train", cap=self.train_cap(world, placed))
+
+    def training(self, world: "SimulationWorld", resident: Resident) -> tuple[str, float] | None:
+        """What a resident is training right now and how far along the next point of it they
+        are, from 0 to 1. None for whoever is not at a thing to train at."""
+        activity = resident.activity
+        if activity is None or not activity.using or activity.path:
+            return None
+        name = self.trains(world, world.interactables.get(activity.target_id or ""))
+        if name is None:
+            return None
+        return name, self.raw(world, resident, name) % 1.0
 
     def tick_day(self, world: "SimulationWorld") -> None:
         """A day of leading tells on whoever leads."""

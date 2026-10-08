@@ -56,7 +56,12 @@
     "work": 0.00012,
     "fight": 0.04,
     "hurt": 0.03,
-    "lead": 0.01
+    "lead": 0.01,
+    "train": 0.0003
+  },
+  "training": {
+    "cap": 6,
+    "per_level": 1
   },
   "age": {
     "from": 50,

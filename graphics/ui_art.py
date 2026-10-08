@@ -547,6 +547,15 @@ def _face(p: Pen) -> None:
     p.arc(24, 24, 15.8, 198, 252, 2.6, p.light)
 
 
+def _dumbbell(p: Pen) -> None:
+    p.box(14, 20.5, 20, 7, 2, p.soft)
+    for x in (4.5, 35.5):
+        p.box(x, 10, 8, 28, 3.5)
+    for x in (12.5, 30.5):
+        p.box(x, 15, 5, 18, 2)
+    p.line([(8.5, 14), (8.5, 22)], 2.2, p.light)
+
+
 GLYPHS: dict[str, Glyph] = {
     "people": _people,
     "work": _hammer,
@@ -580,6 +589,7 @@ GLYPHS: dict[str, Glyph] = {
     "unlock": _unlock,
     "mood": _face,
     "push": _flame,
+    "train": _dumbbell,
 }
 # The colour each icon is, where it stands alone or on a tile of its own.
 HUES: dict[str, Color] = {
@@ -615,6 +625,7 @@ HUES: dict[str, Color] = {
     "unlock": (108, 168, 96),
     "mood": (244, 198, 78),
     "push": (236, 112, 48),
+    "train": (96, 168, 190),
 }
 # What is cut into an icon that stands alone, where it is not simply dark.
 CUTS: dict[str, Color] = {"medicine": (206, 58, 54)}

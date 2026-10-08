@@ -477,6 +477,11 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
 - **One thing after another.** What is said while they are at something they were told
   waits its turn, and is done when the one before is over. What can no longer be done by then
   is let go. Any of it can be taken back.
+- **Training** (S57). A thing whose use `trains` an attribute is one to train at: told to,
+  with `task:train` and the thing as what it is about, a resident goes and uses it, and each
+  minute of it is practice (`AttributeSystem.train`), no further than the thing takes it:
+  `train_cap` for a common one and `train_per_level` more for each level it has (S54).
+  Nothing in what residents do of their own accord picks such a use: it lowers no need.
 - **Nothing unasked.** A resident can be told to do nothing of their own accord: they do what
   they are told, see to what was put in their hands, and otherwise stand by. A body that can
   wait no longer is seen to all the same.

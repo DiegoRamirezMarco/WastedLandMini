@@ -27,8 +27,8 @@ EFFECTS = (
     "learning", "sight", "finds", "danger", "mishap",
 )
 # What raises an attribute, each by so much a time: a minute at a post, a fight, an injury
-# come through, a day of leading.
-PRACTICES = ("work", "fight", "hurt", "lead")
+# come through, a day of leading, a minute at a thing to train at (S57).
+PRACTICES = ("work", "fight", "hurt", "lead", "train")
 
 
 @dataclass
@@ -75,6 +75,10 @@ class AttributeSettings:
     # What being hurt takes from, and the share of it gone in somebody at death's door.
     injured: tuple[str, ...] = (STRENGTH, DEXTERITY)
     injured_share: float = 0.5
+    # How far a common thing to train at takes an attribute, and how much further each
+    # rarity past it does (S57): what a thing has to teach is all it has.
+    train_cap: float = 6.0
+    train_per_level: float = 1.0
 
     def clamp(self, value: float) -> float:
         return max(self.lowest, min(self.highest, value))
@@ -115,6 +119,7 @@ def attribute_settings_from_data(data: dict[str, Any]) -> AttributeSettings:
     age = data.get("age", {})
     youth = data.get("youth", {})
     injury = data.get("injury", {})
+    training = data.get("training", {})
     settings = AttributeSettings(
         attributes=attributes,
         lowest=float(data.get("lowest", defaults.lowest)),
@@ -133,6 +138,8 @@ def attribute_settings_from_data(data: dict[str, Any]) -> AttributeSettings:
         grows=_named(youth.get("of", defaults.grows), "What grows with a child"),
         injured=_named(injury.get("of", defaults.injured), "What being hurt takes from"),
         injured_share=float(injury.get("share", defaults.injured_share)),
+        train_cap=float(training.get("cap", defaults.train_cap)),
+        train_per_level=float(training.get("per_level", defaults.train_per_level)),
     )
     if not settings.lowest <= settings.middle <= settings.highest or settings.lowest >= settings.highest:
         raise ValueError("Attributes go from a lowest to a highest, with the middle between them")
@@ -142,4 +149,6 @@ def attribute_settings_from_data(data: dict[str, Any]) -> AttributeSettings:
         raise ValueError("The first resident needs points for the lowest of everything, and a child grows up")
     if not 0.0 < settings.youth_floor <= 1.0 or any(value < 0 for value in settings.practice.values()):
         raise ValueError("A newborn has a share of what they will have, and practice takes nothing away")
+    if settings.train_per_level < 0:
+        raise ValueError("A better thing to train at takes an attribute no less far than a worse one")
     return settings

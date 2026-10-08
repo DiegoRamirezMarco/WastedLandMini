@@ -4214,6 +4214,11 @@ Asked first, in two batches, and answered, for the three of them:
 
 Read without asking: after resources come words, and then what is done, as they were named.
 
+Where the layer of resources stands, on 2026-10-08: all of it is built but errands and the
+box (S56), which the user left out for now when they were asked about, and what P61 was to
+show of them. Words and things, and what is done with things and with each other, are
+planned and not begun.
+
 What holds for the layer of resources:
 - Nothing is collected by the player. Whoever makes a thing carries it, as now (S8)
 - What is the settlement's is what is nobody's: in a store, in the hands of whoever is
@@ -4863,7 +4868,7 @@ Still to settle, to be asked before it is built:
 - How many at once, and whether one lapses
 - What a box holds
 
-### S57 — Training (needs S46) — planned
+### S57 — Training (needs S46) — done
 - **Things to train at**, each for one attribute, as data: time at one raises it as using it
   does, and sooner
 - A resident is told to, from the wheel
@@ -4880,11 +4885,66 @@ Asked on 2026-10-08, and answered:
 - **It costs time and tiredness**: an hour of it tires and makes hungry and thirsty as work
   does, a point takes weeks, and whoever trains is not at their post
 
-### P61 — Training on screen (needs S57) — planned
+What there is:
+- **Six kinds of thing to build**, from `Urbanismo` under `Entreno`, each for three of scrap
+  and two hours of work: `pesas` for strength, `mesa de ajedrez` for mind, `diana` for
+  senses, `comba` for dexterity, `maniquí` for charisma and `tronco de entrenamiento` for
+  constitution. The settlement that comes ready made has none
+- **Training is a use of the thing** that practises an attribute: `trains` on the use of a
+  kind of object, as data. A minute of it raises the attribute as a minute at a post does,
+  two and a half times as fast, and more slowly the higher it is
+- **Only the player has anybody train**: with `Entrenar`, among the tasks of the wheel, which
+  lists the things there are that still have something to teach whoever is asked, the
+  nearest first; or by putting them down on the thing (P27). Nobody goes to one unasked
+- **A thing teaches as far as it is good**: a common one up to 6, and one point more for
+  each rarity past it, up to 10. Whoever has that much already cannot be told to train
+  there, and it is said why. All six can be made better (S54)
+- **A session is two hours**, and ends sooner if the thing has no more to teach them or a
+  need of the body can wait no longer. It tires as work does, a little more for the
+  weights, the rope, the target and the log than for the chess table and the dummy. One at
+  a time at each thing
+
+Decided without asking:
+- **How fast**: 0.0003 of a point a minute in the middle of the scale, which is a point in
+  about a month of one session a day, and in a week of doing nothing else. Work gives
+  0.00012. It is data: `practice.train` in `data/attributes.json`
+- **It makes nobody hungrier or thirstier than the day does**, which is what work does too:
+  a post tires and nothing else
+- **Charisma is trained like the rest**, though it is kept with how somebody is and not
+  with their other five: the dummy raises that
+- **What they can bring to bear today is not what is capped**: age and injuries take from
+  that, and the cap is on what they have
+- **Nothing is said when a session ends**, only when it comes to a whole point more
+  (`attribute_grew`, as with anything that raises one)
+- **A child trains like anybody**, if told to
+- **They have a tab of their own in `Urbanismo`**, `Entreno`: among the furniture they were
+  one more than its catalogue shows without the wheel, and more than the list of furniture
+  inside a building has room for. The tests of both said so. They are a category of
+  their own in the data, `"category": "training"`
+
+Still open here:
+- No thing has a movement of its own: whoever trains at any of the six is seen as at any
+  work done with bare hands
+- There is no way to have somebody train every day without telling them each time
+- Nothing warns that training somebody leaves their post empty
+- A thing to train at is put from `Urbanismo`: from inside a building only furniture is offered
+
+### P61 — Training on screen (needs S57) — done
 Errands and the box were to be shown here too. They went with S56, which the user left out
 for now on 2026-10-08.
-- Training, in the wheel and by putting somebody down on the thing (P27)
-- Whoever trains is seen to, and how far along the next point is
+- **`Entrenar` in the wheel**, among the tasks, with an icon of its own: it opens on the
+  things there are to train at, each named with what it is for
+- **Putting somebody down on one** (P27) says `Entrenar` under the hand before they are let go
+- **Whoever trains has a ring over them** that fills as the next point comes, in a colour
+  of its own, where whoever is at a post has the ring of the post (P59), and is seen hard
+  at it, as at any work done with bare hands
+- **What is said of the thing** when it is pressed (P60): what it is for, how far it takes
+  it, and how far it would if it were made better
+- Each of the six is drawn by the game, like everything else, and can be drawn by the player
+
+Still open here:
+- The names in the wheel are cut short where there are many: how far each thing is does not fit
+- Nowhere lists who has trained what, or how far each could still go
 
 ### S58 — Lines with holes in them (needs S2, S19 and S47) — planned
 The second layer: words and things. It is the first way of putting talk into words (S34): a

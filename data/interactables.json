@@ -570,5 +570,131 @@
       },
       "minutes": 240
     }
+  },
+  "weights": {
+    "name": "pesas",
+    "article": "unas",
+    "category": "training",
+    "use": {
+      "action": "train",
+      "text": "levanta pesas",
+      "label": "Entrenar",
+      "minutes": 120,
+      "per_minute": {
+        "tiredness": 0.03
+      },
+      "trains": "strength"
+    },
+    "build": {
+      "cost": {
+        "scrap": 3
+      },
+      "minutes": 120
+    }
+  },
+  "chess_table": {
+    "name": "mesa de ajedrez",
+    "article": "una",
+    "category": "training",
+    "use": {
+      "action": "train",
+      "text": "le da vueltas a una partida de ajedrez",
+      "label": "Entrenar",
+      "minutes": 120,
+      "per_minute": {
+        "tiredness": 0.02
+      },
+      "trains": "mind"
+    },
+    "build": {
+      "cost": {
+        "scrap": 3
+      },
+      "minutes": 120
+    }
+  },
+  "target": {
+    "name": "diana",
+    "article": "una",
+    "category": "training",
+    "use": {
+      "action": "train",
+      "text": "tira a la diana",
+      "label": "Entrenar",
+      "minutes": 120,
+      "per_minute": {
+        "tiredness": 0.03
+      },
+      "trains": "senses"
+    },
+    "build": {
+      "cost": {
+        "scrap": 3
+      },
+      "minutes": 120
+    }
+  },
+  "skipping_rope": {
+    "name": "comba",
+    "article": "una",
+    "category": "training",
+    "use": {
+      "action": "train",
+      "text": "salta a la comba",
+      "label": "Entrenar",
+      "minutes": 120,
+      "per_minute": {
+        "tiredness": 0.03
+      },
+      "trains": "dexterity"
+    },
+    "build": {
+      "cost": {
+        "scrap": 3
+      },
+      "minutes": 120
+    }
+  },
+  "dummy": {
+    "name": "maniquí",
+    "article": "un",
+    "category": "training",
+    "use": {
+      "action": "train",
+      "text": "le suelta un discurso al maniquí",
+      "label": "Entrenar",
+      "minutes": 120,
+      "per_minute": {
+        "tiredness": 0.02
+      },
+      "trains": "charisma"
+    },
+    "build": {
+      "cost": {
+        "scrap": 3
+      },
+      "minutes": 120
+    }
+  },
+  "training_log": {
+    "name": "tronco de entrenamiento",
+    "article": "un",
+    "category": "training",
+    "use": {
+      "action": "train",
+      "text": "se da de cabezazos contra el tronco",
+      "label": "Entrenar",
+      "minutes": 120,
+      "per_minute": {
+        "tiredness": 0.04
+      },
+      "trains": "constitution"
+    },
+    "build": {
+      "cost": {
+        "scrap": 3
+      },
+      "minutes": 120
+    }
   }
 }

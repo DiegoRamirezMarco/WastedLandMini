@@ -20,6 +20,8 @@ RING = 11
 SMALL_RING = 7
 RING_STEPS = 24
 PLAIN_COLOR, PUSHED_COLOR = "lichen", "ember"
+# The colour of the ring of whoever is training, which fills as the next point comes (P61).
+TRAINING_COLOR = "teal"
 # How long a unit that came out is seen over its post, in real seconds, how far it rises, and
 # how many are shown at once however fast time goes.
 POP_SECONDS = 1.6
@@ -35,13 +37,15 @@ def draw_ring(
     share: float,
     pushed: bool = False,
     side: int = RING,
+    hue: str | None = None,
 ) -> pygame.Rect:
     """A ring about a point of the canvas, with that share of it filled: as fine as the window
-    shows it, or else at the size of the canvas. Whoever is being pushed has it in red."""
+    shows it, or else at the size of the canvas. Whoever is being pushed has it in red, and
+    `hue` is another colour of the palette for a ring that is of something else."""
     rect = pygame.Rect(0, 0, side, side)
     rect.center = centre
     filled = round(max(0.0, min(1.0, share)) * RING_STEPS) / RING_STEPS
-    color = PALETTE[PUSHED_COLOR if pushed else PLAIN_COLOR]
+    color = PALETTE[hue or (PUSHED_COLOR if pushed else PLAIN_COLOR)]
     scale = skin.layers.scale if skin.layers is not None else 1
     if not (skin.usable and skin.picture(target, skin.ring(rect.width * scale, filled, color, pushed), rect)):
         target.blit(pygame.transform.smoothscale(skin.ring(rect.width * 4, filled, color, pushed), rect.size), rect)

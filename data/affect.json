@@ -274,6 +274,11 @@
       "name": "Usar",
       "label": "Que use {target}"
     },
+    "train": {
+      "name": "Entrenar",
+      "label": "Que entrene en {target}",
+      "icon": "train"
+    },
     "stop": {
       "name": "Dejarlo todo",
       "label": "Que deje lo que está haciendo, y lo que tenía por delante",

@@ -69,6 +69,7 @@ CATEGORY_LABELS = {
     "buildings": "Edificios",
     "furniture": "Muebles",
     "decor": "Decorado",
+    "training": "Entreno",
 }
 TERRAIN_COLORS = {
     "dirt": "earth",

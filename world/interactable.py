@@ -5,7 +5,7 @@ from world.build import BuildRule, build_rule_from_data
 from world.map import Tile
 
 USE_POSITIONS = ("adjacent", "on")
-URBANISM_CATEGORIES = ("furniture", "decor")
+URBANISM_CATEGORIES = ("furniture", "decor", "training")
 
 
 @dataclass(frozen=True)
@@ -52,6 +52,8 @@ class UseDefinition:
     radio: bool = False
     # What it is called for short, where using this is offered by name. Empty for none of its own.
     label: str = ""
+    # The attribute that using this practises (S57): weights, a chess table. None for most.
+    trains: str | None = None
 
 
 @dataclass(frozen=True)
@@ -240,4 +242,5 @@ def _use_from_data(kind: str, data: dict[str, Any]) -> UseDefinition:
         material_from=str(data["material_from"]) if data.get("material_from") is not None else None,
         radio=bool(data.get("radio", False)),
         label=str(data.get("label", "")),
+        trains=str(data["trains"]) if data.get("trains") is not None else None,
     )

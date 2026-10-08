@@ -24,7 +24,7 @@ from simulation.items.custom_content import load_custom_items
 from simulation.items.item import TASTE_TAG_PATTERN
 from simulation.items.registry import ItemRegistry
 from simulation.residents.manner import MannerSettings, manner_settings_from_data
-from simulation.residents.attributes import AttributeSettings, attribute_settings_from_data
+from simulation.residents.attributes import ATTRIBUTES, AttributeSettings, attribute_settings_from_data
 from simulation.residents.personality import Personality
 from simulation.social.bonds import BondSettings, bond_settings_from_data
 from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
@@ -373,6 +373,10 @@ class BuiltInRegistries:
                 unknown = sorted(set(units or ()) - set(self.resources.resources))
                 if unknown:
                     raise ValueError(f"Interactable {kind} keeps a resource there is not: {unknown}")
+        for kind in self.interactables.kinds():
+            use = self.interactables.get(kind).use
+            if use is not None and use.trains is not None and use.trains not in ATTRIBUTES:
+                raise ValueError(f"Interactable {kind} trains an attribute there is not: {use.trains}")
         if self.items.find(self.power.fuel) is None and any(
             self.interactables.get(kind).gives for kind in self.interactables.kinds()
         ):

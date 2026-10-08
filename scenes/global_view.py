@@ -177,7 +177,7 @@ from ui.minimap import TILE_PIXELS, draw_minimap, minimap_base, minimap_size, ti
 from ui.panel import draw_item, draw_panel
 from ui.task_bar import draw_task_bar, task_bar_rect, task_progress
 from ui.job_board import LEAVE_KIND, LEAVE_POST_INTENT, PUSH_KIND, PUSH_POST_INTENT, PUT_KIND
-from ui.work_marks import RING, SMALL_RING, WorkPops, draw_ring
+from ui.work_marks import RING, SMALL_RING, TRAINING_COLOR, WorkPops, draw_ring
 from ui.tutorial_panel import (
     ACKNOWLEDGE_INTENT,
     BUILDING_ART_FOCUS,
@@ -474,6 +474,8 @@ class GlobalView:
         # post somebody is at was last drawn, by who is at it.
         self.pops = WorkPops()
         self.work_rings: dict[str, pygame.Rect] = {}
+        # And the ring of whoever is training, which fills as the next point comes (P61).
+        self.train_rings: dict[str, pygame.Rect] = {}
         # Tiles under a roof that is on this frame: what stands there is not drawn.
         self._hidden: set[Tile] = set()
         # Buildings that stand closed this frame, by room ID.
@@ -856,6 +858,7 @@ class GlobalView:
         self.object_marks = {}
         self._idle = marks_of(self.world)
         self.task_bars = {}
+        self.train_rings = {}
         self.placards = {}
         self.sign_boxes = {}
         self.bundle_boxes = {}
@@ -1968,6 +1971,7 @@ class GlobalView:
         self._idle = marks_of(self.world)
         self.task_bars = {}
         self.work_rings = {}
+        self.train_rings = {}
         self.placards = {}
         self._overlays = []
         self._doll_draws = []
@@ -2929,6 +2933,9 @@ class GlobalView:
             return None
         if activity.action == BUILD_ACTION:
             return (self.poses.build, self.poses.build.prop)
+        if self.world.attributes.training(self.world, resident) is not None:
+            # At a thing to train at they are seen hard at it, as at any work with bare hands (P61).
+            return (self.poses.work, None)
         if activity.action != WORK_ACTION:
             return None
         job = self.world.work.job_of(self.world, resident)
@@ -3359,6 +3366,15 @@ class GlobalView:
             pushed = self.world.rush.pushed(self.world, resident)
             ring = draw_ring(self.canvas, self.hud.skin, centre, coming, pushed, side)
             self.work_rings[resident.resident_id] = ring
+            top = min(top, ring.top - 1)
+        training = self.world.attributes.training(self.world, resident) if here and coming is None else None
+        if training is not None:
+            # At a thing to train at: a ring of its own colour, for the next point of it.
+            side = SMALL_RING if self.overview else RING
+            beside = task_bar_rect((x, y), small=self.overview)
+            centre = (beside.left - (side + 1) // 2 - 2, beside.bottom - (side + 1) // 2)
+            ring = draw_ring(self.canvas, self.hud.skin, centre, training[1], False, side, TRAINING_COLOR)
+            self.train_rings[resident.resident_id] = ring
             top = min(top, ring.top - 1)
         y = top
         if with_name:

@@ -364,6 +364,16 @@ ICONS = {
         "oeyyyeo.",
         ".ooooo..",
     ],
+    "train": [
+        "........",
+        ".o....o.",
+        "oeo..oeo",
+        "oemmmmeo",
+        "oemmmmeo",
+        "oeo..oeo",
+        ".o....o.",
+        "........",
+    ],
     "mood": [
         "..oooo..",
         ".oyyyyo.",
