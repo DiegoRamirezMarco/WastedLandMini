@@ -1,6 +1,7 @@
 """Jobs: residents go to their post during their shift, and the post does its work while staffed."""
 
 import math
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from simulation.ai.crowd import free_tile
@@ -10,7 +11,7 @@ from simulation.economy.ledger import MADE, USED
 from simulation.events.event import DomainEvent
 from simulation.items.item import ItemInstance
 from simulation.residents.activity import Activity
-from simulation.residents.attributes import CONSTITUTION
+from simulation.residents.attributes import CONSTITUTION, MIND
 from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
 from simulation.residents.resident import Resident
 from simulation.work import hauling
@@ -45,6 +46,16 @@ WATCH_AHEAD_MINUTES = 8 * 60
 WATCH_AFTER_MINUTES = 60
 WATCH_NOTICE = "watch:"
 LOW_MOOD_WORK_FLOOR = 0.75
+
+
+@dataclass(frozen=True)
+class Expected:
+    """What somebody would make of a post."""
+
+    # How many times as fast as a plain pair of hands: 1 for the same.
+    pace: float
+    # Units a day of what the job makes, where it makes something by the unit.
+    per_day: float | None = None
 
 
 def minutes_left_in_shift(job: JobDefinition, hour: int, minute: int, longer: int = 0) -> int:
@@ -267,6 +278,7 @@ class WorkSystem:
             return
         if job.research:
             world.research.work(world, resident, placed)
+            world.rush.after_minute(world, resident, job, placed)
         if job.produces is None and job.expedition is None:
             # A post that makes nothing of its own: what its worker has come to is made there.
             world.crafts.craft(world, resident, job, placed)
@@ -347,10 +359,12 @@ class WorkSystem:
     def _toll(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> dict[str, float]:
         """What a minute of the job does to whoever does it: it tires a strong constitution less."""
         tiring = job.per_minute.get("tiredness", 0.0)
-        if tiring <= 0.0:
-            return job.per_minute
-        spared = world.attributes.factor(world, resident, CONSTITUTION, "tiredness")
-        return {**job.per_minute, "tiredness": tiring * max(0.0, 2.0 - spared)}
+        toll = job.per_minute
+        if tiring > 0.0:
+            spared = world.attributes.factor(world, resident, CONSTITUTION, "tiredness")
+            toll = {**job.per_minute, "tiredness": tiring * max(0.0, 2.0 - spared)}
+        # Pushed, it takes more out of them, whatever the job.
+        return world.rush.toll(world, resident, toll)
 
     def _say_if_watching(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> None:
         """Say, once a night, that someone is at their post out of hours because of what they know is coming."""
@@ -421,20 +435,9 @@ class WorkSystem:
             return hauling.errand(world, resident, rule, shift_left) is None
         how = own.get(making)
         tool = self.tool_of(world, resident, job)
-        speed = self.tool_speed(world, job, tool) or 1.0 if tool is not None else 1.0
-        # Short of an arm the work still gets done, in more minutes.
-        speed *= world.health.work_pace(world, resident)
-        speed *= self.mood_pace(resident)
-        speed *= world.trade.unpaid_pace(world, resident)
-        speed *= world.substances.work_pace(world, resident)
-        speed *= world.politics.work_pace(world, resident)
-        # Whoever has more of what the job goes by does it faster.
-        speed *= world.attributes.work_pace(world, resident, job)
-        # What has been worked out about a trade makes it go faster.
-        speed *= world.research.factor(world, f"{JOB_PACE}{job.job_id}")
-        # And so does every level whoever does it has at it.
-        speed *= world.crafts.pace(world, resident, job)
+        speed = self.pace(world, resident, job, tool)
         needed = math.ceil((how.every_minutes if how is not None else rule.every_minutes) / speed)
+        resident.work_needed = needed
         resident.work_progress = min(resident.work_progress + 1, needed)
         if resident.work_progress < needed:
             return True
@@ -454,7 +457,57 @@ class WorkSystem:
         resident.work_progress = 0
         if tool is not None:
             world.items.wear(world, resident, tool)
+        world.rush.after_unit(world, resident, job, placed)
         return True
+
+    def pace(
+        self, world: "SimulationWorld", resident: Resident, job: JobDefinition, tool: ItemInstance | None = None
+    ) -> float:
+        """How many times as fast as a plain pair of hands a resident turns out what a job makes,
+        with `tool` in them: what everything that tells on it comes to."""
+        speed = self.tool_speed(world, job, tool) or 1.0 if tool is not None else 1.0
+        # Short of an arm the work still gets done, in more minutes.
+        speed *= world.health.work_pace(world, resident)
+        speed *= self.mood_pace(resident)
+        speed *= world.trade.unpaid_pace(world, resident)
+        speed *= world.substances.work_pace(world, resident)
+        speed *= world.politics.work_pace(world, resident)
+        # Whoever has more of what the job goes by does it faster.
+        speed *= world.attributes.work_pace(world, resident, job)
+        # What has been worked out about a trade makes it go faster.
+        speed *= world.research.factor(world, f"{JOB_PACE}{job.job_id}")
+        # And so does every level whoever does it has at it.
+        speed *= world.crafts.pace(world, resident, job)
+        # And being pushed, for as long as it lasts.
+        speed *= world.rush.pace(world, resident)
+        return speed
+
+    def progress(self, world: "SimulationWorld", resident: Resident) -> float | None:
+        """How far along whoever is at their post is with the next unit, or with what is being
+        worked out, from 0 to 1. None for whoever is not at a post where anything is."""
+        job = self.job_of(world, resident)
+        if job is None or not self.on_duty(world, resident):
+            return None
+        if job.research:
+            return world.research.progress_of(world)
+        if resident.work_needed <= 0:
+            return None
+        return max(0.0, min(1.0, resident.work_progress / resident.work_needed))
+
+    def expected(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> "Expected":
+        """What a resident would make of a job as they are today, whether or not it is theirs:
+        how fast beside a plain pair of hands, and how many units a day where it makes any."""
+        pace = self.pace(world, resident, job, self.tool_of(world, resident, job))
+        if job.research:
+            # What is worked out goes by the head, and by nothing that is made with the hands.
+            pace = world.health.work_pace(world, resident) * self.mood_pace(resident)
+            pace *= world.attributes.factor(world, resident, MIND, "study") * world.crafts.pace(world, resident, job)
+            pace *= world.rush.pace(world, resident)
+        per_day = None
+        if job.produces is not None and pace > 0:
+            shift = sum((end - start) % 24 * 60 for start, end in job.shifts)
+            per_day = shift / math.ceil(job.produces.every_minutes / pace)
+        return Expected(pace, per_day)
 
     def mood_pace(self, resident: Resident) -> float:
         """Low spirits make productive work drag; good spirits do not make it superhuman."""

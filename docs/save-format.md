@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `39` |
+| `version` | `40` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -32,7 +32,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `interactables` | Placed objects: `id`, `kind`, tile `x` and `y` |
 | `sites`, `site_count` | What is being built: `id`, `kind` (`object` or `building`), `what` (the object kind or blueprint ID), tile `x` and `y`, `in_charge` (the resident who agreed to it), `delivered` (units brought so far, per item definition), `progress` (minutes of work done) and `started_at`; and the counter behind site IDs |
 | `salvage` | What somebody has been told to take apart: `object_id`, `resident_id` and `progress` (minutes of work done) |
-| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `attributes` (`strength`, `constitution`, `dexterity`, `mind` and `senses` from 1 to 10, or `null` for somebody not asked yet), `trade` (minutes at each job, by job ID), `makes` (the day each thing they know how to make was learned, by discovery ID), `lessons` (minutes of being shown each thing they are learning), `dosed_with`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them), `doing` (what they are at for having been told, as `kind` and `target_id`, or `null`), `orders` (what they were told and have not got to, the next first, each the same way) and `free_will` (false for somebody who does nothing unasked) |
+| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `attributes` (`strength`, `constitution`, `dexterity`, `mind` and `senses` from 1 to 10, or `null` for somebody not asked yet), `trade` (minutes at each job, by job ID), `makes` (the day each thing they know how to make was learned, by discovery ID), `lessons` (minutes of being shown each thing they are learning), `dosed_with`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `pushing_until`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them), `doing` (what they are at for having been told, as `kind` and `target_id`, or `null`), `orders` (what they were told and have not got to, the next first, each the same way) and `free_will` (false for somebody who does nothing unasked) |
 | `containers` | Per container object ID, the items inside |
 | `item_count` | Counter behind item IDs |
 | `thefts`, `theft_cooldowns`, `notices` | Record of every theft, with the `amount` of credit taken when it was not an item and `@fund` for a `victim_id` when it was the settlement's; last theft per resident; once-a-day notices already given |
@@ -84,6 +84,8 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 40** added `pushing_until` on a resident (S52): the game minute until which they
+  are pushing their post. In an older save nobody is pushed.
 - **Version 39** added `ledger` (S51). In an older save nothing has been written down: the books
   are opened the first minute it goes on, with what there is then as what there was.
 - **Version 38** added `doing`, `orders` and `free_will` on a resident, and `ordered` on their

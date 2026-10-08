@@ -153,7 +153,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 39
+    CURRENT_VERSION = 40
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -358,6 +358,7 @@ class SaveManager:
                     "dosed_until": resident.dosed_until,
                     "dosed_with": resident.dosed_with,
                     "trade": dict(resident.trade),
+                    "pushing_until": resident.pushing_until,
                     "makes": dict(resident.makes),
                     "lessons": dict(resident.lessons),
                     "lost_limbs": list(resident.lost_limbs),
@@ -584,6 +585,7 @@ class SaveManager:
                 ],
                 dosed_until=int(resident_data.get("dosed_until", 0)),
                 dosed_with=_text_or_none(resident_data.get("dosed_with")),
+                pushing_until=max(0, int(resident_data.get("pushing_until", 0))),
                 trade={
                     str(job_id): max(0.0, float(minutes))
                     for job_id, minutes in _object_or_empty(resident_data.get("trade")).items()

@@ -588,6 +588,50 @@ looks and nothing of what happens.
 Which resident has which job, and which day of the week they have off, is set where the
 settlement is created, in `SimulationWorld.demo_world`.
 
+A job that is never to be pushed says `"rush": false`.
+
+## Pushing a post
+
+`data/work.json` says what telling somebody to push their post does, under `rush`:
+
+```json
+{
+  "rush": {
+    "pace": 1.5,
+    "per_minute": {"tiredness": 0.07, "stress": 0.06},
+    "risk": 0.05,
+    "check_minutes": 30,
+    "tired_from": 50,
+    "tired_risk": 2.0,
+    "level_relief": 0.1,
+    "trust": -6,
+    "mood": -6,
+    "memory": "Me pasó algo por apretar en el trabajo.",
+    "mishaps": {
+      "hurt": {"weight": 4, "text": "{name} se hace daño apretando en su puesto: {job}",
+               "injuries": {"bruise": {"weight": 5, "harm": [6, 14]}}},
+      "tool": {"weight": 3, "text": "A {name} se le parte {thing} de tanto apretar"},
+      "spoil": {"weight": 3, "text": "...", "fraction": 0.25, "most": 6}
+    }
+  }
+}
+```
+
+- `pace` is how many times as fast they work, and `per_minute` what each minute of it adds to
+  their needs. With a `pace` of 1, or no file, nobody can be pushed.
+- `risk` is the chance that a unit turned out pushed ends badly, for somebody rested, in the
+  middle of what the job goes by and at its first level. `tired_risk` is how many times as
+  likely it is for somebody worn right out, from `tired_from` of tiredness up, and
+  `level_relief` the share of it each level past the first takes off. `check_minutes` is how
+  many minutes of work that turns out no units count as one.
+- `mishaps` are the ways it can end badly, picked by `weight` among those that can happen:
+  `hurt` with the `injuries` there are to come by (kinds of `data/injuries.json`, each with a
+  weight and the least and the most harm), `tool` and `spoil`, which loses that `fraction`
+  of what they made and still have by them, and never more than `most` units. `text` is what
+  is told of it, with `{name}`, `{job}` and, for a tool, `{thing}`.
+- `trust` and `mood` are what it does to how far they trust the player and to their spirits,
+  and `memory` what they remember of it.
+
 ## Expeditions
 
 - A job is done outside with `"expedition": {"minutes": [240, 360], "finds": [3, 6], "danger": 0.12}`:

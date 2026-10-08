@@ -151,15 +151,25 @@ class ItemSystem:
             return
         item.condition = max(0.0, item.condition - toll)
         if item.broken:
-            world.emit_event(
-                DomainEvent(
-                    "item_broke",
-                    BROKEN_IMPORTANCE,
-                    f"A {holder.name} se le rompe {_named(definition)}",
-                    [holder.resident_id],
-                ),
-                at=holder.tile,
-            )
+            self._broke(world, holder, definition)
+
+    def shatter(self, world: "SimulationWorld", holder: Resident, item: ItemInstance) -> None:
+        """Break a thing outright, whatever was left in it. It does nothing until repaired."""
+        if item.broken:
+            return
+        item.condition = 0.0
+        self._broke(world, holder, world.registries.items.resolve(item.definition_id))
+
+    def _broke(self, world: "SimulationWorld", holder: Resident, definition: ItemDefinition) -> None:
+        world.emit_event(
+            DomainEvent(
+                "item_broke",
+                BROKEN_IMPORTANCE,
+                f"A {holder.name} se le rompe {_named(definition)}",
+                [holder.resident_id],
+            ),
+            at=holder.tile,
+        )
 
     def _relief(self, resident: Resident, effects: dict[str, float]) -> float:
         return sum(need_urgency(resident, need) for need, delta in effects.items() if delta < 0 and need in NEED_NAMES)

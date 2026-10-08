@@ -49,7 +49,8 @@
     "learning": 0.08,
     "sight": 0.4,
     "finds": 0.06,
-    "danger": 0.05
+    "danger": 0.05,
+    "mishap": 0.08
   },
   "practice": {
     "work": 0.00012,

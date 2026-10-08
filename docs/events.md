@@ -37,6 +37,8 @@ Event types emitted so far:
 | `post_vacant` | A job has been short of people too long (once per vacancy) | 35 |
 | `job_offered` | A resident is asked to take a vacant job and waits for advice | 50 |
 | `job_changed` | A resident takes up a job | 40 |
+| `work_pushed` | A resident is told to push their post for what is left of their shift, with `resident_id`, `job` and `until` (the game minute it ends) in `data` | 20 |
+| `work_accident` | A push ends badly, with `resident_id`, `job`, `mishap` (`hurt`, `tool` or `spoil`) and `units` lost in `data` | 45 |
 | `research_chosen` | The player says what is to be worked out next, with `subject` in `data` | 20 |
 | `research_waiting` | Somebody holds the post and nothing has been chosen, or what the subject studies is nowhere to be had (once a day each) | 30 |
 | `research_finished` | A subject is known, with `subject` in `data` | 45 |

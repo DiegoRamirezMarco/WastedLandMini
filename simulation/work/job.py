@@ -92,6 +92,8 @@ class JobDefinition:
     # The attribute the work goes by: whoever has more of it does it faster, and doing it
     # raises it. None for work that anybody does as well as anybody else.
     stat: str | None = None
+    # Whether whoever holds it can be told to push it (S52).
+    rush: bool = True
 
 
 def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition:
@@ -167,4 +169,5 @@ def job_definition_from_data(job_id: str, data: dict[str, Any]) -> JobDefinition
         watch_for=str(data["watch_for"]) if "watch_for" in data else None,
         research=bool(data.get("research", False)),
         stat=stat,
+        rush=bool(data.get("rush", True)),
     )

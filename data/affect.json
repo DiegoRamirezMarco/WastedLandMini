@@ -243,6 +243,11 @@
       "name": "A su puesto",
       "label": "Que vaya a su puesto"
     },
+    "push": {
+      "name": "Apretar",
+      "label": "Que apriete en su puesto lo que queda de turno",
+      "icon": "push"
+    },
     "take_charge": {
       "name": "Llevar una obra",
       "label": "Que se haga cargo de la obra: {target}"

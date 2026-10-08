@@ -61,6 +61,8 @@ class StaffingSystem:
             resident.activity = None
             resident.current_action = "idle"
         self._put_down(world, resident)
+        # A push is of the post they had: it does not go with them to another.
+        world.rush.ease(resident)
         resident.job_id, resident.post_id, resident.work_progress = job_id, post_id, 0
         resident.seeks_work = False
         text = f"{resident.name} se hace cargo de un puesto: {job.name}"

@@ -240,6 +240,13 @@ class ResearchSystem:
             return None
         return SupplyRule(subject.item, job.station, low=subject.count, carry=subject.count, max_stock=subject.count)
 
+    def progress_of(self, world: "SimulationWorld") -> float | None:
+        """How far along what is being worked out is, from 0 to 1. None with nothing in hand."""
+        subject = self.in_hand(world)
+        if subject is None or subject.minutes <= 0:
+            return None
+        return max(0.0, min(1.0, world.studies.progress.get(subject.subject_id, 0.0) / subject.minutes))
+
     def work(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> None:
         """One minute of somebody's shift at a post where things are worked out."""
         subject = self.in_hand(world)
@@ -251,6 +258,7 @@ class ResearchSystem:
         job = world.work.job_of(world, resident)
         if job is not None:
             pace *= world.crafts.pace(world, resident, job)
+        pace *= world.rush.pace(world, resident)
         state.progress[subject.subject_id] = state.progress.get(subject.subject_id, 0.0) + pace
         if state.progress[subject.subject_id] >= subject.minutes:
             self._finish(world, subject, resident)

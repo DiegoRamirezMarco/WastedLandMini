@@ -128,6 +128,25 @@ room. An argument's importance rises with the resentment between the two.
 - **Days off.** A resident can have one day of the week on which they do not work. Their post
   simply stands empty that day: no stew if it is the cook, a shut bar if it is the bartender.
 
+### Seen, pushed and given out
+
+- **`world.work.pace(world, resident, job, tool)`** is how many times as fast as a plain pair of
+  hands somebody turns out what a job makes: everything that tells on it, multiplied. It is
+  what the post goes by each minute, and nothing else works it out.
+- **`world.work.progress(world, resident)`** is how far along the next unit is, from 0 to 1,
+  for whoever is at a post; for whoever studies, how far along the subject in hand is.
+- **`world.work.expected(world, resident, job)`** is what somebody would make of a job as they
+  are today, theirs or not: the pace, and units a day where the job makes any.
+- **Pushing** (`simulation/work/rush.py`, `data/work.json`) is told with `task:push`, as an
+  order. `Resident.pushing_until` is the game minute the shift they were told to push ends.
+  Until then their pace is multiplied by `pace`, each minute at the post adds `per_minute`
+  to their needs, and each unit they turn out throws the settlement's dice against
+  `RushSystem.risk`: what the data says, more with tiredness past `tired_from`, less with
+  the attribute the job goes by (the `mishap` effect of `data/attributes.json`) and with
+  each level at the job. What goes wrong is one of `mishaps`, by weight, among those that
+  can: `hurt`, `tool` if there is one in their hands, `spoil` if there is anything of what
+  they made by them. No dice are thrown for whoever is not pushed.
+
 ## Beyond the fence
 
 - **The job.** A job with an `expedition` is done outside. Its post is only where the worker

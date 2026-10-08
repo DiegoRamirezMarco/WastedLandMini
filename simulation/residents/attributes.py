@@ -21,9 +21,10 @@ OWN = (STRENGTH, CONSTITUTION, DEXTERITY, MIND, SENSES)
 #   study: how fast things are worked out, by mind. learning: how fast a trade is learned.
 #   sight: tiles further or nearer that are seen, by senses.
 #   finds: what a trip outside brings back. danger: how safe it is, by senses.
+#   mishap: how sure somebody is at a post they are pushing, by what the job goes by.
 EFFECTS = (
     "work_pace", "fight_strength", "fight_dodge", "toughness", "healing", "tiredness", "carry", "study",
-    "learning", "sight", "finds", "danger",
+    "learning", "sight", "finds", "danger", "mishap",
 )
 # What raises an attribute, each by so much a time: a minute at a post, a fight, an injury
 # come through, a day of leading.

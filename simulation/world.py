@@ -60,6 +60,7 @@ from simulation.work.craft_system import CraftSystem
 from simulation.work.construction import ConstructionSystem
 from simulation.work.expedition_system import ExpeditionSystem
 from simulation.work.research import ResearchResult, ResearchState, ResearchSystem
+from simulation.work.rush import RushSystem
 from simulation.work.salvage import Salvage, SalvageSystem
 from simulation.work.staffing import StaffingSystem
 from simulation.work.work_system import WORK_ACTION, WorkSystem
@@ -111,6 +112,7 @@ class SimulationWorld:
     history: list[DomainEvent] = field(default_factory=list)
     items: ItemSystem = field(default_factory=ItemSystem)
     work: WorkSystem = field(default_factory=WorkSystem)
+    rush: RushSystem = field(default_factory=RushSystem)
     staffing: StaffingSystem = field(default_factory=StaffingSystem)
     trade: TradeSystem = field(default_factory=TradeSystem)
     fund: FundSystem = field(default_factory=FundSystem)

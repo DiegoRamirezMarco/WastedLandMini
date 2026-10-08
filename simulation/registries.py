@@ -39,6 +39,7 @@ from simulation.work.construction import ConstructionSettings, construction_sett
 from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
 from simulation.work.research import EFFECTS, JOB_PACE, ResearchSettings, research_settings_from_data
+from simulation.work.rush import RushSettings, rush_settings_from_data
 from world.interactable import InteractableDefinition, interactable_definition_from_data
 from world.custom_content import load_custom_buildings, load_custom_interactables
 from world.map import TerrainDefinition
@@ -169,6 +170,8 @@ class BuiltInRegistries:
     economy: EconomySettings = field(default_factory=EconomySettings)
     # What the settlement lives on, and which items count as each.
     resources: ResourceSettings = field(default_factory=ResourceSettings)
+    # What pushing a post does, and what it risks.
+    rush: RushSettings = field(default_factory=RushSettings)
     bonds: BondSettings = field(default_factory=BondSettings)
     expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
     # How building is gone about. What each thing takes is in its own definition.
@@ -292,6 +295,9 @@ class BuiltInRegistries:
         resources_path = root / "resources.json"
         if resources_path.is_file():
             registries.resources = resource_settings_from_data(_read_object(resources_path))
+        work_path = root / "work.json"
+        if work_path.is_file():
+            registries.rush = rush_settings_from_data(_read_object(work_path).get("rush", {}))
         tastes_path = root / "tastes.json"
         if tastes_path.is_file():
             registries.tastes = taste_settings_from_data(_read_object(tastes_path))
@@ -436,6 +442,10 @@ class BuiltInRegistries:
                 raise ValueError(f"Law {law_id} names kinds of object that are not defined: {unknown}")
         if self.laws.laws and not {ENACT_LAW, REPEAL_LAW} <= self.proposals.kinds.keys():
             raise ValueError("There are laws and no way of proposing one, or of doing away with one")
+        hurt = self.rush.mishaps.get("hurt")
+        unknown = sorted(kind for kind in (hurt.injuries if hurt is not None else ()) if kind not in self.injuries)
+        if unknown and self.injuries:
+            raise ValueError(f"A push leaves kinds of injury that are not defined: {unknown}")
         if self.substances.overdose_kind not in self.injuries and self.injuries:
             raise ValueError(f"Too much of a substance leaves an unknown kind of injury: {self.substances.overdose_kind}")
         for job_id, job in self.jobs.items():

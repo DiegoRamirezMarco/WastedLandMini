@@ -397,7 +397,9 @@ class CraftSystem:
             return
         speed = world.health.work_pace(world, resident) * world.work.mood_pace(resident)
         speed *= world.attributes.work_pace(world, resident, job) * self.pace(world, resident, job)
+        speed *= world.rush.pace(world, resident)
         needed = math.ceil(product.every_minutes / max(0.1, speed))
+        resident.work_needed = needed
         resident.work_progress = min(resident.work_progress + 1, needed)
         if resident.work_progress < needed:
             return
@@ -414,10 +416,15 @@ class CraftSystem:
                 data={"item": product.item_id, "container": target},
             )
         )
+        world.rush.after_unit(world, resident, job, placed)
 
     def _kept(self, world: "SimulationWorld", item_id: str) -> int:
         """Units of a thing lying in the settlement's containers."""
         return sum(inventory.count(item_id) for inventory in world.containers.values())
+
+    def store(self, world: "SimulationWorld", kind: KindDefinition, placed: Interactable) -> str | None:
+        """The container that what is made at a post is kept in. None if there is nowhere."""
+        return self._store(world, kind, placed)
 
     def _store(self, world: "SimulationWorld", kind: KindDefinition, placed: Interactable) -> str | None:
         """Where what is made at a post is kept: the nearest container of the kind for it, the

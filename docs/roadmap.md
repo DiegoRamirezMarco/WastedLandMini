@@ -4244,26 +4244,64 @@ Still open here:
 - Nothing of this has been seen on a real window by whoever made it: the frames it was judged
   by were drawn without one
 
-### S52 — Work that is seen, pushed and given out (needs S51, S46 and S50) — planned
-- **How fast somebody works is worked out in one place**, from what it already went by: the
-  tool, health, spirits, pay, what they have taken, the laws, the attribute the job goes by,
-  what has been worked out and the level they have at it
+### S52 — Work that is seen, pushed and given out (needs S51, S46 and S50) — done
+- **How fast somebody works is worked out in one place** (`WorkSystem.pace`), from what it
+  already went by: the tool, health, spirits, pay, what they have taken, the laws, the
+  attribute the job goes by, what has been worked out and the level they have at it
 - **How far along the next unit is** can be asked of anybody at a post
-- **What somebody would make of a post can be asked before they have it**, beside anybody else
-- **Putting somebody to a post is an order** (S37, S50): the one there already was, from the
-  board. Proposing it is still there for whoever would rather ask
-- **A post is pushed for what is left of the shift**: half as much again is made, whoever is
-  at it tires twice as fast and their nerves with it, and every unit made may end badly. The
-  more tired, the likelier; the better at it, by attribute and by level, the less
-- **What ends badly**: they are hurt; their tool breaks; what was being made, and some of what
-  the post holds, is lost. The post breaking down comes with S55. It ends the push, and they
-  trust the player the less for it (S27)
-- What a push does and risks is data (`data/work.json`), and a job can say it is not pushed
+  (`WorkSystem.progress`), and of whoever studies, how far along what is being worked out is
+- **What somebody would make of a post can be asked before they have it**
+  (`WorkSystem.expected`): how many times as fast as a plain pair of hands, and how many
+  units a day where the job makes any. It tells what they carry and what they know
+- **Putting somebody to a post is an order** (S37, S50): the one there already was,
+  `task:take_job`. Proposing it is still there for whoever would rather ask
+- **A post is pushed for what is left of the shift** (`task:push`, in
+  `simulation/work/rush.py`): told to, they go to it if they are not there and work half as
+  fast again. It is an order like any other, waits its turn and can be taken back. It is
+  for whoever has a shift ahead of them at a post that makes something, works something
+  out, or where they make what they have come to: not for keeping watch, nor for what is
+  done outside
+- **It takes more out of them**: as tired again as the day leaves anybody, and their nerves
+  with it, every minute of it
+- **Every unit turned out pushed may end badly**: one in twenty for somebody rested, in the
+  middle of what the job goes by and new to it. Up to twice that the more tired they are
+  past half way; less the more they have of what the job goes by; and a tenth less for
+  every level they have at it. Work that turns out no units is looked at every half hour
+- **What ends badly**, whichever of them can: they are hurt, with bruises, a cut or now and
+  then a fracture, and never so that they die of it; the tool in their hands breaks; or what
+  they had made and still had by them is lost, a quarter of it and no more than six units,
+  out of their hands, their post and where it is kept, and is in the books as lost (S51)
+- **It ends the push, and they trust the player the less for it** (S27), are the lower in
+  spirits and remember it. Leaving the post or being put to another ends it too
+- **What a push does and risks is data** (`data/work.json`), with what is told of each thing
+  that goes wrong, and a job says it is not pushed with `"rush": false`
+- `work_pushed` and `work_accident` say each
+- Saved (version 40): until when each resident is pushing. In a save from before nobody is
 
-Done when: pushed, a post makes more in the same shift and whoever is at it ends it more
-tired; each thing that can go wrong does, with the risk forced; whoever is better at it has
-fewer accidents over many seeds; a push ends with the shift; and with nobody pushed a
-settlement goes exactly as it did.
+Done when: pushed, the garden makes a third more in the same morning and whoever is at it
+ends it more tired and more frayed; each thing that can go wrong does, with the risk forced;
+nobody dies of it; whoever is better at it has fewer accidents; a push ends with the shift;
+the books still come to what there is after something is lost; and with nobody pushed three
+seeds of ten days come out as they did before any of this, event for event and die for die.
+
+Decided without asking:
+- **Being pushed tires by a figure of its own**, the same whatever the job, and not by twice
+  what the job does: most jobs tire nobody past what a day does
+- **Nobody dies of having been pushed.** It was asked for that they be hurt, not killed
+- **What is lost is what they made and still have by them**, and at a tank never more than
+  six units: a quarter of the water was a day and a half of it
+- **Whatever goes wrong ends the push.** A second accident in the same shift would be the
+  player's to ask for again
+- Whoever is pushed still sees to hunger, thirst and sleep when they can wait no longer, as
+  anybody at a post does, and is still pushed when they come back
+- Trust in the player moves only when it goes wrong: a push that ends well is a shift
+
+Still open here:
+- The post breaking down is the fourth thing that can go wrong, and comes with S55
+- Nobody thinks anything of being pushed until it goes wrong: what they make of being told
+  what to do (S20) does not come into it
+- Whoever studies loses none of what was worked out: there is nothing of theirs to spoil
+- The figures are a first guess
 
 ### P59 — Rings over posts, and a board that puts people to them (needs S52) — planned
 - **A ring over each post somebody is at** fills as the next unit comes, on the roof for one

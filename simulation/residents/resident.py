@@ -48,6 +48,9 @@ class Resident:
     post_id: str | None = None
     # Minutes worked towards the next thing their job produces.
     work_progress: int = 0
+    # The game minute until which they are pushing their post, for having been told to (S52).
+    # Nothing for whoever works as anybody does.
+    pushing_until: int = 0
     # Minutes of each job they have behind them, by job ID: what their level at it comes of (S47).
     trade: dict[str, float] = field(default_factory=dict)
     # What they have come to at a job, or been shown, beyond what the job gives anybody: the
@@ -109,6 +112,9 @@ class Resident:
     trail: list[Point] = field(default_factory=list, compare=False, repr=False)
     # The points of the stretch they are walking that are still ahead of them. Not saved either.
     ahead: list[Point] = field(default_factory=list, compare=False, repr=False)
+    # How many minutes the unit they are working on takes them, as last worked out, for whoever
+    # shows how far along it is. Not saved: it is worked out again the next minute they work.
+    work_needed: int = field(default=0, compare=False, repr=False)
 
     @property
     def health(self) -> float:

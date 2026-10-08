@@ -36,10 +36,10 @@ GROUPS = (NEED, WITH, INCITE, LEISURE, TASK, WORDS)
 # The groups of what is done with somebody else.
 SHARED = (WITH, INCITE, LEISURE)
 # What a resident can be told to get on with.
-TO_POST, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, STOP = (
-    "to_post", "take_charge", "salvage", "take_job", "leave_job", "treat", "stop",
+TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, STOP = (
+    "to_post", "push", "take_charge", "salvage", "take_job", "leave_job", "treat", "stop",
 )
-TASKS = (TO_POST, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, STOP)
+TASKS = (TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, STOP)
 # Who an exchange can be had with: anybody, only somebody they are no couple with, or only their partner.
 ANYBODY, SINGLE, PARTNER = "anybody", "single", "partner"
 # What an exchange is, for whoever shows it: between friends, between two who are drawn to
@@ -507,6 +507,9 @@ class AffectSystem:
             job = world.work.job_of(world, resident)
             on = job is not None and resident.post_id in world.interactables
             return () if on and world.work.shift_minutes_left(world, resident, job) > 0 else None
+        if name == PUSH:
+            # Only whoever has a shift ahead of them at a post where there is something to push.
+            return () if world.rush.obstacle(world, resident) is None else None
         if name == LEAVE_JOB:
             return () if resident.job_id in world.registries.jobs else None
         if name == TAKE_CHARGE:
@@ -690,8 +693,24 @@ class AffectSystem:
             resident.activity = activity
             resident.current_action = "walking"
             return None
+        if name == PUSH:
+            failed = world.rush.push(world, resident)
+            if failed is not None:
+                return failed
+            if world.work.on_duty(world, resident):
+                # At their post already: they go on with it, harder.
+                return None
+            activity = world.work.plan(world, resident)
+            if activity is None:
+                world.rush.ease(resident)
+                return nowhere
+            self._leave_off(world, resident)
+            resident.activity = activity
+            resident.current_action = "walking"
+            return None
         if name == LEAVE_JOB:
             self._leave_off(world, resident)
+            world.rush.ease(resident)
             resident.job_id, resident.post_id, resident.work_progress = None, None, 0
             return None
         if name == TAKE_JOB:
