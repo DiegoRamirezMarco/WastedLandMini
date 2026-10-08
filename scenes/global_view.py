@@ -1630,14 +1630,16 @@ class GlobalView:
             self._building_pictures[key] = made
         return self._building_pictures[key]
 
-    def _game_picture(self, definition) -> ObjectPicture | None:
-        """The game's own picture of a kind of object, where it is that and not somebody's drawing that is shown."""
+    def _game_picture(self, definition, placed: Interactable | None = None) -> ObjectPicture | None:
+        """The game's own picture of a kind of object, where it is that and not somebody's
+        drawing that is shown. With `placed`, as that very one looks: a bed by what grows in it."""
         if not self.windowed or self.object_art.drawing(definition) is not None:
             return None
         if not self.object_pictures.has(definition.kind, definition.width, definition.height):
             return None
         frame = int(self.time * ANIMATION_FPS) % self.object_pictures.frames(definition.kind)
-        return self.object_pictures.at(definition.kind, self._cell, frame)
+        way = self.world.crafts.grown_at(self.world, placed.object_id) if placed is not None else None
+        return self.object_pictures.at(self.object_pictures.grown(definition.kind, way), self._cell, frame)
 
     def _show_illustrated(
         self,
@@ -1874,7 +1876,7 @@ class GlobalView:
             definition = self.world.definition_of(placed)
             goods = displayed_goods(self.world, placed) if definition.display_of is not None else []
             foot = float((placed.y + definition.height) * TILE_SIZE)
-            game = self._game_picture(definition)
+            game = self._game_picture(definition, placed)
             if game is not None:
                 # A map pixel is this many of the picture's.
                 detail = self._cell / TILE_SIZE

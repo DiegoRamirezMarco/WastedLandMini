@@ -640,6 +640,77 @@ def crop_bed(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
     return stage.picture()
 
 
+def _plot(rise: float, cell: int, depth: int) -> tuple[Stage, float, float]:
+    """A bed of earth edged with boards with nothing in it yet, with room above it: the stage
+    it is drawn on, where its earth starts, and how deep the earth is."""
+    stage = Stage((1, 1), rise, cell, depth)
+    s = stage.under
+    floor = stage.front - 4
+    deep = stage.front - stage.back - 8
+    top = floor - 9 - deep
+    s.block(4, top, 92, deep, 9, PALE_WOOD, 3, SOIL)
+    for share in (0.3, 0.62):
+        s.stroke([(10, top + deep * share), (90, top + deep * share)], darker(SOIL, 0.3), 2.2)
+    return stage, top, deep
+
+
+def _fruit(s: Sheet, x: float, y: float, size: float, color: Color) -> None:
+    """Something small and round among the leaves: too small for a line round it as thick as the rest have."""
+    s.oval(x - 1.6, y - 1.6, size + 3.2, size + 3.2, LINE)
+    s.oval(x, y, size, size, color)
+
+
+def crop_bed_bush(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A bed with three round bushes in it, heavy with something red."""
+    stage, top, deep = _plot(46, cell, depth)
+    s = stage.under
+    for index, (x, share) in enumerate(((24, 0.42), (52, 0.3), (78, 0.5))):
+        foot = top + deep * share
+        leaf = lighter(GREEN, 0.08 + 0.1 * (index % 2))
+        s.oval(x - 18, foot - 30, 36, 31, darker(leaf, 0.14), 255, outline=True)
+        s.oval(x - 12, foot - 33, 24, 19, leaf, 255)
+        for dx, dy in ((-8, -13), (4, -21), (9, -8)):
+            _fruit(s, x + dx - 3, foot + dy - 3, 7, RED)
+    return stage.picture()
+
+
+def crop_bed_vine(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A bed with two stakes and string between them, and something climbing them."""
+    stage, top, deep = _plot(84, cell, depth)
+    s = stage.under
+    foot = top + deep * 0.5
+    high = max(4.0, foot - 80)
+    for x in (20, 80):
+        s.stroke([(x, high), (x, foot)], LINE, 8.0)
+        s.stroke([(x, high), (x, foot)], PALE_WOOD, 4.6)
+    for share in (0.15, 0.45, 0.75):
+        y = high + (foot - high) * share
+        s.stroke([(20, y), (80, y)], CANVAS, 1.6)
+    climbs = [(28 + (index % 2) * 44, foot - index * (foot - high) / 6.5) for index in range(7)]
+    s.stroke(climbs, darker(GREEN, 0.1), 3.2)
+    for index, (x, y) in enumerate(climbs[1:]):
+        s.oval(x - 9, y - 7, 18, 12, lighter(GREEN, 0.1 + 0.1 * (index % 2)), 255, outline=True)
+        if index % 2:
+            _fruit(s, x + 3, y + 3, 8, YELLOW)
+    return stage.picture()
+
+
+def crop_bed_tree(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
+    """A bed with a tree in it, taller than whoever tends it, with fruit in its leaves."""
+    stage, top, deep = _plot(150, cell, depth)
+    s = stage.under
+    foot = top + deep * 0.55
+    crown = max(3.0, foot - 150)
+    s.box(43, crown + 62, 14, foot - crown - 62, WOOD, 3)
+    s.stroke([(50, crown + 86), (30, crown + 70)], darker(WOOD, 0.2), 4.0)
+    s.oval(8, crown + 20, 84, 62, darker(GREEN, 0.14), 255, outline=True)
+    s.oval(20, crown, 62, 54, GREEN, 255, outline=True)
+    s.oval(30, crown + 8, 30, 20, lighter(GREEN, 0.2), 255)
+    for x, y in ((22, 50), (52, 28), (72, 54), (40, 64), (62, 72)):
+        _fruit(s, x, crown + y, 9, ORANGE)
+    return stage.picture()
+
+
 def guard_post(cell: int, depth: int, frame: int = 0) -> ObjectPicture:
     """A sentry box by the gate, with a striped board across it."""
     stage = Stage((1, 1), 128, cell, depth)
@@ -866,6 +937,11 @@ PAINTERS: dict[str, Painter] = {
     "radio_set": radio_set,
     "lab_bench": lab_bench,
     "crop_bed": crop_bed,
+    # What a bed looks like for how what its farmer has come to is grown (P55). In the
+    # ground it is the bed as it always was.
+    "crop_bed_bush": crop_bed_bush,
+    "crop_bed_vine": crop_bed_vine,
+    "crop_bed_tree": crop_bed_tree,
     "guard_post": guard_post,
     "grave": grave,
     "wreck": wreck,
@@ -903,6 +979,12 @@ class ObjectPictures:
 
     def frames(self, kind: str) -> int:
         return FRAMES.get(kind, 1)
+
+    def grown(self, kind: str, way: str | None) -> str:
+        """The picture a kind of object has for how what grows in it is grown, where it has
+        one of its own for that: the kind itself otherwise."""
+        made = f"{kind}_{way}" if way else kind
+        return made if made in PAINTERS and footprint(made) == footprint(kind) else kind
 
     def at(self, kind: str, cell: int, frame: int = 0) -> ObjectPicture:
         """A kind of object for cells that wide, as deep as they look from where it is seen."""

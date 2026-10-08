@@ -57,6 +57,8 @@ COOKED_TAG = "cooked"
 FOOD_CATEGORY = "food"
 # The choice of a dish that says what it is made of, and of a tool that says what job it is for.
 FROM_CHOICE, FOR_CHOICE = "from", "for"
+# The choice of a crop that says how it grows, which is what is seen of it where it grows.
+GROWS_CHOICE = "grows"
 TOOL_TAG = "tool_"
 
 
@@ -354,6 +356,23 @@ class CraftSystem:
             for discovery in world.discoveries.values()
             if discovery.kind == kind.kind_id and discovery.item_id is not None
         )
+
+    def grown_at(self, world: "SimulationWorld", post_id: str) -> str | None:
+        """How what is grown at a post is grown, for it to be seen there: the way of the crop
+        its worker learned last. None where nothing is grown but what anybody grows."""
+        if not world.discoveries:
+            return None
+        last: tuple[tuple[int, int], str] | None = None
+        for resident in world.residents.values():
+            if resident.post_id != post_id or not resident.makes:
+                continue
+            for discovery in self.known(world, resident, resident.job_id):
+                way = discovery.choices.get(GROWS_CHOICE)
+                number = discovery.discovery_id.rsplit("_", 1)[-1]
+                when = (resident.makes[discovery.discovery_id], int(number) if number.isdigit() else 0)
+                if way is not None and (last is None or when > last[0]):
+                    last = (when, way)
+        return last[1] if last is not None else None
 
     def extra_items(self, world: "SimulationWorld", resident: Resident) -> tuple[str, ...]:
         """The items a resident's job has them make beyond the job's own, to be carried with them."""

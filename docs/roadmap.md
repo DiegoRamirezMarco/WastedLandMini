@@ -3762,7 +3762,8 @@ Still open here:
 - It is on screen since P54: the screen on which a thing is drawn and named
 - Tools, weapons and remedies are made of nothing, and only the time they take holds them back
 - The shop, the water and the desk teach nothing: only the work is better at each level
-- A crop is grown in the bed its farmer has: no bed is given over to it, and no tree stands there
+- A crop is grown in the bed its farmer has: no bed is given over to it. How it grows is
+  seen there since P55
 - Nobody is put to a job, or kept at one, for the level they have at it (S8)
 - A new thing has no part in what residents like until they have tried it (S19)
 - What each level takes and gives is a first guess
@@ -3871,10 +3872,28 @@ Decided without asking:
 Still open here:
 - What was named cannot be named again, nor drawn again, from this screen: the item editor
   redraws it, by its ID
-- A crop does not show in the bed it grows in: the bed looks as it did, whatever grows there
+- How a crop grows shows in the bed it grows in since P55. What the player drew of it does not
 - What a pick does is said in a line, and no figure is shown before it is saved
 - Two settlements kept on one machine share the folder of pictures, as they share the
   drawings of their residents
+
+### P55 — A bed looks like what grows in it (needs S47 and P41) — done
+Answered with S47: how a crop is grown changes how long it takes, how much it gives and how
+it looks.
+
+- **A bed is drawn by how the crop its farmer learned last is grown**: three round bushes
+  heavy with fruit, two stakes with string and something climbing them, or a tree taller
+  than whoever tends it. Grown in the ground, it is the bed as it always was
+- **The simulation says which** (`CraftSystem.grown_at`), and the window has a picture for
+  each (`crop_bed_bush`, `crop_bed_vine`, `crop_bed_tree`): a way of growing with no picture
+  of its own is the bed as it was
+- The bed of whoever grows nothing but what anybody grows, and one nobody tends, is as it was
+
+Still open here:
+- It is seen on the window, in the game's own hand. The small sprite of the canvas, and a
+  bed the player has drawn (P17), are as they were
+- A tree stands in its bed from the day it is learned: it does not grow before it gives
+- One bed shows one way of growing, the last learned, whatever else its farmer grows there
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

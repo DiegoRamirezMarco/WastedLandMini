@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pygame
 
+from graphics.object_pictures import PAINTERS, ObjectPictures
 from scenes.discovery_editor import MADE_FOLDER, NAMELESS
 from scenes.hud import DISCOVERY_INTENT
 from scenes.item_editor import ART_AREA
@@ -202,6 +203,66 @@ class DiscoveryScreenTests(unittest.TestCase):
         with self.assertNoLogs("simulation.items.custom_content", level="WARNING"):
             registries = BuiltInRegistries.load(DATA_DIR, custom_dir=self.custom)
         self.assertIsNone(registries.items.find(item_id), "what it is belongs to the settlement that came to it")
+
+
+class BedsOnTheMapTests(unittest.TestCase):
+    """A bed as the game draws it on the window, by how what grows in it is grown (P55)."""
+
+    def setUp(self) -> None:
+        for variable in ("SDL_VIDEODRIVER", "SDL_AUDIODRIVER"):
+            self.addCleanup(DiscoveryScreenTests._restore_driver, variable, os.environ.get(variable))
+            os.environ[variable] = "dummy"
+        from game.game import Game
+
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        root = Path(self._tmp.name)
+        (root / "illustrations").mkdir()
+        self.game = Game(
+            illustrations_dir=root / "illustrations", voices_dir=None, start_in_menu=False,
+            custom_content_dir=root / "custom",
+        )
+        self.addCleanup(pygame.quit)
+        self.view, self.world = self.game.global_view, self.game.world
+
+    def _learns(self, resident_id: str, name: str, way: str) -> None:
+        world = self.world
+        resident = world.residents[resident_id]
+        job = world.registries.jobs[resident.job_id]
+        level = world.crafts.level(world, resident, job.job_id)
+        world.crafts.worked(world, resident, job, world.registries.crafts.levels[level] * 2)
+        waiting = [each for each in world.crafts.waiting(world) if each.by == resident_id]
+        self.assertTrue(world.name_discovery(waiting[0].discovery_id, name, {"grows": way}).ok)
+
+    def test_each_way_of_growing_has_a_picture_of_its_own_and_the_ground_is_the_bed_as_it_was(self) -> None:
+        pictures = ObjectPictures()
+        self.assertEqual(pictures.grown("crop_bed", None), "crop_bed")
+        self.assertEqual(pictures.grown("crop_bed", "soil"), "crop_bed")
+        seen = {"crop_bed": pygame.image.tobytes(pictures.at("crop_bed", 64).under, "RGBA")}
+        for way in ("bush", "vine", "tree"):
+            kind = pictures.grown("crop_bed", way)
+            self.assertEqual(kind, f"crop_bed_{way}")
+            self.assertIn(kind, PAINTERS)
+            seen[kind] = pygame.image.tobytes(pictures.at(kind, 64).under, "RGBA")
+        self.assertEqual(len(set(seen.values())), 4, "no two look alike")
+        self.assertGreater(pictures.at("crop_bed_tree", 64).rise, pictures.at("crop_bed_bush", 64).rise, "a tree stands taller")
+        self.assertEqual(pictures.grown("crate", "tree"), "crate", "what grows nothing looks as it does")
+
+    def test_the_bed_of_whoever_grows_a_tree_is_seen_with_a_tree_in_it(self) -> None:
+        view, world = self.view, self.world
+        self.assertTrue(view.windowed)
+        raul, ines = world.residents["raul"], world.residents["ines"]
+        bed = world.registries.interactables.get("crop_bed")
+        mine, theirs = world.interactables[raul.post_id], world.interactables[ines.post_id]
+        plain = view._game_picture(bed, mine)
+        self.assertIs(plain, view._game_picture(bed), "until something is come to, a bed like any other")
+        self._learns("raul", "limones", "tree")
+        tree = view._game_picture(bed, mine)
+        self.assertIs(tree, view.object_pictures.at("crop_bed_tree", view._cell))
+        self.assertGreater(tree.under.get_height(), plain.under.get_height())
+        self.assertIs(view._game_picture(bed, theirs), plain, "and the bed beside it is as it was")
+        self.view.centre_on_resident("raul")
+        self.view.render()
 
 
 if __name__ == "__main__":

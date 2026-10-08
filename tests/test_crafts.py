@@ -393,6 +393,19 @@ class MakingTests(unittest.TestCase):
         world.clock.day += days
         self.assertTrue(world.crafts.products(world, raul, job)[0].ripe)
 
+    def test_a_bed_is_grown_as_the_crop_its_farmer_learned_last_is(self) -> None:
+        world = _settled()
+        raul, ines = world.residents["raul"], world.residents["ines"]
+        self.assertIsNone(world.crafts.grown_at(world, raul.post_id), "nothing but what anybody grows")
+        _learn(world, "raul", "tomate", grows="bush")
+        self.assertEqual(world.crafts.grown_at(world, raul.post_id), "bush")
+        self.assertIsNone(world.crafts.grown_at(world, ines.post_id), "the bed beside it is another's")
+        _learn(world, "raul", "limones", grows="tree")
+        self.assertEqual(world.crafts.grown_at(world, raul.post_id), "tree")
+        self.assertIsNone(world.crafts.grown_at(world, world.residents["marta"].post_id))
+        world.health.die(world, raul, "una prueba")
+        self.assertIsNone(world.crafts.grown_at(world, "crop_1"), "with nobody to tend it, it is a bed again")
+
     def test_a_dish_is_made_of_one_thing_and_only_with_that_in_hand(self) -> None:
         world = _settled()
         crop = _learn(world, "raul", "tomate")
