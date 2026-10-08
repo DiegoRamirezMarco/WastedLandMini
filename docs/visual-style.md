@@ -165,10 +165,11 @@ cut apart where the body bends, each part laid along its bone and turned as the 
   bones as one curve: the line down its middle rounds the elbow or the knee off, and the
   drawing follows it, drawn out on the outside of the bend and gathered on the inside, with
   its outline unbroken. Both ends stay where the skeleton has them. Shorter than it was drawn
-  a limb is a little wider, and longer a little thinner. Hands and feet are still parts of
-  their own at the end of it, as a glove and a shoe are, and so are the trunk, the hips and
-  the neck. A limb that has lost a part is shown in the parts it has left. Nothing has to be
-  drawn again for it: a limb drawn in one line bends as it is.
+  a limb is a little wider, and longer a little thinner. A hand and a foot are the end of
+  their limb and not parts pinned to it: each keeps its shape, as a glove and a shoe do, and
+  turns about the wrist or the ankle, and the limb gives over a narrow band there to go into
+  it without a cut. The trunk, the hips and the neck are still parts. A limb that has lost a
+  part is shown in the parts it has left. Nothing has to be drawn again for it.
 - **Put together.** The doll has a build of its own, apart from the pixel bodies. The arm of the
   near side hangs from a little behind the middle of the trunk and the far one from a little in
   front, so that both show, and the legs leave the hips the same way. The legs start low in the hips, so that the top of a thigh comes to

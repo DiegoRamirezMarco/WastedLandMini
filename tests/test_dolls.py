@@ -441,7 +441,7 @@ class RubberLimbTests(unittest.TestCase):
     def _limb(self, bend: float) -> list:
         """The bones of the arm, turned at the elbow by so many degrees."""
         skeleton = self._skeleton(bend)[0]
-        return [skeleton.bones[name] for name in ("upper_arm_right", "forearm_right")]
+        return [skeleton.bones[name] for name in ("upper_arm_right", "forearm_right", "hand_right")]
 
     def _arm(
         self, doll: Doll, bend: float, longer: float = 1.0, lost: tuple[str, ...] = ()
@@ -464,11 +464,11 @@ class RubberLimbTests(unittest.TestCase):
         doll = self._doll()
         limb = doll.limbs["upper_arm_right"]
         self.assertIs(doll.limbs["forearm_right"], limb)
-        self.assertEqual(limb.bones, ("upper_arm_right", "forearm_right"))
-        self.assertNotIn("hand_right", doll.limbs, "a hand is a part of its own at the end of the arm")
-        self.assertEqual(len(limb.joints), 3)
+        self.assertIs(doll.limbs["hand_right"], limb, "the hand is the end of the arm, and not a part of its own")
+        self.assertEqual(limb.bones, ("upper_arm_right", "forearm_right", "hand_right"))
+        self.assertEqual(len(limb.joints), 4)
         # Nothing is cut out of it at the elbow: it is the bar, from end to end.
-        shoulder, elbow, wrist = limb.joints
+        shoulder, elbow, wrist, _ = limb.joints
         for joint in (shoulder, elbow, wrist):
             self.assertAlmostEqual(joint[0], shoulder[0])
         for y in range(round(shoulder[1]), round(wrist[1]) - 1):
@@ -543,16 +543,20 @@ class RubberLimbTests(unittest.TestCase):
     def test_only_so_many_limbs_are_bent_in_a_frame_and_the_rest_make_do(self) -> None:
         allowance = rubber.Allowance(0.01)
         doll = self._doll()
-        laid = lambda which, bend: which.hosed("upper_arm_right", False, self.DETAIL, self._limb(bend), allowance)
+        # The part of the arm that bends is the first of its pictures.
+        def laid(which: Doll, bend: float):
+            pictures = which.hosed("upper_arm_right", False, self.DETAIL, self._limb(bend), allowance)
+            return pictures[0][:2] if pictures is not None else None
+
         straight = laid(doll, 0)
         self.assertIsNotNone(straight)
         # The one bend the frame allows has been spent: turned at the elbow, it keeps the shape it has.
-        self.assertIs(laid(doll, 90), straight)
+        self.assertIs(laid(doll, 90)[0], straight[0])
         allowance.new_frame()
         bent = laid(doll, 90)
-        self.assertIsNot(bent, straight)
+        self.assertIsNot(bent[0], straight[0])
         self.assertGreater(bent[0].get_width(), straight[0].get_width() + 20)
-        self.assertIs(laid(doll, 90), bent, "a shape it has had is kept")
+        self.assertIs(laid(doll, 90)[0], bent[0], "a shape it has had is kept")
         # With nothing left to spend and no shape of its own yet, a limb is shown in its parts.
         other = self._doll()
         self.assertIsNone(laid(other, 90))
@@ -567,6 +571,80 @@ class RubberLimbTests(unittest.TestCase):
         # Whoever gives no allowance is never made to wait: a doll shown by itself bends at once.
         self.assertIsNotNone(self._doll().hosed("upper_arm_right", False, self.DETAIL, self._limb(90)))
 
+    def test_a_hand_is_the_end_of_its_arm_and_turns_at_the_wrist_without_coming_apart(self) -> None:
+        hand = self.template.parts["hand_right"]
+        pygame.draw.rect(self.body, RED, pygame.Rect(hand.start[0] - self.HALF, hand.start[1], self.HALF * 2, hand.end[1] - hand.start[1]))
+        pygame.draw.circle(self.body, BLUE, hand.end, 6)
+        doll = self._doll()
+        marks = []
+        for turned in (0, 40, -40):
+            skeleton, places = self._skeleton(60)
+            wrist, reach = places["hand_right"], self.plan.length("doll", "hand_right")
+            way = math.radians(60 + turned)
+            tip = (wrist[0] + math.sin(way) * reach, wrist[1] + math.cos(way) * reach)
+            skeleton.joints["fingertip_right"].x, skeleton.joints["fingertip_right"].y = tip
+            picture = pygame.Surface((400, 400), pygame.SRCALPHA)
+            draw_doll(picture, doll, self.plan, skeleton, self.ORIGIN, self.DETAIL)
+            self.assertEqual(len(pygame.mask.from_surface(picture).connected_components(30)), 1, f"one piece, turned {turned}")
+            marked = pygame.mask.from_threshold(picture, (*BLUE, 255), (60, 60, 60, 255))
+            marks.append(marked.count())
+            on_picture = (self.ORIGIN[0] + (tip[0] + 0.5) * self.DETAIL, self.ORIGIN[1] + (tip[1] + 0.5) * self.DETAIL)
+            self.assertAlmostEqual(marked.centroid()[0], on_picture[0], delta=6, msg=f"its far end is at the fingertips, turned {turned}")
+            self.assertAlmostEqual(marked.centroid()[1], on_picture[1], delta=6, msg=turned)
+        self.assertLess(max(marks), min(marks) * 1.5, "and nothing of it is shown twice")
+
+    def test_a_leg_goes_on_into_its_foot_round_the_corner_it_was_drawn_with(self) -> None:
+        body = pygame.Surface(self.template.canvases[BODY_CANVAS], pygame.SRCALPHA)
+        thigh, shin, foot = (self.template.parts[f"{part}_right"] for part in ("thigh", "shin", "foot"))
+        half = 20
+        # A leg in one bar, and a shoe under its ankle and out in front of it, as anyone would draw them.
+        pygame.draw.rect(body, RED, pygame.Rect(thigh.start[0] - half, thigh.start[1], half * 2, shin.end[1] - thigh.start[1]))
+        shoe = pygame.Rect(foot.start[0] - half, foot.start[1], foot.end[0] - foot.start[0] + half + 14, 24)
+        pygame.draw.rect(body, BLUE, shoe)
+        doll = Doll(self.template, {BODY_CANVAS: body})
+        self.assertEqual(doll.limbs["foot_right"].bones, ("thigh_right", "shin_right", "foot_right"))
+
+        def shown(which: Doll, flexed: float) -> tuple[pygame.Surface, tuple[float, float]]:
+            skeleton = Skeleton(self.plan, "doll_right", ["arm_left", "arm_right", "leg_left"])
+            skeleton.set_pose(self.plan.pose("doll_right"))
+            ankle, toe = skeleton.joints["foot_right"], skeleton.joints["toe_right"]
+            reach, way = math.dist((ankle.x, ankle.y), (toe.x, toe.y)), math.radians(90 + flexed)
+            toe.x, toe.y = ankle.x + math.sin(way) * reach, ankle.y + math.cos(way) * reach
+            picture = pygame.Surface((400, 400), pygame.SRCALPHA)
+            draw_doll(picture, which, self.plan, skeleton, (200, 360), self.DETAIL)
+            return picture, (200 + (toe.x + 0.5) * self.DETAIL, 360 + (toe.y + 0.5) * self.DETAIL)
+
+        # Standing as it was drawn, it is the drawing: what its parts would show, pinned together.
+        with mock.patch.object(rubber, "AVAILABLE", False):
+            in_parts = Doll(self.template, {BODY_CANVAS: body})
+        whole, _ = shown(doll, 0)
+        pinned, _ = shown(in_parts, 0)
+        one, other = pygame.mask.from_surface(whole), pygame.mask.from_surface(pinned)
+        self.assertGreater(one.overlap_area(other, (0, 0)), max(one.count(), other.count()) * 0.9)
+        blue = lambda picture: pygame.mask.from_threshold(picture, (*BLUE, 255), (60, 60, 60, 255))
+        at_rest = blue(whole).count()
+        self.assertGreater(at_rest, 800)
+        # With the foot turned up or down it is still one piece, its toe where the skeleton has it,
+        # and no more shoe than there was: nothing of the drawing is shown twice.
+        for flexed in (35, -35):
+            picture, toe = shown(doll, flexed)
+            self.assertEqual(len(pygame.mask.from_surface(picture).connected_components(30)), 1, flexed)
+            painted = blue(picture)
+            self.assertLess(painted.count(), at_rest * 1.3, flexed)
+            self.assertGreater(painted.count(), at_rest * 0.6, flexed)
+            box = painted.get_bounding_rects()[0]
+            self.assertLess(math.dist(box.center, toe), 40, f"the shoe goes where the foot does, turned {flexed}")
+
+    def test_an_arm_with_no_hand_drawn_is_still_a_limb(self) -> None:
+        body = pygame.Surface(self.template.canvases[BODY_CANVAS], pygame.SRCALPHA)
+        top, bottom = self.upper.start[1], self.fore.end[1] - 30
+        pygame.draw.rect(body, RED, pygame.Rect(self.upper.start[0] - self.HALF, top, self.HALF * 2, bottom - top))
+        doll = Doll(self.template, {BODY_CANVAS: body})
+        self.assertNotIn("hand_right", doll.parts)
+        self.assertEqual(doll.limbs["upper_arm_right"].bones, ("upper_arm_right", "forearm_right"))
+        picture, at = self._arm(doll, 90)
+        self.assertEqual(len(pygame.mask.from_surface(picture).connected_components(30)), 1)
+
     def test_pictures_are_kept_until_there_are_too_many_and_then_the_longest_unseen_go(self) -> None:
         kept = rubber.Kept(100)
         kept.keep("a", 1, 40)
@@ -579,9 +657,18 @@ class RubberLimbTests(unittest.TestCase):
         self.assertEqual(len(kept), 1)
         self.assertEqual(kept.get("c"), 4)
 
-    def test_a_limb_of_rubber_must_be_parts_drawn_in_one_line(self) -> None:
+    def test_a_limb_of_rubber_must_be_parts_drawn_one_after_the_other(self) -> None:
         data = json.loads(PLAN_PATH.read_text(encoding="utf-8"))["doll"]
-        self.assertIn(("thigh_left", "shin_left"), template_from_data(data).hoses)
+        made = template_from_data(data)
+        self.assertIn(("thigh_left", "shin_left", "foot_left"), made.hoses, "a leg ends in its foot, which sticks out of it")
+        self.assertIn(("upper_arm_right", "forearm_right", "hand_right"), made.hoses)
+        self.assertGreater(made.tip, 0.0)
+        # With no ends that keep their shape, every part of a limb bends, and has to be in line.
+        all_bend = {**data, "hose": {**data["hose"], "tip": 0}}
+        with self.assertRaises(ValueError):
+            template_from_data(all_bend)
+        arms = [limb for limb in data["hoses"] if "hand" in limb[-1]]
+        self.assertEqual(len(template_from_data({**all_bend, "hoses": arms}).hoses), 2, "an arm is drawn in one line, hand and all")
         for limbs in (
             [["shin_left", "foot_left"]],
             [["upper_arm_left", "shin_left"]],

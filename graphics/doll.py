@@ -57,15 +57,19 @@ JOINT_BAND = 2
 # Pixels to one of the skeleton's at which a doll is laid out to see how much room it takes.
 BOX_DETAIL = 4.0
 # A limb of rubber is turned as a whole in steps, as many to a full turn as leave its far end
-# within half a pixel of where it should be: this many for each pixel to one of the skeleton's,
-# in twelves, and never fewer or more than these.
-TURN_STEPS_PER_PIXEL = 40
-FEWEST_LIMB_TURNS, MOST_LIMB_TURNS = 60, 192
+# within a pixel or so of where it should be: this many for each pixel to one of the
+# skeleton's, in twelves, and never fewer or more than these. What hangs from that end is hung
+# where the limb ends as it was turned, so nothing comes apart for it.
+TURN_STEPS_PER_PIXEL = 30
+FEWEST_LIMB_TURNS, MOST_LIMB_TURNS = 60, 120
 # From there each of its parts is bent in this many steps of a full turn, and drawn out in steps
 # of this many hundredths of the length it was drawn at. These are coarse: bending is what
 # costs, and the coarser they are the fewer shapes a limb has to be bent into.
 BEND_STEPS = 72
 STRETCH_STEP = 4
+# A hand or a foot at the end of a limb is bent in steps this many times as coarse: it is short,
+# and its far end moves little for them.
+TIP_COARSER = 2
 # A limb is bent out of a drawing twice as fine as it is shown, which smooths it. Shown at this
 # many pixels to one of the skeleton's or more, it is large enough to be bent out of one as fine.
 FINER = 2
@@ -234,6 +238,11 @@ class DollTemplate:
     # at 2, and how much wider it gets for being shorter than drawn, from not at all at 0.
     rounding: float = 1.0
     volume: float = 0.0
+    # A hand or a foot, the last part of a limb of three or more, is not bent: it keeps its shape
+    # and turns about the joint it hangs from. This is how much of its own length the limb gives,
+    # back from that joint, to go into it without a cut. At 0 a limb has no such end, and all of
+    # it bends.
+    tip: float = 0.35
 
     def adopted(self, canvas: str, drawing: pygame.Surface, build: DollBuild) -> pygame.Surface:
         """A drawing as this template lays its paper out, whichever way it was laid out when drawn.
@@ -632,17 +641,19 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
         )
     start = build_from_data(data.get("build"))
     hoses = tuple(tuple(str(bone) for bone in limb) for limb in data.get("hoses", ()))
-    _check_hoses(hoses, parts)
     bends = data.get("hose") or {}
+    _check_hoses(hoses, parts, float(bends.get("tip", 0.35)) > 0)
     return DollTemplate(
         unit, canvases, parts, start, _former(unit, canvases, parts, start, data.get("former")),
-        hoses, float(bends.get("round", 1.0)), float(bends.get("volume", 0.0)),
+        hoses, float(bends.get("round", 1.0)), float(bends.get("volume", 0.0)), float(bends.get("tip", 0.35)),
     )
 
 
-def _check_hoses(hoses: tuple[tuple[str, ...], ...], parts: dict[str, PartSpec]) -> None:
+def _check_hoses(hoses: tuple[tuple[str, ...], ...], parts: dict[str, PartSpec], tipped: bool) -> None:
     """Refuse a limb of rubber that could not be bent as one piece: its parts have to be drawn
-    one after the other in one line, on one canvas."""
+    one after the other on one canvas, each starting where the one before it ends, and in one
+    line. If limbs have ends that keep their shape, the last part of a limb of three or more
+    is that end, a hand or a foot, and may be drawn pointing any way."""
     taken: set[str] = set()
     for limb in hoses:
         if len(limb) < 2 or not set(limb) <= parts.keys():
@@ -650,12 +661,14 @@ def _check_hoses(hoses: tuple[tuple[str, ...], ...], parts: dict[str, PartSpec])
         if taken & set(limb):
             raise ValueError(f"A part is in two limbs of rubber: {sorted(taken & set(limb))}")
         taken.update(limb)
-        for before, after in zip(limb, limb[1:]):
+        for index, (before, after) in enumerate(zip(limb, limb[1:])):
             first, second = parts[before], parts[after]
+            if first.whole or second.whole or first.canvas != second.canvas or first.end != second.start:
+                raise ValueError(f"The parts of a limb of rubber must be drawn one after the other: {before}, {after}")
             way, onward = _direction(first), _direction(second)
-            in_line = way[0] * onward[0] + way[1] * onward[1] > 0.999
-            if first.whole or second.whole or first.canvas != second.canvas or first.end != second.start or not in_line:
-                raise ValueError(f"The parts of a limb of rubber must be drawn in one line: {before}, {after}")
+            hangs = tipped and len(limb) > 2 and index == len(limb) - 2
+            if not hangs and way[0] * onward[0] + way[1] * onward[1] < 0.999:
+                raise ValueError(f"The parts of a limb of rubber that bend must be drawn in one line: {before}, {after}")
 
 
 def _former(
@@ -704,6 +717,8 @@ class DollLimb:
     bones: tuple[str, ...]
     image: pygame.Surface
     joints: tuple[Point, ...]
+    # Whether the last of its parts is a hand or a foot, which hangs from it and keeps its shape.
+    tipped: bool = False
 
 
 def _turn_about(image: pygame.Surface, joint: Point, turn: float, scale: float = 1.0) -> tuple[pygame.Surface, Point]:
@@ -751,17 +766,21 @@ class Doll:
                 (spec.start[0] - box.x, spec.start[1] - box.y),
                 (spec.end[0] - box.x, spec.end[1] - box.y),
             )
-        # The limbs of rubber, by each of their parts. One of which a part was left undrawn is
-        # not one piece, and stays in its parts.
+        # The limbs of rubber, by each of their parts. One is as much of it as was drawn, from
+        # the trunk outwards: an arm with no hand is still an arm. Less than two parts of it is
+        # not a limb, and stays a part.
         self.limbs: dict[str, DollLimb] = {}
         for bones in template.hoses if rubber.AVAILABLE else ():
-            if not all(bone in self.parts for bone in bones):
+            whole = len(bones)
+            bones = tuple(itertools.takewhile(lambda bone: bone in self.parts, bones))
+            if len(bones) < 2:
                 continue
+            tipped = template.tip > 0 and whole > 2 and len(bones) == whole
             specs = [template.parts[bone] for bone in bones]
             # Together the parts have no cut between them, and keep the round ends they had at either end.
             cut, box = self._cut(sheets[specs[0].canvas], [masks[bone] for bone in bones])
             joints = [specs[0].start, *(spec.end for spec in specs)]
-            limb = DollLimb(bones, cut.subsurface(box).copy(), tuple((x - box.x, y - box.y) for x, y in joints))
+            limb = DollLimb(bones, cut.subsurface(box).copy(), tuple((x - box.x, y - box.y) for x, y in joints), tipped)
             self.limbs.update({bone: limb for bone in bones})
         # How long each part is drawn, in the skeleton's own measure.
         self.drawn = {bone: math.dist(spec.start, spec.end) / template.unit for bone, spec in template.parts.items()}
@@ -906,18 +925,20 @@ class Doll:
             self._turned[key] = _turn_about(part.image, part.start, steps * math.tau / TURN_STEPS)
         return self._turned[key]
 
-    def _strip(self, limb: DollLimb, mirrored: bool, detail: float) -> rubber.Strip:
-        """A limb of rubber at the size it is bent at, and in a mirror if the body faces the other way."""
-        key = (limb.bones, mirrored, round(detail * 1000))
+    def _strip(self, limb: DollLimb, mirrored: bool, detail: float, fine: float) -> rubber.Strip | None:
+        """A limb of rubber to be bent at a size, out of a drawing `fine` times as fine as that,
+        and in a mirror if the body faces the other way."""
+        key = (limb.bones, mirrored, round(detail * 1000), fine)
         if key not in self._strips:
-            factor = detail / self.unit
+            factor = detail * fine / self.unit
             size = (max(1, round(limb.image.get_width() * factor)), max(1, round(limb.image.get_height() * factor)))
             image = pygame.transform.smoothscale(limb.image, size)
             joints = [(x * factor, y * factor) for x, y in limb.joints]
             if mirrored:
                 image = pygame.transform.flip(image, True, False)
                 joints = [(size[0] - x, y) for x, y in joints]
-            self._strips[key] = rubber.read_strip(image, joints)
+            give = self.template.tip if limb.tipped else None
+            self._strips[key] = rubber.read_strip(image, joints, self.template.rounding, fine, give)
         return self._strips[key]
 
     def hosed(
@@ -927,9 +948,14 @@ class Doll:
         detail: float,
         bones: Sequence[Bone],
         allowance: rubber.Allowance | None = None,
-    ) -> tuple[pygame.Surface, Point] | None:
-        """The limb of rubber a part belongs to, laid along its bones, and where on that picture
-        its first joint is.
+    ) -> list[tuple[pygame.Surface, Point, Point]] | None:
+        """The limb of rubber a part belongs to, laid along its bones: its pictures, the nearest
+        the trunk first, and for each where on it the joint it is hung by is, and how far from
+        the first joint of the limb that joint goes, in pixels.
+
+        The part of it that bends is one picture. A hand or a foot that hangs from it, with the
+        end of the limb that gives to it, is another: it turns by itself, and so the limb need
+        not be bent again each time it does.
 
         `bones` are the bones of the skeleton it is laid on, one to each of its parts from the
         trunk outwards, wherever their joints are now. `allowance` is how much bending the frame
@@ -940,13 +966,14 @@ class Doll:
         limb = self.limbs.get(bone)
         if limb is None or len(bones) != len(limb.bones):
             return None
+        bends = len(bones) - 1 if limb.tipped else len(bones)
         steps = limb_turns(detail)
         # The whole limb is turned in steps, as a part is, and bent in steps from there: bending
         # is the costly half, and a limb takes few shapes, however many ways it is turned.
         turn = round(wrapped(bones[0].angle) / math.tau * steps) % steps
         turned = turn * math.tau / steps
         parts = []
-        for name, laid in zip(limb.bones, bones):
+        for name, laid in zip(limb.bones[:bends], bones):
             long = math.dist((laid.a.x, laid.a.y), (laid.b.x, laid.b.y))
             stretch = round(100 * long / self.drawn[name] / STRETCH_STEP) * STRETCH_STEP if self.drawn[name] else 0
             if stretch <= 0:
@@ -976,16 +1003,62 @@ class Doll:
         if placed is None:
             placed = _turn_about(*shapes[shape], turned)
             KEPT.keep(key, placed, placed[0].get_width() * placed[0].get_height() * 4)
+        laid_out = [(*placed, (0.0, 0.0))]
+        if limb.tipped:
+            # Where the part that bends ends, as it was bent, and which way it points there.
+            end, pointing = [0.0, 0.0], turned
+            for name, (stretch, bend, _) in zip(limb.bones, shape):
+                long, pointing = self.drawn[name] * stretch / 100 * detail, turned + bend * math.tau / BEND_STEPS
+                end = [end[0] + math.sin(pointing) * long, end[1] + math.cos(pointing) * long]
+            hung = self._hung(limb, mirrored, detail, bones[-2], bones[-1], pointing, limb_key)
+            if hung is not None:
+                laid_out.append((*hung, (end[0], end[1])))
+        return laid_out
+
+    def _hung(
+        self, limb: DollLimb, mirrored: bool, detail: float, last: Bone, hangs: Bone, pointing: float, limb_key: tuple
+    ) -> tuple[pygame.Surface, Point] | None:
+        """The hand or the foot at the end of a limb, turned as its bone is against the last of
+        the limb's, and then with the limb, which points along `pointing` where it ends."""
+        name = limb.bones[-1]
+        long = math.dist((hangs.a.x, hangs.a.y), (hangs.b.x, hangs.b.y))
+        stretch = round(100 * long / self.drawn[name] / STRETCH_STEP) * STRETCH_STEP if self.drawn[name] else 100
+        # How far it is turned from the way the limb ends, in the coarse steps a hand is turned in.
+        lean = round(wrapped(hangs.angle - last.angle) / math.tau * BEND_STEPS / TIP_COARSER) * TIP_COARSER % BEND_STEPS
+        fine = FINER if detail < LARGE else 1
+        strip = self._strip(limb, mirrored, detail, fine)
+        if strip is None or strip.tip is None:
+            return None
+        hung_key = (*limb_key, "hung")
+        hands: dict[tuple, tuple[pygame.Surface, Point]] = BENT.get(hung_key) or {}
+        if (lean, stretch) not in hands:
+            # Angles here go anticlockwise from straight down. A picture is turned the way the
+            # hands of a clock go on the screen, which is the other way.
+            made = rubber.tipped(strip, -lean * math.tau / BEND_STEPS, max(stretch, STRETCH_STEP) / 100)
+            if made is None:
+                return None
+            hands[(lean, stretch)] = made
+            BENT.keep(hung_key, hands, sum(each.get_width() * each.get_height() * 4 for each, _ in hands.values()))
+        # It was made with the limb pointing as it does on the drawing: it is turned from there.
+        way = (strip.joints[-1][0] - strip.joints[0][0], strip.joints[-1][1] - strip.joints[0][1])
+        steps = limb_turns(detail)
+        spun = round(wrapped(pointing - math.atan2(way[0], way[1])) / math.tau * steps) % steps
+        key = (*hung_key, lean, stretch, spun)
+        placed = KEPT.get(key)
+        if placed is None:
+            placed = _turn_about(*hands[(lean, stretch)], spun * math.tau / steps)
+            KEPT.keep(key, placed, placed[0].get_width() * placed[0].get_height() * 4)
         return placed
 
     def _bent(
         self, limb: DollLimb, mirrored: bool, detail: float, shape: Sequence[tuple[int, int, int]]
     ) -> tuple[pygame.Surface, Point] | None:
-        """A limb of rubber bent to a shape, its first part pointing straight down or nearly.
+        """The part of a limb of rubber that bends, bent to a shape, its first part pointing
+        straight down or nearly.
 
-        `shape` is, for each of its parts, how long it is in hundredths of the length it was drawn
-        at, how far it is turned from straight down in steps of a bend, and how long it is at
-        rest on the body it is laid on, in the same hundredths.
+        `shape` is, for each of those parts, how long it is in hundredths of the length it was
+        drawn at, how far it is turned from straight down in steps of a bend, and how long it is
+        at rest on the body it is laid on, in the same hundredths.
         """
         fine = FINER if detail < LARGE else 1
         points = [(0.0, 0.0)]
@@ -994,8 +1067,8 @@ class Doll:
             long, angle = self.drawn[name] * stretch / 100 * detail, bend * math.tau / BEND_STEPS
             points.append((points[-1][0] + math.sin(angle) * long, points[-1][1] + math.cos(angle) * long))
             rest.append(self.drawn[name] * at_rest / 100 * detail)
-        strip = self._strip(limb, mirrored, detail * fine)
-        return rubber.bent(strip, points, self.template.rounding, self.template.volume, fine, rest)
+        strip = self._strip(limb, mirrored, detail, fine)
+        return rubber.bent(strip, points, self.template.volume, rest) if strip is not None else None
 
 
 class DollStore:
@@ -1104,10 +1177,13 @@ def _laid(
         if limb is not None:
             bones = [skeleton.bones.get(skeleton.as_posed(part)) for part in limb.bones]
             if all(each is not None for each in bones):
-                placed = doll.hosed(name, skeleton.mirrored, detail, bones, allowance)
-                if placed is not None:
-                    bone = bones[0]
+                laid_out = doll.hosed(name, skeleton.mirrored, detail, bones, allowance)
+                if laid_out is not None:
                     shown.update(limb.bones)
+                    first = bones[0].a
+                    for image, joint, at in laid_out:
+                        yield image, (first.x + 0.5) * detail + at[0] - joint[0], (first.y + 0.5) * detail + at[1] - joint[1]
+                    continue
         if placed is None and bone is not None:
             # A part may be longer on the skeleton than it was drawn: it is drawn out to fit. And
             # its clip may have it squashed or drawn out from there, in steps, and the wider or

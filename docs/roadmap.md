@@ -3177,6 +3177,42 @@ Still open here:
 - The measures of the three walks were written by a script that is not kept: they are plain
   numbers in `data/skeleton.json` now, and changing a walk means changing eight keys
 
+### P45 — Hands and feet that do not come apart (needs P44) — done
+The user, with a picture of Olga holding a knife: "las manos y los pies se rompen bastante no se
+si siguen el mismo metodo o no pero como ves en la imagen se rompen". They did not follow it:
+the rubber went from the shoulder to the wrist and from the hip to the ankle, and a hand and a
+foot were still parts pinned on the end. With the springs of P43 they turned by themselves,
+and the straight cut each has at its joint showed: a block at the wrist, a step of trouser
+over the shoe.
+
+- **A hand and a foot are the end of their limb** (`doll.hoses` lists three parts to a limb
+  now). The limb is cut out of the drawing in one piece, hand or foot and all
+- **They keep their shape.** Laid along a curve as the rest of the limb is, a shoe came out of
+  shape: its heel stayed behind and its sole twisted. That was tried and thrown out. A hand
+  or a foot turns whole about the joint it hangs from, whichever way it was drawn pointing,
+  as a foot sticks out of a leg
+- **The joint gives.** Over a narrow band, most of it on the limb, everything turns a little
+  further the nearer it is to the hand: the limb goes into it with no cut and nothing sticks
+  out. How wide that band is, is data (`doll.hose.tip`)
+- **What is drawn at a joint stays at it.** The round of a bend that takes more of one part
+  than of the other was centred half-way along itself, and not on the joint: a leg, whose
+  shin is longer than its thigh, had its knee a little off
+- An arm with no hand drawn is still a limb, as far as it was drawn
+- **A limb is kept as two pictures**: the part that bends, and the hand or foot with the band
+  that gives. A hand turns all the time on its spring; kept as one picture the whole limb
+  was bent again each time, and showing twelve dolls went from 1 ms to 7
+
+What it costs now, on the user's machine: the game with nine residents and seven in sight
+shows a frame in 9 to 10 ms without a window, as before. Twelve dolls on springs, every one
+taking up something new every three seconds, are drawn in 2.6 ms at the size the map opens at
+(1.2 before their hands and feet were theirs) and about 9 at the nearest, where there are more
+pictures than are kept.
+
+Still open here:
+- The shoulder and the hip are still pins, under the trunk
+- A limb cut off the body, a forearm with its hand, is shown in its parts as it falls
+- At the nearest zoom with many dolls in sight, more turned pictures are wanted than are kept
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.
