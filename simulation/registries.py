@@ -32,6 +32,7 @@ from simulation.tastes.settings import TasteSettings, taste_settings_from_data
 from simulation.housing.decor import DecorSettings, decor_settings_from_data
 from simulation.housing.housing import HousingSettings, housing_settings_from_data
 from simulation.tutorial.tutorial import BUILDING, JOB, OBJECT, TutorialDefinition, tutorial_definition_from_data
+from simulation.work.craft import CraftSettings, craft_settings_from_data
 from simulation.work.construction import ConstructionSettings, construction_settings_from_data
 from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
@@ -158,6 +159,8 @@ class BuiltInRegistries:
     jobs: dict[str, JobDefinition] = field(default_factory=dict)
     # What a resident is capable of, and what each of the six is good for.
     attributes: AttributeSettings = field(default_factory=AttributeSettings)
+    # The levels of a job, and the kinds of thing each job teaches.
+    crafts: CraftSettings = field(default_factory=CraftSettings)
     injuries: dict[str, InjuryDefinition] = field(default_factory=dict)
     # Limbs a resident can lose for good, by limb ID.
     limbs: dict[str, LimbDefinition] = field(default_factory=dict)
@@ -272,6 +275,9 @@ class BuiltInRegistries:
         bonds_path = root / "relationships.json"
         if bonds_path.is_file():
             registries.bonds = bond_settings_from_data(_read_object(bonds_path))
+        crafts_path = root / "crafts.json"
+        if crafts_path.is_file():
+            registries.crafts = craft_settings_from_data(_read_object(crafts_path))
         attributes_path = root / "attributes.json"
         if attributes_path.is_file():
             registries.attributes = attribute_settings_from_data(_read_object(attributes_path))

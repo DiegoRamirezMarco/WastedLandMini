@@ -8,6 +8,7 @@ worth to them. Either way the settlement keeps whoever works for it, and nobody 
 import math
 from typing import TYPE_CHECKING
 
+from simulation.work.craft_system import tool_tag
 from simulation.ai.utility_ai import need_urgency
 from simulation.economy.fund_system import hand_over
 from simulation.events.event import DomainEvent
@@ -314,6 +315,8 @@ class TradeSystem:
         job = world.work.job_of(world, resident)
         if job is not None and job.tool is not None and job.tool.tag in definition.tags:
             return 0.0 if self._carries_tagged(world, resident, job.tool.tag) else MAX_WANT
+        if job is not None and tool_tag(job.job_id) in definition.tags:
+            return 0.0 if world.work.tool_of(world, resident, job) is not None else MAX_WANT
         if definition.properties.get("damage", 0.0) > 1.0:
             if world.health.weapon_of(world, resident)[0] > 1.0:
                 return 0.0

@@ -42,6 +42,13 @@ class Resident:
     post_id: str | None = None
     # Minutes worked towards the next thing their job produces.
     work_progress: int = 0
+    # Minutes of each job they have behind them, by job ID: what their level at it comes of (S47).
+    trade: dict[str, float] = field(default_factory=dict)
+    # What they have come to at a job, or been shown, beyond what the job gives anybody: the
+    # day they learned each, by discovery ID. And the minutes of being shown what they are
+    # still learning from somebody.
+    makes: dict[str, int] = field(default_factory=dict)
+    lessons: dict[str, float] = field(default_factory=dict)
     # Day of the week, counted from 0, on which they do not work. None for no day off.
     day_off: int | None = None
     # What their work has earned them and they have not spent yet.
@@ -83,8 +90,10 @@ class Resident:
     # Whether they are looking for a job to take, as someone newly arrived is.
     seeks_work: bool = False
     injuries: list[Injury] = field(default_factory=list)
-    # Game minute until which the last dose they were given in care goes on working.
+    # Game minute until which the last dose they were given in care goes on working, and
+    # the item it was a dose of.
     dosed_until: int = 0
+    dosed_with: str | None = None
     # IDs of the limbs they have lost for good, from the limb registry.
     lost_limbs: list[str] = field(default_factory=list)
     # Where they walked during the last tick, starting where the tick began: a point for each

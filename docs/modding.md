@@ -507,6 +507,34 @@ looks and nothing of what happens.
 - `age` (`from`, `per_year`, `of`), `youth` (`grown_at`, `floor`, `of`) and `injury` (`of`,
   `share`) say what the years, growing up and being hurt take from, and how much.
 
+## Trades
+
+`data/crafts.json` holds the levels of a job and the kinds of thing a job teaches.
+
+- `levels` are the minutes at a job from which each level is reached, the first from 0. `pace`
+  is how much faster each level makes the work, `better` how much better each level makes
+  what is come to at it, `teach_minutes` and `teach_reach` how long and how near somebody has
+  to be to learn a thing from whoever knows it, and `name_length` the longest name.
+- `jobs` says which kind each job teaches, by job ID. A job left out teaches nothing.
+- `kinds` lists them by ID, each with a `name`, what the player is asked (`ask`), how it is
+  said of whoever comes to one (`learned`), and:
+  - `item`, the item it is as the game makes it: `category`, `tags`, `value`, `effects`,
+    `properties`, `preference_tags`, a `substance`, and `flavours` (how many of the tastes in
+    `flavours` it is given). A pair of numbers is anywhere between them. Left out, it is not
+    a thing: somewhere to go.
+  - `choices`, what the player picks, by ID. Each has a `name` and either its `options`
+    written out or a `source` they come from as things stand: `raw_food` or `making_jobs`.
+    An option has a `name`, a `text`, and what picking it does: an `item` laid over the kind's
+    (lists grow, the rest is written over), `every_minutes`, `batch` and `ripens_days` for how
+    it is made, and `fetch` and `finds` for what is brought from a place.
+  - `every_minutes` and `batch` for how a unit is made where no option says, and, for a job
+    that makes nothing of its own, `into` (the kind of container what is made is kept in) and
+    `max_stock` (how many of each the settlement keeps before no more are made).
+- A choice called `from` names what a thing is made of, which has to be in the hands of
+  whoever makes it. One called `for` names the job a tool is for, and tags it `tool_<job>`.
+- What a made item is good for is its data: `speed` on a tool, `dose` and `mends_<injury>` on
+  a medicine, `armour`, and `damage` and `raid` on a weapon.
+
 ## Jobs
 
 `data/jobs.json` defines the settlement's posts:

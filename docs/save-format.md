@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `36` |
+| `version` | `37` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -32,7 +32,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `interactables` | Placed objects: `id`, `kind`, tile `x` and `y` |
 | `sites`, `site_count` | What is being built: `id`, `kind` (`object` or `building`), `what` (the object kind or blueprint ID), tile `x` and `y`, `in_charge` (the resident who agreed to it), `delivered` (units brought so far, per item definition), `progress` (minutes of work done) and `started_at`; and the counter behind site IDs |
 | `salvage` | What somebody has been told to take apart: `object_id`, `resident_id` and `progress` (minutes of work done) |
-| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `attributes` (`strength`, `constitution`, `dexterity`, `mind` and `senses` from 1 to 10, or `null` for somebody not asked yet), `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them) |
+| `residents` | `id`, `name`, tile `x` and `y`, `facing`, `needs`, `personality`, `attributes` (`strength`, `constitution`, `dexterity`, `mind` and `senses` from 1 to 10, or `null` for somebody not asked yet), `trade` (minutes at each job, by job ID), `makes` (the day each thing they know how to make was learned, by discovery ID), `lessons` (minutes of being shown each thing they are learning), `dosed_with`, `mood`, `current_action`, `activity`, `traits`, `inventory`, `job_id`, `post_id`, `work_progress`, `day_off`, `credits`, `age`, `couple_with`, `expedition`, `last_expedition_day`, `seeks_work`, `injuries`, `dosed_until` (game minute until which the last dose given them in care goes on working), `lost_limbs` (limb IDs), `manners` (per kind ID from `data/manners.json`, the ID of the manner chosen for them) |
 | `containers` | Per container object ID, the items inside |
 | `item_count` | Counter behind item IDs |
 | `thefts`, `theft_cooldowns`, `notices` | Record of every theft, with the `amount` of credit taken when it was not an item and `@fund` for a `victim_id` when it was the settlement's; last theft per resident; once-a-day notices already given |
@@ -82,6 +82,13 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 37** added `discoveries` (each with `discovery_id`, `kind`, `job_id`, who it is `by`
+  and their `by_name`, the `level` and `day` it was come to, the `name` and `choices` the
+  player gave it, and the `item_id` and whole `item` definition it made) and
+  `discovery_count`; and `trade`, `makes`, `lessons` and `dosed_with` on a resident (S47). The
+  items of what was named are put back before anything that may be one of them. In an older
+  save nothing has been come to and everybody starts their job anew. What was known of a
+  discovery that is no longer on record is forgotten.
 - **Version 36** added `attributes` on a resident (S46). In an older save everybody has what
   the settlement's seed gives them, the first time it is asked. What is out of bounds is
   brought back in.

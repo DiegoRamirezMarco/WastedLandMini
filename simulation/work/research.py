@@ -247,6 +247,9 @@ class ResearchSystem:
         state = world.studies
         pace = world.health.work_pace(world, resident) * world.work.mood_pace(resident)
         pace *= world.attributes.factor(world, resident, MIND, "study")
+        job = world.work.job_of(world, resident)
+        if job is not None:
+            pace *= world.crafts.pace(world, resident, job)
         state.progress[subject.subject_id] = state.progress.get(subject.subject_id, 0.0) + pace
         if state.progress[subject.subject_id] >= subject.minutes:
             self._finish(world, subject, resident)

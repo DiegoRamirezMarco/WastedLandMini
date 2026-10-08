@@ -42,6 +42,7 @@ from simulation.politics.records import (
     Proposal,
 )
 from simulation.residents.attributes import OWN, Attributes
+from simulation.work.craft import Discovery
 from simulation.residents.personality import Personality
 from simulation.residents.resident import FACINGS, Resident
 from simulation.rng import SimulationRNG
@@ -130,6 +131,9 @@ FIRST_FAMILY_VERSION = 29
 # square against which (S45). In a save from before every law was voted and nobody is out.
 # Version 36 added each resident's attributes (S46). In a save from before everybody has what
 # the settlement's seed gives them, the first time it is asked.
+# Version 37 added what residents have come to at their jobs, the time each has at each job,
+# what each knows how to make and is learning, and what they were last dosed with (S47). In a
+# save from before everybody starts their job anew and nothing has been come to.
 LAST_MAP_CHANGE_VERSION = 16
 # A save older than this gives the containers it never had what the map starts them with.
 LAST_STOCK_CHANGE_VERSION = 28
@@ -148,7 +152,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 36
+    CURRENT_VERSION = 37
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -290,6 +294,8 @@ class SaveManager:
             ],
             "site_count": world.site_count,
             "salvage": [vars(job) for job in world.salvage.values()],
+            "discoveries": [asdict(discovery) for discovery in world.discoveries.values()],
+            "discovery_count": world.discovery_count,
             "research": {
                 "subject": world.studies.subject_id,
                 "known": list(world.studies.known),
@@ -336,6 +342,10 @@ class SaveManager:
                     "seeks_work": resident.seeks_work,
                     "injuries": [vars(injury) for injury in resident.injuries],
                     "dosed_until": resident.dosed_until,
+                    "dosed_with": resident.dosed_with,
+                    "trade": dict(resident.trade),
+                    "makes": dict(resident.makes),
+                    "lessons": dict(resident.lessons),
                     "lost_limbs": list(resident.lost_limbs),
                     "inventory": _inventory_to_data(resident.inventory),
                 }
@@ -426,6 +436,7 @@ class SaveManager:
             registries=registries or builtin_registries(),
         )
         self._restore_map(world, data, version)
+        self._restore_discoveries(world, data)
 
         residents = data.get("residents", [])
         if not isinstance(residents, list):
@@ -549,6 +560,22 @@ class SaveManager:
                     if isinstance(injury, dict)
                 ],
                 dosed_until=int(resident_data.get("dosed_until", 0)),
+                dosed_with=_text_or_none(resident_data.get("dosed_with")),
+                trade={
+                    str(job_id): max(0.0, float(minutes))
+                    for job_id, minutes in _object_or_empty(resident_data.get("trade")).items()
+                },
+                # What was come to and is no longer on record is forgotten.
+                makes={
+                    str(discovery_id): int(day)
+                    for discovery_id, day in _object_or_empty(resident_data.get("makes")).items()
+                    if discovery_id in world.discoveries
+                },
+                lessons={
+                    str(discovery_id): max(0.0, float(minutes))
+                    for discovery_id, minutes in _object_or_empty(resident_data.get("lessons")).items()
+                    if discovery_id in world.discoveries
+                },
                 # A limb that is no longer defined is simply not missed.
                 lost_limbs=[
                     str(limb)
@@ -634,6 +661,31 @@ class SaveManager:
         self._restore_research(world, data, version)
         self._restore_housing(world, data)
         return world
+
+    def _restore_discoveries(self, world: SimulationWorld, data: dict[str, Any]) -> None:
+        """Put back what residents have come to at their jobs, and the items that were made of
+        it, before anything that may be one of them is. A save from before has none."""
+        kinds = world.registries.crafts.kinds
+        for saved in _list_or_empty(data.get("discoveries")):
+            if not isinstance(saved, dict) or "discovery_id" not in saved or saved.get("kind") not in kinds:
+                # A kind of thing that is no longer defined cannot be made, and is forgotten.
+                continue
+            discovery = Discovery(
+                discovery_id=str(saved["discovery_id"]),
+                kind=str(saved["kind"]),
+                job_id=str(saved.get("job_id", "")),
+                by=str(saved.get("by", "")),
+                by_name=str(saved.get("by_name", "")),
+                level=int(saved.get("level", 2)),
+                day=int(saved.get("day", 0)),
+                name=str(saved.get("name", "")),
+                choices={str(key): str(value) for key, value in _object_or_empty(saved.get("choices")).items()},
+                item_id=_text_or_none(saved.get("item_id")),
+                item=dict(_object_or_empty(saved.get("item"))),
+            )
+            world.discoveries[discovery.discovery_id] = discovery
+        world.discovery_count = max(int(data.get("discovery_count", 0)), len(world.discoveries))
+        world.crafts.restore(world)
 
     def _restore_politics(self, world: SimulationWorld, data: dict[str, Any]) -> None:
         """Put back the government and what each resident holds about it. A save from before

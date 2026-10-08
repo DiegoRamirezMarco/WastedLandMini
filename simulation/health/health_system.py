@@ -102,7 +102,10 @@ class HealthSystem:
                 # An injury of a kind that is no longer defined simply fades.
                 rate = 10.0
             elif treated:
-                rate = definition.treated_per_day
+                # A remedy somebody came to may be better for some things than plain medicine.
+                dose = world.registries.items.find(resident.dosed_with or "")
+                better = dose.properties.get(f"mends_{injury.kind}", 1.0) if dose is not None else 1.0
+                rate = definition.treated_per_day * max(1.0, better)
             else:
                 rate = definition.heal_per_day * (BED_REST_BONUS if resting else 1.0)
             injury.severity -= rate * mending / MINUTES_PER_DAY
@@ -124,7 +127,9 @@ class HealthSystem:
                 if item.owner_id is not None or care.care_item not in definition.tags:
                     continue
                 inventory.take_unit(item.instance_id)
-                resident.dosed_until = now + round(care.dose_minutes * world.research.factor(world, DOSE_MINUTES))
+                lasts = care.dose_minutes * world.research.factor(world, DOSE_MINUTES)
+                resident.dosed_until = now + round(lasts * max(1.0, definition.properties.get("dose", 1.0)))
+                resident.dosed_with = definition.item_id
                 room = world.room_at(resident.tile)
                 world.emit_event(
                     DomainEvent(
@@ -187,6 +192,15 @@ class HealthSystem:
                 best = (damage, item)
         return best[1] if best is not None else None
 
+    def armour_item(self, world: "SimulationWorld", resident: Resident) -> ItemInstance | None:
+        """The thing a resident carries that stops most of a blow, if they carry any in a state to."""
+        best: tuple[float, ItemInstance] | None = None
+        for item in resident.inventory.items:
+            stops = world.registries.items.resolve(item.definition_id).properties.get("armour", 0.0)
+            if not item.broken and stops > (best[0] if best is not None else 0.0):
+                best = (stops, item)
+        return best[1] if best is not None else None
+
     def weapon_of(self, world: "SimulationWorld", resident: Resident) -> tuple[float, tuple[str, ...]]:
         """Damage multiplier and tags of the best weapon a resident carries. Bare hands are 1."""
         weapon = self.weapon_item(world, resident)
@@ -209,6 +223,12 @@ class HealthSystem:
         strength *= max(0.0, 2.0 - attributes.factor(world, victim, DEXTERITY, "fight_dodge"))
         attributes.practise(world, attacker, STRENGTH, "fight")
         attributes.practise(world, victim, DEXTERITY, "fight")
+        # What whoever is struck wears stops some of it, and wears out doing so.
+        worn = self.armour_item(world, victim)
+        if worn is not None:
+            stops = world.registries.items.resolve(worn.definition_id).properties.get("armour", 0.0)
+            strength *= max(0.0, 1.0 - min(0.9, stops))
+            world.items.wear(world, victim, worn)
         multiplier, tags = self.weapon_of(world, attacker)
         weapon = self.weapon_item(world, attacker)
         if weapon is not None:
@@ -290,6 +310,8 @@ class HealthSystem:
         gone_id, tile = resident.resident_id, resident.tile
         del world.residents[gone_id]
         resident.activity = None
+        # What only they knew how to make goes with them.
+        world.crafts.gone(world, resident)
 
         for other in world.residents.values():
             if other.activity is not None and other.activity.partner_id == gone_id:

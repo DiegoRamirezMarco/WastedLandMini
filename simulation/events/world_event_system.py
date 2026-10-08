@@ -247,7 +247,10 @@ class WorldEventSystem:
             fact_text=f"{keeper.name} echó a unos merodeadores",
         )
         armed = world.health.weapon_of(world, keeper)[0] > 1.0
-        if world.event_rng.random() < definition.danger * (ARMED_FACTOR if armed else 1.0):
+        weapon = world.health.weapon_item(world, keeper)
+        # A thing made to keep them at a distance (S47) makes it safer still.
+        reach = world.registries.items.resolve(weapon.definition_id).properties.get("raid", 1.0) if weapon else 1.0
+        if world.event_rng.random() < definition.danger * (ARMED_FACTOR if armed else 1.0) * min(1.0, max(0.0, reach)):
             world.health.hurt(world, keeper, world.event_rng.randint(*RAID_INJURY), "cut", RAID_CAUSE)
 
     def _loot(self, world: "SimulationWorld", definition: WorldEventDefinition) -> None:

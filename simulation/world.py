@@ -53,6 +53,8 @@ from simulation.housing.decor import DecorSystem
 from simulation.housing.housing import HousingResult, HousingState, HousingSystem
 from simulation.tutorial.tutorial import TutorialState
 from simulation.tutorial.tutorial_system import TutorialSystem
+from simulation.work.craft import CraftResult, Discovery
+from simulation.work.craft_system import CraftSystem
 from simulation.work.construction import ConstructionSystem
 from simulation.work.expedition_system import ExpeditionSystem
 from simulation.work.research import ResearchResult, ResearchState, ResearchSystem
@@ -91,6 +93,10 @@ class SimulationWorld:
     interactables: dict[str, Interactable] = field(default_factory=dict)
     activities: ActivitySystem = field(default_factory=ActivitySystem)
     attributes: AttributeSystem = field(default_factory=AttributeSystem)
+    crafts: CraftSystem = field(default_factory=CraftSystem)
+    # What residents have come to at their jobs, by discovery ID: named by the player, or waiting to be.
+    discoveries: dict[str, Discovery] = field(default_factory=dict)
+    discovery_count: int = 0
     interventions: InterventionSystem = field(default_factory=InterventionSystem)
     affect: AffectSystem = field(default_factory=AffectSystem)
     # Open chances for the player to advise a resident, by decision ID.
@@ -209,6 +215,7 @@ class SimulationWorld:
         self.staffing.tick(self)
         self.construction.tick(self)
         self.research.tick(self)
+        self.crafts.tick(self)
         self.happenings.tick(self)
         self.lending.tick(self)
         self.family.tick(self)
@@ -335,6 +342,10 @@ class SimulationWorld:
         """Take in the player's first resident. Returns their ID, or None if there is already someone."""
         resident = found_resident(self, name, age, personality, traits, manners, identity, attributes)
         return resident.resident_id if resident is not None else None
+
+    def name_discovery(self, discovery_id: str, name: str, choices: Mapping[str, str] | None = None) -> CraftResult:
+        """Say what something a resident has come to at their job is called, and what is picked of it."""
+        return self.crafts.name(self, discovery_id, name, choices)
 
     def accuse(self, accused_id: str, fact_id: str | None = None) -> JusticeResult:
         """Have a resident tried for something that is known of them. Those who decide judge."""

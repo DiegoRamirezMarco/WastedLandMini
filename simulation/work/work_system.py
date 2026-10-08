@@ -13,6 +13,7 @@ from simulation.residents.attributes import CONSTITUTION
 from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
 from simulation.residents.resident import Resident
 from simulation.work import hauling
+from simulation.work.craft_system import tool_tag
 from simulation.work.job import INTO_STATION, JobDefinition, SupplyRule
 from simulation.work.research import JOB_PACE
 from world.interactable import Interactable, UseDefinition
@@ -93,8 +94,12 @@ class WorkSystem:
         return use.repairs <= 0 and resident.job_id == use.staffed_by
 
     def sight_bonus(self, world: "SimulationWorld", resident: Resident) -> int:
+        """Tiles further a resident sees for being on watch: what the job says, and one more
+        for every two levels they have at it."""
         job = self.job_of(world, resident)
-        return job.sight_bonus if job is not None and self.on_duty(world, resident) else 0
+        if job is None or not job.sight_bonus or not self.on_duty(world, resident):
+            return 0
+        return job.sight_bonus + (world.crafts.level(world, resident, job.job_id) - 1) // 2
 
     def is_day_off(self, world: "SimulationWorld", resident: Resident) -> bool:
         """Whether today is a day this resident does not work: their own day of the week, or
@@ -125,12 +130,24 @@ class WorkSystem:
         return max(shift, coming.at + WATCH_AFTER_MINUTES - world.clock.total_minutes)
 
     def tool_of(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> ItemInstance | None:
-        """The working tool for this job that a resident has on them, if the job uses one."""
-        if job.tool is None:
-            return None
+        """The working tool for this job that a resident has on them: one of the kind the job
+        uses, or one somebody made for it (S47). The one that makes the work go fastest."""
+        best: tuple[float, ItemInstance] | None = None
         for item in resident.inventory.items:
-            if not item.broken and job.tool.tag in world.registries.items.resolve(item.definition_id).tags:
-                return item
+            speed = self.tool_speed(world, job, item)
+            if speed is not None and (best is None or speed > best[0]):
+                best = (speed, item)
+        return best[1] if best is not None else None
+
+    def tool_speed(self, world: "SimulationWorld", job: JobDefinition, item: ItemInstance) -> float | None:
+        """How many times as fast an item makes a job go. None for what is no tool for it, or is broken."""
+        if item.broken:
+            return None
+        definition = world.registries.items.resolve(item.definition_id)
+        if job.tool is not None and job.tool.tag in definition.tags:
+            return job.tool.speed
+        if tool_tag(job.job_id) in definition.tags:
+            return max(1.0, definition.properties.get("speed", 1.0))
         return None
 
     def candidate(self, world: "SimulationWorld", resident: Resident) -> ScoredAction | None:
@@ -240,6 +257,7 @@ class WorkSystem:
             )
         resident.needs.apply(self._toll(world, resident, job))
         world.attributes.practise(world, resident, job.stat, "work")
+        world.crafts.worked(world, resident, job)
         world.trade.pay_wage(world, resident, job)
         activity.minutes_left -= 1
         if job.produces is not None and not self._produce(world, resident, job, placed, activity.minutes_left):
@@ -248,6 +266,9 @@ class WorkSystem:
             return
         if job.research:
             world.research.work(world, resident, placed)
+        if job.produces is None and job.expedition is None:
+            # A post that makes nothing of its own: what its worker has come to is made there.
+            world.crafts.craft(world, resident, job, placed)
         supplies = self.supplies_of(world, job)
         if supplies is not None and self._called_away(world, resident, supplies, placed, activity.minutes_left):
             self._leave(resident)
@@ -375,21 +396,31 @@ class WorkSystem:
         """
         rule = job.produces
         making = rule.item
+        # What they have come to at the job, or been shown, is made in turn with what the job
+        # gives anybody: whichever there is least of. A thing made of another needs it in hand.
+        own = {
+            product.item_id: product
+            for product in world.crafts.products(world, resident, job)
+            if product.ripe and (product.needs is None or resident.inventory.stack_of(product.needs, None) is not None)
+        }
         if rule.into == INTO_STATION:
             target = world.containers.get(placed.object_id)
             if target is not None:
                 # Of the things made here, the one there is least of.
-                making = min((rule.item, *rule.also), key=target.count)
+                making = min((rule.item, *rule.also, *own), key=target.count)
             full = target is None or target.count(making) >= rule.max_stock
         else:
             target = resident.inventory
-            full = hauling.carried(resident, rule.item) >= hauling.load(world, resident, rule)
+            if own:
+                making = min((rule.item, *own), key=lambda item_id: hauling.kept(world, resident, rule, item_id))
+            full = hauling.carried_made(world, resident, rule) >= hauling.load(world, resident, rule)
         if target is None:
             return True
         if full:
             return hauling.errand(world, resident, rule, shift_left) is None
+        how = own.get(making)
         tool = self.tool_of(world, resident, job)
-        speed = job.tool.speed if job.tool is not None and tool is not None else 1.0
+        speed = self.tool_speed(world, job, tool) or 1.0 if tool is not None else 1.0
         # Short of an arm the work still gets done, in more minutes.
         speed *= world.health.work_pace(world, resident)
         speed *= self.mood_pace(resident)
@@ -400,16 +431,22 @@ class WorkSystem:
         speed *= world.attributes.work_pace(world, resident, job)
         # What has been worked out about a trade makes it go faster.
         speed *= world.research.factor(world, f"{JOB_PACE}{job.job_id}")
-        needed = math.ceil(rule.every_minutes / speed)
+        # And so does every level whoever does it has at it.
+        speed *= world.crafts.pace(world, resident, job)
+        needed = math.ceil((how.every_minutes if how is not None else rule.every_minutes) / speed)
         resident.work_progress = min(resident.work_progress + 1, needed)
         if resident.work_progress < needed:
             return True
         if rule.source is not None:
-            material = hauling.raw_carried(world, resident, rule)
+            material = (
+                resident.inventory.stack_of(how.needs, None)
+                if how is not None and how.needs is not None
+                else hauling.raw_carried(world, resident, rule)
+            )
             if material is None:
                 return hauling.errand(world, resident, rule, shift_left) is None
             resident.inventory.take_unit(material.instance_id)
-        world.stock(target, making, 1, None)
+        world.stock(target, making, how.batch if how is not None else 1, None)
         resident.work_progress = 0
         if tool is not None:
             world.items.wear(world, resident, tool)

@@ -72,6 +72,11 @@ Event types emitted so far:
 | `fight_brewing` | A resident squares up to another and waits for advice | 60 to 69 |
 | `fight_started` | Two residents come to blows | 60, plus up to 20 with resentment, plus 15 |
 | `injured` | A resident comes out of something hurt | 45 |
+| `trade_level` | A resident reaches a level of their job, with `resident_id`, `job` and `level` in `data` | 40 |
+| `discovery_made` | A level brings somebody something new that waits to be named, with `discovery`, `resident_id`, `job`, `kind` and `level` | 60 |
+| `discovery_named` | The player says what it is, with `discovery`, `resident_id`, `kind`, `item`, `name` and `choices` | 55 |
+| `trade_taught`, `trade_lost` | Somebody learns a thing from whoever knows it (`discovery`, `teacher`, `learner`), or the last who knew one is gone (`discovery`, `resident_id`, `item`) | 40, 50 |
+| `thing_made` | A post that makes nothing of its own finishes one of what its worker has come to, with `item` and `container` | 10 |
 | `attribute_grew` | Somebody comes to a whole point more of an attribute by using it, with `resident_id`, `attribute` and `level` in `data` | 20 |
 | `limb_lost` | A resident loses a limb to an injury, in place of `injured` | 85 |
 | `death` | A resident dies | 95 |

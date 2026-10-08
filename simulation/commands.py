@@ -6,6 +6,7 @@ from simulation.economy.terms import TradeResult
 from simulation.housing.housing import HousingResult
 from simulation.justice.justice_system import JusticeResult
 from simulation.politics.government import PoliticsResult
+from simulation.work.craft import CraftResult
 from simulation.work.research import ResearchResult
 from world.map import Tile
 from world.urbanism import UrbanismResult
@@ -145,6 +146,9 @@ class CommandTarget(Protocol):
         ...
 
     def set_manner(self, resident_id: str, kind_id: str, manner_id: str) -> bool:
+        ...
+
+    def name_discovery(self, discovery_id: str, name: str, choices: Mapping[str, str] | None = None) -> CraftResult:
         ...
 
     def accuse(self, accused_id: str, fact_id: str | None = None) -> JusticeResult:
@@ -674,6 +678,23 @@ class SetIdentityCommand:
     def apply(self, world: CommandTarget) -> bool:
         """Returns whether they are now so: there must be such a resident, and it must make sense."""
         return world.set_identity(self.resident_id, self.sex, self.gender, self.drawn_to)
+
+
+@dataclass(frozen=True)
+class NameDiscoveryCommand:
+    """What the player says something a resident has come to at their job is (S47): what it
+    is called, and what is picked of it out of what its kind lets be picked, by choice ID.
+
+    What it is like otherwise is the game's to work out. Left unpicked, a choice is the first
+    there is. Drawing it is done on the window, and is no business of the simulation's.
+    """
+
+    discovery_id: str
+    name: str
+    choices: Mapping[str, str] = field(default_factory=dict)
+
+    def apply(self, world: CommandTarget) -> CraftResult:
+        return world.name_discovery(self.discovery_id, self.name, self.choices)
 
 
 @dataclass(frozen=True)

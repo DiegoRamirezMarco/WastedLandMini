@@ -3676,6 +3676,98 @@ Still open here:
 - A raid is answered as it was (S11): strength does not come into it
 - What each point does is a first guess
 
+### S47 — A trade, and what it teaches (needs S46 and S17) — done
+The user's words: "Los trabajos ahora tendran experiencia, cada nivel de experiencia de un pj le
+enseña a hacer cosas nuevas, ejemplo, el granjero sube a nivel 2 ahora sabe cultivar (se generan
+datos de un nuevo alimento) dibujalo y ponle nombre a lo nuevo que sabe cultivar, asi el jugador
+si quiere que el nuevo cultivable sea un tomate lo es y si quiere un limon pues limon, nosotros
+solo elegimos x cosas depende del trabajo, en el caso del granjero el dibujo el nombre y un
+desplegable de como se cultiva, tierra, matojo, arbol etc". Asked first, in two batches, and
+answered:
+
+- **What somebody learns is theirs, and they can show it to others**: if they die or go
+  without showing anybody, it is lost
+- **Every job that was put to the user teaches something**, and in their words "cuando
+  implementemos mas trabajos veremos que crean": the garden, the kitchen, the cantina, the
+  laboratory, the clinic, the workshop, the watch and the handcart
+- **Five levels, and something new at each**: not the recommendation, which was something new
+  at two of them. Four things for each resident and job, and the work better at every level
+- **How a crop is grown changes how long it takes, how much it gives and how it looks**
+
+Built:
+- **Time at a job adds up** (`Resident.trade`, minutes by job): a minute at the post, or out
+  there for whoever works out there. A good head learns sooner (S46)
+- **Five levels** (`data/crafts.json`), the first from nothing and the rest at 3000, 9000,
+  20000 and 36000 minutes: about a week of work for the second and three months for the fifth
+- **Each level makes the work go faster**, five parts in a hundred: what a post makes, what
+  the desk works out, what a trip brings back, and how far whoever keeps watch sees
+- **Each level brings something new**, of the kind the job teaches. The game works out what
+  it is like, always the same for the same settlement and thing, and better the higher the
+  level it was come to at. Until the player has named it, it waits, and nobody makes it
+- **What the player says of it is its name and what its kind lets be picked**
+  (`NameDiscoveryCommand`), and nothing else. Drawing it is the window's business:
+
+  | Job | What is come to | What is picked |
+  |---|---|---|
+  | Garden | A crop: food | How it grows: in the ground, on a bush, on a vine, on a tree |
+  | Kitchen | A dish: a meal | What it is made of, out of the raw food there is, crops included |
+  | Cantina | A drink | How it is made: distilled, fermented, or an infusion with no drink in it |
+  | Laboratory | A substance | What it does (calms, lifts, puts out) and how it is taken |
+  | Clinic | A remedy | What it cures: wounds, what was eaten or taken, hunger and thirst |
+  | Workshop | A tool | The job it is for, out of those that make something |
+  | Watch | A weapon | Its type: for close quarters, to keep them at a distance, or to stop blows |
+  | Handcart | Somewhere to go | What is brought from there: food, scrap, fuel or medicine |
+
+- **A kind has no code of its own.** What the thing is, what there is to pick and what each
+  pick does are data, laid over one another into an item like any a pack brings. The item is
+  that settlement's alone, kept in its save, and the game's own definitions are not touched
+- **A crop grown in the ground** gives one every 18 minutes; **on a bush** two every 30; **on
+  a vine** three every 36, from four days after it is learned; **on a tree** four every 30,
+  from two weeks after, with no replanting. Whoever is shown a tree waits for their own
+- **What somebody has come to is made in turn with what the job gives anybody**: whichever
+  there is least of. A dish needs what it is made of in the cook's hands, who fetches it when
+  the pot has less of that dish than of the usual
+- **A pantry holds as much of the garden as it did, of more kinds**: what a job makes and
+  what anybody has come to at it share the room there is where it is kept
+- **A post that makes nothing of its own** (the clinic, the workshop, the watch) makes what
+  its worker has come to, slowly, while the settlement keeps too few: remedies into the
+  medicine cabinet, tools and weapons onto the shop's counter
+- **A tool made for a job** makes that job go faster for whoever carries it, as a hoe does
+  for the garden, and whoever holds that job wants one. **A remedy** is a dose in the clinic
+  that lasts longer and mends what it is for faster. **What is worn to stop blows** takes
+  some of every blow and wears out. **What keeps them at a distance** makes standing up to
+  raiders safer
+- **Whoever knows of a place outside goes there in its turn**, for the one thing brought from
+  it, and a day in between for wherever their feet take them
+- **Whoever holds the job learns it from whoever knows it** by being within six tiles of
+  them long enough: fifteen hours, less for a good head. It is the learner's from that day
+- **What only one knew is lost with them**, dead or gone: the thing is what it was, what
+  there is of it is still there, and nobody makes more. What they had come to and nobody had
+  named is forgotten
+- `trade_level`, `discovery_made`, `discovery_named`, `trade_taught`, `trade_lost` and
+  `thing_made` say each of those. A thing named is a fact that is seen and told
+- Saved: the time each has at each job, what each knows and is learning, what has been come
+  to, and what somebody was last dosed with. Save version 37
+
+Decided without asking:
+- What a drink is made of was put to the user as what is picked. The bar draws only water,
+  so what is picked is how it is made. A dish is made of what was said
+- A place is not drawn: it has a name and what is brought from it
+- What a new food tastes of is the game's to say, out of six tastes: the player is not asked
+- A level is never lost, and time at a job that somebody leaves is kept for if they go back
+- Somebody shown a thing remembers who showed them, and trusts them a little more for it
+- Whoever is within reach teaches, at work or not: there is nobody who sets out to teach
+- With no word from the player a discovery waits for ever: nothing names it for them
+
+Still open here:
+- None of it is on screen: P53. Until then a thing is named by command, and has no picture
+- Tools, weapons and remedies are made of nothing, and only the time they take holds them back
+- The shop, the water and the desk teach nothing: only the work is better at each level
+- A crop is grown in the bed its farmer has: no bed is given over to it, and no tree stands there
+- Nobody is put to a job, or kept at one, for the level they have at it (S8)
+- A new thing has no part in what residents like until they have tried it (S19)
+- What each level takes and gives is a first guess
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

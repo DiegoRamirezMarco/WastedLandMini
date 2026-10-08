@@ -77,6 +77,7 @@ class ExpeditionSystem:
             world.rng.randint(*rule.finds)
             * world.research.factor(world, EXPEDITION_FINDS)
             * world.attributes.factor(world, resident, SENSES, "finds")
+            * world.crafts.pace(world, resident, job)
         )
         wary = max(0.0, 2.0 - world.attributes.factor(world, resident, SENSES, "danger"))
         comes_on_something = world.rng.random() < settings.find_chance
@@ -86,11 +87,22 @@ class ExpeditionSystem:
             danger=rule.danger * world.research.factor(world, EXPEDITION_DANGER) * wary,
             find_at=now + minutes // 2 if comes_on_something else None,
         )
+        # Whoever knows of a place out there goes to it in its turn, for what is brought from it.
+        bound = world.crafts.destination(world, resident)
+        said = job.text
+        if bound is not None and world.registries.items.find(bound[1].fetch or "") is not None:
+            place, brings = bound
+            resident.expedition.fetch = brings.fetch
+            resident.expedition.finds = max(1, resident.expedition.finds + brings.finds)
+            said = f"sale del asentamiento hacia {place.name}"
         resident.last_expedition_day = world.clock.day
         resident.activity = Activity(EXPEDITION_ACTION, resident.post_id, minutes_left=minutes, using=True)
         resident.current_action = EXPEDITION_ACTION
         world.emit_event(
-            DomainEvent("expedition_left", LEFT_IMPORTANCE, f"{resident.name} {job.text}", [resident.resident_id]),
+            DomainEvent(
+                "expedition_left", LEFT_IMPORTANCE, f"{resident.name} {said}", [resident.resident_id],
+                data={"place": bound[0].discovery_id} if bound is not None else {},
+            ),
             at=resident.tile,
         )
 
@@ -104,6 +116,7 @@ class ExpeditionSystem:
             return
         if job is not None:
             world.trade.pay_wage(world, resident, job)
+            world.crafts.worked(world, resident, job)
         now = world.clock.total_minutes
         activity.minutes_left = max(1, trip.returns_at - now)
         if trip.find_at is not None and now >= trip.find_at:
