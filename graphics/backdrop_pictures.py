@@ -146,9 +146,12 @@ def _ruins_far(sheet: Sheet, wide: float, chance: random.Random, ground: float) 
         things.append(tower)
         x += across + chance.uniform(0, 24)
     _round(things, wide)
-    # Their feet are lost in the dust.
-    sheet.shade(-2, base - 30, wide + 4, 16, HAZE, 60)
-    sheet.shade(-2, base - 16, wide + 4, 18, HAZE, 120)
+    # Their feet are lost in the dust: over them only, so that whatever sky is behind shows between.
+    standing = pygame.mask.from_surface(sheet.surface)
+    for top, deep, alpha in ((base - 30, 16, 60), (base - 16, 18, 120)):
+        band = pygame.Rect(0, round(top * sheet.unit), sheet.surface.get_width(), round(deep * sheet.unit))
+        dust = standing.to_surface(setcolor=(*HAZE, alpha), unsetcolor=(0, 0, 0, 0))
+        sheet.surface.blit(dust, band.topleft, band)
 
 
 def _building(sheet: Sheet, chance: random.Random, x: float, base: float) -> tuple[Thing, float]:

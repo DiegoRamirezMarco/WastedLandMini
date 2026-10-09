@@ -718,6 +718,8 @@ happens.
   that is not listed has `plain`.
 - A layer somebody has drawn is `illustrations/backdrops/<zone>/<layer>.png`, the size of the
   paper, clear wherever what is behind should show. It must meet itself at its two ends.
+  They are drawn in the game, from `Dibujar fondo` while somebody is watched out there, and
+  belong to a game being played. A zone with no file for a layer has the game's.
 
 ## World events
 

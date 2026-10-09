@@ -22,6 +22,7 @@ from graphics.item_icons import ItemIcons
 from graphics.looks import Looks
 from graphics.screen_layers import ScreenLayers
 from save.save_manager import SaveManager
+from scenes.backdrop_editor import BackdropEditor
 from scenes.building_editor import BuildingEditor
 from scenes.coin_editor import CoinEditor
 from scenes.doll_editor import DollEditor
@@ -75,6 +76,7 @@ COIN_SCENE = "coin_editor"
 FAMILY_SCENE = "family"
 MANNER_SCENE = "manners"
 GARMENT_SCENE = "garment_editor"
+BACKDROP_SCENE = "backdrop_editor"
 NO_DRAWINGS = "No hay carpeta de ilustraciones disponible"
 # Screens that read the keyboard themselves: the way in, and where the first resident is made.
 MENU_SCENE, CREATOR_SCENE = "menu", "creator"
@@ -249,6 +251,20 @@ class Game:
             if self.illustrations.root is not None
             else None
         )
+        # What goes by behind whoever is out is drawn a layer at a time, and kept in the same folder.
+        self.backdrop_editor = (
+            BackdropEditor(
+                self.canvas,
+                self.world,
+                self.font,
+                self.layers,
+                self.illustrations.root,
+                self.global_view.expedition.backdrops,
+                walker=self.global_view.walker,
+            )
+            if self.illustrations.root is not None
+            else None
+        )
         # Items can always be edited: their overrides live in custom_content, independently of
         # the optional high-resolution illustrations folder.
         self.item_editor = ItemEditor(
@@ -414,6 +430,8 @@ class Game:
             return self.object_editor
         if self.scene_name == COIN_SCENE and self.coin_editor is not None:
             return self.coin_editor
+        if self.scene_name == BACKDROP_SCENE and self.backdrop_editor is not None:
+            return self.backdrop_editor
         if self.scene_name == ITEM_SCENE:
             return self.item_editor
         if self.scene_name == DISCOVERY_SCENE:
@@ -444,6 +462,7 @@ class Game:
             BUILDING_SCENE,
             OBJECT_SCENE,
             COIN_SCENE,
+            BACKDROP_SCENE,
             ITEM_SCENE,
             DISCOVERY_SCENE,
             VOICE_SCENE,
@@ -547,6 +566,9 @@ class Game:
             self._leave_art()
         elif self.scene_name == COIN_SCENE and (self.coin_editor is None or self.coin_editor.closed):
             self.scene_name = "global"
+        elif self.scene_name == BACKDROP_SCENE and (self.backdrop_editor is None or self.backdrop_editor.closed):
+            # Back to whoever was being watched, if they are still out.
+            self.scene_name = "global"
         elif self.scene_name == URBANISM_SCENE and self.urbanism_editor.requested_art_object is not None:
             kind = self.urbanism_editor.requested_art_object
             self.urbanism_editor.requested_art_object = None
@@ -633,6 +655,14 @@ class Game:
             self.coin_editor.open(self.global_view.requested_coin_editor)
             if not self.coin_editor.closed:
                 self.scene_name = COIN_SCENE
+        elif (
+            self.scene_name == "global"
+            and self.global_view.requested_backdrop_editor is not None
+            and self.backdrop_editor is not None
+        ):
+            self.backdrop_editor.open(*self.global_view.requested_backdrop_editor)
+            if not self.backdrop_editor.closed:
+                self.scene_name = BACKDROP_SCENE
         elif self.scene_name == "global" and self.global_view.requested_voice is not None and self.voice_editor is not None:
             self.voice_editor.open(self.global_view.requested_voice)
             self.scene_name = VOICE_SCENE
@@ -654,6 +684,7 @@ class Game:
         self.global_view.requested_object_editor = None
         self.global_view.requested_object_level = 1
         self.global_view.requested_coin_editor = None
+        self.global_view.requested_backdrop_editor = None
         self.global_view.requested_family = False
         self.global_view.requested_voice = None
         self.global_view.requested_manners = None

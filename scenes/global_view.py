@@ -95,7 +95,7 @@ from scenes.hud import (
     URBANISM_INTENT,
     Hud,
 )
-from scenes.expedition_view import LEAVE_TRIP_INTENT, ExpeditionView
+from scenes.expedition_view import DRAW_BACKDROP_INTENT, LEAVE_TRIP_INTENT, ExpeditionView
 from scenes.interior_view import DECOR_INTENT, HOUSE_INTENT, LEAVE_INTENT, InteriorView
 from ui.decor_board import DONE_INTENT as DECOR_DONE_INTENT
 from ui.decor_board import FLOORS as DECOR_FLOORS
@@ -463,6 +463,9 @@ class GlobalView:
         self.requested_object_level = 1
         # Currency whose coin the player asked to draw, by its ID.
         self.requested_coin_editor: str | None = None
+        # The country out there the player asked to draw, by the ID of its zone, and who was
+        # being watched going through it (P69).
+        self.requested_backdrop_editor: tuple[str, str | None] | None = None
         # Whether the player asked for the families of the whole settlement.
         self.requested_family = False
         # Pictures made outside the game, and where they are put to go straight on the window.
@@ -796,9 +799,15 @@ class GlobalView:
     def _click_outside(self, position: tuple[int, int]) -> None:
         """A press while somebody is watched out of the settlement: the way back, somebody
         else who is out, or whoever is walking there."""
-        if self.expedition.click(position) == LEAVE_TRIP_INTENT:
+        intent = self.expedition.click(position)
+        if intent == LEAVE_TRIP_INTENT:
             self._sound("click")
             self.come_back()
+            return
+        watched = self.world.residents.get(self.outside or "")
+        if intent == DRAW_BACKDROP_INTENT and watched is not None:
+            self._sound("open")
+            self.requested_backdrop_editor = (self.expedition.zone_id(watched), watched.resident_id)
             return
         if self.hud.covers(position):
             return
@@ -3117,6 +3126,16 @@ class GlobalView:
     def _doll_for(self, resident: Resident) -> Doll | None:
         """The paper doll a resident is shown as."""
         return self._doll_of(resident.resident_id, self.world.children.is_child(self.world, resident))
+
+    def walker(self, resident_id: str | None):
+        """Somebody as they are shown walking: their doll, the body plan it moves by, and the
+        clip and pace of their own way of walking. None for nobody, or with no doll to show."""
+        resident = self.world.residents.get(resident_id or "")
+        doll = self._doll_for(resident) if resident is not None else None
+        if doll is None:
+            return None
+        clip, rate = self._way_of(resident, WALK)
+        return (doll, doll.plan if doll.plan is not None else self.bodies.plan, clip, rate)
 
     def _small_frame(
         self, picture: pygame.Surface, origin: tuple[int, int], grown: float

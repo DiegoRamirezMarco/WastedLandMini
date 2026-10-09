@@ -496,6 +496,10 @@ the style contract as the illustrations are.
   streaks of `sand` going with the wind, and its tint over it all.
 - Their name and what is over their head go on the canvas, as on the map. The way of the
   trip is a small panel in the sky (`ui/trip_bar.py`).
+- The layers of a zone are drawn in `scenes/backdrop_editor.py` (P69), on the paper at one
+  canvas pixel to one of its own, a layer at a time, with the others faint under and over
+  it. Its guide is the game's layer, a line in `ember` where feet come down and a box as
+  tall as somebody. A layer kept with nothing on it is not kept: it is the game's.
 
 ## Interaction view
 - A resident asking for advice takes over the dock, framed in `lamp`, and time stops. The rest

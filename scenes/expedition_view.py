@@ -40,6 +40,9 @@ if TYPE_CHECKING:
 
 LEAVE_TRIP_INTENT = ("leave_trip",)
 LEAVE_LABEL = "Volver"
+# Opens the screen where the country they go through is drawn (P69).
+DRAW_BACKDROP_INTENT = ("draw_backdrop",)
+DRAW_LABEL = "Dibujar fondo"
 MARGIN = 6
 # The country of a trip that goes through none the data names.
 NOWHERE = "nowhere"
@@ -74,6 +77,8 @@ class ExpeditionView:
         corner = view.viewport.topright
         self.leave_button = Button.at(view.font, 0, corner[1] + MARGIN, LEAVE_LABEL, LEAVE_TRIP_INTENT)
         self.leave_button.rect.right = corner[0] - MARGIN
+        self.draw_button = Button.at(view.font, 0, corner[1] + MARGIN, DRAW_LABEL, DRAW_BACKDROP_INTENT)
+        self.draw_button.rect.right = self.leave_button.rect.left - 3
         self.backdrops = BackdropStore(view.illustrations)
         # How far the ground has gone by under them, in the measure of their own body: on as
         # they go out and back as they come home. And how many strides they have taken.
@@ -90,7 +95,8 @@ class ExpeditionView:
         return pygame.Rect(0, 0, viewport.width * SCALE, viewport.height * SCALE)
 
     def buttons(self) -> list[Button]:
-        return [self.leave_button]
+        """The way back to the map, and to where what goes by is drawn if there is anywhere to keep drawings."""
+        return [self.leave_button, *([self.draw_button] if self.backdrops.available else [])]
 
     def click(self, position: tuple[int, int]) -> Hashable | None:
         """What a press at a place on the canvas asks for, if it is on anything of this view's."""

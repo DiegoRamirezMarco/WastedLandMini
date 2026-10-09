@@ -5915,6 +5915,53 @@ Done when: a click on the face of whoever is out shows them walking from the sid
 ground going by, away and then home, stopped at a find and dark at night, and `Volver` or
 their coming back puts the map on again.
 
+### P69 — The country out there, drawn (needs P68) — done
+Answered with S67: the backdrop is drawn by the player in an editor, where the recommendation
+was for the game to draw it.
+
+- **`Dibujar fondo`, beside `Volver`** while somebody is watched out there, opens it on the
+  zone they are going through (`scenes/backdrop_editor.py`). Time stands still, and `Volver`
+  or Escape goes back to them walking
+- **One paper, a layer at a time**: `Cielo`, `Horizonte`, `Fondo`, `Suelo` and `Delante` over
+  the paper, with the tools every drawing has. What goes in the layer in hand is said first
+  beside it
+- **The other layers are seen faintly**, the ones behind under it and the ones in front over
+  it, fainter. `Capas` leaves only the one in hand
+- **The guide** is the layer the game has, a line where feet come down and a box as tall as
+  somebody. `Arte de partida` puts the game's layer on the paper to be drawn over
+- **`Correr` slides the paper sideways**, every layer with it, a quarter of its width at a
+  press: where its two ends meet comes into the middle, to be drawn across. All the way
+  round it is as it was
+- **Beside the paper the whole of it goes by** as it will out there, each layer at its pace,
+  with whoever was being watched walking in it
+- **`Guardar` keeps the layers that have anything on them**, in
+  `illustrations/backdrops/<zone>/`, which belongs to a game being played. A layer with
+  nothing on it is the game's, and what was kept of one wiped clean is taken away
+- **What is drawn is what goes by** from the moment it is kept
+
+Decided without asking:
+- **A layer with nothing painted is the game's own**, layer by layer, and not bare: drawing
+  the sky alone does not take the ground from under them. A layer left empty on purpose
+  cannot be had
+- **The paper is as wide as the place it is shown in**, and comes round every screen
+- **It is reached only from the trip**, while somebody is out
+- **It does not open by itself** the first time somebody goes out through country nobody
+  has drawn
+- **There is no lesson for it in the opening**: its tools are the ones the opening teaches
+- **Sliding the paper is not undone on saving**: a layer slid is the same layer
+
+Still open here:
+- **Nobody has tried it with a mouse**: it was driven by scripted presses and looked at in
+  pictures of the game
+- **A paper pixel is nearly three of the window's** out there: a drawing is soft where the
+  game's own is sharp
+- **Night and storm are not tried on beside the paper**
+- **A way to it with nobody out**, from `Dibujar`
+- **A zone of its own for each place somebody comes to**, each to be drawn (see S67)
+
+Done when: from somebody walking out there the player opens the paper, paints a layer, keeps
+it, and sees it go by behind them, with the layers left alone still the game's.
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.
