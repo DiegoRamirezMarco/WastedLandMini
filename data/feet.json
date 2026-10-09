@@ -1,0 +1,18 @@
+{
+  "bones": ["foot_left", "foot_right"],
+  "far": "_left",
+  "color": [214, 170, 130],
+  "far_shade": 0.14,
+  "size": 1.0,
+  "sizes": [0.7, 1.4],
+  "sole": 0.92,
+  "shaft": {"wide": 0.56, "above": 0.16, "round": 0.1},
+  "heel": {"back": 0.18, "radius": 0.44},
+  "toe": {"at": 1.2, "radius": 0.38},
+  "line": 0.08,
+  "lines": [0, 2.5],
+  "front": 0.5,
+  "splay_to": 40,
+  "matches": "shin_right",
+  "ankle": "foot_right"
+}

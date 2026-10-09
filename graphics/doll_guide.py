@@ -164,21 +164,25 @@ def cuts(template: DollTemplate, canvas: str, among: Piece | None = None) -> lis
 
 
 def build_guide(
-    template: DollTemplate, canvas: str, zones: dict[Piece, pygame.mask.Mask] | None = None
+    template: DollTemplate,
+    canvas: str,
+    zones: dict[Piece, pygame.mask.Mask] | None = None,
+    figure: pygame.Surface | None = None,
 ) -> pygame.Surface:
     """What is shown under a canvas to draw over.
 
     Each piece has a zone of its own, lightly tinted by the side of the body it is on, with a thin
     line round all of it and not round each of its parts. The plain figure lies in the middle of
     it. Where a piece bends it is crossed by a line of dots, and every joint has a small ring.
-    `zones` are those of the pieces, if they have been worked out already.
+    `zones` are those of the pieces, if they have been worked out already. `figure` is the
+    figure to lie in it, where it is not the plain one as it comes.
     """
     size = template.canvases[canvas]
     guide = pygame.Surface(size, pygame.SRCALPHA)
     zones = zones if zones is not None else piece_zones(template, canvas)
     for piece, zone in zones.items():
         zone.to_surface(guide, setcolor=(*side_tint(piece[0]), ZONE_FILL), unsetcolor=None)
-    guide.blit(reference(template, canvas), (0, 0))
+    guide.blit(figure if figure is not None else reference(template, canvas), (0, 0))
     marks = pygame.Surface(size, pygame.SRCALPHA)
     for piece, zone in zones.items():
         tint = side_tint(piece[0])

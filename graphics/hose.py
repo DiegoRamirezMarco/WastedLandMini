@@ -92,10 +92,13 @@ class Allowance:
     have had, so that no frame is kept waiting.
     """
 
-    def __init__(self, a_frame: float = 4.0) -> None:
+    def __init__(self, a_frame: float = 4.0, never_bare: bool = False) -> None:
         # Milliseconds of bending to a frame, as near as it can be told beforehand.
         self.a_frame = a_frame
         self._left = a_frame
+        # Whether a limb that has had no shape yet is bent whatever is left. Where one doll is
+        # shown large, a limb in its jointed parts for a frame shows more than a frame that waits.
+        self.never_bare = never_bare
 
     def new_frame(self) -> None:
         self._left = self.a_frame
@@ -316,12 +319,26 @@ def _lay(
     return sections
 
 
-def _spread(section: _Section, reach: float, crowded: float = 1.0) -> tuple[Any, ...]:
+def _way(corners: Any, piece: int) -> float:
+    """Which way one straight piece of a line of corners runs, as an angle."""
+    return math.atan2(corners[piece + 1][1] - corners[piece][1], corners[piece + 1][0] - corners[piece][0])
+
+
+def _spread(
+    section: _Section, reach: float, crowded: float = 1.0, meets: tuple[float | None, float | None] = (None, None)
+) -> tuple[Any, ...]:
     """Places all along a section, near enough to one another that nothing is left out between
     them even on the outside of a bend. `crowded` has them that many times nearer still.
 
     For each: where it is, which way is to its side, how far along the drawing it is, how wide
     the limb is there, and how sharply the line is turning, to that side if more than nothing.
+
+    `meets` is which way the line runs just before this section and just after it, where
+    another section is there. Where two meet in the round of a joint, each ended square to
+    its own last piece, and the two were a hair apart on the outside of the bend: a line of
+    pixels nothing was put on, right across a limb as wide as a trunk. So at an end where it
+    meets another, a section is square to half way between the two, as it is at every corner
+    of its own.
     """
     corners = section.corners
     piece = np.diff(corners, axis=0)
@@ -333,6 +350,13 @@ def _spread(section: _Section, reach: float, crowded: float = 1.0) -> tuple[Any,
     facing = np.concatenate((heading[:1], (heading[:-1] + heading[1:]) / 2, heading[-1:]))
     turning = np.zeros(len(corners))
     turning[1:-1] = (heading[1:] - heading[:-1]) / ((long[:-1] + long[1:]) / 2)
+    for end, piece, other in ((0, 0, meets[0]), (-1, -1, meets[1])):
+        if other is None:
+            continue
+        # The angle of the piece beyond, said the way this one's is: no full turn apart.
+        beyond = heading[piece] + (other - heading[piece] + math.pi) % math.tau - math.pi
+        facing[end] = (heading[piece] + beyond) / 2
+        turning[end] = (beyond - heading[piece]) * (1.0 if end else -1.0) / long[piece]
     crowd = (1 + reach * section.wide * np.abs(turning)) * crowded / STEP
     filled = np.concatenate(([0.0], np.cumsum((crowd[:-1] + crowd[1:]) / 2 * long)))
     places = np.interp(np.linspace(0.0, filled[-1], max(2, math.ceil(filled[-1]) + 1)), filled, far)
@@ -381,7 +405,9 @@ def _laid(to_x: Any, to_y: Any, taken: Any, left: int, top: int, size: tuple[int
     ).ravel()
     landed = np.maximum(np.bincount(where, minlength=count), 1)
     each = (where[:, None] * 4 + np.arange(4)).ravel()
-    return np.bincount(each, weights=taken.reshape(-1), minlength=count * 4).reshape(count, 4) / landed[:, None]
+    # In single precision from here on: it is a picture, and half as much to carry about.
+    summed = np.bincount(each, weights=taken.reshape(-1), minlength=count * 4).astype(np.float32).reshape(count, 4)
+    return summed / landed[:, None].astype(np.float32)
 
 
 def _picture(seen: Any, size: tuple[int, int]) -> pygame.Surface:
@@ -398,7 +424,8 @@ def _picture(seen: Any, size: tuple[int, int]) -> pygame.Surface:
 
 
 def bent(
-    strip: Strip, points: Sequence[Point], volume: float = 0.0, rest: Sequence[float] | None = None
+    strip: Strip, points: Sequence[Point], volume: float = 0.0, rest: Sequence[float] | None = None, closer: float = 1.0,
+    creased: bool = True,
 ) -> tuple[pygame.Surface, Point] | None:
     """The part of a limb that bends, laid along its joints, and where on that picture the first
     of them is.
@@ -409,6 +436,16 @@ def bent(
     the picture, if that is not as long as it was drawn. If a hand or a foot hangs from the limb
     this stops short of it, where the joint begins to give: `tipped` is the rest of it. None if
     the limb cannot be laid out.
+
+    `closer` has the limb looked at that many times as closely, along it and across it. A pixel
+    is the middle of whatever lands on it: looked at just closely enough to leave none out, one
+    place or two land on each, and its edge has steps. Twice as closely, four land, and the
+    edge is as much of the limb as there is in each pixel. It takes that much longer.
+
+    On the inside of a bend, whatever is further in than its middle is all put at its middle:
+    the line round the limb with the rest, which is the crease an elbow has. Not `creased`,
+    what is put there is the limb as it is at that middle, and there is no line: a trunk
+    that leans has none across its waist.
     """
     joints, fine, tip = strip.joints, strip.fine, strip.tip
     if len(points) != len(joints):
@@ -430,13 +467,17 @@ def bent(
     size = (math.ceil(float(every[:, 0].max()) + room) - left, math.ceil(float(every[:, 1].max()) + room) - top)
     if size[0] * size[1] > LARGEST:
         return None
-    across = np.arange(-reach, reach + STEP, STEP / widest)
+    across = np.arange(-reach, reach + STEP, STEP / (widest * closer))
     # Where on the strip each place across the limb is, from the place along it: a clear pixel
     # comes before the first of the drawing, and whatever falls outside it is given one.
     over_x, over_y = side[0] * across * fine, side[1] * across * fine
-    seen = np.zeros((size[0] * size[1], 4))
-    for section in sections:
-        at_x, at_y, aside_x, aside_y, along, wide, turning = _spread(section, reach)
+    seen = np.zeros((size[0] * size[1], 4), np.float32)
+    for index, section in enumerate(sections):
+        meets = (
+            _way(sections[index - 1].corners, len(sections[index - 1].corners) - 2) if index else None,
+            _way(sections[index + 1].corners, 0) if index < len(sections) - 1 else None,
+        )
+        at_x, at_y, aside_x, aside_y, along, wide, turning = _spread(section, reach, closer, meets)
         if tip is not None:
             # It goes a little way into what the other picture shows, where the joint has barely
             # begun to give and the two are alike: laid one over the other, no line shows between.
@@ -453,8 +494,14 @@ def bent(
             np.where(turning < 0, -inmost, -np.inf)[:, None],
             np.where(turning > 0, inmost, np.inf)[:, None],
         )
-        from_x = (joints[0][0] + 1 + way[0] * along * fine)[:, None] + over_x[None, :]
-        from_y = (joints[0][1] + 1 + way[1] * along * fine)[:, None] + over_y[None, :]
+        if creased:
+            from_x = (joints[0][0] + 1 + way[0] * along * fine)[:, None] + over_x[None, :]
+            from_y = (joints[0][1] + 1 + way[1] * along * fine)[:, None] + over_y[None, :]
+        else:
+            # Looked at where it is put, and not past it.
+            looked = aside / wide[:, None] * fine
+            from_x = (joints[0][0] + 1 + way[0] * along * fine)[:, None] + side[0] * looked
+            from_y = (joints[0][1] + 1 + way[1] * along * fine)[:, None] + side[1] * looked
         taken = strip.pixels[
             np.clip(from_x, 0, width + 1).astype(np.intp), np.clip(from_y, 0, height + 1).astype(np.intp)
         ]
@@ -464,7 +511,7 @@ def bent(
     return _picture(seen, size), (points[0][0] - left, points[0][1] - top)
 
 
-def tipped(strip: Strip, lean: float, drawn_out: float = 1.0) -> tuple[pygame.Surface, Point] | None:
+def tipped(strip: Strip, lean: float, drawn_out: float = 1.0, closer: float = 1.0) -> tuple[pygame.Surface, Point] | None:
     """The hand or the foot at the end of a limb, with the end of the limb that gives to it, and
     where on that picture the joint it hangs from is.
 
@@ -492,8 +539,8 @@ def tipped(strip: Strip, lean: float, drawn_out: float = 1.0) -> tuple[pygame.Su
         # The end of the limb, as far back as it gives: the nearer the joint, the further it
         # turns about it. Its outside is drawn out by that, and is looked at the more closely.
         crowded = 1 + reach * abs(turn) * 1.5 / (give * (1 + GIVE_PAST))
-        past = np.linspace(-give, 0.0, max(2, math.ceil(give * crowded / STEP) + 1))
-        across = np.arange(-reach, reach + STEP, STEP)
+        past = np.linspace(-give, 0.0, max(2, math.ceil(give * crowded * closer / STEP) + 1))
+        across = np.arange(-reach, reach + STEP, STEP / closer)
         given = (_given(past * fine, tip.give) * turn)[:, None]
         off_x = way[0] * past[:, None] + side[0] * across[None, :]
         off_y = way[1] * past[:, None] + side[1] * across[None, :]
@@ -517,3 +564,26 @@ def tipped(strip: Strip, lean: float, drawn_out: float = 1.0) -> tuple[pygame.Su
     )
     seen = layer + seen * (1 - layer[:, 3:4])
     return _picture(seen, size), (float(around), float(around))
+
+
+def brought_down(made: tuple[pygame.Surface, Point], over: int) -> tuple[pygame.Surface, Point]:
+    """A picture that was made `over` times as large as it is to be shown, brought down to
+    size, and where on it a point of the large one is.
+
+    A limb is bent by putting each place of its drawing where it goes, and a pixel is whatever
+    landed on it: made at the size it is shown, its edge is a pixel that is there or is not,
+    and it has steps all along it. Made larger and brought down, each pixel is as much of the
+    limb as there is of it there. Colours are added up each times how solid it is, so nothing
+    clear darkens an edge.
+    """
+    image, (x, y) = made
+    if over <= 1:
+        return made
+    width, height = image.get_size()
+    wide, high = -(-width // over), -(-height // over)
+    seen = np.zeros((wide * over, high * over, 4))
+    solid = pygame.surfarray.array_alpha(image) / 255.0
+    seen[:width, :height, :3] = pygame.surfarray.array3d(image) * solid[..., None]
+    seen[:width, :height, 3] = solid
+    seen = seen.reshape(wide, over, high, over, 4).mean(axis=(1, 3))
+    return _picture(seen, (wide, high)), (x / over, y / over)

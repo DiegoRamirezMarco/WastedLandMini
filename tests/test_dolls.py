@@ -54,6 +54,10 @@ class DollTemplateTests(unittest.TestCase):
         self.assertEqual(self.plan.like("doll"), "side", "a doll is posed by the clips of a body seen from the side")
         stretched = {}
         for bone, spec in self.template.parts.items():
+            if spec.rides:
+                # A part that rides on another's bone has none of its own to be longer than.
+                self.assertIn(spec.rides, self.plan.bones)
+                continue
             self.assertIn(bone, self.plan.bones)
             longer = self.plan.length("doll", bone) / (math.dist(spec.start, spec.end) / unit)
             if abs(longer - 1.0) > 1e-6:
@@ -74,7 +78,9 @@ class DollTemplateTests(unittest.TestCase):
                 bone = f"{part}_{side}"
                 drawn = math.dist(self.template.parts[bone].start, self.template.parts[bone].end) / unit
                 self.assertAlmostEqual(self.plan.length("doll", bone), drawn)
-        self.assertEqual(set(self.template.parts), set(self.plan.orders["doll"]), "every part has its turn to be drawn")
+        # A part that rides on another's bone is laid straight after whatever that bone is of.
+        own = {bone for bone, spec in self.template.parts.items() if not spec.rides}
+        self.assertEqual(own, set(self.plan.orders["doll"]), "every part has its turn to be drawn")
 
     def test_hands_feet_and_hips_are_parts_of_their_own(self) -> None:
         parts = self.template.parts
@@ -122,7 +128,8 @@ class DollTemplateTests(unittest.TestCase):
             self.assertLess(below_waist, drawn_to, side)
 
     def test_zones_only_overlap_where_two_parts_are_jointed(self) -> None:
-        parts = {bone: spec for bone, spec in self.template.parts.items() if not spec.whole}
+        # A part that rides on another's bone is jointed to it on the paper and not on the body.
+        parts = {bone: spec for bone, spec in self.template.parts.items() if not spec.whole and not spec.rides}
         masks = {bone: pygame.mask.from_surface(self.template.mask(bone)) for bone in parts}
         # What is a part's own is its zone as far as the joints it is cut at.
         regions = {bone: pygame.mask.from_surface(self.template.region(bone)) for bone in parts}

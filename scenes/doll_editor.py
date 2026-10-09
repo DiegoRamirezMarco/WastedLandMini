@@ -60,7 +60,8 @@ from ui.tutorial_panel import (
     lesson_for,
 )
 
-BODY_AT = (196, 58)
+# The paper of the body is as tall as the screen has room for: it stands on the foot of it.
+BODY_AT = (196, 42)
 HEAD_AT = (604, 58)
 PREVIEW = pygame.Rect(604, 272, 192, 170)
 NOTES = pygame.Rect(8, 308, 180, 138)

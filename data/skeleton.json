@@ -777,7 +777,7 @@
   },
   "doll": {
     "unit": 16,
-    "canvases": {"body": [25, 24], "head": [12, 12]},
+    "canvases": {"body": [25, 25.5], "head": [12, 12]},
     "hoses": [
       ["upper_arm_left", "forearm_left", "hand_left"],
       ["upper_arm_right", "forearm_right", "hand_right"],
@@ -789,10 +789,15 @@
       "mask": {"name": "Máscara", "parts": ["skull"]},
       "helmet": {"name": "Casco", "parts": ["skull"]},
       "torso": {"name": "Torso", "parts": ["neck", "spine"]},
-      "legs": {"name": "Pantalones", "parts": ["hips", "thigh", "shin"]},
+      "legs": {"name": "Pantalones", "parts": ["hips", "briefs", "thigh", "shin"]},
       "shoulders": {"name": "Hombreras", "parts": ["upper_arm"]}
     },
     "former": [
+      {
+        "canvases": {"body": [25, 24]},
+        "from": {"thigh_left": [8.5, 13.6], "shin_left": [8.5, 16.6], "foot_left": [8.5, 19.6], "thigh_right": [16.5, 13.6], "shin_right": [16.5, 16.6], "foot_right": [16.5, 19.6]},
+        "zones": {"briefs": {"reach": 0, "ends": [0, 0]}}
+      },
       {
         "canvases": {"body": [24, 24]},
         "from": {"neck": [12, 3], "spine": [12, 7], "hips": [12, 7], "upper_arm_left": [2.6, 3], "forearm_left": [2.6, 6], "hand_left": [2.6, 9], "upper_arm_right": [21.4, 3], "forearm_right": [21.4, 6], "hand_right": [21.4, 9], "thigh_left": [8, 13.6], "shin_left": [8, 16.6], "foot_left": [8, 19.6], "thigh_right": [16, 13.6], "shin_right": [16, 16.6], "foot_right": [16, 19.6]},
@@ -812,6 +817,7 @@
       "neck": {"canvas": "body", "from": [12.5, 3], "to": [12.5, 1], "radius": 0.7, "reach": 1.6, "ends": [0.8, 0.9], "shape": "neck"},
       "spine": {"canvas": "body", "from": [12.5, 7], "to": [12.5, 3], "radius": 2.4, "reach": 5.2, "ends": [2.6, 0.8], "free_end": true, "shape": "chest"},
       "hips": {"canvas": "body", "from": [12.5, 7], "to": [12.5, 8.8], "radius": 2.4, "reach": 5.2, "ends": [0.2, 0.8], "shape": "pelvis"},
+      "briefs": {"canvas": "body", "from": [12.5, 8.8], "to": [12.5, 10.1], "radius": 2.4, "reach": 5.2, "ends": [0.2, 0.9], "shape": "briefs", "rides": "hips"},
       "skull": {"canvas": "head", "from": [6, 10.2], "to": [6, 7.2], "radius": 3.2, "whole": true, "shape": "head"},
       "upper_arm_left": {"canvas": "body", "from": [2.85, 4.75], "to": [2.85, 7.75], "radius": 1.1, "reach": 2.6, "ends": [1.4, 1.6], "shape": "upper_arm"},
       "forearm_left": {"canvas": "body", "from": [2.85, 7.75], "to": [2.85, 10.75], "radius": 1.1, "reach": 2.6, "ends": [1.6, 1], "shape": "forearm"},
@@ -819,12 +825,12 @@
       "upper_arm_right": {"canvas": "body", "from": [22.15, 4.75], "to": [22.15, 7.75], "radius": 1.1, "reach": 2.6, "ends": [1.4, 1.6], "shape": "upper_arm"},
       "forearm_right": {"canvas": "body", "from": [22.15, 7.75], "to": [22.15, 10.75], "radius": 1.1, "reach": 2.6, "ends": [1.6, 1], "shape": "forearm"},
       "hand_right": {"canvas": "body", "from": [22.15, 10.75], "to": [22.15, 12.35], "radius": 1.2, "reach": 2.6, "ends": [0.6, 2], "shape": "hand"},
-      "thigh_left": {"canvas": "body", "from": [8.5, 13.6], "to": [8.5, 16.6], "radius": 1.4, "reach": 2.8, "ends": [1.6, 0.9], "shape": "thigh"},
-      "shin_left": {"canvas": "body", "from": [8.5, 16.6], "to": [8.5, 19.6], "radius": 1.4, "reach": 2.8, "ends": [1.8, 1], "shape": "shin"},
-      "foot_left": {"canvas": "body", "from": [8.5, 19.6], "to": [10.5, 19.6], "radius": 1, "reach": 2.6, "ends": [2, 2], "shape": "foot"},
-      "thigh_right": {"canvas": "body", "from": [16.5, 13.6], "to": [16.5, 16.6], "radius": 1.4, "reach": 2.8, "ends": [1.6, 0.9], "shape": "thigh"},
-      "shin_right": {"canvas": "body", "from": [16.5, 16.6], "to": [16.5, 19.6], "radius": 1.4, "reach": 2.8, "ends": [1.8, 1], "shape": "shin"},
-      "foot_right": {"canvas": "body", "from": [16.5, 19.6], "to": [18.5, 19.6], "radius": 1, "reach": 2.6, "ends": [2, 2], "shape": "foot"}
+      "thigh_left": {"canvas": "body", "from": [8.5, 15.1], "to": [8.5, 18.1], "radius": 1.4, "reach": 2.8, "ends": [1.6, 0.9], "shape": "thigh"},
+      "shin_left": {"canvas": "body", "from": [8.5, 18.1], "to": [8.5, 21.1], "radius": 1.4, "reach": 2.8, "ends": [1.8, 1], "shape": "shin"},
+      "foot_left": {"canvas": "body", "from": [8.5, 21.1], "to": [10.5, 21.1], "radius": 1, "reach": 2.6, "ends": [2, 2], "shape": "foot"},
+      "thigh_right": {"canvas": "body", "from": [16.5, 15.1], "to": [16.5, 18.1], "radius": 1.4, "reach": 2.8, "ends": [1.6, 0.9], "shape": "thigh"},
+      "shin_right": {"canvas": "body", "from": [16.5, 18.1], "to": [16.5, 21.1], "radius": 1.4, "reach": 2.8, "ends": [1.8, 1], "shape": "shin"},
+      "foot_right": {"canvas": "body", "from": [16.5, 21.1], "to": [18.5, 21.1], "radius": 1, "reach": 2.6, "ends": [2, 2], "shape": "foot"}
     }
   },
   "life": {

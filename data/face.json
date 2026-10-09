@@ -1,0 +1,53 @@
+{
+  "views": {"front": 0, "three_quarter": 45, "profile": 90},
+  "view_names": {"front": "Frente", "three_quarter": "3/4", "profile": "Perfil"},
+  "steps": 12,
+  "flat": 0.75,
+  "inside": 0.97,
+  "kinds": {
+    "hair_back": {
+      "name": "Pelo detrás", "paper": [256, 352], "zoom": 1,
+      "turn": "shift", "out": -0.24, "narrowest": 0.7, "over_head": true, "behind": true, "under_body": true,
+      "comes_over_behind": "ear"
+    },
+    "ear": {
+      "name": "Oreja", "paper": [40, 64], "zoom": 5, "paired": true,
+      "turn": "edge", "at": [0.98, 0.05], "out": -0.1, "far_gone": 45, "behind": true
+    },
+    "mouth": {
+      "name": "Boca", "paper": [80, 40], "zoom": 4,
+      "turn": "flat", "at": [0, 0.52], "narrowest": 0.5
+    },
+    "nose": {
+      "name": "Nariz", "paper": [40, 56], "zoom": 6,
+      "turn": "solid", "at": [0, 0.16], "out": 0.18
+    },
+    "eye": {
+      "name": "Ojo", "paper": [56, 40], "zoom": 6, "paired": true,
+      "turn": "flat", "at": [0.4, -0.12], "narrowest": 0.55, "far_gone": 90
+    },
+    "brow": {
+      "name": "Ceja", "paper": [56, 24], "zoom": 6, "paired": true,
+      "turn": "flat", "at": [0.4, -0.42], "narrowest": 0.55, "far_gone": 90
+    },
+    "hair": {
+      "name": "Pelo delante", "paper": [192, 192], "zoom": 2,
+      "turn": "shift", "out": 0.1, "narrowest": 1.0, "over_head": true,
+      "opens_on": "hair_back"
+    }
+  },
+  "body": {
+    "nearest": 45,
+    "least_swing": 0.12,
+    "least_long": 0.45,
+    "stiff": [["neck", "head"]],
+    "trunk": ["spine", "hips", "briefs", "neck"],
+    "rubber": ["hips", "spine"],
+    "depth": 0.62,
+    "depths": [0.35, 1.0],
+    "limbs": {
+      "arm": {"beside": "spine", "share": 0.86, "hangs_from": "chest", "joints": ["shoulder", "elbow", "hand", "fingertip"], "clear_of": "upper_arm_right", "clear": 0.8},
+      "leg": {"beside": "hips", "share": 0.5, "hangs_from": "pelvis", "joints": ["hip", "knee", "foot", "toe"], "clear_of": "thigh_right", "clear": 0.15}
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "bones": ["hand_left", "hand_right"],
+  "far": "_left",
+  "color": [214, 170, 130],
+  "far_shade": 0.14,
+  "far_other_to": 200,
+  "matches": "forearm_right",
+  "darts": 0.3,
+  "size": 1.2,
+  "sizes": [0.6, 2.2],
+  "palm": {"from": -0.08, "wide": 0.9, "long": 0.66, "round": 0.3, "wrist": 0.8, "knuckles": 0.07, "lap": 0.02},
+  "fingers": {
+    "count": 3, "counts": [2, 4],
+    "long": 0.5, "gap": 0.1, "fan": 15, "folds": 165, "folded": 0.62,
+    "lengths": {"2": [1.0, 0.92], "3": [0.88, 1.0, 0.9], "4": [0.82, 0.98, 1.0, 0.86]}
+  },
+  "thumb": {"long": 0.5, "thick": 0.3, "root": [0.22, 0.36], "open": 54, "shut": -76, "swings": [0.2, 0.8], "lifts": 0.3},
+  "line": 0.075,
+  "lines": [0, 2.5],
+  "inner_line": 0.45,
+  "poses": {
+    "open": {"name": "Abierta", "curl": 0.0, "spread": 1.0},
+    "relaxed": {"name": "Suelta", "curl": 0.3, "spread": 0.2},
+    "grip": {"name": "Agarre", "curl": 0.8, "spread": 0.0},
+    "fist": {"name": "Puño", "curl": 1.0, "spread": 0.0}
+  },
+  "at_rest": "relaxed",
+  "clips": {
+    "walk": "relaxed", "walk_shuffle": "relaxed", "walk_swagger": "fist", "idle": "relaxed",
+    "work": "grip", "hammer": "grip", "hoe": "grip", "weed": "grip", "carry": "open",
+    "fight": "fist", "fight_brawl": "fist", "fight_kick": "fist",
+    "argue": "fist", "argue_stomp": "fist", "argue_arms": "open",
+    "knife_lunge": "grip", "knife_slash": "grip", "knife_overhand": "grip",
+    "shoot_aim": "grip", "shoot_braced": "grip", "shoot_hip": "grip",
+    "eat": "grip", "eat_wolf": "grip", "eat_dainty": "grip", "pocket": "open"
+  },
+  "held": {"thick": [0.0, 1.4], "opens": 0.5},
+  "quick": 9.0
+}

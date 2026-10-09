@@ -528,4 +528,4 @@ class Tailor:
 
     def dress(self, doll: Doll, garments: Sequence[Garment]) -> Doll:
         """A doll with pieces on: cut from its own drawings with theirs over them."""
-        return Doll(doll.template, self.dressed(doll.template, doll.sheets, garments), doll.plan)
+        return Doll(doll.template, self.dressed(doll.template, doll.sheets, garments), doll.plan, doll.without)

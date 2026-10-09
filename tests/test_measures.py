@@ -46,6 +46,8 @@ class DollBuildTests(unittest.TestCase):
         self.assertTrue(self.template.takes(build))
         plan = doll_plan(self.plan, self.template, build)
         for bone, spec in self.template.parts.items():
+            if spec.rides:
+                continue
             self.assertAlmostEqual(plan.length(DOLL_VIEW, bone), _length(spec) / self.template.unit, places=6, msg=bone)
         # The game's own body had a longer trunk than the paper, and drew the drawing out to fit.
         self.assertGreater(self.plan.length(DOLL_VIEW, "spine"), plan.length(DOLL_VIEW, "spine"))
@@ -193,6 +195,8 @@ class DollBuildTests(unittest.TestCase):
         self.assertEqual(set(built.parts), set(self.template.parts))
         plan = doll_plan(self.plan, built, start)
         for bone, spec in built.parts.items():
+            if spec.rides:
+                continue
             self.assertAlmostEqual(plan.length(DOLL_VIEW, bone), _length(spec) / self.template.unit, places=6, msg=bone)
         # A template whose start no doll could have gives the plain one instead of a broken doll.
         broken = replace(self.template, start=DollBuild(joints={"shin.end": -40.0}))

@@ -181,17 +181,20 @@ class RoomOnThePaperTests(unittest.TestCase):
 
     def test_a_drawing_made_on_a_paper_of_before_is_laid_out_anew_and_nothing_of_it_is_resized(self) -> None:
         formers = self.template.formers
-        self.assertEqual(len(formers), 2, "the paper has been laid out anew twice")
+        self.assertEqual(len(formers), 3, "the paper has been laid out anew three times")
         sizes = [former.canvases[BODY_CANVAS] for former in formers]
-        self.assertGreater(self.template.canvases[BODY_CANVAS][0], sizes[0][0], "each time wider than the time before")
-        self.assertGreater(sizes[0][0], sizes[1][0])
+        # The last time taller, to make room under the hips, and each time before that wider.
+        self.assertGreater(self.template.canvases[BODY_CANVAS][1], sizes[0][1])
+        self.assertGreater(sizes[0][0], sizes[1][0], "each time wider than the time before")
+        self.assertGreater(sizes[1][0], sizes[2][0])
         for former in formers:
             for build in (DollBuild(), self.template.starting(), DollBuild(joints={"shin.end": -1.0, "upper_arm.start": -0.5})):
                 was, now = former.built(build), self.template.built(build)
                 old = pygame.Surface(former.canvases[BODY_CANVAS], pygame.SRCALPHA)
                 marks = {}
                 for index, (bone, spec) in enumerate(was.parts.items()):
-                    if spec.canvas != BODY_CANVAS:
+                    if spec.canvas != BODY_CANVAS or not spec.reach:
+                        # A part there was no room for then had nothing drawn for it.
                         continue
                     # A mark of its own in the middle of every part, as it was laid out then.
                     color = (20 + index * 13, 200 - index * 9, 40 + index * 5)
@@ -210,8 +213,15 @@ class RoomOnThePaperTests(unittest.TestCase):
                 )
 
     def test_a_part_is_moved_by_whole_pixels_and_cut_by_the_zone_it_had_then(self) -> None:
-        latest, oldest = self.template.formers
+        newest, latest, oldest = self.template.formers
         unit = self.template.unit
+        # The last time the paper was laid out anew, the legs went down to make room under the
+        # hips, by whole pixels, and nothing else moved.
+        for bone, spec in self.template.parts.items():
+            down = spec.start[1] - newest.parts[bone].start[1]
+            self.assertAlmostEqual(down, round(down), 6, bone)
+            self.assertEqual(spec.start[0], newest.parts[bone].start[0], bone)
+            self.assertEqual(down > 0, bone.startswith(("thigh", "shin", "foot")), bone)
         for bone, spec in self.template.parts.items():
             for former in (latest, oldest):
                 was = former.parts[bone]
@@ -225,8 +235,16 @@ class RoomOnThePaperTests(unittest.TestCase):
             # What was a part's own then is its own now: nothing drawn on a paper of before is left out of today's.
             was = latest.parts[bone]
             then, now = (pygame.mask.from_surface(each.region(bone)) for each in (latest, self.template))
+            seam = 0
+            for rider, other in self.template.parts.items():
+                if other.rides == bone:
+                    # What rides on it has what was its own past the joint it ends at: under the
+                    # hips, what was drawn for them is now of the piece between the legs. The two
+                    # are cut apart along a line a pixel wide, which is of neither.
+                    now.draw(pygame.mask.from_surface(self.template.region(rider)), (0, 0))
+                    seam = round(spec.reach * 2) + 2
             by = (round(spec.start[0] - was.start[0]), round(spec.start[1] - was.start[1]))
-            self.assertEqual(now.overlap_area(then, by), then.count(), bone)
+            self.assertGreaterEqual(now.overlap_area(then, by) + seam, then.count(), bone)
         hand = "hand_left"
         self.assertLess(latest.parts[hand].ends[1], self.template.parts[hand].ends[1], "a hand has more room now")
         # Drawn past the end of the zone a hand had then, though inside today's, it was nobody's: it is left behind.
@@ -264,7 +282,7 @@ class RoomOnThePaperTests(unittest.TestCase):
 
     def test_two_papers_of_before_cannot_be_of_the_same_size_nor_of_today_s(self) -> None:
         data = json.loads(PLAN_PATH.read_text(encoding="utf-8"))["doll"]
-        latest, oldest = data["former"]
+        _, latest, oldest = data["former"]
         self.assertEqual(len(template_from_data({**data, "former": latest}).formers), 1, "one alone need not be in a list")
         self.assertEqual(template_from_data({key: value for key, value in data.items() if key != "former"}).formers, ())
         for wrong in (

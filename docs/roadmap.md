@@ -6247,6 +6247,81 @@ Still to settle, to be asked before it is brought in:
 - Whether what is worn (P66, S66) stops anything
 - The new enemies of each zone, which the user asked for with S68
 
+### P71 — Dolls that turn: what turns them (needs P42 to P45) — done
+Asked for on 2026-10-09 and the days about it, tried apart from the game first, in a project of
+its own beside it (`DollVolumeLab`), and judged there turn by turn on being played: "vale es
+hora de que lo integremos al principal". One batch of three was asked before it came in:
+- **All of it, the map too**, over three milestones: what turns a doll (this one), the screen
+  it is drawn on (P72) and the settlement (P73). Chosen over the recommendation, which was to
+  stop before the map
+- **Whoever is drawn already is made to turn by rule**, and nobody is left as they are until
+  drawn anew. Chosen over the recommendation
+- **Walking down the map somebody is seen from the front, and up it from behind.** The
+  recommendation, over three quarters either way
+
+What there is:
+- **A trunk is drawn from the front and wrapped round something solid**
+  (`graphics/volume.py`): at every height as wide as it was drawn and a share of that from
+  chest to back. Turned, its drawing goes round with it. The line round it is told from the
+  drawing and put back at its edge, lines drawn near its edge do not run down its side, and
+  from behind it is plain, in the colour there is most of part by part, unless its back is
+  drawn (`back.png`)
+- **Its hips and its trunk are one limb of rubber**, and a piece hangs under the hips,
+  between the legs (`briefs`): it has no bone of its own and rides on the hips' (`rides`). The
+  paper of the body is taller for it, and the legs lower: what was drawn on the paper before
+  is laid out anew by itself (`former`)
+- **Limbs go round with the body and are never bent again for it** (`graphics/turn.py`):
+  where each begins goes round the trunk, and nearer the front than three quarters, or nearer
+  right behind, what a clip does across the screen is seen less across it
+- **A face is pieces put on a head** (`graphics/face.py`): eyes, brows, a nose, a mouth, ears,
+  hair in front and hair behind, each drawn once and put where it goes from the front. Turned,
+  each goes where the head being round puts it, unless somebody has said otherwise for that
+  view. From behind the hair at the back is over the head
+- **Hands and feet may be made and not drawn** (`graphics/hand.py`, `graphics/foot.py`): a
+  glove and a boot in a colour of one's picking, that open, shut and hold. They are joined to
+  the limb each is on (`graphics/joined.py`): as wide as it where they begin, its colour until
+  one is picked, and no line across it
+- **`Figures` (`graphics/figure.py`) is what the game asks for a body turned so far**: the
+  doll to lay over a skeleton, what of it is made, and where its joints then go. Only two
+  bodies are turned a way they have not been turned yet in a frame; the rest are shown the
+  nearest way they have been
+- **Somebody drawn before any of this has a trunk seen from its side**, and is told from the
+  rest by there being no `"trunk": "front"` kept with their measures. From their side they are
+  their drawing as it ever was. From anywhere else their trunk is made into one seen from the
+  front by rule, as much wider as a trunk is wider than deep; their head, with its face
+  painted on it, is the same from everywhere. No drawing of theirs is changed on disk
+- **Bent limbs have no steps along their edge** where they are shown large, no hair of a gap
+  where two parts of one meet, and are their jointed parts where they are folded right back
+
+Decided without asking:
+- **Nothing the player sees changes with this milestone** but the paper of the body, which is
+  taller: nobody asks `Figures` for anything yet
+- **Armour is as it was** (P66): cut to a body and laid on it. On a trunk drawn from the front
+  a plate drawn from the side will not sit right, and that is left for when armour is judged
+- **A doll remembers what it was cut without**, so that one with something on is cut the same
+- **A head does not lean** as its body comes round to the front: it is one picture
+- **The colour of a dark body is told** though it is as dark as a line
+
+Still open here:
+- **Arms and legs are the drawing made from the side** whichever way the body is turned
+- **A trunk seen from its side has no belly and no chest**: it is as deep all the way up
+- **Somebody made to turn by rule looks odd** from the front and from behind until drawn anew
+
+Done when: a body kept from before is asked for from the front, from three quarters and from
+behind and comes turned; one drawn from the front comes wrapped; and every test there was
+passes with the paper laid out anew.
+
+### P72 — Dolls that turn: one screen to draw them on (needs P71) — planned
+- The one screen of the project it was tried in takes the place of the screen residents are
+  drawn on: a tab each for the body, the head, the face and the hands and feet, tiles with
+  pictures and no words, and the doll beside the work, turned with a bar
+- What the game's own screen had stays: who there is to draw, their names, the lessons of
+  the opening and the fitting room for armour
+
+### P73 — Dolls that turn: in the settlement (needs P71) — planned
+- On the map, indoors and out on a trip, somebody walking down is seen from the front, and
+  walking up from behind, coming round by degrees
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.
