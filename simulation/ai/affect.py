@@ -52,9 +52,23 @@ QUEUED_IMPORTANCE = 10
 DROPPED_IMPORTANCE = 15
 WILL_IMPORTANCE = 20
 FOOD = "food"
+# What stands between a thing and one of its uses in what an order is about.
+USE_MARK = "|"
 
 # One way of feeling that will do: for each feeling it goes by, the least and the most of it.
 Feels = dict[str, tuple[float, float]]
+
+
+def use_target(object_id: str, action: str | None = None) -> str:
+    """What an order to use a thing is about: the thing, and which of its uses where it is
+    not what it is mainly for (S60)."""
+    return f"{object_id}{USE_MARK}{action}" if action else object_id
+
+
+def split_use(target_id: str | None) -> tuple[str, str | None]:
+    """The thing an order to use something names, and which of its uses, if it says."""
+    object_id, _, action = (target_id or "").partition(USE_MARK)
+    return object_id, action or None
 
 
 @dataclass(frozen=True)
@@ -560,11 +574,15 @@ class AffectSystem:
         # naming the thing, as by putting them down at it (P27).
         return None
 
-    def can_use(self, world: "SimulationWorld", resident: Resident, placed: Interactable, task: str = USE) -> bool:
+    def can_use(
+        self, world: "SimulationWorld", resident: Resident, placed: Interactable, task: str = USE, action: str | None = None
+    ) -> bool:
         """Whether a resident can be told to use one thing in particular, as things stand: it
         is used at all, it is open to them, and there is room at it. `task` is the order
-        it would be told by."""
-        use = world.definition_of(placed).use
+        it would be told by, and `action` which of its uses, where it is not what it is
+        mainly for."""
+        definition = world.definition_of(placed)
+        use = definition.use_named(action) if action is not None else definition.use
         if use is None or task not in world.registries.affect.tasks:
             return False
         if use.trains is not None and not world.attributes.learns_at(world, resident, placed):
@@ -573,7 +591,22 @@ class AffectSystem:
         theirs = resident.activity is not None and resident.activity.target_id == placed.object_id
         if world.users_of(placed.object_id) - (1 if theirs else 0) >= use.capacity:
             return False
-        return world.activities.routine.open_for(world, resident, placed)
+        return world.activities.routine.open_for(world, resident, placed, action)
+
+    def things_to_do(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> list[tuple[str, str, str]]:
+        """What a resident can be told to do with one thing, as things stand: each as what
+        it is called, the order it is told by and what the order is about. What it is mainly
+        for comes first. Empty for a thing there is nothing to do with."""
+        definition = world.definition_of(placed)
+        tasks = world.registries.affect.tasks
+        found = []
+        for use in definition.uses:
+            task = TRAIN if use.trains is not None else USE
+            action = None if use is definition.use else use.action
+            if task in tasks and self.can_use(world, resident, placed, task, action):
+                label = use.label or tasks[task].name
+                found.append((label, f"{TASK}:{task}", use_target(placed.object_id, action)))
+        return found
 
     def _named(self, world: "SimulationWorld", placed: Interactable) -> str:
         definition = world.definition_of(placed)
@@ -668,13 +701,19 @@ class AffectSystem:
                 return "Eso no se le puede decir ahora", ""
             return None, world.registries.affect.tasks[TRAIN].label.replace("{target}", self._named(world, placed))
         if group == TASK and name == USE:
-            # It names the thing itself, which need not be the nearest of its kind.
-            placed = world.interactables.get(target_id or "")
+            # It names the thing itself, which need not be the nearest of its kind, and which
+            # of the things there are to do with it, where it is not what it is mainly for (S60).
+            object_id, action = split_use(target_id)
+            placed = world.interactables.get(object_id)
             if placed is None:
                 return "Hay que decir con quién, o con qué", ""
-            if not self.can_use(world, resident, placed):
+            if not self.can_use(world, resident, placed, USE, action):
                 return "Eso no se le puede decir ahora", ""
-            return None, world.registries.affect.tasks[USE].label.replace("{target}", self._named(world, placed))
+            named = self._named(world, placed)
+            use = world.definition_of(placed).use_named(action)
+            if use is not None and use.label:
+                named = f"{named} ({use.label.lower()})"
+            return None, world.registries.affect.tasks[USE].label.replace("{target}", named)
         shared = world.registries.affect.shared(group).get(name)
         if shared is not None:
             # Who it is with need not be among the few that are offered: anybody it can be had with will do.
@@ -791,8 +830,9 @@ class AffectSystem:
                 resident.current_action = "walking"
             return None
         if name in (USE, TRAIN):
-            placed = world.interactables.get(target_id or "")
-            activity = routine.use(world, resident, placed) if placed is not None else None
+            object_id, action = split_use(target_id)
+            placed = world.interactables.get(object_id)
+            activity = routine.use(world, resident, placed, action) if placed is not None else None
             if activity is None:
                 return nowhere
             self.leave_off(world, resident)
@@ -936,8 +976,11 @@ class AffectSystem:
         if target_id in world.sites:
             site = world.sites[target_id]
             return world.construction.thing(world, site.kind, site.what) or site.what
-        if target_id in world.interactables:
-            return self._named(world, world.interactables[target_id])
+        object_id, action = split_use(target_id)
+        if object_id in world.interactables:
+            placed = world.interactables[object_id]
+            use = world.definition_of(placed).use_named(action)
+            return f"{self._named(world, placed)} ({use.label.lower()})" if use is not None and use.label else self._named(world, placed)
         if target_id in world.registries.jobs:
             return world.registries.jobs[target_id].name
         definition = world.registries.items.find(target_id)

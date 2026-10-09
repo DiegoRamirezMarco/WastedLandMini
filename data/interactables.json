@@ -26,7 +26,19 @@
         "scrap": 2
       },
       "minutes": 60
-    }
+    },
+    "uses": [
+      {
+        "action": "lie_down",
+        "label": "Echarse un rato",
+        "text": "se echa un rato en la cama",
+        "minutes": 40,
+        "per_minute": {
+          "stress": -0.12
+        },
+        "position": "on"
+      }
+    ]
   },
   "pantry": {
     "name": "despensa",
@@ -71,7 +83,25 @@
         "scrap": 1
       },
       "minutes": 30
-    }
+    },
+    "uses": [
+      {
+        "action": "sing",
+        "label": "Cantar al fuego",
+        "text": "canta junto a la hoguera",
+        "minutes": 30,
+        "per_minute": {
+          "stress": -0.2,
+          "social": -0.15
+        },
+        "capacity": 4,
+        "interruptible": true,
+        "preferred_hours": [
+          19,
+          24
+        ]
+      }
+    ]
   },
   "table": {
     "name": "mesa",
@@ -82,7 +112,20 @@
         "scrap": 2
       },
       "minutes": 45
-    }
+    },
+    "uses": [
+      {
+        "action": "sit_table",
+        "label": "Sentarse a la mesa",
+        "text": "se sienta a la mesa",
+        "minutes": 30,
+        "per_minute": {
+          "stress": -0.12
+        },
+        "capacity": 2,
+        "interruptible": true
+      }
+    ]
   },
   "stool": {
     "name": "taburete",
@@ -299,7 +342,18 @@
     "outlet": {
       "water": 20
     },
-    "draws": 1
+    "draws": 1,
+    "uses": [
+      {
+        "action": "wash",
+        "label": "Lavarse",
+        "text": "se lava en el depósito",
+        "minutes": 10,
+        "per_minute": {
+          "stress": -0.3
+        }
+      }
+    ]
   },
   "generator": {
     "name": "generador",
@@ -441,7 +495,25 @@
       },
       "minutes": 90
     },
-    "draws": 1
+    "draws": 1,
+    "uses": [
+      {
+        "action": "dance_alone",
+        "label": "Bailar",
+        "text": "baila con lo que suena en la radio",
+        "minutes": 20,
+        "per_minute": {
+          "stress": -0.25,
+          "tiredness": 0.04
+        },
+        "capacity": 3,
+        "interruptible": true,
+        "preferred_hours": [
+          18,
+          24
+        ]
+      }
+    ]
   },
   "lab_bench": {
     "name": "laboratorio",
@@ -552,7 +624,18 @@
     "outlet": {
       "water": 20
     },
-    "post_pace": 0.6
+    "post_pace": 0.6,
+    "uses": [
+      {
+        "action": "wash",
+        "label": "Lavarse",
+        "text": "se lava en el pozo",
+        "minutes": 10,
+        "per_minute": {
+          "stress": -0.3
+        }
+      }
+    ]
   },
   "refrigerated_chest": {
     "name": "arcón refrigerado",
@@ -611,7 +694,19 @@
         "scrap": 3
       },
       "minutes": 120
-    }
+    },
+    "uses": [
+      {
+        "action": "play_chess",
+        "label": "Jugar una partida",
+        "text": "juega una partida de ajedrez",
+        "minutes": 40,
+        "per_minute": {
+          "stress": -0.15
+        },
+        "interruptible": true
+      }
+    ]
   },
   "target": {
     "name": "diana",
@@ -632,7 +727,19 @@
         "scrap": 3
       },
       "minutes": 120
-    }
+    },
+    "uses": [
+      {
+        "action": "darts",
+        "label": "Echar unos dardos",
+        "text": "echa unos dardos a la diana",
+        "minutes": 20,
+        "per_minute": {
+          "stress": -0.2
+        },
+        "interruptible": true
+      }
+    ]
   },
   "skipping_rope": {
     "name": "comba",
@@ -653,7 +760,19 @@
         "scrap": 3
       },
       "minutes": 120
-    }
+    },
+    "uses": [
+      {
+        "action": "skip",
+        "label": "Saltar un rato",
+        "text": "salta a la comba por gusto",
+        "minutes": 15,
+        "per_minute": {
+          "stress": -0.2,
+          "tiredness": 0.05
+        }
+      }
+    ]
   },
   "dummy": {
     "name": "maniquí",
@@ -674,7 +793,19 @@
         "scrap": 3
       },
       "minutes": 120
-    }
+    },
+    "uses": [
+      {
+        "action": "vent",
+        "label": "Desahogarse",
+        "text": "se desahoga con el maniquí",
+        "minutes": 15,
+        "per_minute": {
+          "stress": -0.4,
+          "tiredness": 0.04
+        }
+      }
+    ]
   },
   "training_log": {
     "name": "tronco de entrenamiento",

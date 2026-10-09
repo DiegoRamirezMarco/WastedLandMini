@@ -364,10 +364,11 @@ class ThingTests(unittest.TestCase):
         self.assertEqual([each.kind for each in self.world.placements("ines", site_id=site_id)], [STAND])
 
     def test_a_thing_with_nothing_to_it_only_has_them_left_beside_it(self) -> None:
-        found = self.world.placements("ines", object_id="table")
-        self.assertEqual([(each.kind, each.text) for each in found], [(STAND, "Dejar junto a una mesa")])
-        self.world.apply_command(PutDownCommand("ines", object_id="table"))
-        table = self.world.interactables["table"]
+        # A barrel: a table is something to sit at since things offer more than one thing (S60).
+        found = self.world.placements("ines", object_id="barrel_cantina")
+        self.assertEqual([(each.kind, each.text) for each in found], [(STAND, "Dejar junto a un bidón")])
+        self.world.apply_command(PutDownCommand("ines", object_id="barrel_cantina"))
+        table = self.world.interactables["barrel_cantina"]
         footprint = table.footprint(self.world.definition_of(table))
         self.assertEqual(min(manhattan(self.ines.tile, tile) for tile in footprint), 1)
 

@@ -308,8 +308,12 @@ class OrderTests(unittest.TestCase):
             resident.personality.impulsiveness = 100.0
             resident.personality.empathy = 0.0
         paco = world.residents["paco"]
-        self.assertTrue(world.apply_command(AffectCommand("paco", "task:salvage", "tyres_workshop")).ok)
-        self.assertEqual(world.salvage["tyres_workshop"].resident_id, "paco")
+        # Whatever there is to take apart nearest to where the hour has left him: only so many
+        # of the nearest are offered, and which they are goes by where he has wandered to.
+        about = next(option for option in world.affect.options(world, "paco") if option.kind == "task:salvage")
+        target = about.targets[0][0]
+        self.assertTrue(world.apply_command(AffectCommand("paco", "task:salvage", target)).ok)
+        self.assertEqual(world.salvage[target].resident_id, "paco")
         self.assertTrue(_run(world, 60, lambda: paco.current_action == SALVAGE_ACTION))
         self.assertEqual(world.player_standing, {}, "nobody thinks the more or the less of the player for it")
 

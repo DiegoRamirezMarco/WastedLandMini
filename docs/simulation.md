@@ -27,7 +27,8 @@ The simulation runs without Pygame. Important state changes emit domain events. 
 1. Needs rise (`simulation/residents/needs.py`). Asleep, hunger, thirst and loneliness grow at half pace.
    Mood drifts separately from stress: bad needs and wounds pull it down over time, good days let
    it recover.
-2. With no activity, `RoutineSystem` scores every free usable object and picks the best reachable one:
+2. With no activity, `RoutineSystem` scores every use of every free object, what it is
+   mainly for and whatever else can be done with it (S60), and picks the best reachable one:
    - each need the use would lower counts as `(need / 100)²`, weighted by personality;
    - a use with `preferred_hours` counts double inside that window and a fifth outside it,
      though the penalty fades as the need grows desperate, so the exhausted nap by day;
@@ -40,6 +41,12 @@ The simulation runs without Pygame. Important state changes emit domain events. 
    until its minutes run out or the needs it lowers reach zero. A use with `until` ends when
    that one need reaches zero: sleep eases stress too, but only tiredness decides when to wake.
    Any other bodily need reaching 85 cuts a long restful use short: hunger or thirst wakes a sleeper.
+
+A thing may offer several uses, each with an action of its own. The activity carries the
+action, and what is said of whoever is at it, what it does to them and whether they notice
+what goes on are those of the use that goes by it (`InteractableDefinition.use_for`). Room at
+a thing is counted over all its uses. An order to use a thing names it, and after `|` the
+use, where it is not what the thing is mainly for.
 
 Starting a use emits an `activity_started` event with low importance. Eating emits the more
 specific `meal_started` event so presentation can animate and sound the meal without owning it.

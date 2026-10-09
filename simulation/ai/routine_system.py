@@ -36,6 +36,9 @@ WANDER_RANGE = 12
 WANDER_ATTEMPTS = 8
 WANDER_MINUTES = (5, 30)
 SCORE_NOISE = 0.05
+# What a thing offers beside what it is for appeals a little less than what a thing is for,
+# and than a thing of their own that is to hand (S60).
+EXTRA_USE_APPEAL = 0.75
 PREFERRED_HOURS_BONUS = 2.0
 OFF_HOURS_PENALTY = 0.2
 # Need level from which the off-hours penalty starts to fade.
@@ -75,24 +78,34 @@ class RoutineSystem:
         indoors = governed and laws.indoors(world, resident)
         hushed = governed and laws.hushed(world, resident)
         for placed in world.interactables.values():
-            use = world.definition_of(placed).use
-            if use is None or world.users_of(placed.object_id) >= use.capacity:
-                continue
-            if not world.work.open_to(world, resident, use) or world.upgrades.in_hand(world, placed.object_id):
-                # Nor is anything used while it is being made better (S54).
-                continue
-            # What stands in somebody's house is theirs to use, and whoever they would have in.
-            # Anybody else goes in for it only when they have to.
-            housing = world.housing
-            if not housing.may_use(world, resident, placed, use) and not housing.pressed(world, resident, placed, use):
-                continue
-            bed_to_be_had = bed_to_be_had or (use.unaware and use.per_minute.get("tiredness", 0.0) < 0)
-            if governed and laws.bars(world, resident, placed, use, indoors):
-                continue
-            score = self._score_use(world, resident, placed, use)
-            if score is not None:
-                pull = laws.pull(world, resident, placed) if governed else 0.0
-                scored.append(ScoredAction(use.action, score + pull + self._noise(world), placed.object_id))
+            # Everything there is to do with it, each for what it is worth to them now (S60).
+            definition = world.definition_of(placed)
+            for use in definition.uses:
+                if world.users_of(placed.object_id) >= use.capacity:
+                    continue
+                if not world.work.open_to(world, resident, use) or world.upgrades.in_hand(world, placed.object_id):
+                    # Nor is anything used while it is being made better (S54).
+                    continue
+                # What stands in somebody's house is theirs to use, and whoever they would have in.
+                # Anybody else goes in for it only when they have to.
+                housing = world.housing
+                if not housing.may_use(world, resident, placed, use) and not housing.pressed(world, resident, placed, use):
+                    continue
+                bed_to_be_had = bed_to_be_had or (use.unaware and use.per_minute.get("tiredness", 0.0) < 0)
+                if governed and laws.bars(world, resident, placed, use, indoors):
+                    continue
+                score = self._score_use(world, resident, placed, use)
+                if score is not None:
+                    pull = laws.pull(world, resident, placed) if governed else 0.0
+                    if use is definition.use:
+                        grain = self._noise(world)
+                    else:
+                        # What a thing offers beside what it is for appeals a little less, and is
+                        # weighed for that and no more: the grain of chance the rest is weighed
+                        # with is thrown as it always was, so that a settlement goes as it went
+                        # until somebody takes one up.
+                        score, grain = score * EXTRA_USE_APPEAL, 0.0
+                    scored.append(ScoredAction(use.action, score + pull + grain, placed.object_id))
         for talk in () if hushed else self.social.candidates(world, resident):
             if indoors and not laws.under_same_roof(world, resident, world.residents[talk.partner_id].tile):
                 continue
@@ -139,7 +152,7 @@ class RoutineSystem:
         return any(
             self._offers(world, resident, placed, use, need)
             for placed in world.interactables.values()
-            if (use := world.definition_of(placed).use) is not None
+            for use in world.definition_of(placed).uses
         )
 
     def relieves(self, world: "SimulationWorld", resident: Resident, placed: Interactable, need: str) -> bool:
@@ -147,18 +160,24 @@ class RoutineSystem:
         use = world.definition_of(placed).use
         return use is not None and self._offers(world, resident, placed, use, need)
 
-    def use(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> Activity | None:
-        """The walk to an object and the use of it. None if there is no getting to it."""
-        return self._use(world, resident, placed)
+    def use(
+        self, world: "SimulationWorld", resident: Resident, placed: Interactable, action: str | None = None
+    ) -> Activity | None:
+        """The walk to an object and the use of it: what it is mainly for, or the one of its
+        uses that goes by `action`. None if there is no getting to it."""
+        return self._use(world, resident, placed, action)
 
     def stroll(self, world: "SimulationWorld", resident: Resident) -> list[Tile]:
         """The way to somewhere near, picked at random, for whoever is out for a walk."""
         return self._wander(world, resident).path
 
-    def open_for(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> bool:
+    def open_for(
+        self, world: "SimulationWorld", resident: Resident, placed: Interactable, action: str | None = None
+    ) -> bool:
         """Whether a resident could use an object as things stand: open, theirs to use, within
-        their means and, where it serves something, not empty."""
-        use = world.definition_of(placed).use
+        their means and, where it serves something, not empty. For what it is mainly for, or
+        for the one of its uses that goes by `action`."""
+        use = world.definition_of(placed).use_for(action)
         if use is None or not world.work.open_to(world, resident, use):
             return False
         if world.upgrades.in_hand(world, placed.object_id):
@@ -221,7 +240,7 @@ class RoutineSystem:
             elif candidate.target_id is None:
                 return self._wander(world, resident)
             else:
-                activity = self._use(world, resident, world.interactables[candidate.target_id])
+                activity = self._use(world, resident, world.interactables[candidate.target_id], candidate.name)
             if activity is not None:
                 return activity
         return self._wander(world, resident)
@@ -286,9 +305,11 @@ class RoutineSystem:
                 score *= OFF_HOURS_PENALTY + (1.0 - OFF_HOURS_PENALTY) * desperation
         return score - DISTANCE_COST * manhattan(resident.tile, (placed.x, placed.y))
 
-    def _use(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> Activity | None:
+    def _use(
+        self, world: "SimulationWorld", resident: Resident, placed: Interactable, action: str | None = None
+    ) -> Activity | None:
         definition = world.definition_of(placed)
-        use = definition.use
+        use = definition.use_for(action)
         if use is None:
             return None
         if use.position == "on":

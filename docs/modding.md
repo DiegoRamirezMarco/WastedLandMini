@@ -130,10 +130,13 @@ A minimal patch can change only the displayed name:
 ```
 
 Editable fields are `name`, `article`, `width`, `height`, `blocks`, `container`, `display_of`,
-`light`, `category`, `seat`, `use` and `build`. `category` is `furniture` or `decor` and decides where the kind
+`light`, `category`, `seat`, `use`, `uses` and `build`. Whatever else a kind has, what it gives
+taken apart, the current it draws, what it stores, is kept as it was. `category` is `furniture` or `decor` and decides where the kind
 appears in the Urbanismo catalogue. A `use` object is itself patched field by field, so
 `{"id":"bed", "use":{"minutes":480}}` keeps the sleeping action and changes only its duration.
-Set `"use": null` to remove the use entirely. Every placed object of that kind receives the
+Set `"use": null` to remove the use entirely. `uses` is a list of whatever else can be done
+with the thing (S60), each written as a `use` with an `action` of its own and a `label`, which
+is what it is called where it is offered: a pack that gives one replaces the whole list. Every placed object of that kind receives the
 modified definition; object instances and saved games continue to store only their stable IDs.
 
 `build` says what putting one up takes: `{"cost": {"scrap": 2}, "minutes": 60, "job": "mechanic"}`.

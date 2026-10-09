@@ -3387,7 +3387,8 @@ class GlobalView:
         placed = self.world.interactables.get(activity.target_id)
         if placed is None:
             return None
-        use = self.world.definition_of(placed).use
+        # By the use they are at: a thing may offer several, and not all of them from on top of it (S60).
+        use = self.world.definition_of(placed).use_for(activity.action)
         return placed if use is not None and use.position == "on" else None
 
     def _lying_draw(self, resident: Resident, placed: Interactable) -> Draw:

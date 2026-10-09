@@ -741,7 +741,7 @@ class SimulationWorld:
         if activity is None or not activity.using or activity.target_id is None:
             return True
         placed = self.interactables.get(activity.target_id)
-        use = self.definition_of(placed).use if placed is not None else None
+        use = self.definition_of(placed).use_for(activity.action) if placed is not None else None
         return use is None or not use.unaware
 
     def is_dark(self) -> bool:

@@ -318,7 +318,7 @@ class ActivitySystem:
 
     def _use_of(self, world: "SimulationWorld", activity: Activity) -> UseDefinition | None:
         placed = world.interactables.get(activity.target_id) if activity.target_id else None
-        return world.definition_of(placed).use if placed is not None else None
+        return world.definition_of(placed).use_for(activity.action) if placed is not None else None
 
     def _begin(
         self, world: "SimulationWorld", resident: Resident, activity: Activity, use: UseDefinition | None

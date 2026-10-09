@@ -177,6 +177,12 @@ class HousingSystem:
     def _is_bed(use: UseDefinition) -> bool:
         return use.unaware and use.per_minute.get("tiredness", 0.0) < 0
 
+    def _of_a_bed(self, world: "SimulationWorld", placed: Interactable, use: UseDefinition) -> bool:
+        """Whether a use is of a bed: sleeping in it, or anything else that is done with a
+        thing that is slept in (S60). A bed is whose it is whatever is done in it."""
+        main = world.definition_of(placed).use
+        return self._is_bed(use) or (main is not None and self._is_bed(main))
+
     def _at_work(self, world: "SimulationWorld", resident: Resident, placed: Interactable) -> bool:
         job = world.registries.jobs.get(resident.job_id or "")
         return job is not None and job.works_at(placed.kind)
@@ -191,7 +197,7 @@ class HousingSystem:
         room = self.room_of(world, placed)
         if room is None or not self.applies(world) or self._at_work(world, resident, placed):
             return True
-        if self._is_bed(use):
+        if self._of_a_bed(world, placed, use):
             return bool(self.owners(world, room.room_id)) and self.lives_in(world, resident, room)
         return self.welcome(world, resident, room)
 
@@ -199,7 +205,7 @@ class HousingSystem:
         """Whether somebody who may not use a thing would go in for it all the same: a need of
         theirs that it sees to has got that bad, it is no bed, and the door is not locked."""
         room = self.room_of(world, placed)
-        if room is None or self._is_bed(use) or self.locked(world, room):
+        if room is None or self._of_a_bed(world, placed, use) or self.locked(world, room):
             return False
         return any(
             use.per_minute.get(need, 0.0) < 0 or use.consumes is not None and need == "hunger"

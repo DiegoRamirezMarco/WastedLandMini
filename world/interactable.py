@@ -76,6 +76,8 @@ class InteractableDefinition:
     # Whether items can be kept inside.
     container: bool = False
     use: UseDefinition | None = None
+    # Whatever else can be done with it beside what it is mainly for, each a use of its own (S60).
+    more: tuple[UseDefinition, ...] = ()
     # Kind of container whose contents this object shows off, as a shop's shelves show its stock.
     display_of: str | None = None
     # How many tiles around it this object lights after dark. 0 for something that gives no light.
@@ -106,6 +108,20 @@ class InteractableDefinition:
     # By how much what is kept in it goes off more slowly than anywhere else, while it has
     # current (S65): a quarter for what keeps four times as long. One for what does not chill.
     chill: float = 1.0
+
+    @property
+    def uses(self) -> tuple[UseDefinition, ...]:
+        """Everything there is to do with one, what it is mainly for first."""
+        return ((self.use,) if self.use is not None else ()) + self.more
+
+    def use_named(self, action: str | None) -> UseDefinition | None:
+        """The use of it that goes by an action, if it has one that does."""
+        return next((use for use in self.uses if use.action == action), None)
+
+    def use_for(self, action: str | None) -> UseDefinition | None:
+        """The use of it somebody at an action is at: the one that goes by it, or else what
+        it is mainly for."""
+        return self.use_named(action) or self.use
 
 
 @dataclass
@@ -144,6 +160,7 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         blocks=bool(data.get("blocks", True)),
         container=bool(data.get("container", False)),
         use=_use_from_data(kind, data["use"]) if data.get("use") is not None else None,
+        more=tuple(_use_from_data(kind, each) for each in data.get("uses") or ()),
         display_of=str(data["display_of"]) if data.get("display_of") is not None else None,
         light=int(data.get("light", 0)),
         urbanism_category=str(data.get("category", "furniture")),
@@ -177,6 +194,11 @@ def interactable_definition_from_data(kind: str, data: dict[str, Any]) -> Intera
         )
     if definition.use is not None and definition.use.sells and not definition.container:
         raise ValueError(f"Interactable {kind} sells things, so it must be a container")
+    actions = [use.action for use in definition.uses]
+    if len(set(actions)) != len(actions):
+        raise ValueError(f"Interactable {kind} has more than one thing to do with it, each by an action of its own")
+    if any(not use.label for use in definition.more):
+        raise ValueError(f"Whatever else is done with interactable {kind} needs a label to be told by")
     return definition
 
 

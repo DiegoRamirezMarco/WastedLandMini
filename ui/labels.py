@@ -327,10 +327,12 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
             return "le da vueltas a algo"
         return "pasea" if activity.path else "sin hacer nada"
     definition = world.definition_of(placed)
-    if not activity.using or definition.use is None:
+    # What they are at is the use of it that goes by what they do: a thing may offer several (S60).
+    use = definition.use_for(activity.action)
+    if not activity.using or use is None:
         return f"va hacia {definition.article} {definition.name}"
-    text = definition.use.text
-    item_id = activity.item_id or definition.use.item_id
+    text = use.text
+    item_id = activity.item_id or use.item_id
     if item_id is not None:
         item = world.items.definition_for(world, item_id)
         text = text.replace("{item}", f"{item.article} {item.name}")

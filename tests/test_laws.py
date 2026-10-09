@@ -5,7 +5,7 @@ from simulation.events.event import DomainEvent
 from simulation.politics.law import EFFECTS, law_definition_from_data, law_settings_from_data
 from simulation.politics.proposal import ENACT_LAW
 from simulation.politics.records import ACCEPTED
-from simulation.registries import BuiltInRegistries
+from simulation.registries import BuiltInRegistries, InteractableRegistry
 from simulation.residents.activity import ATTEND_ACTION, RETIRE_ACTION, Activity
 from simulation.residents.needs import Needs
 from simulation.work.work_system import minutes_left_in_shift
@@ -364,6 +364,12 @@ class CurfewTests(unittest.TestCase):
 class UseTests(unittest.TestCase):
     def test_under_a_dry_law_whoever_keeps_it_does_not_drink_and_whoever_does_not_is_seen_at_it(self) -> None:
         world = _governed()
+        # With nothing to do of an evening but what each thing is for: whoever is on edge
+        # and will not keep the law has the bar, and not a song by the fire instead (S60).
+        kinds = InteractableRegistry()
+        for kind in world.registries.interactables.kinds():
+            kinds.register(replace(world.registries.interactables.get(kind), more=()))
+        world.registries = replace(world.registries, interactables=kinds)
         world.politics.laws.enact(world, "dry_law")
         _obeys(world, "paco", "lucia")
         _defies(world, "raul")

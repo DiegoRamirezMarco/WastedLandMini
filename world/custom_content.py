@@ -45,12 +45,17 @@ def _use_data(use: UseDefinition) -> dict[str, Any]:
         "staffed_by": use.staffed_by,
         "heals": use.heals,
         "care_job": use.care_job,
+        "care_item": use.care_item,
+        "care_from": use.care_from,
+        "dose_minutes": use.dose_minutes,
         "price": use.price,
         "sells": use.sells,
         "repairs": use.repairs,
         "material": use.material,
         "material_from": use.material_from,
         "radio": use.radio,
+        "label": use.label,
+        "trains": use.trains,
     }
 
 
@@ -64,11 +69,23 @@ def _definition_data(definition: InteractableDefinition) -> dict[str, Any]:
         "blocks": definition.blocks,
         "container": definition.container,
         "use": _use_data(definition.use) if definition.use is not None else None,
+        "uses": [_use_data(use) for use in definition.more],
         "display_of": definition.display_of,
         "light": definition.light,
         "category": definition.urbanism_category,
         "seat": definition.seat,
         "build": build_rule_data(definition.build),
+        "salvage": (
+            {"item": definition.salvage.item, "units": definition.salvage.units, "minutes": definition.salvage.minutes}
+            if definition.salvage is not None
+            else None
+        ),
+        "draws": definition.draws,
+        "gives": definition.gives,
+        "post_pace": definition.post_pace,
+        "store": dict(definition.store) if definition.store is not None else None,
+        "outlet": dict(definition.outlet) if definition.outlet is not None else None,
+        "chill": definition.chill,
     }
 
 

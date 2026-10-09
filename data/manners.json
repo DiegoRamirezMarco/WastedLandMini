@@ -6,7 +6,7 @@
     "shoot": {"name": "Disparar", "occasion": "fight", "weapon_tag": "firearm"},
     "knife": {"name": "Cuchillo", "occasion": "fight", "weapon_tag": "blade"},
     "argue": {"name": "Discutir", "occasion": "argue"},
-    "sit": {"name": "Sentarse", "occasion": "sit", "actions": ["relax", "listen", "eat", "drink", "sit", "cards", "stories"]}
+    "sit": {"name": "Sentarse", "occasion": "sit", "actions": ["relax", "listen", "eat", "drink", "sit", "cards", "stories", "sit_table", "sing", "play_chess"]}
   },
   "manners": {
     "walk_steady": {

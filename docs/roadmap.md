@@ -5302,7 +5302,7 @@ Still open here:
 - What a crate holds cannot be given from the crate's own panel
 - The `Almacén` does not say what whoever is selected makes of each thing, where it is known
 
-### S60 — More than one thing to do with a thing (needs S30 and P27) — planned
+### S60 — More than one thing to do with a thing (needs P27) — done
 The third layer: what is done with things and with each other.
 
 - **A piece of furniture offers several things to do**, as data, where it offered one
@@ -5313,6 +5313,71 @@ Asked on 2026-10-09, since a click on a thing has shown what there is to say of 
 and answered:
 - **With somebody selected, a click on a thing opens the ring of what they can do with it**,
   with a way from it to what is said of the thing. With nobody selected it shows that, as now
+
+What there is, of which the ring is P63:
+- **A kind of object has what it is mainly for and whatever else can be done with it**, as
+  data: `use`, as ever, and `uses`, a list of more, each a use like the first with an action
+  of its own, what it is called, what is said of whoever is at it, how long it takes and what
+  it does a minute
+- **Ten more things to do with what there was**: lie down a while on a bed, sing by the
+  fire, dance to the radio, wash at the tank or at the well, play a game at the chess
+  table, skip for the sake of it, let off steam at the dummy and throw some darts at the
+  target. And a table, which had nothing to it, is something to sit at
+- **Residents weigh every one of them** when they choose what to do, each for what it is
+  worth to them then: whoever is on edge and not thirsty washes sooner than drinks. What a
+  thing offers beside what it is for is weighed without the grain of chance the rest is
+  weighed with, so the settlement's dice are thrown as often as they were and no oftener:
+  a settlement goes as it went, minute for minute, until somebody takes one of them up.
+  And it appeals a little less than what a thing is for, three quarters as much, and than
+  a thing of their own that is to hand: a table to sit at does not come before the fire,
+  nor before the toy somebody carries
+- **One in particular is told** with the order to use a thing, which names the thing and
+  the use, `water_tank|wash`. Told plainly, it is what the thing is mainly for.
+  `AffectSystem.things_to_do` lists what somebody can be told to do with a thing as things
+  stand, what it is mainly for first
+- **Everything about whoever is at a thing goes by the use they are at**: what is said of
+  them, what it does to them and for how long, and whether they notice what goes on.
+  Somebody lying down on a bed sees what happens in the room; somebody asleep in it does not
+- **There is room at a thing for so many, whatever each is doing with it**: a bed with
+  somebody lying on it is taken
+- **A bed is whose it is whatever is done in it**: nobody lies down on somebody else's
+- **Measured** over eighteen seeds of six weeks, with them and with each thing left its one
+  use, in the same tree: nobody dies either way, with about as much food at the end (95
+  against 102, less apart than one seed is from the next), the same spirits (56.8 against
+  57.4) and as much said between them (533 chats against 531). It was not so at first:
+  sitting at a table
+  and lying down a while took sleep off whoever did them, and by night, too hungry to
+  settle down to sleep, people sat up instead, night after night. In fifteen settlements of
+  eighteen everybody had died within six weeks. Rest is a bed's, slept in: the two ease the
+  nerves now and no more, and a test holds that nothing added to a thing is rest. Left to
+  themselves residents take the ten up for less than an hour a day among them all, mostly a
+  song by the fire of an evening: they ease nerves that are seldom on edge, and that waits
+  for wanting to be entertained to be a need (S62)
+
+Decided without asking:
+- **Which ten**, and what each does: all of them ease the nerves, some tire, the fire and a
+  song keep company
+- **Residents do them unasked**, as they do anything else that is there to be used. The
+  things to train at are still only for whoever is told (S57): what was added to them is the
+  pastime, not the training
+- **A table is still for nothing in particular**: sitting at it is one more thing to do with
+  it, and it has no use that is its own
+- **Six tests that held a seed to something were going to fail** when each thing a resident
+  weighed threw a die more, for every day of every seed going another way. Weighing them
+  without the dice was the answer to that, and not six new seeds
+- **What a thing offers beside appeals three quarters as much as what a thing is for.**
+  Weighed the same, whoever was on edge sat at a table before taking out the toy they
+  carry, which is worth four fifths to them: things of their own would have gone unused
+- **Being told to eat, drink, sleep or unwind still goes to what a thing is mainly for**
+- **S30 is not built**, and this does not wait for it: what there is to do is still
+  furniture's, as data, and not a handler that an item names
+- **Nothing is saved that was not**: a use is told apart by its action, which was saved
+
+Still open here:
+- The ring of what can be done with a thing, and dropping somebody on it, is P63
+- None of the ten has a movement of its own: whoever dances stands
+- None is for two at once: chess is played alone
+- Nobody tires of doing the same thing
 
 ### S61 — Wishes, and what weighs on somebody (needs S60) — planned
 - **A resident comes to want small things**, which they see to themselves or are helped to
