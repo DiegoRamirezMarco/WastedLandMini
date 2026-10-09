@@ -6175,6 +6175,27 @@ mete a un enemigo monstruo con garras":
   of the new enemies asked for with S68, met from the mountain on
 - The options of the trial say who is met, how many and of what level
 
+Asked on seeing that: "los desmembramientos que sean a camara lenta y con zoom epico. rematar
+en el suelo puede ser guay, agacharse y liarse a puñetazos, hasta que el de abajo gane un
+dado de fuerza contra el que lo esta golpeando. lo de la municion mola, que antes del
+combate te diga con que arma quiere luchar":
+- **A part coming off is seen slowly and from near**: time at a seventh of its pace for a
+  second and a half, longer for a head, and how it ended is said only after. Only seen:
+  nothing of it is in the rules. It can be turned off in the options
+- **Somebody on the ground is got down on and pounded** by whoever is right up to them and
+  fights with their hands: fists, fast, whatever they carry. After each blow the one under
+  throws a die and their Strength against a die and the Strength of the one on them, and
+  with more is up and has them off. Theirs do it to ours
+- **What is fired holds so many rounds a fight**, one a shot. With none left it is what is
+  in the hand, or bare hands
+- **On coming on them it is asked what they fight with**, of what they carry: what is in
+  the hand, what is fired, or both; it can be changed as the fight goes
+
+Decided without asking there: the top face of the die always gets them off, so that nobody
+is held for ever; a beast claws at whoever it is on, no faster than it claws; a telling
+blow on somebody on the ground is struck with the weapon and not with fists; raiders run out
+of rounds too; and the kneeling is a clip of the trial's own, written as the game's are.
+
 Decided without asking, in the trial:
 - **A telling blow is never dodged**, and the fight goes on at a fifth of its pace while its
   mark is being stopped
@@ -6188,7 +6209,7 @@ Decided without asking, in the trial:
 
 Still to settle, to be asked before it is brought in:
 - How often raiders are come on in a trip, and where along it
-- Where medkits come from, and what is handed over to be let by
+- Where medkits and rounds come from, and what is handed over to be let by
 - Whether what is worn (P66, S66) stops anything
 - The new enemies of each zone, which the user asked for with S68
 
