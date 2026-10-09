@@ -25,6 +25,8 @@ from simulation.memory.memory import Memory
 from simulation.registries import DEFAULT_MAP_ID, BuiltInRegistries, builtin_registries
 from simulation.residents.activity import Activity, Order
 from simulation.residents.needs import Needs
+from simulation.residents.wishes import KINDS as WISH_KINDS
+from simulation.residents.wishes import Wish
 from simulation.politics.government import MEASURES
 from simulation.politics.political_event import PoliticalEvent
 from simulation.politics.profile import PoliticalProfile
@@ -165,7 +167,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 50
+    CURRENT_VERSION = 51
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -416,6 +418,7 @@ class SaveManager:
             "power_burnt": world.power_burnt,
             "dressed": dict(world.dressed),
             "words": _words_to_data(world.words),
+            "wishes": [vars(wish) for wish in world.wishes_of.values()],
             "vacancies": dict(world.vacancies),
             "deaths": [vars(death) for death in world.deaths],
             "decisions": [_decision_to_data(decision) for decision in world.decisions.values()],
@@ -1132,6 +1135,19 @@ class SaveManager:
             for object_id, until in _object_or_empty(data.get("dressed")).items()
             if isinstance(until, int) and not isinstance(until, bool)
         }
+        # What each resident wants. Nobody wants anything in a save from before (S61).
+        world.wishes_of = {}
+        for saved in _list_or_empty(data.get("wishes")):
+            whole = (
+                isinstance(saved, dict)
+                and saved.get("kind") in WISH_KINDS
+                and all(isinstance(saved.get(key), str) for key in ("resident_id", "what"))
+                and all(isinstance(saved.get(key), int) and not isinstance(saved.get(key), bool) for key in ("since", "until"))
+            )
+            if whole and saved["resident_id"] in world.residents:
+                world.wishes_of[saved["resident_id"]] = Wish(
+                    saved["resident_id"], saved["kind"], saved["what"], saved["since"], saved["until"]
+                )
         # The words the player has given. None in a save from before (S58).
         world.words = _words_from_data(data.get("words"))
         world.vacancies = {

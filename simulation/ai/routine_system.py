@@ -141,6 +141,10 @@ class RoutineSystem:
             wish = SHELTER_SCORE + 0.5 * need_urgency(resident, "stress")
             scored.append(ScoredAction(SHELTER_ACTION, wish + self._noise(world)))
         scored.append(ScoredAction(WANDER_ACTION, WANDER_SCORE + self._noise(world)))
+        if resident.resident_id in world.wishes_of and not indoors and not world.happenings.is_stormy(world):
+            # Whoever wants something is a little the readier to do what would meet it (S61).
+            # It can wait, though: for the law that has them indoors, and for the weather.
+            scored = [replace(each, score=each.score + world.wishes.pull(world, resident, each)) for each in scored]
         return scored
 
     def can_relieve(self, world: "SimulationWorld", resident: Resident, need: str) -> bool:

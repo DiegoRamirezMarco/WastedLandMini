@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `50` |
+| `version` | `51` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -51,6 +51,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 | `taste_seen_as` | The same way round as `taste_knowledge`: the reaction each taste looked like the last time it showed |
 | `taste_knowledge` | Per onlooker (`@player`, or a resident ID), per resident, per taste (`tag:sweet`, `item:stew`, `category:food`): how much of it has been seen |
 | `words` | The words the player has given (S58): `lists` (per list ID, each word with its `word_id`, `text`, `by`, the resident who asked for it or `null`, and the `day` it was given), `phrases` (per resident ID, their own by phrase ID), `nicknames` (per resident ID, what they call each other resident), `asks` (what residents wait to be given: `ask_id`, `resident_id`, `kind`, `what` and `since`), `ask_count` and `told` (per resident ID, who they were told to talk to and the subject) |
+| `wishes` | What each resident wants right now (S61): a list of `resident_id`, `kind` (`eat`, `with`, `have`, `do`), `what` (an item, a resident or an action, by ID), and `since` and `until` in game minutes. Nobody is in it twice |
 | `ledger` | The settlement's books (S51): `day` (the day being written down, or `0` if they have not been opened), `opened_at` (the game minute they were opened at), `today` (per resource ID, what has come in, above nothing, and gone out, below it, by why: `made:farmer`, `eaten`, `other`), `days` (the same per day, for the last days kept) and `held` (per day, what the settlement had of each resource when it ended). Missing in an older save, which has nothing written |
 | `tutorial` | Where a new settlement is in its opening: `step` (a step ID from `data/tutorial.json`, or `null` once it is over or if it never had one), `since` (game minute the step began), `opened`, `acknowledged`, the `deeds` the player has done of what the step asks them to do themselves, and the IDs of the steps `done` |
 
@@ -88,6 +89,11 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 51** added `wishes` (S61): what each resident wants right now, as a list of
+  `resident_id`, `kind` (`eat`, `with`, `have`, `do`), `what` (an item, a resident or an
+  action, by ID), and `since` and `until` in game minutes. In a save from before nobody
+  wants anything. One that is not whole, of no known kind, or of somebody who is not
+  there is left out.
 - **Version 50** added `source`, `units` and `owner` on a discovery (S59): where something
   that was found came from, how many of it wait to be named and whose they are then.
   In a save from before every discovery was come to at a job. A discovery with a `source`

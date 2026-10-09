@@ -41,6 +41,8 @@ watches, advises and intervenes, but does not control them.
   dare, couples, affairs kept secret until someone finds out, jealousy and breakups.
 - Things put in somebody's hands, to see how they take them, and things nobody knows that
   turn up from outside for the player to name and draw.
+- Wishes of their own: something to eat, a while with somebody, a thing to have, something
+  to do. They see to them when they can, or the player helps, and one let go is remembered.
 - Talk that is about something: a thing, somebody, a piece of news, or a word the player
   gave when a resident asked for one. How whoever listens takes it, by tastes of their own,
   tells on how the two get on, and the player can tell somebody what to talk about.

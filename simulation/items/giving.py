@@ -96,6 +96,8 @@ class GiveSystem:
         )
         reaction = world.tastes.react(world, resident, definition, HANDED)
         self._remember(world, resident, definition, reaction)
+        # If it is the very thing they wanted, that is their wish met (S61).
+        world.wishes.handed(world, resident, definition_id)
         return GiveResult(True, f"{resident.name} tiene ahora {thing}", reaction)
 
     def _remember(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition, reaction: str) -> None:

@@ -50,6 +50,9 @@ Event types emitted so far:
 | `chat_started` | Two residents start a friendly chat. Where it is about something (S58) the text says what, and nobody is quoted | 10 |
 | `subject_taken` | Whoever listened to a talk took its subject well or badly, with `resident_id`, `speaker_id`, `subject` (`item:stew`, `person:ines`, `word:insults.zopenco`, `fact:fact_12`) and `reaction` (`hated`, `disliked`, `liked`, `loved`) in `data`. Taking it as it comes is not an event | 8 |
 | `word_asked` | A resident wants something of the player: a word for a list, a phrase, a name for somebody, or what to talk to somebody about, with `ask_id`, `resident_id`, `kind` (`word`, `phrase`, `nickname`, `subject`) and `what` (the list, the phrase or the other resident) in `data` | 30 |
+| `wish_made` | A resident comes to want something (S61), with `resident_id`, `kind` (`eat`, `with`, `have`, `do`) and `what` (an item, a resident or an action, by ID) in `data` | 14 |
+| `wish_met` | What a resident wanted, they have: they ate it, were handed it, spent a while with whoever it was, or did it. `data` as `wish_made` | 20 |
+| `wish_lapsed` | A resident lets go unmet of what they wanted, after a day or because whoever it was is gone. `data` as `wish_made` | 16 |
 | `word_given` | A word has gone into one of the settlement's lists, with `word` in `data`; whoever asked for it is the participant | 12 |
 | `argument_started` | Two residents start an argument | 35, plus up to 30 with the resentment between them, plus 15 if one went looking for the other |
 | `heart_to_heart_started` | A resident talks things out after a crisis | 30 |

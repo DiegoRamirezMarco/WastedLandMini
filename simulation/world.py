@@ -49,6 +49,7 @@ from simulation.residents.manner import MannerDefinition
 from simulation.residents.attributes import Attributes
 from simulation.residents.personality import Personality
 from simulation.residents.resident import Resident
+from simulation.residents.wishes import Wish, WishSystem
 from simulation.rng import SimulationRNG
 from simulation.social.bonds import BondSystem
 from simulation.substances.substance_system import SubstanceSystem
@@ -102,6 +103,9 @@ class SimulationWorld:
     activities: ActivitySystem = field(default_factory=ActivitySystem)
     attributes: AttributeSystem = field(default_factory=AttributeSystem)
     crafts: CraftSystem = field(default_factory=CraftSystem)
+    # What each resident wants right now, if anything, by resident ID (S61).
+    wishes: WishSystem = field(default_factory=WishSystem)
+    wishes_of: dict[str, Wish] = field(default_factory=dict)
     # What turns up that nobody knows, and things put in somebody's hands by the player (S59).
     finds: FindSystem = field(default_factory=FindSystem)
     giving: GiveSystem = field(default_factory=GiveSystem)
@@ -264,6 +268,7 @@ class SimulationWorld:
             self.attributes.tick_day(self)
         self.justice.tick(self)
         self.talk.tick(self)
+        self.wishes.tick(self)
         self.housing.tick(self)
         self.activities.begin_minute(self)
         for resident in list(self.residents.values()):

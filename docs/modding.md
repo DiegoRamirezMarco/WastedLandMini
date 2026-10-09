@@ -1385,6 +1385,56 @@ file nothing is about anything, and a chat quotes a line as it used to.
 A word is a taste tag, `word_<list>.<word>`, with a leaning for each resident like any other
 tag.
 
+## Wishes
+
+`data/wishes.json` is what residents come to want of their own accord (S61). Without the
+file, or with `chance` at 0, nobody wants anything.
+
+```json
+{
+  "chance": 0.04,
+  "hours": [8, 22],
+  "lasts_hours": 24,
+  "met_mood": 10,
+  "lapsed_mood": -6,
+  "met_value": 0.5,
+  "lapsed_value": -0.3,
+  "liked_from": 20,
+  "fond_from": 20,
+  "pull": 0.3,
+  "kinds": {
+    "eat": {
+      "text": "{name} tiene antojo de {what}",
+      "weight": 3,
+      "categories": ["food", "drink"],
+      "met": "Tenía antojo de {what}, y me di el gusto.",
+      "lapsed": "Me quedé con el antojo de {what}.",
+      "got": "{name} se da el gusto de {what}",
+      "lost": "A {name} se le pasa el antojo de {what}"
+    }
+  }
+}
+```
+
+- **`chance`** is how likely a wish is to come to somebody who has none, each hour between
+  the two `hours` of the day, and **`lasts_hours`** how long they have to see it met.
+- **`met_mood`** and **`lapsed_mood`** are what one met and one let go do to their mood,
+  and **`met_value`** and **`lapsed_value`** how the memory of each sits with them, from -1
+  to 1.
+- **`liked_from`** is how much a thing has to be to their taste to be wished for, and
+  **`fond_from`** how much affection they need for somebody to wish to be with them.
+- **`pull`** is how much is added to the score of whatever would meet it, when they choose
+  what to do.
+- **`kinds`** are the kinds of wish there are, of `eat`, `with`, `have` and `do`: leave one
+  out and nobody wishes that way. Each has the `text` said of whoever has it, `got` and
+  `lost` for when it is met and let go, all three with `{name}` and `{what}`, and what they
+  remember of it, `met` and `lapsed`, with `{what}`. `weight` is how often it is that kind
+  beside the others. `eat` and `have` need the `categories` of item wished for that way:
+  give a pack's items one of them and they are wished for with no more said.
+
+What there is to do, for `do`, is every pastime of `data/leisure.json` and everything in
+the `uses` of the kinds of object that stand in the settlement, save what is for training.
+
 ## Friendship and romance
 
 `data/relationships.json` holds the rules:

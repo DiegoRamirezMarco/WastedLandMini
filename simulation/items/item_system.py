@@ -203,6 +203,9 @@ class ItemSystem:
         ]
         if not choices:
             return None
+        # Whoever wants one thing in particular takes that, where there is some (S61).
+        fancied = world.wishes.fancied(world, resident)
+        choices = [item for item in choices if item.definition_id == fancied] or choices
         resolve = world.registries.items.resolve
         taste = world.registries.tastes.food_choice
         # What answers their needs comes first. Among those, what does most, and what they like.

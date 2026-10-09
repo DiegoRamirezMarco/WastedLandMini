@@ -5379,7 +5379,7 @@ Still open here:
 - None is for two at once: chess is played alone
 - Nobody tires of doing the same thing
 
-### S61 — Wishes, and what weighs on somebody (needs S60) — planned
+### S61 — Wishes, and what weighs on somebody (needs S60) — done
 - **A resident comes to want small things**, which they see to themselves or are helped to
 - **What has lifted their spirits and what has brought them down**, as a list, on their panel
 
@@ -5390,6 +5390,81 @@ Asked on 2026-10-09, and answered:
 - **A wish that is met lifts their spirits and is remembered**, and one that lapses unmet is
   remembered too, the other way. Not the recommendation, which had it count for more when
   it was the player who met it
+
+What there is, of which what is seen of it is P63:
+- **A resident wants one thing at a time**, kept by resident in `world.wishes_of` and saved:
+  what kind of wish it is, what it is for, since when and until when. The rules are
+  `data/wishes.json`
+- **Four kinds, as data**: something to eat or drink, a while with somebody, a thing to have,
+  and something to do. Each says how it is told, how it is told met and let go, what is
+  remembered of it either way and how much it weighs beside the rest. The two that are for
+  a thing say which categories of thing: food and drink to eat, and to have, what is kept
+  and used, which is a tool, a radio, or a trinket somebody found (S59)
+- **What they come to want is out of what they know of and like**: a thing they carry or
+  that is kept in the settlement as everybody's or their own, and that they would take to
+  (`TasteSystem.fancy`, which makes no taste of its own); somebody they are fond of; any
+  pastime (S49), and anything else there is to do with the things that stand there and
+  are theirs to use (S60). Nobody wishes for a thing to have that they have, for what a
+  law they keep forbids them, or for what they have made up their mind against
+- **One may come on the hour, by day**, to whoever is in the settlement and wants nothing:
+  about one every other day each, and it lasts a day. None comes during the tutorial
+- **It is met** by eating or drinking the thing, or by being handed it (S59); by a friendly
+  exchange with whoever it was, and not by a quarrel; by having one of the thing that is
+  theirs, however they came by it; by doing what it was
+- **They see to it themselves when the chance comes**: they are a little the readier to
+  talk to whoever it is, to do the thing, and to go and eat or drink where there is some of
+  it, hungry or not, and whoever eats or drinks from where there is some takes that and
+  nothing else. It can wait, though: nothing pulls while a law they keep has them indoors,
+  or in a storm
+- **The player helps** with what there was: hands the thing over from the `Almacén`, tells
+  them to go and talk to somebody, to pass the time, or to use a thing
+- **Met, it lifts their spirits and is remembered as something good. Let go unmet, it
+  brings them down and is remembered the other way**, by less. Whoever they wanted to be
+  with leaving the settlement, or dying, lets it go there and then
+- **Wishing throws none of the settlement's dice**: whether one comes and which is by a die
+  of its own, keyed by who and when. What changes in a settlement is what follows from
+  what they then do
+- Domain events `wish_made`, `wish_met` and `wish_lapsed`
+- **Measured** over eighteen seeds of six weeks, with wishes and without, in the same
+  tree: nobody dies either way, with as much food at the end (105 against 95), the same
+  spirits (56.8 either way) and as much said between them (535 chats against 533). A
+  settlement of ten comes to want some four things a day among them all, and with nobody
+  to help, a little over half are met (90 of 175 in six weeks): what there is to eat, a
+  while with somebody, a song by the fire. What is wished for to have waits for the player
+
+Decided without asking:
+- **`Other`, ticked with nothing written beside it, is taken as no fifth kind.** Say what
+  it was and it goes in as one
+- **One wish at a time**, and none comes to whoever has one
+- **How often and for how long**: one hour in twenty-five of the day's fourteen, a day to
+  see to it
+- **How much**: ten of spirits for one met and six off for one let go, and each is
+  remembered for a little less than a present that was loved and one that was hated are
+- **What is wished for to have is what is kept**: nobody wishes they had scrap, fuel,
+  medicine or water, though they may like them, nor a vice, which whoever depends on it
+  craves in a way of its own (S23)
+- **Handed the very thing they wanted to eat, the wish is met there and then**, without
+  waiting for them to eat it
+- **Nobody goes and takes from a store a thing they want to have.** That one is for the
+  player to give, which is what giving by hand was for, or for them to come by some other way
+- **It makes no difference who or what met it**, as answered: a wish somebody else happened
+  to meet counts as much
+- **A thing wished for to have is met by any one of it that is theirs**, however rare
+- **One test that held a seed to something moved to another**: three nights under a curfew
+  see it broken by nobody but the two who owe the government nothing at seed 7 without
+  wishes and not with them. Somebody else is caught out late in eleven seeds of eighteen
+  without wishes and in twelve with them, so it is the seed's luck and not the rule. The
+  settled world the tests of work count units in has nobody wishing: somebody who fancies
+  a stew has one
+
+Still open here:
+- What somebody wants, over their head and on their panel, is P63, with the list of what
+  has lifted their spirits and what has brought them down
+- Nobody says what they want, to the player or to each other: it could be something to
+  talk about (S58)
+- Nobody goes and gets a thing they want to have, or buys it
+- What somebody is like does not tell in what they wish for, beyond their tastes
+- Nobody wishes for something to do with somebody: a game of chess is played alone (S60)
 
 ### S62 — Leisure of their own accord (needs S49 and S31) — planned
 - **Wanting to be entertained is a need of its own**, which tedium and work raise and pastimes

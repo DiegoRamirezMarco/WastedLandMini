@@ -26,6 +26,7 @@ from simulation.items.registry import ItemRegistry
 from simulation.residents.manner import MannerSettings, manner_settings_from_data
 from simulation.residents.attributes import ATTRIBUTES, AttributeSettings, attribute_settings_from_data
 from simulation.residents.personality import Personality
+from simulation.residents.wishes import WishSettings, wish_settings_from_data
 from simulation.social.bonds import BondSettings, bond_settings_from_data
 from simulation.social.interaction import InteractionDefinition, interaction_definition_from_data
 from simulation.justice.settings import JusticeSettings, justice_settings_from_data
@@ -170,6 +171,8 @@ class BuiltInRegistries:
     attributes: AttributeSettings = field(default_factory=AttributeSettings)
     # The levels of a job, and the kinds of thing each job teaches.
     crafts: CraftSettings = field(default_factory=CraftSettings)
+    # What residents come to want, how often, and what it is worth to them met and unmet (S61).
+    wishes: WishSettings = field(default_factory=WishSettings)
     # The kinds of thing nobody knows that turn up, and where from (S59).
     finds: FindSettings = field(default_factory=FindSettings)
     injuries: dict[str, InjuryDefinition] = field(default_factory=dict)
@@ -301,6 +304,9 @@ class BuiltInRegistries:
         crafts_path = root / "crafts.json"
         if crafts_path.is_file():
             registries.crafts = craft_settings_from_data(_read_object(crafts_path))
+        wishes_path = root / "wishes.json"
+        if wishes_path.is_file():
+            registries.wishes = wish_settings_from_data(_read_object(wishes_path))
         finds_path = root / "finds.json"
         if finds_path.is_file():
             registries.finds = find_settings_from_data(_read_object(finds_path))

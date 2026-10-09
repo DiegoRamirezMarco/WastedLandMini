@@ -938,6 +938,38 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
 - **Being told what to do** counts for more or less by that taste: it scales how much the
   player's advice weighs when a resident decides.
 
+## Wishes
+
+- **A resident may want one thing at a time** (S61), kept in `world.wishes_of` by resident
+  ID: a `Wish` with its `kind`, `what` it is for, and the game minutes `since` and `until`.
+  The rules are `data/wishes.json`, read into `registries.wishes`.
+- **Four kinds**: `eat` (an item to eat or drink), `with` (a resident), `have` (an item to
+  keep) and `do` (the action of a pastime, or of anything else a thing that stands in the
+  settlement offers, S60).
+- **Coming to want.** `WishSystem.tick` runs every minute. On the hour, between the `hours`
+  of the day, each resident who is in the settlement and wants nothing throws a die of
+  their own, `SimulationRNG.keyed(seed, "wish", resident, minute)`: with `chance` they come
+  to want one of `WishSystem.options`, the kind by its `weight`. The options are the things
+  `TalkSystem.known_items` gives that are of the kind's `categories`, that they would take
+  to (`TasteSystem.fancy` from `liked_from`), that no law they keep forbids them and that
+  they have not sworn off; whoever they feel `fond_from` of affection for; and everything
+  there is to do: the pastimes, and what the things that are theirs to use offer beside
+  what they are for. The settlement's dice are not thrown.
+- **Met.** `WishSystem.met` is asked every minute: `have` by an item of that definition in
+  their inventory that is theirs; `with` by a friendly exchange under way with that
+  resident; `do` by being at that action; `eat` by eating or drinking that. A thing put in
+  their hands by `GiveSystem.give` that is the thing they wanted, to eat or to have, is
+  the wish met there and then (`WishSystem.handed`).
+- **Seeing to it.** `WishSystem.pull` is added to the score of everything they could do
+  next that would meet it: talking to that resident, doing that, and eating or drinking
+  from a container where there is some of what they want. Nothing is added while a law
+  they keep has them indoors, or in a storm. `ItemSystem.best_food` picks what they
+  fancied where there is some among what they may take.
+- **The end of it.** Met or, at `until`, let go: their mood moves by `met_mood` or
+  `lapsed_mood` and a memory tagged `wish` is made, of value `met_value` or
+  `lapsed_value`. A wish to be with somebody who is no longer there is let go at once.
+- Domain events: `wish_made`, `wish_met`, `wish_lapsed`.
+
 ## Friendship, romance and couples
 
 Everything here is between adults, and nothing happens to anyone who does not want it.
