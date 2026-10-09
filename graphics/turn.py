@@ -64,6 +64,34 @@ def limbs_apart(turn: BodyTurn, doll: Doll) -> dict[str, float]:
     return apart
 
 
+def _no_shorter(step: Point, least: float, down: float) -> Point:
+    """A part of a limb as it goes across and down the screen, and no shorter than the least
+    it may be: made longer the way it goes, or down or up as it went if it goes no way at all."""
+    long = math.hypot(*step)
+    if long >= least or least <= 0.0:
+        return step
+    if long < 1e-6:
+        return (0.0, least if down >= 0.0 else -least)
+    return (step[0] * least / long, step[1] * least / long)
+
+
+def _unfolded(before: Point | None, step: Point, sharpest: float, least: float) -> Point:
+    """A part of a limb that is bent no further from the part before it than so many degrees:
+    one that is, is folded back towards or away from whoever looks, and is shown going on
+    the way the part before it went and as short as it may be. Brought onto the screen as
+    it was, a limb folded back on itself is drawn as a spike, or sticks out to one side."""
+    if before is None or sharpest <= 0.0 or sharpest >= 180.0:
+        return step
+    long, was = math.hypot(*step), math.hypot(*before)
+    if long < 1e-6 or was < 1e-6:
+        return step
+    bend = math.atan2(before[0] * step[1] - before[1] * step[0], before[0] * step[0] + before[1] * step[1])
+    if abs(bend) <= math.radians(sharpest):
+        return step
+    short = max(least, 1e-3)
+    return (before[0] / was * short, before[1] / was * short)
+
+
 def turned_pose(
     turn: BodyTurn,
     apart: dict[str, float],
@@ -92,6 +120,8 @@ def turned_pose(
     fronted = (1.0 - swing) / (1.0 - turn.least_swing) if turn.least_swing < 1.0 else 0.0
     # In a mirror the near side is on the other hand, unless the names went over with it.
     hand = (-1.0 if mirrored else 1.0) * (-1.0 if swapped else 1.0)
+    # And what is ahead of a body in a mirror is the other way across.
+    facing = -1.0 if mirrored else 1.0
     shown = dict(pose)
     if swing < 1.0 and AXIS in pose:
         # The trunk and the head lean towards whoever looks, and so lean less across.
@@ -115,7 +145,12 @@ def turned_pose(
             to_its_side = out * (-1.0 if which == NEAR_SIDE else 1.0) * hand
             begins = (shown[hangs][0] if hangs is not None else pose[first][0]) + ahead * sine + to_its_side * cosine
             before, at = pose[first], begins
+            # How much nearer whoever looks each joint is than where the limb begins, by what
+            # it is ahead of it: and so how much lower on the screen, the ground being seen
+            # from above. From behind, what is ahead is further off, and higher.
+            nearer = turn.tilt * (1.0 if cosine >= 0.0 else -1.0) * facing
             shown[first] = (begins, pose[first][1])
+            reached, last = shown[first], None
             for joint in limb.joints[1:]:
                 if f"{joint}{which}" not in pose:
                     continue
@@ -123,13 +158,22 @@ def turned_pose(
                 across, down = x - before[0], y - before[1]
                 share = swing
                 least = math.hypot(across, down) * turn.least_long
-                if swing < 1.0 and across and (across * share) ** 2 + down * down < least * least:
+                # A hand or a foot, at the end of its limb, is one stiff picture drawn from
+                # its side: it is laid as it was before the ground was seen from above.
+                deep = bool(turn.tilt) and joint != limb.joints[-1]
+                if swing < 1.0 and not deep and across and (across * share) ** 2 + down * down < least * least:
                     # Seen all but end on, it would be no length at all: it is as much
-                    # across the screen as leaves it the least it may be.
+                    # across the screen as leaves it the least it may be. Where the ground is
+                    # seen from above it has its length down the screen or up it, and needs none.
                     share = min(1.0, math.sqrt(max(0.0, least * least - down * down)) / abs(across))
-                at += across * share
-                shown[f"{joint}{which}"] = (at, y)
-                before = (x, y)
+                step = (across * share, down)
+                if swing < 1.0 and deep:
+                    # What of it is not seen across the screen is towards whoever looks, or away.
+                    step = (step[0], down + across * (1.0 - share) * nearer)
+                    step = _unfolded(last, _no_shorter(step, least, down), turn.sharpest, least)
+                reached = (reached[0] + step[0], reached[1] + step[1])
+                shown[f"{joint}{which}"] = reached
+                before, last = (x, y), step
     return shown
 
 

@@ -324,6 +324,15 @@ class BodyTurn:
     # neck to its crown: that line brought in towards the middle of the trunk with the rest,
     # the head was seen to lean over to one side as the body came round to the front.
     stiff: tuple[tuple[str, str], ...] = ()
+    # How much lower on the screen what is nearer whoever looks is, as a share of how much
+    # nearer: the ground is seen from above, and a foot put forward by somebody who faces the
+    # window comes down the screen, as one put forward by somebody seen from behind goes up
+    # it. Without it a walk seen from the front is legs that hardly move.
+    tilt: float = 0.0
+    # The most a limb is bent at a joint when its body is nearer the front than three quarters,
+    # in degrees from straight: what is done towards whoever looks, brought onto the screen,
+    # may fold a limb right back on itself, and one so folded is drawn as a spike.
+    sharpest: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -415,6 +424,8 @@ def rules_from_data(data: dict[str, Any]) -> FaceRules:
         float(body.get("least_swing", 1.0)),
         float(body.get("least_long", 0.0)),
         tuple((str(by), str(joint)) for by, joint in body.get("stiff", ())),
+        float(body.get("tilt", 0.0)),
+        float(body.get("sharpest", 0.0)),
     )
     return FaceRules(
         kinds, views, names, max(1, int(data.get("steps", 12))), float(data.get("flat", 0.75)),

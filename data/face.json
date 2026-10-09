@@ -55,6 +55,8 @@
     "nearest": 45,
     "least_swing": 0.12,
     "least_long": 0.45,
+    "tilt": 0.55,
+    "sharpest": 80,
     "stiff": [["neck", "head"]],
     "trunk": ["spine", "hips", "briefs", "neck"],
     "rubber": ["hips", "spine"],

@@ -6537,9 +6537,43 @@ Done when: of two who talk on the map one moves their hands and their mouth and 
 nods; they change over as the words over them do; and a way of speaking chosen for somebody
 on the screen of manners is the one they are seen to speak in.
 
-### P76 — Walking seen from the front and from behind (needs P73) — planned
-- Looked at in a strip of the walk turned by rule: from the front and from behind the legs
-  hardly move and the arms stay at the sides, with corners where a forearm folds to nothing
+### P76 — Walking seen from the front and from behind (needs P73) — done
+Looked at first in a strip of the walk as it was turned by rule: from the front and from
+behind the legs hardly moved and the arms stayed at the sides, with spikes where a forearm
+folded to nothing.
+
+- **The ground is seen from above, so what is nearer is lower on the screen** (`tilt` in
+  `data/face.json`): what a limb does towards whoever looks, which is not seen across the
+  screen from the front, is seen down it. A foot put forward by somebody who faces the window
+  comes down the screen, and the one behind goes up it; seen from behind it is the other way
+  about. So the feet of somebody walking down the map go up and down by turns
+- **No limb is folded back on itself** (`sharpest`): a part bent further from the part before
+  it than a limb bends is pointing at whoever looks or away, and is shown going on the way
+  the part before it went, as short as a part may be. A leg that is lifted is a short leg.
+  Folded back, a limb was drawn as a spike, or stuck out to one side
+- **A part that points at whoever looks has its length down the screen**, and is not laid
+  across it to have any
+- **Hands and feet are laid at the end of their limb as they were**: each is one stiff
+  picture drawn from its side
+- **From its side and three quarters on, nothing has changed**: a body walks there as it did
+- **It is the same rule beside the paper**, where a doll is turned by hand
+
+Decided without asking:
+- **A rule, and no clips written for the front**: every way of walking there is, and every
+  one there will be, is seen from the front by it
+- **How much lower** (a little over half of how much nearer) **and how far a limb bends**
+  (eighty degrees) were set by eye, on the drawings there are
+
+Still open here:
+- **Nobody has played it with a mouse**: it was read in strips of the walk on a doll of the
+  game turned five ways, old against new, and of four residents walking down the map and up it
+- **Arms swing little from the front**: an arm swung forward comes down the screen, and one
+  swung back goes up it, by not much
+- **The body does not sway from side to side** as somebody seen from the front does
+
+Done when: somebody walking down the map is seen to step, one foot coming down the screen as
+the other goes up it, with no spike and no limb out to one side; and from the side they walk
+as they did.
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

@@ -1,6 +1,7 @@
 import math
 import os
 import unittest
+from dataclasses import replace
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
@@ -250,9 +251,12 @@ class VolumeTests(unittest.TestCase):
         self.assertEqual(front["head"][1], pose["head"][1])
         limbs = [bone for bone in self.plan.bones.values() if bone.start.endswith(("_left", "_right"))]
         narrowed = 0
+        # That is with the ground seen from its side. Seen from above, what a limb does
+        # towards whoever looks goes down the screen too (P76, `tests/test_front_walk.py`).
+        level = turned_pose(replace(self.turn, tilt=0.0, sharpest=0.0), apart, pose, 0.0, side)
         for bone in limbs:
             was = (pose[bone.end][0] - pose[bone.start][0], pose[bone.end][1] - pose[bone.start][1])
-            now = (front[bone.end][0] - front[bone.start][0], front[bone.end][1] - front[bone.start][1])
+            now = (level[bone.end][0] - level[bone.start][0], level[bone.end][1] - level[bone.start][1])
             self.assertAlmostEqual(now[1], was[1], msg=bone.name)
             # That much less across, or as much as leaves it the least of its length it may be seen at.
             self.assertGreaterEqual(abs(now[0]) + 1e-9, abs(was[0]) * least, bone.name)
