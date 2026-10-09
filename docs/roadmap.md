@@ -5859,6 +5859,62 @@ Done when: a trip says how far out it is and which way it faces at any minute, w
 decided at a find moves its turn, and a save from before loads with everybody out on their
 way home.
 
+### P68 — A trip seen from the side (needs S67) — done
+The answers are under S67.
+
+- **A click on a face in `Fuera` shows them walking**, where the map was
+  (`scenes/expedition_view.py`): seen full from the side, on the spot, while the country goes
+  by behind them. `Volver` goes back to the map, and so does their coming home, with the map
+  on them
+- **A backdrop is layers that go by each at its own pace** (`graphics/backdrop.py`,
+  `data/backdrops.json`): sky, horizon, what is behind, the ground, and what passes in
+  front. The sky stands still, the ground goes by as fast as they walk, and what is in front
+  faster. Each layer meets itself at its ends and comes round for as long as there is
+  walking to do
+- **The ground goes by as far as their stride takes them**: the two tiles to a turn of the
+  walk that the map goes by, so that no foot slides. They walk their own way of walking
+- **Out and then home**: they face away for the way out and towards the settlement for the
+  way back, with more of the place ahead of them than behind, and the ground goes by the
+  other way
+- **They stand still at what they come on**, with the mark of somebody who waits over their
+  head, and a click on them asks what to do, there and then. With time stopped they stop
+  mid stride; with time flying they hurry, and not sixteen times over
+- **Dark after dark and dusty in a storm**, as the map is: the same night over everything,
+  and streaks of dust across it
+- **How long is left** is up in the sky, under `Volver`: a line from the settlement to where
+  they are bound, their face on it as far out as they are with a mark of which way they
+  go, what they are doing and when they are due
+- **The ruins are the game's own until somebody draws them** (`graphics/backdrop_pictures.py`):
+  a hazy sky with a pale sun, towers far off, buildings come down in part with their bars
+  out, a road gone to cracks, and a sign, a tyre and rubble in front. A zone the game has no
+  picture of is bare country
+- **The same body as on the map**: their doll, or the plain figure in their colour, on its
+  springs. With no window under the canvas, the game's own small body, large
+
+Decided without asking:
+- **One at a time**, as answered, and the faces in the corner change who
+- **Time goes on** while they are watched, and everything else of the screen is there
+- **The way is shown up in the sky and not along the foot of the place**, where it was first
+  and hid the ground they walk on
+- **What passes in front is no higher than their shins**
+- **Nothing is in their hands and nothing on their back**, out or home: what they bring is
+  not known until they are in
+- **No stars and no moon**: the night is the map's, over a sky drawn for the day
+- **The minimap goes** while they are watched, and nothing of the settlement is heard
+- **`I` does nothing out there**, and neither does the wheel of the mouse
+
+Still open here:
+- **Nobody has tried it with a mouse**: it was driven by scripted presses and looked at in
+  pictures of the game
+- **The trip is not heard**: no steps, no wind
+- **Nothing is met on the way**: what is come on is not seen, only that they have stopped
+- **A layer comes round every screen**, and the ground every few seconds
+- **Whoever is hurt out there is not seen to be**
+
+Done when: a click on the face of whoever is out shows them walking from the side with the
+ground going by, away and then home, stopped at a find and dark at night, and `Volver` or
+their coming back puts the map on again.
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

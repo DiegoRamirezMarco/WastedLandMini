@@ -39,6 +39,8 @@ SEVER_SPEED = 0.4
 SEVER_SPIN = 9.0
 # Rows of a tile left below the feet of whoever stands on it.
 FEET_ABOVE_EDGE = 2
+# Tiles walked in one turn of the walk clip: a step with each foot.
+TILES_PER_STRIDE = 2
 # Real seconds after which somebody nobody has looked at is taken as found: whatever they are
 # at, they are not seen to begin it.
 UNSEEN_SECONDS = 0.5

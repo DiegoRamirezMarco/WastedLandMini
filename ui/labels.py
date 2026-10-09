@@ -38,6 +38,15 @@ NEED_LABELS = {
 FEELING_LABELS = {"affection": "afecto", "resentment": "rencor"}
 TALKING_ABOUT = "{name} y {other} están hablando sobre {about}"
 MINUTES_PER_DAY = 24 * 60
+# What is said of somebody who is out of the settlement (P68).
+TRIP_HOME = "Asentamiento"
+TRIP_OUT_THERE = "Fuera"
+TRIP_OUT = "{name} se aleja{through}"
+TRIP_BOUND = "{name} va hacia {place}{through}"
+TRIP_BACK = "{name} vuelve al asentamiento"
+TRIP_STOPPED = "{name} ha dado con algo y no se decide"
+TRIP_DUE = "Llega en {span}"
+TRIP_NEARLY = "Está al llegar"
 # What is said of a taste, by how sure it is and which way it goes. There is never a figure.
 TASTE_WORDS = {
     SUSPECTED: {LIKED: "Parece gustarle", NEUTRAL: "Parece darle igual", DISLIKED: "Parece no gustarle"},
@@ -233,6 +242,47 @@ def known_forecasts(world: SimulationWorld) -> list[str]:
 def away_residents(world: SimulationWorld) -> list[Resident]:
     """Whoever is outside the settlement right now."""
     return [resident for resident in world.residents.values() if resident.away]
+
+
+def describe_span(minutes: int) -> str:
+    """So many game minutes, as somebody would say it: `2 h 10 min`, `40 min`."""
+    hours, left = divmod(max(0, minutes), 60)
+    if hours and left:
+        return f"{hours} h {left} min"
+    return f"{hours} h" if hours else f"{left} min"
+
+
+def trip_ends(world: SimulationWorld, resident: Resident) -> tuple[str, str]:
+    """What a trip goes between, to be written at the two ends of its way: the settlement,
+    and the place it is bound for or else the country it goes through."""
+    trip = resident.expedition
+    place = world.discoveries.get(trip.place or "") if trip is not None else None
+    zone = world.expeditions.zone_of(world, trip) if trip is not None else None
+    if place is not None and place.named:
+        return (TRIP_HOME, place.name)
+    return (TRIP_HOME, zone.name.capitalize() if zone is not None else TRIP_OUT_THERE)
+
+
+def trip_lines(world: SimulationWorld, resident: Resident) -> tuple[str, str]:
+    """What is said of somebody who is out: which way they are going, and when they are due."""
+    trip = resident.expedition
+    if trip is None:
+        return ("", "")
+    now = world.clock.total_minutes
+    zone = world.expeditions.zone_of(world, trip)
+    place = world.discoveries.get(trip.place or "")
+    through = f" por {zone.name}" if zone is not None else ""
+    waiting = any(decision.resident_id == resident.resident_id for decision in world.decisions.values())
+    if waiting:
+        going = TRIP_STOPPED.format(name=resident.name)
+    elif trip.heading_back(now):
+        going = TRIP_BACK.format(name=resident.name)
+    elif place is not None and place.named:
+        going = TRIP_BOUND.format(name=resident.name, place=place.name, through=through)
+    else:
+        going = TRIP_OUT.format(name=resident.name, through=through)
+    left = trip.returns_at - now
+    return (going, TRIP_DUE.format(span=describe_span(left)) if left > 0 else TRIP_NEARLY)
 
 
 def describe_credits(world: SimulationWorld, resident: Resident) -> str:

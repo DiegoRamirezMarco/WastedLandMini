@@ -1,0 +1,46 @@
+{
+  "paper": [
+    400,
+    310
+  ],
+  "ground": 0.8,
+  "figure": 0.24,
+  "layers": [
+    {
+      "id": "sky",
+      "name": "Cielo",
+      "pace": 0.0,
+      "note": "Lo que no se mueve. Píntalo entero: es lo único que no deja ver nada detrás."
+    },
+    {
+      "id": "far",
+      "name": "Horizonte",
+      "pace": 0.06,
+      "note": "Lo más lejano, que apenas se mueve: siluetas, montes, torres a lo lejos."
+    },
+    {
+      "id": "middle",
+      "name": "Fondo",
+      "pace": 0.25,
+      "note": "Lo que queda detrás de quien anda y pasa despacio: edificios, árboles, restos."
+    },
+    {
+      "id": "ground",
+      "name": "Suelo",
+      "pace": 1.0,
+      "note": "Por donde pisa. Avanza al paso de quien anda: la línea roja es donde ponen los pies."
+    },
+    {
+      "id": "front",
+      "name": "Delante",
+      "pace": 1.5,
+      "front": true,
+      "note": "Lo que pasa por delante, más deprisa que el suelo. Poco y bajo, o tapará a quien anda."
+    }
+  ],
+  "zones": {
+    "ruins": {
+      "art": "ruins"
+    }
+  }
+}

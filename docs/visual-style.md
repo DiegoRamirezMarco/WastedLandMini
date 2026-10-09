@@ -405,7 +405,7 @@ gradients and any colour.
 - Forecasts that at least one resident has heard are listed at the top left of the map, one line
   each in `sand`. What nobody knows is never shown.
 - Whoever is outside the settlement is a face in a small panel below that list, and can be picked
-  there like anyone on the map.
+  there like anyone on the map. A click on it shows them walking out there (see Beyond the fence).
 - While a resident is selected, a heart is drawn over their partner and a star over those they
   hold as friends. A couple alone together has a heart for a status icon.
 
@@ -470,6 +470,32 @@ illustrations are.
   and what is over their head on the canvas, as on the map. Whoever stands further down the
   floor is in front. Whoever lies in a bed shows their own head on the pillow, at the size of
   the cells: a doll's head as it was drawn, or the head of the game's body down to the eyes.
+
+## Beyond the fence
+Somebody who is out, seen from the side as they go (P68): `scenes/expedition_view.py`. It is
+drawn at the resolution of the window, in the part of the screen the map has, and is free of
+the style contract as the illustrations are.
+
+- A backdrop is the layers of `data/backdrops.json`, from the back to the front, on one
+  paper (400 by 310). Each goes by at `pace` times what the ground does: 0 for the sky, 1
+  for the ground, more for what is nearer than whoever walks, which has `front` and is drawn
+  over them. A layer is as wide as the paper and meets itself at its ends.
+- `ground` is how far down the paper feet come down, and `figure` how much of its height
+  somebody standing takes. Both are shares of it.
+- The layers of a zone are what somebody has drawn of them, in
+  `illustrations/backdrops/<zone>/<layer>.png`, and where nobody has, the game's own
+  (`graphics/backdrop_pictures.py`), drawn at the size it is shown and not on the paper. Which
+  art a zone has is `zones` there: a zone with none is bare country.
+- Only the rows of a layer that have something in them are kept, and a layer with nothing
+  clear in it, as a sky is, is shown without asking what is behind it.
+- Whoever walks is their doll at `figure` of the height, on its springs, walking their own
+  way, and stands a little back from the middle of the place, with more of it ahead. On the
+  way home they face the other way and are brought across.
+- The ground goes by `TILES_PER_STRIDE` tiles to a turn of the walk, as on the map.
+- Night is the map's: everything multiplied by what the hour leaves of the light. A storm is
+  streaks of `sand` going with the wind, and its tint over it all.
+- Their name and what is over their head go on the canvas, as on the map. The way of the
+  trip is a small panel in the sky (`ui/trip_bar.py`).
 
 ## Interaction view
 - A resident asking for advice takes over the dock, framed in `lamp`, and time stops. The rest

@@ -703,6 +703,22 @@ A job that is never to be pushed says `"rush": false`.
 - In `data/decisions.json` the game opens `risky_find` by ID, and an outcome's `"expedition"`
   (`push_on` or `turn_back`) is what it does to the trip.
 
+## Backdrops
+
+What goes by behind somebody who is out (`data/backdrops.json`). None of it changes what
+happens.
+
+- `paper` is the size every layer is drawn on. `ground` is how far down it feet come down and
+  `figure` how much of its height somebody standing takes, as shares of it.
+- `layers` go from the back to the front. Each has an `id`, a `name`, a `pace` (how much of
+  the way the ground goes it goes: `0` stands still, `1` is the ground, more is nearer),
+  `front` for what passes in front of whoever walks, and a `note` for whoever draws it.
+- `zones` says which of the game's own pictures a zone of `data/expeditions.json` has until
+  somebody draws it: `{"ruins": {"art": "ruins"}}`. The game has `ruins` and `plain`. A zone
+  that is not listed has `plain`.
+- A layer somebody has drawn is `illustrations/backdrops/<zone>/<layer>.png`, the size of the
+  paper, clear wherever what is behind should show. It must meet itself at its two ends.
+
 ## World events
 
 `data/world_events.json` holds what can happen to the settlement from outside.

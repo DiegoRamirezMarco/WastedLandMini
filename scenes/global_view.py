@@ -49,6 +49,7 @@ from scenes.body_stage import (
     LYING_HEAD_OFFSET,
     LYING_HEAD_ROWS,
     LYING_NECK,
+    TILES_PER_STRIDE,
     BodyStage,
     Remains,
     ground_spot,
@@ -94,6 +95,7 @@ from scenes.hud import (
     URBANISM_INTENT,
     Hud,
 )
+from scenes.expedition_view import LEAVE_TRIP_INTENT, ExpeditionView
 from scenes.interior_view import DECOR_INTENT, HOUSE_INTENT, LEAVE_INTENT, InteriorView
 from ui.decor_board import DONE_INTENT as DECOR_DONE_INTENT
 from ui.decor_board import FLOORS as DECOR_FLOORS
@@ -230,8 +232,6 @@ from world.interactable import Interactable
 from world.map import Tile
 from world.room import Room
 
-# Tiles walked in one turn of the walk clip: a step with each foot.
-TILES_PER_STRIDE = 2
 # How far across a step has to take someone, in tiles, for a doll to turn to that side.
 LEAN = 0.05
 # What a body does besides standing and walking, and how many times a second its clip goes round.
@@ -501,6 +501,8 @@ class GlobalView:
         self._marks: dict[str, list[tuple[str, float, float]]] = {}
         # Where each resident was last drawn, for picking them with the mouse.
         self.hitboxes: dict[str, pygame.Rect] = {}
+        # Where the face of each of those who are out was last drawn, in its corner of the map.
+        self.away_boxes: dict[str, pygame.Rect] = {}
         # Where the bubble of what each is talking of was last drawn (P62).
         self.talk_bubbles: dict[str, pygame.Rect] = {}
         self.container_hitboxes: dict[str, pygame.Rect] = {}
@@ -560,6 +562,10 @@ class GlobalView:
         # The building being looked at from inside, by room ID, and what draws it. None out on the map.
         self.inside: str | None = None
         self.interior = InteriorView(self)
+        # Whoever is being watched out of the settlement, by their ID, and what draws them
+        # walking there. Nobody out on the map (P68).
+        self.outside: str | None = None
+        self.expedition = ExpeditionView(self)
         # Where the sign of each building that can be gone into was last drawn, by room ID.
         self.sign_boxes: dict[str, pygame.Rect] = {}
         # Whether the minimap was on show when a building was gone into, to put it back on coming out.
@@ -614,6 +620,8 @@ class GlobalView:
             self._name_key(event)
             return
         if self.carry is not None and self._carry_event(event):
+            return
+        if self.outside is not None and self._outside_event(event):
             return
         if event.type == pygame.KEYDOWN and event.key == pygame.K_i:
             self.toggle_inside()
@@ -708,6 +716,7 @@ class GlobalView:
         """Look at a building from inside, in place of the map. Says whether there was such a building."""
         if not self.enterable(room_id):
             return False
+        self.come_back()
         if self.inside is None:
             self._minimap_kept = self.hud.minimap_rect is not None
         self.inside = room_id
@@ -743,6 +752,89 @@ class GlobalView:
                 self._sound("open")
                 return
         self.hud.notify(NOWHERE_TO_ENTER)
+
+    # ----- beyond the fence -----
+
+    def watch(self, resident_id: str | None) -> bool:
+        """Look at somebody who is out of the settlement, walking, in place of the map. Says
+        whether there was such a one."""
+        resident = self.world.residents.get(resident_id or "")
+        if resident is None or not resident.away:
+            return False
+        self.leave()
+        if self.hud.wheel.open:
+            self._close_wheel()
+        if self.outside is None:
+            self._minimap_kept = self.hud.minimap_rect is not None
+        self.outside = resident.resident_id
+        # There is no map to find the way on out there.
+        self.hud.minimap_rect = None
+        self._press, self._drag_last, self._dragging, self._press_on = None, None, False, None
+        return True
+
+    def come_back(self) -> None:
+        """Go back to the map from watching somebody who is out."""
+        if self.outside is None:
+            return
+        self.outside = None
+        self.hud.minimap_rect = self._minimap_rect if self._minimap_kept else None
+
+    def _outside_event(self, event: pygame.event.Event) -> bool:
+        """Take what the mouse does while somebody is watched out of the settlement. Says whether it did."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self.pointer = canvas_position(event.pos)
+            self.click(self.pointer)
+            return True
+        if event.type == pygame.MOUSEMOTION:
+            self.pointer = canvas_position(event.pos)
+            return True
+        # There is no map out there to drag about, to see from nearer or to go into a building of.
+        return event.type in (pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN, pygame.MOUSEWHEEL) or (
+            event.type == pygame.KEYDOWN and (event.key in ZOOM_KEYS or event.key == pygame.K_i)
+        )
+
+    def _click_outside(self, position: tuple[int, int]) -> None:
+        """A press while somebody is watched out of the settlement: the way back, somebody
+        else who is out, or whoever is walking there."""
+        if self.expedition.click(position) == LEAVE_TRIP_INTENT:
+            self._sound("click")
+            self.come_back()
+            return
+        if self.hud.covers(position):
+            return
+        boxes = (*self.hitboxes.items(), *self.away_boxes.items())
+        picked = [rid for rid, rect in boxes if rect.collidepoint(position)]
+        if not picked:
+            return
+        self._sound("select")
+        self.hud.select_resident(picked[-1])
+        # Another face of those who are out is another trip to look at.
+        self.watch(picked[-1])
+        decision = self._decision_of(picked[-1])
+        if decision is not None:
+            # Stopped at something they have come on: what to do about it is asked there and then.
+            self.requested_decision = decision
+
+    def _render_outside(self, resident: Resident) -> None:
+        """The frame while somebody is watched out of the settlement: them walking where the
+        map was, and everything round it."""
+        self.hitboxes = {}
+        self.container_hitboxes = {}
+        self.thing_hitboxes = {}
+        self.use_hitboxes = {}
+        self.object_marks = {}
+        self._idle = {}
+        self.task_bars = {}
+        self.work_rings = {}
+        self.train_rings = {}
+        self.placards = {}
+        self.talk_bubbles = {}
+        self.hud.spoken = None
+        self.sign_boxes = {}
+        self.bundle_boxes = {}
+        self.expedition.render(resident)
+        self.hud.render()
+        self._draw_away()
 
     def _inside_event(self, event: pygame.event.Event) -> bool:
         """Take what the mouse does while a building is being looked at from inside. Says whether it did."""
@@ -937,6 +1029,7 @@ class GlobalView:
         if not self.world.clock.paused:
             self.time += dt
             self.bodies.update(dt, self.world)
+        self.expedition.update(dt, self.world.residents.get(self.outside or ""))
         self.hud.update(dt)
         self.hud.pointer = self.pointer
         self.pops.take(self.world, self.time)
@@ -1166,6 +1259,8 @@ class GlobalView:
         if intent is not None:
             self._sound("click")
             self._apply(intent)
+        elif self.outside is not None:
+            self._click_outside(position)
         elif self.inside is not None:
             self._click_inside(position)
         elif minimap is not None and minimap.collidepoint(position):
@@ -1193,6 +1288,10 @@ class GlobalView:
                 self._sound("open")
                 self.requested_decision = self.gate_decision()
                 return
+            elif picked and self.watch(picked[-1]):
+                # A face of those who are out: a click on it is to see them walking there.
+                self._sound("open")
+                self.hud.select_resident(picked[-1])
             elif picked and self._asks_for_wheel(picked[-1]):
                 # A second click on whoever is selected opens the wheel about them.
                 self._toggle_affect()
@@ -1422,6 +1521,9 @@ class GlobalView:
     def in_view(self) -> tuple[set[str], list[str]]:
         """What can be seen of the settlement right now: the kinds of object, and who is there.
         For whoever sounds it: nothing here is drawn."""
+        if self.outside is not None:
+            # Out there with somebody, nothing of the settlement is in sight.
+            return set(), []
         region = self._visible_region()
 
         def seen(x: int, y: int) -> bool:
@@ -2135,6 +2237,17 @@ class GlobalView:
         if self.layers is not None:
             self.layers.clear()
         self.canvas.fill(PALETTE["ink"])
+        if self.outside is not None:
+            watched = self.world.residents.get(self.outside)
+            if watched is not None and watched.away:
+                self._render_outside(watched)
+                return
+            # They are back in, or no more: the map is where to look, and where they now are.
+            back = self.outside
+            self.come_back()
+            if watched is not None and self.hud.selected_id == back:
+                self.centre_on_resident(back)
+                self.following = back
         if self.inside is not None:
             room = self.world.rooms.get(self.inside)
             if room is not None and room.roofed:
@@ -2375,6 +2488,7 @@ class GlobalView:
     def _draw_away(self) -> None:
         """Whoever is outside the settlement is nowhere on the map: their faces go in a corner, to be picked there."""
         away = away_residents(self.world)
+        self.away_boxes = {}
         if not away:
             return
         panel = self.hud.away_rect()
@@ -2388,7 +2502,9 @@ class GlobalView:
             marker = self.faces.marker(resident.resident_id)
             spot = marker.get_rect(topleft=(x, panel.y + 2))
             self.canvas.blit(marker, spot)
-            self.hitboxes[resident.resident_id] = spot
+            self.away_boxes[resident.resident_id] = spot
+            # Whoever is being watched out there is picked where they walk.
+            self.hitboxes.setdefault(resident.resident_id, spot)
             if resident.resident_id == self.hud.selected_id:
                 pygame.draw.rect(self.canvas, PALETTE["glow"], spot, 1)
             x += marker.get_width() + 2
