@@ -54,6 +54,7 @@ from simulation.rng import SimulationRNG
 from simulation.social.bonds import BondSystem
 from simulation.substances.substance_system import SubstanceSystem
 from simulation.social.relationship import Relationship
+from simulation.social.deeds import DeedSystem
 from simulation.social.talk import TalkResult, TalkSystem, VocabularyState
 from simulation.tastes.knowledge import TasteKnowledge
 from simulation.tastes.taste import TasteProfile
@@ -224,6 +225,8 @@ class SimulationWorld:
     # What is talked of, and the words the player has given for it: the lists, each
     # resident's phrases, what one calls another, and what they are waiting to be told (S58).
     talk: TalkSystem = field(default_factory=TalkSystem)
+    # What an exchange does beyond what the two of them come to feel (S63).
+    deeds: DeedSystem = field(default_factory=DeedSystem)
     words: VocabularyState = field(default_factory=VocabularyState)
     # What each resident likes and loathes, by resident ID. Kept apart from the resident.
     taste_profiles: dict[str, TasteProfile] = field(default_factory=dict)
@@ -857,19 +860,19 @@ class SimulationWorld:
         # A settlement that is already running knows how to make what it has.
         world.research.grant_what_stands(world)
         residents = [
-            Resident("marta", "Marta", personality=Personality(empathy=75, sociability=65, charisma=68, leadership=58), traits=["music_lover"]),
-            Resident("raul", "Raúl", personality=Personality(aggression=72, impulsiveness=68, charisma=42, leadership=55)),
-            Resident("lucia", "Lucía", personality=Personality(empathy=60, greed=25, charisma=55, leadership=45), traits=["sweet_tooth"]),
-            Resident("tomas", "Tomás", personality=Personality(courage=75, sociability=35, aggression=55, charisma=45, leadership=70)),
-            Resident("ines", "Inés", personality=Personality(empathy=65, sociability=60, greed=40, charisma=60, leadership=50)),
-            Resident("vera", "Vera", personality=Personality(empathy=80, sociability=55, courage=60, charisma=62, leadership=64)),
-            Resident("paco", "Paco", personality=Personality(empathy=45, sociability=45, impulsiveness=40, charisma=40, leadership=35), traits=["dim"]),
-            Resident("nuria", "Nuria", personality=Personality(empathy=55, sociability=70, greed=65, charisma=70, leadership=40)),
+            Resident("marta", "Marta", personality=Personality(empathy=75, sociability=65, charisma=68, leadership=58), traits=["music_lover", "caring"]),
+            Resident("raul", "Raúl", personality=Personality(aggression=72, impulsiveness=68, charisma=42, leadership=55), traits=["bully", "grouch"]),
+            Resident("lucia", "Lucía", personality=Personality(empathy=60, greed=25, charisma=55, leadership=45), traits=["sweet_tooth", "generous"]),
+            Resident("tomas", "Tomás", personality=Personality(courage=75, sociability=35, aggression=55, charisma=45, leadership=70), traits=["brave", "cold"]),
+            Resident("ines", "Inés", personality=Personality(empathy=65, sociability=60, greed=40, charisma=60, leadership=50), traits=["gossip", "handy"]),
+            Resident("vera", "Vera", personality=Personality(empathy=80, sociability=55, courage=60, charisma=62, leadership=64), traits=["listener", "peacemaker"]),
+            Resident("paco", "Paco", personality=Personality(empathy=45, sociability=45, impulsiveness=40, charisma=40, leadership=35), traits=["dim", "clown"]),
+            Resident("nuria", "Nuria", personality=Personality(empathy=55, sociability=70, greed=65, charisma=70, leadership=40), traits=["charmer", "scrounger"]),
             Resident(
                 "sergio",
                 "Sergio",
                 personality=Personality(courage=70, greed=60, impulsiveness=55, charisma=55, leadership=52),
-                traits=["rogue"],
+                traits=["rogue", "idler"],
             ),
         ]
         # Who works where, and the day of the week each has off. Marta cooks what Raúl and Inés

@@ -152,8 +152,9 @@ class LeisureSystem:
 
     def called_away(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> bool:
         """Whether what somebody took up to pass the time is over because work calls (S62):
-        it was time on their hands, and their shift has begun. Not what they were told to do."""
-        return not activity.ordered and world.work.candidate(world, resident) is not None
+        it was time on their hands, and their shift has begun. Not what they were told to
+        do, nor what somebody talked them into (S63)."""
+        return not activity.ordered and not activity.led and world.work.candidate(world, resident) is not None
 
     def _begin(self, world: "SimulationWorld", resident: Resident, pastime: Pastime) -> None:
         settings = world.registries.leisure

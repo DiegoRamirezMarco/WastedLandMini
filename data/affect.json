@@ -163,6 +163,174 @@
       "feels": {
         "resentment": 50
       }
+    },
+    "cow": {
+      "name": "Intimidar",
+      "label": "Que intimide a {target}",
+      "interaction": "cow",
+      "tone": "hostile",
+      "trait": "bully"
+    },
+    "charm": {
+      "name": "Camelar",
+      "label": "Que camele a {target}",
+      "interaction": "charm",
+      "tone": "friendly",
+      "trait": "charmer"
+    },
+    "pry": {
+      "name": "Sonsacar",
+      "label": "Que le sonsaque algo a {target}",
+      "interaction": "pry",
+      "tone": "friendly",
+      "trait": "gossip"
+    },
+    "amuse": {
+      "name": "Hacer reír",
+      "label": "Que haga reír a {target}",
+      "interaction": "amuse",
+      "tone": "play",
+      "trait": "clown"
+    },
+    "tend": {
+      "name": "Cuidar",
+      "label": "Que cuide de {target}",
+      "interaction": "tend",
+      "tone": "friendly",
+      "trait": "caring"
+    },
+    "teach": {
+      "name": "Enseñar",
+      "label": "Que le enseñe a {target}",
+      "interaction": "teach",
+      "tone": "friendly",
+      "trait": "teacher"
+    },
+    "reconcile": {
+      "name": "Poner paz",
+      "label": "Que le hable de paz a {target}",
+      "interaction": "reconcile",
+      "tone": "friendly",
+      "trait": "peacemaker"
+    },
+    "hear_out": {
+      "name": "Escuchar",
+      "label": "Que escuche a {target}",
+      "interaction": "hear_out",
+      "tone": "friendly",
+      "trait": "listener"
+    },
+    "treat": {
+      "name": "Convidar",
+      "label": "Que convide a {target}",
+      "interaction": "treat",
+      "tone": "friendly",
+      "trait": "generous"
+    },
+    "rally": {
+      "name": "Arengar",
+      "label": "Que le dé ánimos a {target}",
+      "interaction": "rally",
+      "tone": "friendly",
+      "trait": "rousing"
+    },
+    "hearten": {
+      "name": "Dar valor",
+      "label": "Que le dé valor a {target}",
+      "interaction": "hearten",
+      "tone": "friendly",
+      "trait": "brave"
+    },
+    "make_amends": {
+      "name": "Hacer devolver",
+      "label": "Que haga a {target} devolver lo que cogió",
+      "interaction": "make_amends",
+      "tone": "friendly",
+      "trait": "upright"
+    },
+    "fix_for": {
+      "name": "Arreglarle algo",
+      "label": "Que le arregle algo a {target}",
+      "interaction": "fix_for",
+      "tone": "friendly",
+      "trait": "handy"
+    },
+    "pamper": {
+      "name": "Mimar",
+      "label": "Que mime a {target}",
+      "interaction": "pamper",
+      "tone": "friendly",
+      "trait": "affectionate"
+    },
+    "swindle": {
+      "name": "Timar",
+      "label": "Que time a {target}",
+      "interaction": "swindle",
+      "tone": "hostile",
+      "trait": "swindler"
+    },
+    "set_against": {
+      "name": "Malmeter",
+      "label": "Que malmeta a {target}",
+      "interaction": "set_against",
+      "tone": "hostile",
+      "trait": "schemer"
+    },
+    "belittle": {
+      "name": "Hacer de menos",
+      "label": "Que haga de menos a {target}",
+      "interaction": "belittle",
+      "tone": "hostile",
+      "trait": "envious"
+    },
+    "shove": {
+      "name": "Zarandear",
+      "label": "Que zarandee a {target}",
+      "interaction": "shove",
+      "tone": "hostile",
+      "trait": "brute"
+    },
+    "skive": {
+      "name": "Escaquearse",
+      "label": "Que convenza a {target} de no hacer nada",
+      "interaction": "skive",
+      "tone": "play",
+      "trait": "idler"
+    },
+    "tell_off": {
+      "name": "Echar la bronca",
+      "label": "Que le eche la bronca a {target}",
+      "interaction": "tell_off",
+      "tone": "hostile",
+      "trait": "grouch"
+    },
+    "scrounge": {
+      "name": "Gorronear",
+      "label": "Que le gorronee a {target}",
+      "interaction": "scrounge",
+      "tone": "hostile",
+      "trait": "scrounger"
+    },
+    "lead_astray": {
+      "name": "Liar para beber",
+      "label": "Que líe a {target} para tomar algo",
+      "interaction": "lead_astray",
+      "tone": "play",
+      "trait": "tempter"
+    },
+    "rake_up": {
+      "name": "Remover lo pasado",
+      "label": "Que le remueva lo pasado a {target}",
+      "interaction": "rake_up",
+      "tone": "hostile",
+      "trait": "spiteful"
+    },
+    "snub": {
+      "name": "Cortar en seco",
+      "label": "Que corte en seco a {target}",
+      "interaction": "snub",
+      "tone": "hostile",
+      "trait": "cold"
     }
   },
   "leisure": {
@@ -278,6 +446,11 @@
       "name": "Entrenar",
       "label": "Que entrene en {target}",
       "icon": "train"
+    },
+    "steal": {
+      "name": "Robar",
+      "label": "Que robe: {target}",
+      "icon": "steal"
     },
     "stop": {
       "name": "Dejarlo todo",

@@ -131,6 +131,7 @@ Event types emitted so far:
 | `order_dropped` | Something a resident was told cannot be done when its turn comes, and is let go, with `kind` and `target` in `data` | 15 |
 | `will_changed` | A resident is told to do nothing of their own accord, or given their will back, with `free` in `data` | 20 |
 | `leisure_started` | A resident sets about a pastime alone, with the `pastime` and how they take it (`reaction`, or nothing) in `data` | 6 |
+| `deed_done` | What an exchange did beside what the two came to feel (S63): somebody tended, taught, set against another, talked out of their credit. The one who did it and the one it was done to are the participants. Being swindled is a fact that can be told | 18, or 40 for a swindle |
 | `leisure_declined` | Somebody asked to go on somewhere with another does not care to | 12 |
 | `joke_started`, `hug_started`, `flirt_started`, `kiss_started`, `insult_started`, `cards_started`, `stories_started`, `dance_started`, `invite_drink_started` | Two residents start that exchange, as with any other in `data/social.json` | as the data says |
 | `material_wanted` | Whoever sees to a site sits by it with nothing to build with, with `site_id`, what is `wanted` and what could be taken apart for it (`salvageable`) in `data`. Once a day for each site | 45 |

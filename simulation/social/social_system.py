@@ -385,25 +385,35 @@ class SocialSystem:
                 relish *= world.registries.talk.relish.get(heard, 1.0)
             for feeling, delta in feeling_changes(definition, resident, partner, feelings, drawn, relish).items():
                 feelings.adjust(feeling, delta)
+            # Where it was something done to one of them (S63), whoever came to do it is the
+            # doer: each comes to feel, and is left, as their side of it has them.
+            came = activity.intent == definition.interaction_id
+            for feeling, delta in (definition.towards_other if came else definition.towards_doer).items():
+                feelings.adjust(feeling, delta)
+            resident.adjust_mood(definition.doer_mood if came else definition.other_mood)
+            resident.needs.apply(definition.doer_needs if came else definition.other_needs)
             if definition.hostile:
                 feelings.last_argued = world.clock.total_minutes
             world.bonds.update_friendship(world, resident, partner)
             if definition.romance is not None and activity.intent == definition.interaction_id:
                 world.bonds.resolve(world, resident, partner, definition)
             room = world.room_at(resident.tile)
+            value = definition.emotional_value if came or definition.value_other is None else definition.value_other
             world.memories.remember(
                 resident.resident_id,
                 Memory(
-                    text=definition.memory.replace("{other}", partner.name),
+                    text=(definition.memory if came or definition.memory_other is None else definition.memory_other).replace(
+                        "{other}", partner.name
+                    ),
                     importance=float(definition.importance),
-                    emotional_value=definition.emotional_value,
+                    emotional_value=value,
                     people=[partner.resident_id],
                     tags=list(definition.tags),
                     timestamp=world.clock.total_minutes,
                     location_id=room.room_id if room is not None else None,
                 ),
             )
-            resident.adjust_mood(definition.emotional_value * 8.0)
+            resident.adjust_mood(value * 8.0)
             if activity.about and activity.brought:
                 # What they brought up was all they had to tell, news or not.
                 world.talk.tell(world, resident, partner, activity.about)
@@ -415,10 +425,21 @@ class SocialSystem:
                 world.tastes.after_exchange(world, resident, partner)
         resident.activity = None
         resident.current_action = "idle"
+        if partner is not None and definition.deeds:
+            # What else it does (S63): the doer's to do as they have had their say, and the
+            # other's once they have heard them out.
+            if activity.intent == definition.interaction_id:
+                world.deeds.done(world, resident, partner, definition.deeds)
+            else:
+                world.deeds.heard(world, partner, resident, definition.deeds)
+            if resident.resident_id not in world.residents:
+                return
         if partner is not None and definition.then_use is not None:
-            # It leads somewhere: each goes on there for themselves, whoever was asked if they care to.
+            # It leads somewhere: each goes on there for themselves, whoever was asked if they
+            # care to, or whether they do or not where whoever asked will not hear of it.
             came_for_it = activity.intent == definition.interaction_id
-            onward = world.leisure.go_on(world, resident, partner, definition.then_use, asked=not came_for_it)
+            asked = not came_for_it and not definition.insists
+            onward = world.leisure.go_on(world, resident, partner, definition.then_use, asked=asked)
             if onward is not None:
                 onward.ordered = activity.ordered
                 resident.activity = onward

@@ -588,7 +588,7 @@ class FamilyAtTheGateTests(unittest.TestCase):
     def test_let_in_together_they_live_here_as_the_brother_and_sister_they_are(self) -> None:
         self.assertEqual(self.world.apply_command(ChooseOptionCommand(self._decision().decision_id, "open")), "let_in")
         hugo, carmen = self.world.residents["hugo"], self.world.residents["carmen"]
-        self.assertEqual((hugo.sex, carmen.sex, hugo.traits, carmen.traits), ("m", "f", ["kleptomaniac"], ["wicked"]))
+        self.assertEqual((hugo.sex, carmen.sex, hugo.traits, carmen.traits), ("m", "f", ["kleptomaniac", "swindler"], ["wicked", "brute"]))
         self.assertEqual(self.world.family.kin.word(self.world, "hugo", "carmen"), "hermana")
         self.assertEqual(self.world.relationship("carmen", "hugo").affection, self.world.registries.family.kin_affection)
         self.assertNotIn("family_parted", _types(self.world))

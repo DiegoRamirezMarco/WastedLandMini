@@ -5442,7 +5442,7 @@ Decided without asking:
   remembered for a little less than a present that was loved and one that was hated are
 - **What is wished for to have is what is kept**: nobody wishes they had scrap, fuel,
   medicine or water, though they may like them, nor a vice, which whoever depends on it
-  craves in a way of its own (S23)
+  craves in a way of its own (S24)
 - **Handed the very thing they wanted to eat, the wish is met there and then**, without
   waiting for them to eat it
 - **Nobody goes and takes from a store a thing they want to have.** That one is for the
@@ -5555,7 +5555,7 @@ Still open here:
 - Nothing shows over somebody who is bored
 - Children are as bored as anybody
 
-### S63 — Blows, theft, and what goes with what somebody is like (needs S48 and S60) — planned
+### S63 — Blows, theft, and what goes with what somebody is like (needs S48 and S60) — done
 The user's words: "La parte agresiva, pegar, robar, acciones especiales que vayan con los
 rasgos".
 
@@ -5570,6 +5570,108 @@ Asked on 2026-10-09, and answered:
   twenty was left to whoever builds it: they are listed here when they are built, to be put right
 - **Stealing when told is from anybody, of what they carry, and from the `Almacén` and the
   shop as well.** Not the recommendation, which stopped at what somebody carries
+
+What there is, of which what is seen of it is P63:
+- **An order can be for whoever has a trait**, as data: `trait` on what can be done with
+  somebody (`data/affect.json`). Nobody else is offered it or can be told it, and whoever
+  has the trait needs to feel nothing in particular for it
+- **Twenty-four traits, each with something only they can be told to do with somebody**:
+  the four that were asked for, ten good ones and ten that are flaws, listed below. Each
+  is an exchange between two (`data/social.json`) like any other
+- **An exchange can be something done to somebody**, as data, beside what both come to
+  feel: what whoever it was done to comes to feel for whoever did it, and the other way;
+  what it does to the spirits and the needs of each; what each remembers of it, which is
+  their side of it; and what is said of each while it goes on. Whoever went over to do it
+  is the one doing it
+- **Fourteen things an exchange can do besides**, each named in the data (`deeds`) and
+  done by the game: have the news and a taste out of somebody, see to what ails them,
+  teach them their job, ease what they hold against somebody or their fear of them, set
+  them against somebody, give them a thing or have one off them, mend what they carry,
+  have them give back what they stole, talk them out of their credit, hurt them, and
+  have them leave what they were about
+- **Stealing can be told** (`task:steal`): from the stores, from where the fund is kept,
+  and from whoever carries something. From somebody it is the thing of theirs they carry
+  that the thief would most like to have, or failing that the credit within reach, taken
+  standing beside them: they see it. From the stores it is a thing that is nobody's, taken
+  from the store or, where it holds nothing, from wherever its things are kept at hand;
+  from the shop it is the fund's coin, or a thing where there is no coin
+- **It is theft like any other**: it is on record, whoever sees it knows, and what follows
+  from a theft follows (S5, S7, S28)
+- **Who can be told to steal, and from whom, goes by what they have it in them to do**
+  (`ItemSystem.leaning_to_steal`, which was there): greed and a grudge against whoever it
+  is push towards it, feeling for others holds back, and some are that way whatever else
+  they are. Whoever is past caring for hunger, thirst or sleep can be told to take from
+  the stores
+- **Whoever is talked into leaving what they were about is not called back by their
+  shift**, which a pastime of their own is (S62): that is what it is for
+- **The settlement that comes ready made has them**: each of the nine has one or two, and
+  so do the four who come to the gate
+- Domain event `deed_done`. Each exchange has its own `<exchange>_started`, as ever
+
+The traits, and what each opens, to be put right:
+
+| Trait | In the game | Only they can be told to | What it does |
+|---|---|---|---|
+| `bully`, a flaw | Matón | Intimidar | The other is left afraid of them, sore at them and shaken. It can come to blows |
+| `charmer` | Labia | Camelar | The other warms to them: fonder, more trusting, more drawn |
+| `gossip` | Chismoso | Sonsacar | They have out of the other the most striking thing they know, and one of their tastes |
+| `clown` | Payaso | Hacer reír | The other's spirits lift and their nerves ease |
+| `caring` | Buenas manos | Cuidar | The worst of what ails the other is a little better |
+| `teacher` | Maestro | Enseñar | The other is an hour the better at their job |
+| `peacemaker` | Mano izquierda | Poner paz | The other holds less against whoever they resent most |
+| `listener` | Buen oyente | Escuchar | A good deal off the other's nerves and their want of company |
+| `generous` | Generoso | Convidar | They give the other a thing of their own that they carry |
+| `rousing` | Animoso | Arengar | The other's spirits lift, and they are less tired |
+| `brave` | Valiente | Dar valor | The other is less afraid of whoever frightens them most |
+| `upright` | Honrado | Hacer devolver | The other gives back what they stole |
+| `handy` | Manitas | Arreglarle algo | The most worn thing the other carries is mended some |
+| `affectionate` | Cariñoso | Mimar | Company and comfort for the other, who is the fonder for it |
+| `swindler`, a flaw | Timador | Timar | They talk the other out of a little credit, and it is known |
+| `schemer`, a flaw | Liante | Malmeter | The other is set against whoever they themselves resent most |
+| `envious`, a flaw | Envidioso | Hacer de menos | The other is brought down, and sore at them. It can come to blows |
+| `brute`, a flaw | Bruto | Zarandear | The other is hurt a little, afraid and sore. It can come to blows |
+| `idler`, a flaw | Vago | Escaquearse | The other leaves what they were about and sits down to nothing |
+| `grouch`, a flaw | Cascarrabias | Echar la bronca | The other is told off: a little afraid, a little sore. It can come to blows |
+| `scrounger`, a flaw | Gorrón | Gorronear | They have something to eat or drink off the other |
+| `tempter`, a flaw | Mala influencia | Liar para beber | Both go for a drink, whether the other cares to or not |
+| `spiteful`, a flaw | Rencoroso | Remover lo pasado | Old things raked up: each is the sorer at the other. It can come to blows |
+| `cold`, a flaw | Seco | Cortar en seco | The other is put off: less drawn to them, less fond |
+
+Who has which: Marta `caring`, Raúl `bully` and `grouch`, Lucía `generous`, Tomás `brave` and
+`cold`, Inés `gossip` and `handy`, Vera `listener` and `peacemaker`, Paco `clown`, Nuria
+`charmer` and `scrounger`, Sergio `idler`; of those who come to the gate, Olga `teacher` and
+`affectionate`, Hugo `swindler`, Carmen `brute`, Bruno `upright` and `rousing`. Nobody
+begins with `schemer`, `envious`, `tempter` or `spiteful`: they are there for whoever the
+player makes.
+
+Decided without asking:
+- **Which twenty**, their names, what each opens and what it does: the table above
+- **The ten bad ones, and the bully, are flaws**, as the traits that were there say of
+  themselves: a child of two who are kin takes the flaws of both
+- **Nobody does any of it unasked.** The answer was what somebody can be told
+- **Not anybody can be told to steal**, though anybody can be stolen from: what is told
+  goes by what they are like and what they feel, as coming to blows does (S48). Somebody
+  greedy, or with a grudge, or with a trait for it. Not somebody who feels for others
+  and has nothing against anybody
+- **From the stores it is always a thing, and from the shop the coin where there is one**
+- **Which thing is not chosen**: the one they would most like to have
+- **Taken off somebody standing beside them, it is seen**: there is no doing it unseen
+- **A store that holds nothing is still the stores**: what the settlement holds is kept at
+  hand in the pantries, the tank and the heaps, and it is taken from there
+- **Coming to blows was already told by what is felt** (S48), and stays so. Of the traits,
+  the brute lays hands on somebody, which hurts a little and no more
+- **How much each does** is a first guess, in the data
+- **Nobody has more than two traits**, as before: the creator lists all thirty, across the
+  width of the screen
+- **What an exchange does besides is the game's to do**, a small function to each, and the
+  data's to name: a pack can give an exchange any of the fourteen, and cannot write a new one
+
+Still open here:
+- What only somebody can be told, marked as theirs in the wheel, is P63
+- Nobody does what goes with their trait of their own accord
+- A trait does not tell in what somebody wishes for (S61) nor in how they pass the time (S62)
+- What each trait opens is not said where a resident is made
+- The traits that were there, the thieving ones and the two for tastes, open nothing
 
 ### P63 — What is done, on screen (needs S60 to S63) — planned
 - The ring of a thing, wishes over heads, what weighs on somebody in their panel, and what

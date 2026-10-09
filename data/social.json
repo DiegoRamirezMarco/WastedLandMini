@@ -437,5 +437,614 @@
       "leisure"
     ],
     "then_use": "drink"
+  },
+  "cow": {
+    "hostile": true,
+    "minutes": [
+      2,
+      5
+    ],
+    "importance": 30,
+    "text": "{a} intimida a {b}",
+    "memory": "Puse en su sitio a {other}.",
+    "memory_other": "{other} me metió el miedo en el cuerpo.",
+    "emotional_value": 0.1,
+    "value_other": -0.6,
+    "towards_doer": {
+      "fear": 12,
+      "resentment": 4
+    },
+    "other_mood": -5,
+    "other_needs": {
+      "stress": 12
+    },
+    "doer_needs": {
+      "stress": -6
+    },
+    "fact": "{a} intimidó a {b}",
+    "tags": [
+      "argument"
+    ],
+    "doing": "intimida a {other}",
+    "doing_other": "se achanta ante {other}"
+  },
+  "charm": {
+    "hostile": false,
+    "minutes": [
+      5,
+      10
+    ],
+    "importance": 15,
+    "text": "{a} camela a {b}",
+    "memory": "Camelé a {other}.",
+    "memory_other": "{other} estuvo de lo más encantador conmigo.",
+    "emotional_value": 0.2,
+    "value_other": 0.4,
+    "towards_doer": {
+      "affection": 5,
+      "trust": 3,
+      "attraction": 3
+    },
+    "other_mood": 3,
+    "tags": [
+      "chat"
+    ],
+    "doing": "camela a {other}",
+    "doing_other": "se deja camelar por {other}"
+  },
+  "pry": {
+    "hostile": false,
+    "minutes": [
+      5,
+      12
+    ],
+    "importance": 15,
+    "text": "{a} le tira de la lengua a {b}",
+    "memory": "Le saqué a {other} lo que sabía.",
+    "memory_other": "Hablé de más con {other}.",
+    "emotional_value": 0.2,
+    "value_other": -0.1,
+    "deeds": [
+      "learn_news",
+      "learn_taste"
+    ],
+    "tags": [
+      "chat"
+    ],
+    "doing": "le tira de la lengua a {other}",
+    "doing_other": "habla de más con {other}"
+  },
+  "amuse": {
+    "hostile": false,
+    "minutes": [
+      5,
+      10
+    ],
+    "importance": 12,
+    "text": "{a} hace reír a {b}",
+    "memory": "Hice reír a {other}.",
+    "memory_other": "{other} me hizo reír con ganas.",
+    "emotional_value": 0.3,
+    "value_other": 0.5,
+    "towards_doer": {
+      "affection": 3
+    },
+    "other_mood": 8,
+    "other_needs": {
+      "stress": -15
+    },
+    "doer_mood": 4,
+    "tags": [
+      "chat"
+    ],
+    "doing": "hace reír a {other}",
+    "doing_other": "se ríe con {other}"
+  },
+  "tend": {
+    "hostile": false,
+    "minutes": [
+      10,
+      20
+    ],
+    "importance": 20,
+    "text": "{a} cuida de {b}",
+    "memory": "Cuidé de {other}.",
+    "memory_other": "{other} cuidó de mí.",
+    "emotional_value": 0.3,
+    "value_other": 0.5,
+    "towards_doer": {
+      "trust": 4,
+      "affection": 3
+    },
+    "other_needs": {
+      "stress": -8
+    },
+    "deeds": [
+      "tend"
+    ],
+    "tags": [
+      "affection"
+    ],
+    "doing": "cuida de {other}",
+    "doing_other": "se deja cuidar por {other}"
+  },
+  "teach": {
+    "hostile": false,
+    "minutes": [
+      20,
+      40
+    ],
+    "importance": 20,
+    "text": "{a} le enseña a {b} lo que sabe",
+    "memory": "Le enseñé a {other} cosas del oficio.",
+    "memory_other": "{other} me enseñó cosas del oficio.",
+    "emotional_value": 0.2,
+    "value_other": 0.4,
+    "towards_doer": {
+      "trust": 3
+    },
+    "deeds": [
+      "teach"
+    ],
+    "tags": [
+      "chat"
+    ],
+    "doing": "le enseña a {other}",
+    "doing_other": "aprende de {other}"
+  },
+  "reconcile": {
+    "hostile": false,
+    "minutes": [
+      10,
+      20
+    ],
+    "importance": 25,
+    "text": "{a} le habla a {b} de hacer las paces",
+    "memory": "Le hablé a {other} de hacer las paces.",
+    "memory_other": "{other} me hizo ver las cosas con más calma.",
+    "emotional_value": 0.2,
+    "value_other": 0.3,
+    "other_needs": {
+      "stress": -8
+    },
+    "deeds": [
+      "calm"
+    ],
+    "tags": [
+      "chat"
+    ],
+    "doing": "le habla de paz a {other}",
+    "doing_other": "escucha a {other}"
+  },
+  "hear_out": {
+    "hostile": false,
+    "minutes": [
+      15,
+      30
+    ],
+    "importance": 15,
+    "text": "{a} escucha a {b}",
+    "memory": "Escuché a {other} un buen rato.",
+    "memory_other": "{other} me escuchó, y me quedé más a gusto.",
+    "emotional_value": 0.1,
+    "value_other": 0.6,
+    "towards_doer": {
+      "trust": 5,
+      "affection": 3
+    },
+    "other_mood": 5,
+    "other_needs": {
+      "stress": -25,
+      "social": -20
+    },
+    "tags": [
+      "chat"
+    ],
+    "doing": "escucha a {other}",
+    "doing_other": "se desahoga con {other}"
+  },
+  "treat": {
+    "hostile": false,
+    "minutes": [
+      3,
+      6
+    ],
+    "importance": 20,
+    "text": "{a} tiene un detalle con {b}",
+    "memory": "Tuve un detalle con {other}.",
+    "memory_other": "{other} tuvo un detalle conmigo.",
+    "emotional_value": 0.3,
+    "value_other": 0.6,
+    "towards_doer": {
+      "affection": 5,
+      "trust": 2
+    },
+    "other_mood": 4,
+    "deeds": [
+      "treat"
+    ],
+    "tags": [
+      "affection"
+    ],
+    "doing": "tiene un detalle con {other}",
+    "doing_other": "recibe un detalle de {other}"
+  },
+  "rally": {
+    "hostile": false,
+    "minutes": [
+      3,
+      8
+    ],
+    "importance": 15,
+    "text": "{a} le da ánimos a {b}",
+    "memory": "Le di ánimos a {other}.",
+    "memory_other": "{other} me dio ánimos.",
+    "emotional_value": 0.2,
+    "value_other": 0.5,
+    "towards_doer": {
+      "trust": 2
+    },
+    "other_mood": 10,
+    "other_needs": {
+      "tiredness": -10
+    },
+    "tags": [
+      "chat"
+    ],
+    "doing": "le da ánimos a {other}",
+    "doing_other": "recibe ánimos de {other}"
+  },
+  "hearten": {
+    "hostile": false,
+    "minutes": [
+      5,
+      10
+    ],
+    "importance": 18,
+    "text": "{a} le quita miedos a {b}",
+    "memory": "Le quité miedos a {other}.",
+    "memory_other": "Con {other} al lado todo da menos miedo.",
+    "emotional_value": 0.2,
+    "value_other": 0.4,
+    "towards_doer": {
+      "trust": 3
+    },
+    "other_needs": {
+      "stress": -10
+    },
+    "deeds": [
+      "hearten"
+    ],
+    "tags": [
+      "chat"
+    ],
+    "doing": "le da valor a {other}",
+    "doing_other": "coge valor con {other}"
+  },
+  "make_amends": {
+    "hostile": false,
+    "minutes": [
+      5,
+      10
+    ],
+    "importance": 30,
+    "text": "{a} le dice a {b} que devuelva lo que no es suyo",
+    "memory": "Hice que {other} devolviera lo que no era suyo.",
+    "memory_other": "{other} me hizo devolver lo que cogí.",
+    "emotional_value": 0.3,
+    "value_other": -0.2,
+    "towards_doer": {
+      "trust": 2
+    },
+    "deeds": [
+      "give_back"
+    ],
+    "tags": [
+      "chat"
+    ],
+    "doing": "le pide cuentas a {other}",
+    "doing_other": "da cuentas a {other}"
+  },
+  "fix_for": {
+    "hostile": false,
+    "minutes": [
+      15,
+      30
+    ],
+    "importance": 15,
+    "text": "{a} le arregla algo a {b}",
+    "memory": "Le arreglé una cosa a {other}.",
+    "memory_other": "{other} me arregló una cosa.",
+    "emotional_value": 0.2,
+    "value_other": 0.4,
+    "towards_doer": {
+      "affection": 3,
+      "trust": 2
+    },
+    "deeds": [
+      "mend"
+    ],
+    "tags": [
+      "chat"
+    ],
+    "doing": "le arregla algo a {other}",
+    "doing_other": "espera a que {other} le arregle algo"
+  },
+  "pamper": {
+    "hostile": false,
+    "minutes": [
+      5,
+      12
+    ],
+    "importance": 12,
+    "text": "{a} mima a {b}",
+    "memory": "Mimé un rato a {other}.",
+    "memory_other": "{other} me mimó un rato.",
+    "emotional_value": 0.3,
+    "value_other": 0.6,
+    "towards_doer": {
+      "affection": 5
+    },
+    "other_mood": 6,
+    "other_needs": {
+      "social": -25,
+      "stress": -8
+    },
+    "tags": [
+      "affection"
+    ],
+    "doing": "mima a {other}",
+    "doing_other": "se deja mimar por {other}"
+  },
+  "swindle": {
+    "hostile": false,
+    "minutes": [
+      5,
+      10
+    ],
+    "importance": 20,
+    "text": "{a} le cuenta un cuento a {b}",
+    "memory": "Le saqué algo a {other} con un cuento.",
+    "memory_other": "{other} me contó no sé qué, y solté lo que llevaba.",
+    "emotional_value": 0.3,
+    "value_other": -0.3,
+    "towards_doer": {
+      "trust": -4
+    },
+    "deeds": [
+      "swindle"
+    ],
+    "tags": [
+      "chat"
+    ],
+    "doing": "le cuenta un cuento a {other}",
+    "doing_other": "escucha el cuento de {other}"
+  },
+  "set_against": {
+    "hostile": false,
+    "minutes": [
+      5,
+      12
+    ],
+    "importance": 20,
+    "text": "{a} le calienta la cabeza a {b}",
+    "memory": "Le calenté la cabeza a {other}.",
+    "memory_other": "{other} me contó cosas que me dejaron mal cuerpo.",
+    "emotional_value": 0.1,
+    "value_other": -0.2,
+    "other_needs": {
+      "stress": 6
+    },
+    "deeds": [
+      "stir"
+    ],
+    "tags": [
+      "chat"
+    ],
+    "doing": "le calienta la cabeza a {other}",
+    "doing_other": "escucha a {other}"
+  },
+  "belittle": {
+    "hostile": true,
+    "minutes": [
+      2,
+      5
+    ],
+    "importance": 25,
+    "text": "{a} hace de menos a {b}",
+    "memory": "Le bajé los humos a {other}.",
+    "memory_other": "{other} me hizo de menos.",
+    "emotional_value": 0.1,
+    "value_other": -0.5,
+    "towards_doer": {
+      "resentment": 5,
+      "affection": -3
+    },
+    "other_mood": -8,
+    "other_needs": {
+      "stress": 10
+    },
+    "doer_mood": 4,
+    "fact": "{a} hizo de menos a {b}",
+    "tags": [
+      "argument"
+    ],
+    "doing": "hace de menos a {other}",
+    "doing_other": "aguanta a {other}"
+  },
+  "shove": {
+    "hostile": true,
+    "minutes": [
+      1,
+      3
+    ],
+    "importance": 40,
+    "text": "{a} zarandea a {b}",
+    "memory": "Zarandeé a {other}.",
+    "memory_other": "{other} me zarandeó.",
+    "emotional_value": 0.0,
+    "value_other": -0.7,
+    "towards_doer": {
+      "fear": 10,
+      "resentment": 8
+    },
+    "other_needs": {
+      "stress": 15
+    },
+    "deeds": [
+      "bruise"
+    ],
+    "fact": "{a} zarandeó a {b}",
+    "tags": [
+      "argument"
+    ],
+    "doing": "zarandea a {other}",
+    "doing_other": "se lleva un zarandeo de {other}"
+  },
+  "skive": {
+    "hostile": false,
+    "minutes": [
+      5,
+      10
+    ],
+    "importance": 15,
+    "text": "{a} convence a {b} de dejarlo para luego",
+    "memory": "Convencí a {other} de dejarlo para luego.",
+    "memory_other": "{other} me convenció de dejarlo para luego.",
+    "emotional_value": 0.2,
+    "value_other": 0.2,
+    "other_needs": {
+      "stress": -5
+    },
+    "deeds": [
+      "idle"
+    ],
+    "tags": [
+      "chat"
+    ],
+    "doing": "convence a {other} de dejarlo",
+    "doing_other": "se deja convencer por {other}"
+  },
+  "tell_off": {
+    "hostile": true,
+    "minutes": [
+      2,
+      5
+    ],
+    "importance": 25,
+    "text": "{a} le echa la bronca a {b}",
+    "memory": "Le eché la bronca a {other}.",
+    "memory_other": "{other} me echó la bronca.",
+    "emotional_value": 0.0,
+    "value_other": -0.4,
+    "towards_doer": {
+      "fear": 4,
+      "resentment": 4
+    },
+    "other_mood": -6,
+    "other_needs": {
+      "stress": 10
+    },
+    "fact": "{a} le echó la bronca a {b}",
+    "tags": [
+      "argument"
+    ],
+    "doing": "le echa la bronca a {other}",
+    "doing_other": "se lleva la bronca de {other}"
+  },
+  "scrounge": {
+    "hostile": false,
+    "minutes": [
+      3,
+      6
+    ],
+    "importance": 18,
+    "text": "{a} le pide de lo suyo a {b}",
+    "memory": "Le saqué algo de comer a {other}.",
+    "memory_other": "{other} me gorroneó.",
+    "emotional_value": 0.2,
+    "value_other": -0.2,
+    "towards_doer": {
+      "resentment": 3
+    },
+    "deeds": [
+      "scrounge"
+    ],
+    "tags": [
+      "chat"
+    ],
+    "doing": "le gorronea a {other}",
+    "doing_other": "aguanta el sablazo de {other}"
+  },
+  "lead_astray": {
+    "hostile": false,
+    "minutes": [
+      3,
+      6
+    ],
+    "importance": 15,
+    "text": "{a} lía a {b} para ir a tomar algo",
+    "memory": "Lié a {other} para ir a tomar algo.",
+    "memory_other": "{other} me lió para ir a tomar algo.",
+    "emotional_value": 0.3,
+    "value_other": 0.1,
+    "then_use": "drink",
+    "insists": true,
+    "tags": [
+      "leisure"
+    ],
+    "doing": "lía a {other} para un trago",
+    "doing_other": "se deja liar por {other}"
+  },
+  "rake_up": {
+    "hostile": true,
+    "minutes": [
+      3,
+      8
+    ],
+    "importance": 30,
+    "text": "{a} le saca a {b} lo de otras veces",
+    "memory": "Le saqué a {other} lo de otras veces.",
+    "memory_other": "{other} me sacó lo de otras veces.",
+    "emotional_value": -0.2,
+    "value_other": -0.5,
+    "towards_doer": {
+      "resentment": 6
+    },
+    "towards_other": {
+      "resentment": 3
+    },
+    "other_needs": {
+      "stress": 8
+    },
+    "fact": "{a} le sacó a {b} lo de otras veces",
+    "tags": [
+      "argument"
+    ],
+    "doing": "le saca lo pasado a {other}",
+    "doing_other": "aguanta a {other}"
+  },
+  "snub": {
+    "hostile": false,
+    "minutes": [
+      1,
+      3
+    ],
+    "importance": 15,
+    "text": "{a} corta en seco a {b}",
+    "memory": "Corté en seco a {other}.",
+    "memory_other": "{other} me cortó en seco.",
+    "emotional_value": 0.0,
+    "value_other": -0.4,
+    "towards_doer": {
+      "attraction": -8,
+      "affection": -4
+    },
+    "other_mood": -3,
+    "tags": [
+      "chat"
+    ],
+    "doing": "corta en seco a {other}",
+    "doing_other": "se lleva un corte de {other}"
   }
 }

@@ -55,8 +55,14 @@ class AffectDataTests(unittest.TestCase):
         self.assertTrue({"need", "with", "leisure", "task", "words"} <= groups)
         # Everything has a short name to go by where there is no room for what it says.
         self.assertTrue(all(option.name for option in world.affect_options("raul")))
-        unfelt = [name for name, order in settings.exchanges.items() if not order.feels and order.who == "anybody"]
-        self.assertEqual(unfelt, ["talk"], "past talk, everything goes by what is felt or by who they are to each other")
+        unfelt = [
+            name
+            for name, order in settings.exchanges.items()
+            if not order.feels and order.who == "anybody" and order.trait is None
+        ]
+        self.assertEqual(
+            unfelt, ["talk"], "past talk, everything goes by what is felt, by who they are to each other, or by what they are like"
+        )
 
     def test_what_makes_no_sense_is_refused(self) -> None:
         affect_settings_from_data({"needs": {"eat": {"label": "Come", "need": "hunger"}}})
@@ -166,7 +172,12 @@ class OptionsTests(unittest.TestCase):
     def test_past_talk_only_what_they_feel_for_somebody_is_on_offer(self) -> None:
         world = _settled()
         felt = [kind for kind in _kinds(world, "raul") if kind.startswith("with:")]
-        self.assertEqual(felt, ["with:talk"], "feeling nothing for anybody, there is talk and no more")
+        self.assertEqual(
+            felt, ["with:talk", "with:cow", "with:tell_off"], "feeling nothing for anybody: talk, and what goes with what he is like (S63)"
+        )
+        world.residents["raul"].traits = []
+        felt = [kind for kind in _kinds(world, "raul") if kind.startswith("with:")]
+        self.assertEqual(felt, ["with:talk"], "and for somebody with nothing of the kind, talk and no more")
         world.relationship("raul", "marta").resentment = 49
         kinds = _kinds(world, "raul")
         self.assertEqual(kinds["with:confront"], ["marta"])
@@ -187,6 +198,8 @@ class OptionsTests(unittest.TestCase):
     def test_what_there_is_with_one_person_is_what_is_felt_for_them(self) -> None:
         world = _settled()
         names = lambda other: [option.kind for option in world.affect_with("raul", other)]
+        # What goes with what he is like is told apart: here it is what is felt that is looked at.
+        world.residents["raul"].traits = []
         self.assertEqual(names("marta"), ["with:talk", "leisure:cards"])
         world.relationship("raul", "marta").affection = 45
         self.assertEqual(

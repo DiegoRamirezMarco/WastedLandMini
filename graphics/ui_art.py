@@ -556,6 +556,17 @@ def _dumbbell(p: Pen) -> None:
     p.line([(8.5, 14), (8.5, 22)], 2.2, p.light)
 
 
+def _mask(p: Pen) -> None:
+    """What somebody up to no good wears over their eyes, with its two ties."""
+    p.line([(6, 22), (1.5, 15)], 3.4, p.soft)
+    p.line([(42, 22), (46.5, 15)], 3.4, p.soft)
+    p.box(4, 14, 40, 19, 9)
+    p.poly([(19, 33.5), (24, 26), (29, 33.5)], p.cut)
+    p.circle(15.5, 23, 4.8, p.cut)
+    p.circle(32.5, 23, 4.8, p.cut)
+    p.line([(9, 17.5), (20, 17.5)], 2.0, p.light)
+
+
 GLYPHS: dict[str, Glyph] = {
     "people": _people,
     "work": _hammer,
@@ -590,6 +601,7 @@ GLYPHS: dict[str, Glyph] = {
     "mood": _face,
     "push": _flame,
     "train": _dumbbell,
+    "steal": _mask,
 }
 # The colour each icon is, where it stands alone or on a tile of its own.
 HUES: dict[str, Color] = {
@@ -626,6 +638,7 @@ HUES: dict[str, Color] = {
     "mood": (244, 198, 78),
     "push": (236, 112, 48),
     "train": (96, 168, 190),
+    "steal": (120, 104, 150),
 }
 # What is cut into an icon that stands alone, where it is not simply dark.
 CUTS: dict[str, Color] = {"medicine": (206, 58, 54)}

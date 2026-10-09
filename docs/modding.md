@@ -1233,6 +1233,11 @@ Two keys of a kind of object in `data/interactables.json`, both of which need
 `item_value_multiplier` (items with a matching tag are worth more to them) and
 `food_reaction_bonus` (food with a matching tag also eases their stress).
 
+A trait can open something only whoever has it can be told to do (S63). The trait itself
+says nothing of it: an order in `with` of `data/affect.json` names it as its `trait`, and
+the exchange the order leads to, in `data/social.json`, says what is done. A trait with
+`"flaw": true` is one a child of two who are kin takes for certain.
+
 `data/audio.json` says what sounds and when. Effects are files in `assets/sounds/`, named as in
 that file. A file of the same name in `sounds/`, at the top of the project, is played in place
 of the game's: see `sounds/README.md`. The game comes with no ambience and no music: each is
@@ -1323,6 +1328,20 @@ they are said to talk, or to argue. `pastime` is the taste it is liked or loathe
 something done for the sake of it: how fond of the other each comes away goes by how they took
 it. `then_use` is the use both go on to once it is over, each for themselves: `drink` sends
 them to the bar. Whoever was asked goes only if they care for whoever asked.
+
+An exchange can be something one of them does to the other (S63). Whoever went over for it
+is the one doing it:
+- `towards_doer` is what the other comes to feel for them, and `towards_other` what they
+  come to feel for the other, as feelings and how much, beside what `relationship` gives both.
+- `doer_mood` and `other_mood`, and `doer_needs` and `other_needs`, are what it does to
+  the spirits and to the needs of each, at a stroke, when it is over.
+- `memory_other` and `value_other` are what the other remembers of it and how it sits
+  with them, where that is not `memory` and `emotional_value`, which are then the doer's.
+- `doing_other` is what is said of the other while it goes on, as `doing` is of the doer.
+- `insists` has the other go on to `then_use` whether they care for the doer or not.
+- `deeds` lists what else it does, of what the game knows how to do: `learn_news`,
+  `learn_taste`, `tend`, `teach`, `calm`, `hearten`, `stir`, `treat`, `scrounge`, `mend`,
+  `give_back`, `swindle`, `bruise` and `idle`. One that is not among them is refused.
 
 An exchange is part of a romance with `"romance"`: `confession` (at its end the one told answers
 from what they feel), `tryst` (two residents alone: it needs the other to want it and nobody

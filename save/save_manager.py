@@ -167,7 +167,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 51
+    CURRENT_VERSION = 52
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -1626,6 +1626,7 @@ def _activity_to_data(activity: Activity | None) -> dict[str, Any] | None:
         "about_text": activity.about_text,
         "brought": activity.brought,
         "began_at": activity.began_at,
+        "led": activity.led,
     }
 
 
@@ -1703,6 +1704,8 @@ def _activity_from_data(data: Any) -> Activity | None:
         item_level=max(1, _level_of({"level": data.get("item_level", 1)})),
         held_up=int(data.get("held_up", 0)),
         ordered=bool(data.get("ordered", False)),
+        # Nobody had been talked into anything in a save from before (S63).
+        led=bool(data.get("led", False)),
         about=str(data.get("about", "")),
         about_text=str(data.get("about_text", "")),
         brought=bool(data.get("brought", False)),

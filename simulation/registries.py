@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from simulation.ai.affect import AffectSettings, affect_settings_from_data
+from simulation.ai.affect import SHARED, AffectSettings, affect_settings_from_data
 from simulation.ai.leisure import LeisureSettings, leisure_settings_from_data
 from simulation.economy.ledger import ResourceSettings, resource_settings_from_data
 from simulation.economy.settings import EconomySettings, economy_settings_from_data
@@ -32,6 +32,7 @@ from simulation.social.interaction import InteractionDefinition, interaction_def
 from simulation.justice.settings import JusticeSettings, justice_settings_from_data
 from simulation.substances.substance import SubstanceSettings, substance_settings_from_data
 from simulation.tastes.settings import TasteSettings, taste_settings_from_data
+from simulation.social.deeds import DEEDS
 from simulation.social.talk_settings import TalkSettings, talk_settings_from_data
 from simulation.housing.decor import DecorSettings, decor_settings_from_data
 from simulation.housing.housing import HousingSettings, housing_settings_from_data
@@ -407,6 +408,14 @@ class BuiltInRegistries:
         unknown = sorted(set(self.spoilage.compost_on) - set(self.interactables.kinds()))
         if unknown:
             raise ValueError(f"Compost is put on kinds of object there are not: {unknown}")
+        for group in SHARED:
+            for name, order in self.affect.shared(group).items():
+                if order.trait is not None and self.traits.find(order.trait) is None:
+                    raise ValueError(f"Order {name} is for whoever has a trait there is not: {order.trait}")
+        for interaction_id, interaction in self.interactions.items():
+            unknown = sorted(set(interaction.deeds) - set(DEEDS))
+            if unknown:
+                raise ValueError(f"Interaction {interaction_id} does what nothing knows how to do: {unknown}")
         both = sorted(set(self.finds.kinds) & set(self.crafts.kinds))
         if both:
             raise ValueError(f"A kind of thing to find is called as one a job teaches: {both}")

@@ -274,7 +274,9 @@ def describe_action(world: SimulationWorld, resident: Resident) -> str:
         if interaction is not None and interaction.romance == "tryst":
             return f"a solas con {partner.name}"
         if interaction is not None and interaction.doing is not None:
-            return interaction.doing.replace("{other}", partner.name)
+            # Whoever came to do it is the one doing it. The other is who it is done to (S63).
+            done_to = interaction.doing_other is not None and activity.intent != interaction.interaction_id
+            return (interaction.doing_other if done_to else interaction.doing).replace("{other}", partner.name)
         verb = "discute" if interaction is not None and interaction.hostile else "charla"
         return f"{verb} con {partner.name}"
     if activity.action == WORK_ACTION:

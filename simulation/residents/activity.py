@@ -46,6 +46,8 @@ class Activity:
     is what the player told them to do, and not something of their own. `about` is the
     subject of a talk (S58) and `about_text` the words for it, `brought` says that it was
     this one who brought it up, and `began_at` is the game minute the exchange began.
+    `led` says that somebody talked them into it (S63), so that work does not call them
+    away from it as it does from what they took up of their own accord.
     """
 
     action: str
@@ -64,3 +66,4 @@ class Activity:
     about_text: str = ""
     brought: bool = False
     began_at: int = 0
+    led: bool = False

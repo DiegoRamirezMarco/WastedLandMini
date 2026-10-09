@@ -154,7 +154,8 @@ class ResidentCreator:
         for trait_id in world.registries.traits.ids():
             label = str(world.registries.traits.get(trait_id).get("name", trait_id))
             button = Button.at(font, x, row, label, ("trait", trait_id))
-            if button.rect.right > LEFT + 400:
+            # There are a good many of them (S63): they run the width of the screen, under the notes.
+            if button.rect.right > canvas.get_width() - LEFT:
                 x, row = LEFT, row + button.rect.height + 3
                 button = Button.at(font, x, row, label, ("trait", trait_id))
             self.trait_buttons.append(button)

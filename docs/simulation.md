@@ -535,6 +535,24 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
 - **Nothing unasked.** A resident can be told to do nothing of their own accord: they do what
   they are told, see to what was put in their hands, and otherwise stand by. A body that can
   wait no longer is seen to all the same.
+- **What goes with a trait** (S63). An order of `with` that names a `trait` is offered to,
+  and can be told to, whoever has it and nobody else. The exchange it leads to is one of
+  `data/social.json`, where an exchange can say what it does to each side. Whoever came
+  for it, with it as their `intent`, is the doer: at its end the other's feelings for them
+  move by `towards_doer` and theirs for the other by `towards_other`, each one's mood by
+  `doer_mood` or `other_mood` and needs by `doer_needs` or `other_needs`, and each
+  remembers their side (`memory` and `emotional_value`, or `memory_other` and
+  `value_other`). Then `DeedSystem` does whatever it names in `deeds`: the doer's as they
+  have had their say (`DOERS`), and the other's once they have heard them out (`OTHERS`).
+  A deed that finds nothing to do, with nobody hurt to tend or nothing to mend, does nothing.
+- **Stealing** (S63). `task:steal` is offered with `AffectSystem._steal_targets`: the
+  stores and where the fund is kept, for whoever `ItemSystem.leaning_to_steal` gives more
+  than nothing with no owner, or whose need of the body is past `desperate_need`; and
+  each resident who has something on them and whom they have it in them to steal from.
+  `pilfering.told` plans it: beside somebody, `pick_pocket` takes the thing of theirs
+  the thief would most like, or their credit; at a place, the theft from the commons that
+  was there takes a thing from it, or from where a store's things are kept at hand
+  (`pilfering.source`). Either is a `TheftAttempt` like any other.
 - **It costs nothing**, and what is on offer follows from how things stand.
 
 ### Picked up and put down

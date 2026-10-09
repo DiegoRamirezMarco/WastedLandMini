@@ -1447,7 +1447,7 @@ class GameShellTests(unittest.TestCase):
         self.assertEqual((rows[0][1], rows[0][2], rows[0][3]), (-35, "Se llevan mal", "argument"))
         raul.couple_with, world.residents["ines"].couple_with = "ines", "raul"
         self.assertEqual(relationship_rows(world, raul, 5)[0][2], "Pareja")
-        self.assertEqual(trait_names(world, world.residents["marta"]), ["Le pierde la música"])
+        self.assertEqual(trait_names(world, world.residents["marta"]), ["Le pierde la música", "Buenas manos"])
         with self.assertNoLogs("graphics.assets", level="WARNING"):
             view.render()
         row, other_id = relationship_hitboxes(view.hud.layout.panel, world, raul)[0]

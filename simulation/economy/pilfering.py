@@ -40,7 +40,9 @@ PILFER_ACTION = "pilfer"
 FUND_THEFT_ACTION = "steal_fund"
 # Taking a meal or a drink out of the commons without leave.
 STEAL_FOOD_ACTION = "steal_food"
-PILFERING_ACTIONS = (PILFER_ACTION, FUND_THEFT_ACTION, STEAL_FOOD_ACTION)
+# Taking what somebody carries, told to (S63): a thing of theirs, or failing that their credit.
+PICK_ACTION = "pick_pocket"
+PILFERING_ACTIONS = (PILFER_ACTION, FUND_THEFT_ACTION, STEAL_FOOD_ACTION, PICK_ACTION)
 # What a sum of credit is worth is weighed like a thing of that base value.
 WORTH_SCALE = 50.0
 # How hungry or thirsty somebody has to be to help themselves, and to do it in front of anybody.
@@ -153,8 +155,88 @@ def plan(world: "SimulationWorld", thief: Resident, candidate: ScoredAction) -> 
     return Activity(candidate.name, candidate.target_id, path, minutes, item_id=candidate.item_id)
 
 
+def on_them(world: "SimulationWorld", thief: Resident, victim: Resident) -> ItemInstance | float | None:
+    """What a thief would take off somebody: the thing of theirs they carry that the thief
+    would most like to have, or failing that the credit within reach. None for nothing."""
+    resolve = world.registries.items.resolve
+    theirs = [item for item in victim.inventory.items if item.owner_id == victim.resident_id and not item.broken]
+    if theirs:
+        return max(theirs, key=lambda item: (world.items.personal_value(world, thief, resolve(item.definition_id), item), item.instance_id))
+    amount = _sum_within_reach(world, victim.credits) if world.fund.currency(world) is not None else 0
+    return float(amount) if amount >= 1 else None
+
+
+def common_places(world: "SimulationWorld") -> list[str]:
+    """Where what is everybody's is kept, to be taken from: the stores, and where the fund is."""
+    stores = [
+        object_id
+        for object_id, placed in world.interactables.items()
+        if world.definition_of(placed).store is not None and object_id in world.containers
+    ]
+    till_id = world.fund.till(world)
+    return [*stores, *([till_id] if till_id is not None and till_id not in stores and till_id in world.containers else [])]
+
+
+def _coin_there(world: "SimulationWorld", container_id: str) -> bool:
+    return container_id == world.fund.till(world) and world.fund.currency(world) is not None and world.trading.fund >= 1
+
+
+def source(world: "SimulationWorld", thief: Resident, place_id: str) -> tuple[str, ItemInstance] | None:
+    """Where a thing is taken from for a place somebody is told to steal from, and the thing.
+
+    The place itself, where it holds something that is nobody's. A store that holds nothing
+    is still the settlement's stores: what it would hold is kept at hand in the pantries, the
+    tank and the heaps (S53), and it is taken from the nearest of those with something in it.
+    """
+    item = _pick(world, thief, place_id) if place_id in world.containers else None
+    if item is not None:
+        return place_id, item
+    placed = world.interactables.get(place_id)
+    if placed is None or world.definition_of(placed).store is None:
+        return None
+    at_hand = sorted(
+        (manhattan(thief.tile, (other.x, other.y)), object_id)
+        for object_id, other in world.interactables.items()
+        if object_id in world.containers and world.definition_of(other).outlet is not None
+    )
+    for _distance, object_id in at_hand:
+        item = _pick(world, thief, object_id)
+        if item is not None:
+            return object_id, item
+    return None
+
+
+def in_it(world: "SimulationWorld", thief: Resident, container_id: str) -> bool:
+    """Whether there is anything of everybody's to take from a place: a thing, or the coin of the fund."""
+    return _coin_there(world, container_id) or source(world, thief, container_id) is not None
+
+
+def told(world: "SimulationWorld", thief: Resident, target_id: str) -> Activity | None:
+    """The walk to whoever, or wherever, a resident has been told to steal from (S63). None
+    if there is no getting there, or nothing to take."""
+    victim = world.residents.get(target_id)
+    if victim is not None:
+        if victim is thief or victim.away or on_them(world, thief, victim) is None:
+            return None
+        approach = world.activities.social.approach(world, thief, victim)
+        if approach is None:
+            return None
+        return Activity(PICK_ACTION, path=approach.path, minutes_left=STEAL_MINUTES, item_id=victim.resident_id)
+    if target_id not in world.interactables or target_id not in world.containers:
+        return None
+    if _coin_there(world, target_id):
+        return plan(world, thief, ScoredAction(FUND_THEFT_ACTION, 1.0, target_id))
+    found = source(world, thief, target_id)
+    if found is None:
+        return None
+    where, item = found
+    return plan(world, thief, ScoredAction(FUND_THEFT_ACTION, 1.0, where, item_id=item.instance_id))
+
+
 def begin(world: "SimulationWorld", thief: Resident, activity: Activity) -> bool:
     """Take what a resident walked over for. False if it is no longer there to be taken."""
+    if activity.action == PICK_ACTION:
+        return _pick_pocket(world, thief, activity)
     if activity.action == PILFER_ACTION:
         return _pilfer(world, thief, activity)
     if activity.action == STEAL_FOOD_ACTION:
@@ -184,13 +266,47 @@ def _pilfer(world: "SimulationWorld", thief: Resident, activity: Activity) -> bo
     return True
 
 
+def _pick_pocket(world: "SimulationWorld", thief: Resident, activity: Activity) -> bool:
+    """Take off somebody what they carry, standing beside them. They are there, and awake
+    as likely as not: it is seen by whoever is looking, they first of all."""
+    victim = world.residents.get(activity.item_id or "")
+    if victim is None or victim is thief or victim.away or manhattan(thief.tile, victim.tile) > 1:
+        return False
+    taken = on_them(world, thief, victim)
+    if taken is None:
+        return False
+    if isinstance(taken, float):
+        coin = world.fund.currency(world)
+        victim.credits -= taken
+        thief.credits += taken
+        attempt = TheftAttempt(thief.resident_id, victim.resident_id, "", container_id="", amount=taken)
+        thing = coin.amount(taken) if coin is not None else str(int(taken))
+    else:
+        victim.inventory.remove(taken.instance_id)
+        thief.inventory.add(taken)
+        definition = world.registries.items.resolve(taken.definition_id)
+        attempt = TheftAttempt(thief.resident_id, victim.resident_id, taken.instance_id, container_id="")
+        thing = f"{definition.article} {definition.name}"
+    _record(
+        world,
+        thief,
+        attempt,
+        f"{thief.name} le quita {thing} a {victim.name} de encima",
+        f"{thief.name} le quitó {thing} a {victim.name} de encima",
+        [thief.resident_id, victim.resident_id],
+    )
+    return True
+
+
 def _raid_fund(world: "SimulationWorld", thief: Resident, activity: Activity) -> bool:
     till_id = activity.target_id or ""
     container = world.containers.get(till_id)
     if container is None:
         return False
     coin = world.fund.currency(world)
-    if coin is not None:
+    # Coin where it is the fund's coin that is taken, and otherwise a thing: from the stores it
+    # is always a thing (S63).
+    if coin is not None and activity.item_id is None:
         amount = world.fund.pay_out(world, _sum_within_reach(world, world.trading.fund))
         if amount < 1:
             world.fund.pay_in(world, amount)

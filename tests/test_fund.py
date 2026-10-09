@@ -973,9 +973,9 @@ class TraitTests(unittest.TestCase):
 
     def test_those_they_suit_carry_them_and_they_can_be_chosen(self) -> None:
         world = SimulationWorld.demo_world()
-        self.assertEqual((world.residents["sergio"].traits, world.residents["paco"].traits), (["rogue"], ["dim"]))
+        self.assertEqual((world.residents["sergio"].traits, world.residents["paco"].traits), (["rogue", "idler"], ["dim", "clown"]))
         newcomers = {n.newcomer_id: n.traits for n in world.registries.world_events.newcomers}
-        self.assertEqual((newcomers["hugo"], newcomers["carmen"]), (("kleptomaniac",), ("wicked",)))
+        self.assertEqual((newcomers["hugo"], newcomers["carmen"]), (("kleptomaniac", "swindler"), ("wicked", "brute")))
         self.assertTrue({"kleptomaniac", "wicked", "rogue", "dim"} <= set(world.registries.traits.ids()))
 
     def test_someone_that_way_inclined_takes_credit_whatever_they_have_put_by(self) -> None:

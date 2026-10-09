@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from simulation.residents.needs import NEED_NAMES
 from simulation.social.relationship import FEELINGS
 
 
@@ -31,6 +32,8 @@ class InteractionDefinition:
     # What is said of somebody who is at it, with `{other}` where the other one goes. None
     # for one that is told like any other talk, or any other quarrel.
     doing: str | None = None
+    # The same of whoever it is being done to, where it is something done to somebody (S63).
+    doing_other: str | None = None
     # The taste it is liked or loathed by, as a tag of `data/tastes.json`, where it is done
     # for the sake of it: cards, a dance. What comes of it goes by how each of them takes it.
     pastime: str | None = None
@@ -40,6 +43,23 @@ class InteractionDefinition:
     # Whether it is about something (S58): whoever starts it brings a subject up, and how
     # the other takes it tells on what they feel for them.
     subject: bool = False
+    # For something that is done to somebody (S63), beside what both come to feel: what
+    # whoever it was done to comes to feel for whoever did it, and what whoever did it for
+    # them; what it does to the spirits and the needs of each; and what else it does, by
+    # the name of each deed.
+    towards_doer: dict[str, float] = field(default_factory=dict)
+    towards_other: dict[str, float] = field(default_factory=dict)
+    doer_mood: float = 0.0
+    other_mood: float = 0.0
+    doer_needs: dict[str, float] = field(default_factory=dict)
+    other_needs: dict[str, float] = field(default_factory=dict)
+    deeds: tuple[str, ...] = ()
+    # What whoever it was done to remembers of it and how it sits with them, where that is
+    # not what whoever did it remembers.
+    memory_other: str | None = None
+    value_other: float | None = None
+    # Whether whoever was asked goes on to what it leads to whether they care to or not.
+    insists: bool = False
 
 
 ROMANCE_KINDS = ("confession", "tryst", "breakup", "proposal")
@@ -62,6 +82,14 @@ def interaction_definition_from_data(interaction_id: str, data: dict[str, Any]) 
     romance = str(data["romance"]) if "romance" in data else None
     if romance is not None and romance not in ROMANCE_KINDS:
         raise ValueError(f"Interaction {interaction_id} is an unknown kind of romance: {romance}")
+    sides = {
+        name: {str(key): float(delta) for key, delta in data.get(name, {}).items()}
+        for name in ("towards_doer", "towards_other", "doer_needs", "other_needs")
+    }
+    if (sides["towards_doer"].keys() | sides["towards_other"].keys()) - set(FEELINGS):
+        raise ValueError(f"Interaction {interaction_id} has somebody come to feel what there is not")
+    if (sides["doer_needs"].keys() | sides["other_needs"].keys()) - set(NEED_NAMES):
+        raise ValueError(f"Interaction {interaction_id} changes a need there is not")
     shortest, longest = (int(value) for value in data["minutes"])
     if not 1 <= shortest <= longest:
         raise ValueError(f"Interaction {interaction_id} has an invalid minutes range")
@@ -83,7 +111,18 @@ def interaction_definition_from_data(interaction_id: str, data: dict[str, Any]) 
         damage=damage,
         romance=romance,
         doing=str(data["doing"]) if data.get("doing") else None,
+        doing_other=str(data["doing_other"]) if data.get("doing_other") else None,
         pastime=str(data["pastime"]) if data.get("pastime") else None,
         then_use=str(data["then_use"]) if data.get("then_use") else None,
         subject=bool(data.get("subject", False)),
+        towards_doer=sides["towards_doer"],
+        towards_other=sides["towards_other"],
+        doer_mood=float(data.get("doer_mood", 0.0)),
+        other_mood=float(data.get("other_mood", 0.0)),
+        doer_needs=sides["doer_needs"],
+        other_needs=sides["other_needs"],
+        deeds=tuple(str(deed) for deed in data.get("deeds", [])),
+        memory_other=str(data["memory_other"]) if data.get("memory_other") else None,
+        value_other=float(data["value_other"]) if "value_other" in data else None,
+        insists=bool(data.get("insists", False)),
     )

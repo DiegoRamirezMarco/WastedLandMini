@@ -620,7 +620,7 @@ class ItemSaveTests(unittest.TestCase):
         self.assertTrue(original.thefts)
         loaded = self.manager.from_data(json.loads(json.dumps(self.manager.to_data(original))))
         self.assertEqual(self.manager.to_data(loaded), self.manager.to_data(original))
-        self.assertEqual(loaded.residents["marta"].traits, ["music_lover"])
+        self.assertEqual(loaded.residents["marta"].traits, ["music_lover", "caring"])
         original.step(3 * MINUTES_PER_DAY)
         loaded.step(3 * MINUTES_PER_DAY)
         self.assertEqual(self.manager.to_data(loaded), self.manager.to_data(original))

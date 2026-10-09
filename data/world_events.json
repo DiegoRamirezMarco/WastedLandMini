@@ -9,7 +9,11 @@
         "empathy": 70,
         "courage": 60,
         "sociability": 45
-      }
+      },
+      "traits": [
+        "teacher",
+        "affectionate"
+      ]
     },
     {
       "id": "hugo",
@@ -21,7 +25,8 @@
         "greed": 55
       },
       "traits": [
-        "kleptomaniac"
+        "kleptomaniac",
+        "swindler"
       ]
     },
     {
@@ -34,7 +39,8 @@
         "empathy": 40
       },
       "traits": [
-        "wicked"
+        "wicked",
+        "brute"
       ]
     },
     {
@@ -45,7 +51,11 @@
         "empathy": 60,
         "sociability": 30,
         "greed": 35
-      }
+      },
+      "traits": [
+        "upright",
+        "rousing"
+      ]
     }
   ],
   "events": {

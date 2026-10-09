@@ -147,6 +147,8 @@ class AffectScreenTests(unittest.TestCase):
         self.assertEqual((ines.activity.action, ines.activity.ordered), ("eat", True))
 
     def test_what_is_done_with_somebody_asks_who_by_their_faces_and_then_what_by_what_is_felt(self) -> None:
+        # What goes with what he is like has tests of its own (S63): here it is what is felt.
+        self.world.residents["raul"].traits = []
         self.world.step(60)
         self.world.relationship("raul", "marta").resentment = 80
         self._open("raul")

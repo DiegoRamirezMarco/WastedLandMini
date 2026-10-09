@@ -45,6 +45,9 @@ watches, advises and intervenes, but does not control them.
   to do. They see to them when they can, or the player helps, and one let go is remembered.
 - Time of their own: bored, they take a stroll, sing by the fire, play a game of darts or
   take out the toy they carry, each as they like it.
+- Thirty traits, most with something only whoever has one can be told to do: a bully cows
+  people, a gossip worms things out of them, a clown makes them laugh. And stealing, told
+  to whoever has it in them, from whoever carries something, from the stores and the shop.
 - Talk that is about something: a thing, somebody, a piece of news, or a word the player
   gave when a resident asked for one. How whoever listens takes it, by tastes of their own,
   tells on how the two get on, and the player can tell somebody what to talk about.

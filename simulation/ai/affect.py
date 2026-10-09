@@ -19,7 +19,8 @@ from typing import TYPE_CHECKING, Any
 from simulation.ai.utility_ai import ScoredAction
 from simulation.events.event import DomainEvent
 from simulation.residents.activity import HEED_ACTION, WAIT_ACTION, Activity, Order
-from simulation.residents.needs import NEED_NAMES
+from simulation.economy import pilfering
+from simulation.residents.needs import BODILY_NEEDS, NEED_NAMES
 from simulation.residents.resident import Resident
 from simulation.social.relationship import FEELINGS, SIGNED_FEELINGS, Relationship
 from simulation.tastes.taste import TAG, key_of
@@ -36,10 +37,10 @@ GROUPS = (NEED, WITH, INCITE, LEISURE, TASK, WORDS)
 # The groups of what is done with somebody else.
 SHARED = (WITH, INCITE, LEISURE)
 # What a resident can be told to get on with.
-TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, USE, TRAIN, STOP = (
-    "to_post", "push", "take_charge", "salvage", "take_job", "leave_job", "treat", "use", "train", "stop",
+TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, USE, TRAIN, STEAL, STOP = (
+    "to_post", "push", "take_charge", "salvage", "take_job", "leave_job", "treat", "use", "train", "steal", "stop",
 )
-TASKS = (TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, USE, TRAIN, STOP)
+TASKS = (TO_POST, PUSH, TAKE_CHARGE, SALVAGE, TAKE_JOB, LEAVE_JOB, TREAT, USE, TRAIN, STEAL, STOP)
 # Who an exchange can be had with: anybody, only somebody they are no couple with, or only their partner.
 ANYBODY, SINGLE, PARTNER = "anybody", "single", "partner"
 # What an exchange is, for whoever shows it: between friends, between two who are drawn to
@@ -96,6 +97,9 @@ class ExchangeOrder:
     name: str = ""
     tone: str = FRIENDLY
     icon: str | None = None
+    # The trait only whoever has it can be told this by (S63). None for what goes by nothing
+    # of what they are like.
+    trait: str | None = None
 
 
 @dataclass(frozen=True)
@@ -220,6 +224,7 @@ def _exchange(name: str, data: Any, where: str, tone: str = FRIENDLY) -> Exchang
         name=str(data.get("name", data["label"])),
         tone=str(data.get("tone", tone)),
         icon=str(data["icon"]) if data.get("icon") else None,
+        trait=str(data["trait"]) if data.get("trait") else None,
     )
     if order.who not in (ANYBODY, SINGLE, PARTNER):
         raise ValueError(f"{where} {name} is with somebody it cannot tell: {order.who}")
@@ -476,6 +481,9 @@ class AffectSystem:
         definition = world.registries.interactions.get(order.interaction)
         if definition is None or other is resident or other.away or other.resident_id in world.leaving:
             return False
+        if order.trait is not None and order.trait not in resident.traits:
+            # It is for whoever is that way, and nobody else can be told it (S63).
+            return False
         together = resident.couple_with == other.resident_id
         if (order.who == PARTNER and not together) or (order.who == SINGLE and together):
             return False
@@ -570,9 +578,34 @@ class AffectSystem:
             return tuple(
                 (each, f"{said}, a {distance} pasos") for distance, each, said in sorted(about)[: settings.most_targets]
             ) or None
+        if name == STEAL:
+            return self._steal_targets(world, resident) or None
         # Using one thing in particular is never among what is offered: it is told by
         # naming the thing, as by putting them down at it (P27).
         return None
+
+    def _steal_targets(self, world: "SimulationWorld", resident: Resident) -> tuple[tuple[str, str], ...]:
+        """Who and what a resident can be told to steal from (S63): whoever they have it in
+        them to steal from, by how given to it they are and what they hold against them
+        (`ItemSystem.leaning_to_steal`), who has something on them; and the stores and
+        where the fund is kept, for whoever has it in them to take what is everybody's, or
+        is past caring for want of something to eat or drink. The places first, and of each
+        the nearest first."""
+        settings = world.registries.affect
+        people, places = [], []
+        for other in world.residents.values():
+            if other is resident or other.away or other.resident_id in world.leaving:
+                continue
+            if world.items.leaning_to_steal(world, resident, other) > 0 and pilfering.on_them(world, resident, other) is not None:
+                people.append((manhattan(resident.tile, other.tile), other.resident_id, other.name))
+        pressed = any(getattr(resident.needs, need) >= settings.desperate_need for need in BODILY_NEEDS)
+        if pressed or world.items.leaning_to_steal(world, resident, None) > 0:
+            for container_id in pilfering.common_places(world):
+                placed = world.interactables[container_id]
+                if pilfering.in_it(world, resident, container_id):
+                    places.append((manhattan(resident.tile, (placed.x, placed.y)), container_id, self._named(world, placed)))
+        found = [*sorted(places), *sorted(people)]
+        return tuple((each, said) for _distance, each, said in found[: settings.most_targets])
 
     def can_use(
         self, world: "SimulationWorld", resident: Resident, placed: Interactable, task: str = USE, action: str | None = None
@@ -833,6 +866,14 @@ class AffectSystem:
             object_id, action = split_use(target_id)
             placed = world.interactables.get(object_id)
             activity = routine.use(world, resident, placed, action) if placed is not None else None
+            if activity is None:
+                return nowhere
+            self.leave_off(world, resident)
+            resident.activity = activity
+            resident.current_action = "walking" if activity.path else resident.current_action
+            return None
+        if name == STEAL:
+            activity = pilfering.told(world, resident, target_id or "")
             if activity is None:
                 return nowhere
             self.leave_off(world, resident)

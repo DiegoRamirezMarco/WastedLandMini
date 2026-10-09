@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `51` |
+| `version` | `52` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -89,6 +89,8 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 52** added `led` on an activity (S63): that somebody talked them into it, so
+  that their shift does not call them away from it. Nobody had been in a save from before.
 - `boredom` joined a resident's `needs` with S62, with no new version: in a save without
   it everybody is as bored as somebody new, 15 of 100.
 - **Version 51** added `wishes` (S61): what each resident wants right now, as a list of
