@@ -71,8 +71,10 @@ from ui.resource_bar import Chip, draw_chips, draw_tip, resource_chips, tip_line
 from ui.resident_panel import (
     KIN_TAB,
     LIFE_TAB,
+    MOOD_TAB,
     TASTES_TAB,
     kin_hitbox,
+    mood_hitbox,
     kin_hitboxes,
     roster_tree_hitbox,
     roster_words_hitbox,
@@ -179,6 +181,8 @@ def speed_intent(speed: int) -> tuple[str, int]:
 PANEL_TAB_INTENT = "panel_tab"
 # Turns a resident's panel to who they are and whose, and back.
 PANEL_KIN_INTENT = "panel_kin"
+# Turns a resident's panel to what lifts their spirits and what weighs on them, and back (P63).
+PANEL_MOOD_INTENT = "panel_mood"
 # Asks for the families of the whole settlement, on a screen of their own.
 FAMILY_INTENT = ("family",)
 # What the player answers when asked whether to draw anew what has just been made better.
@@ -649,6 +653,9 @@ class Hud:
     def toggle_panel_kin(self) -> None:
         self.panel_tab = LIFE_TAB if self.panel_tab == KIN_TAB else KIN_TAB
 
+    def toggle_panel_mood(self) -> None:
+        self.panel_tab = LIFE_TAB if self.panel_tab == MOOD_TAB else MOOD_TAB
+
     def click(self, position: tuple[int, int]) -> Hashable | None:
         """Return the intent of the button, item or resident under `position`."""
         for button in self.buttons:
@@ -672,6 +679,8 @@ class Hud:
             return AFFECT_INTENT
         if self.selected_id in self.world.residents and kin_hitbox(self.layout.panel).collidepoint(position):
             return PANEL_KIN_INTENT
+        if self.selected_id in self.world.residents and mood_hitbox(self.layout.panel).collidepoint(position):
+            return PANEL_MOOD_INTENT
         if self.card_rect() is None and self.thing_rect() is None:
             if roster_tree_hitbox(self.layout.panel).collidepoint(position):
                 return FAMILY_INTENT

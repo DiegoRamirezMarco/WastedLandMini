@@ -12,6 +12,7 @@ from graphics.icons import icon_path
 from graphics.item_icons import ICON_SIZE, ItemIcons
 from graphics.palette import PALETTE
 from graphics.screen_layers import ScreenLayers
+from simulation.ai.activity_system import HEALTH, mood_strains
 from simulation.residents.needs import NEED_NAMES
 from simulation.residents.resident import Resident
 from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
@@ -89,7 +90,22 @@ LIFE_TAB, TASTES_TAB = "life", "tastes"
 TASTES_TITLE = "Gustos"
 # A third face: who they are and whose, and what they take.
 KIN_TAB = "kin"
-TAB_LABELS = {LIFE_TAB: "Gustos", TASTES_TAB: "Volver", KIN_TAB: "Volver"}
+# What lifts their spirits and what weighs on them, behind the bar of their mood (P63).
+MOOD_TAB = "mood"
+TAB_LABELS = {LIFE_TAB: "Gustos", TASTES_TAB: "Volver", KIN_TAB: "Volver", MOOD_TAB: "Volver"}
+MOOD_TITLE = "Ánimo"
+WANTS_TITLE = "Lo que quiere"
+WANTS_NOTHING = "No se le antoja nada"
+WEIGHS_TITLE = "Lo que le pesa ahora"
+WEIGHS_NOTHING = "Nada le pesa"
+BEHIND_TITLE = "Lo que lleva encima"
+BEHIND_NOTHING = "Nada que le haya dejado huella"
+HEALTH_STRAIN = "Lo que le duele"
+# How much a need has to take off their spirits to be told of, and how many of what they
+# remember are looked through for what lifted them and what brought them down.
+STRAIN_FROM = 2.0
+MOST_BEHIND = 12
+LIFTED, LOWERED = "+", "-"
 KIN_LABEL = "Quién es"
 KIN_WIDTH = 56
 KIN_TITLE = "Quién es"
@@ -308,6 +324,75 @@ def _draw_kin(
         y += LINE_HEIGHT
 
 
+def mood_hitbox(panel: pygame.Rect) -> pygame.Rect:
+    """Where the panel is turned to what lifts a resident's spirits and what weighs on them:
+    the name of the bar of their mood, the last of the bars."""
+    top = panel.y + PADDING + FACE_SIZE[1] + 6 + BAR_ROW * (len(NEED_NAMES) + OTHER_BARS - 1)
+    return pygame.Rect(panel.x + PADDING - 2, top - 1, BAR_LEFT - 3, BAR_ROW)
+
+
+def mood_rows(world: SimulationWorld, resident: Resident) -> tuple[list[str], list[tuple[str, int]], list[tuple[str, bool]]]:
+    """What there is to say of a resident's spirits: what they want right now, in a line or
+    none; what weighs on them now, each with how many points of mood it takes, the heaviest
+    first; and what they remember that lifted them or brought them down, the latest first,
+    each with whether it lifted them."""
+    wish = world.wishes_of.get(resident.resident_id)
+    wants = [world.wishes.said(world, wish)] if wish is not None else []
+    weighs = sorted(
+        (
+            (HEALTH_STRAIN if name == HEALTH else NEED_LABELS.get(name, name), round(strain))
+            for name, strain in mood_strains(resident).items()
+            if strain >= STRAIN_FROM
+        ),
+        key=lambda each: -each[1],
+    )
+    behind = [
+        (memory.text, memory.emotional_value > 0)
+        for memory in reversed(world.memories.recent(resident.resident_id, MOST_BEHIND))
+        if memory.emotional_value != 0
+    ]
+    return wants, weighs, behind
+
+
+def _draw_mood(
+    target: pygame.Surface, font: BitmapFont, panel: pygame.Rect, position: tuple[int, int], world: SimulationWorld, resident: Resident
+) -> None:
+    """What lifts a resident's spirits and what weighs on them (P63): what they want, what
+    takes from their mood right now, and what they carry with them of what has happened."""
+    x, y = position
+    inner = panel.width - PADDING * 2
+    wants, weighs, behind = mood_rows(world, resident)
+    y = _title(target, font, WANTS_TITLE, x, y, inner - TAB_WIDTH - 6)
+    for line in font.wrap(wants[0], inner) if wants else [WANTS_NOTHING]:
+        font.draw(target, line, (x, y), PALETTE["lamp" if wants else "stone"])
+        y += LINE_HEIGHT
+    y += 4
+
+    y = _title(target, font, WEIGHS_TITLE, x, y, inner)
+    if not weighs:
+        font.draw(target, WEIGHS_NOTHING, (x, y), PALETTE["stone"])
+        y += LINE_HEIGHT
+    for name, points in weighs:
+        font.draw(target, name, (x, y), PALETTE["bone"])
+        figure = f"-{points}"
+        font.draw(target, figure, (panel.right - PADDING - font.width(figure), y), PALETTE["ember"])
+        y += LINE_HEIGHT
+    y += 4
+
+    y = _title(target, font, BEHIND_TITLE, x, y, inner)
+    if not behind:
+        font.draw(target, BEHIND_NOTHING, (x, y), PALETTE["stone"])
+    for text, lifted in behind:
+        lines = font.wrap(text, inner - 8)[:2]
+        if y + LINE_HEIGHT * len(lines) > panel.bottom - 2:
+            break
+        font.draw(target, LIFTED if lifted else LOWERED, (x, y), PALETTE["lichen" if lifted else "ember"])
+        for line in lines:
+            font.draw(target, line, (x + 8, y), PALETTE["lichen" if lifted else "dust"])
+            y += LINE_HEIGHT
+        y += 1
+
+
 def tab_hitbox(panel: pygame.Rect) -> pygame.Rect:
     """Where the panel is switched between how a resident lives and what they like: at the right
     end of the first heading under their bars."""
@@ -509,8 +594,12 @@ def draw_resident_panel(
         (NEED_LABELS[need], getattr(resident.needs, need), NEED_COLORS[need]) for need in NEED_NAMES
     ] + [(MOOD_LABEL, resident.mood, MOOD_COLOR)]
     bar_width = inner - BAR_LEFT - 22
+    # The name of their mood is the way to what lifts it and what weighs on it (P63).
+    behind = mood_hitbox(panel)
+    draw_panel(target, behind, fill="lamp" if tab == MOOD_TAB else "shadow", border="lamp")
     for label, value, color in bars:
-        font.draw(target, label, (x, y - 1), PALETTE["bone"])
+        named = "bone" if label != MOOD_LABEL else ("ink" if tab == MOOD_TAB else "glow")
+        font.draw(target, label, (x, y - 1), PALETTE[named])
         bar = pygame.Rect(x + BAR_LEFT, y + 3, bar_width, 5)
         draw_bar(target, bar, value / 100.0, color)
         number = str(round(value))
@@ -526,6 +615,10 @@ def draw_resident_panel(
         return
     if tab == KIN_TAB:
         _draw_kin(target, font, faces, panel, (x, y), world, resident)
+        _draw_tab(target, font, panel, tab)
+        return
+    if tab == MOOD_TAB:
+        _draw_mood(target, font, panel, (x, y), world, resident)
         _draw_tab(target, font, panel, tab)
         return
     traits = trait_names(world, resident)
@@ -568,25 +661,37 @@ def draw_resident_panel(
     draw_panel(target, give, fill="shadow", border="lamp")
     font.draw(target, GIVE_LABEL, (give.centerx - font.width(GIVE_LABEL) // 2, give.y), PALETTE["glow"])
     y = _draw_item_grid(target, font, icons, (x, y), inner, world, resident)
-    if has_shop(world):
+    wish = world.wishes_of.get(resident.resident_id)
+    if wish is not None:
+        # What they want right now comes before anything else that is said of them (P63).
+        for line in font.wrap(world.wishes.said(world, wish), inner)[:2]:
+            if y + LINE_HEIGHT > panel.bottom - 2:
+                break
+            font.draw(target, line, (x, y), PALETTE["lamp"])
+            y += LINE_HEIGHT
+        y += 1
+    if has_shop(world) and y + ICON_SIZE[1] <= panel.bottom - 2:
         _draw_affordable(target, font, icons, (x, y), world, resident, inner)
         y += ICON_SIZE[1] + 2
 
+    said: list[tuple[str, str]] = []
     talking = talk_line(world, resident)
     if talking is not None:
         # While they talk of something, what it is: there is no dock to read it in any more (P62).
-        last, color = talking, "paper"
-    elif resident.injuries or resident.lost_limbs:
-        # While someone is hurt, what ails them matters more than what is on their mind.
-        last, color = describe_injuries(world, resident), "ember"
-    else:
-        memories = world.memories.recent(resident.resident_id, 1)
-        last, color = (f"Recuerda: {memories[-1].text}" if memories else "Sin recuerdos todavía"), "stone"
-    for line in font.wrap(last, inner):
-        if y + LINE_HEIGHT > panel.bottom - 2:
-            break
-        font.draw(target, line, (x, y), PALETTE[color])
-        y += LINE_HEIGHT
+        said.append((talking, "paper"))
+    if talking is None:
+        if resident.injuries or resident.lost_limbs:
+            # While someone is hurt, what ails them matters more than what is on their mind.
+            said.append((describe_injuries(world, resident), "ember"))
+        else:
+            memories = world.memories.recent(resident.resident_id, 1)
+            said.append(((f"Recuerda: {memories[-1].text}" if memories else "Sin recuerdos todavía"), "stone"))
+    for text, color in said:
+        for line in font.wrap(text, inner):
+            if y + LINE_HEIGHT > panel.bottom - 2:
+                break
+            font.draw(target, line, (x, y), PALETTE[color])
+            y += LINE_HEIGHT
 
 
 def _draw_item_grid(

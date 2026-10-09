@@ -567,6 +567,17 @@ def _mask(p: Pen) -> None:
     p.line([(9, 17.5), (20, 17.5)], 2.0, p.light)
 
 
+def _star(p: Pen) -> None:
+    """What is somebody's own, for being how they are."""
+    p.poly(
+        [
+            (24, 4), (29.2, 17.6), (43.6, 18.2), (32.4, 27.2), (36.2, 41.4),
+            (24, 33.4), (11.8, 41.4), (15.6, 27.2), (4.4, 18.2), (18.8, 17.6),
+        ]
+    )
+    p.line([(20.5, 20.5), (24, 11.5)], 2.0, p.light)
+
+
 GLYPHS: dict[str, Glyph] = {
     "people": _people,
     "work": _hammer,
@@ -602,6 +613,7 @@ GLYPHS: dict[str, Glyph] = {
     "push": _flame,
     "train": _dumbbell,
     "steal": _mask,
+    "trait": _star,
 }
 # The colour each icon is, where it stands alone or on a tile of its own.
 HUES: dict[str, Color] = {
@@ -639,6 +651,7 @@ HUES: dict[str, Color] = {
     "push": (236, 112, 48),
     "train": (96, 168, 190),
     "steal": (120, 104, 150),
+    "trait": (244, 198, 78),
 }
 # What is cut into an icon that stands alone, where it is not simply dark.
 CUTS: dict[str, Color] = {"medicine": (206, 58, 54)}

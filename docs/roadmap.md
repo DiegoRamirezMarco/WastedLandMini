@@ -5374,7 +5374,8 @@ Decided without asking:
 - **Nothing is saved that was not**: a use is told apart by its action, which was saved
 
 Still open here:
-- The ring of what can be done with a thing, and dropping somebody on it, is P63
+- The ring of what can be done with a thing was P63. Dropping somebody on it still goes
+  by what it is mainly for, as answered for P27, and asks only where there is no such thing
 - None of the ten has a movement of its own: whoever dances stands
 - None is for two at once: chess is played alone
 - Nobody tires of doing the same thing
@@ -5458,7 +5459,7 @@ Decided without asking:
   a stew has one
 
 Still open here:
-- What somebody wants, over their head and on their panel, is P63, with the list of what
+- What somebody wants, over their head and on their panel, was P63, with the list of what
   has lifted their spirits and what has brought them down
 - Nobody says what they want, to the player or to each other: it could be something to
   talk about (S58)
@@ -5667,15 +5668,71 @@ Decided without asking:
   data's to name: a pack can give an exchange any of the fourteen, and cannot write a new one
 
 Still open here:
-- What only somebody can be told, marked as theirs in the wheel, is P63
+- What only somebody can be told, marked as theirs in the wheel, was P63
 - Nobody does what goes with their trait of their own accord
 - A trait does not tell in what somebody wishes for (S61) nor in how they pass the time (S62)
 - What each trait opens is not said where a resident is made
 - The traits that were there, the thieving ones and the two for tastes, open nothing
 
-### P63 — What is done, on screen (needs S60 to S63) — planned
+### P63 — What is done, on screen (needs S60 to S63) — done
 - The ring of a thing, wishes over heads, what weighs on somebody in their panel, and what
   only they can do in the wheel
+
+What there is:
+- **With somebody selected, a click on a thing opens the ring of what they can do with
+  it** (S60), laid out about the thing: what it is mainly for first, then whatever else it
+  offers, each with an icon of what it does for whoever does it, and `Ver`, the way to
+  what there is to say of the thing. They are stopped to be told, as the wheel stops
+  them, and what is picked is an order like any other. With nobody selected, or with
+  nothing they could do with it, the click shows what there is to say of it, as it did
+- **Everything there is something to do with can be clicked**, and not only what has
+  something to say of itself: a bed, a table, the fire
+- **Put down on a thing (P27), somebody still does what it is mainly for**, as was
+  answered then. By a thing with nothing it is mainly for that they can do, a table, or
+  the rope for somebody it has nothing left to teach, they are left beside it, nothing
+  is set about, and its ring opens
+- **Whoever wants something (S61) has a small bubble with something on their mind over
+  their head.** Selected, and saying nothing, it is what they want that is over them: the
+  picture of the thing, the face of whoever they want to be with, or what they feel like
+  doing, in words
+- **What they want is said in their panel**, under what they carry, before anything else
+- **The name of the bar of their mood is a way in**: `Ánimo` turns the panel to what they
+  want, what weighs on them right now, each need with the points of mood it takes and
+  the heaviest first, and what they carry with them of what has happened, the latest
+  first: in green with a `+` what lifted their spirits, and with a `-` what brought them
+  down. `Volver`, or `Ánimo` again, turns it back
+- **What weighs on their mood is what their mood goes by**: the panel and the simulation
+  read it off the same place (`mood_strains`)
+- **What only somebody can be told, for a trait of theirs (S63), wears a star at its
+  corner in the wheel**, and says whose it is where the pointer rests on it: `solo por
+  ser Matón`
+- **Stealing has an icon of its own**, a mask (S63)
+
+Decided without asking:
+- **What lifts and what weighs is behind the bar of their mood and not under what they
+  carry**: there is room there for a line or two, and the list wants the length of the
+  panel
+- **What weighs on them now is told beside what they remember**: a list of what has
+  happened does not say why somebody is low who is only hungry
+- **A need is worth a line from two points of mood**
+- **Whoever is selected shows what they want and the others a mark**: nine bubbles with
+  a picture in each would hide the map
+- **A wish gives way to talk**: while they talk of something, that is what is over them
+- **Being put down on a thing asks nothing where the thing is for something**, though
+  S60 had it that it would go by the ring. Put down on their bed somebody sleeps, as
+  was answered for P27, and what else a bed offers is a click away. Asking every time
+  was built first: six modules of tests put somebody on a bed, the tank or a thing to
+  train at to have them use it, which said how much is done that way, and it was undone
+- **A click on a pantry or the tank with somebody selected opens the ring** and not what
+  it holds, which is one press further, at `Ver`
+- **The icon of each thing to do** goes by what it does: food, water, a moon for sleep,
+  a cross for care, the weights for training, and a die for whatever is done for the
+  sake of it
+
+Still open here:
+- Nothing shows over somebody who is bored
+- What each trait opens is not said where a resident is made
+- What has lifted their spirits goes back as far as they remember, and no further
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

@@ -237,6 +237,13 @@ python -m simulation.headless --days 7 --seed 7
 - `Palabras`, at the foot of the list of residents and over what a resident carries, or `H`:
   the lists of words of the settlement, each resident's own phrases and what they call the
   others, and `Que hable de algo` to tell somebody what to talk about and with whom
+- With somebody selected, click a thing to tell them what to do with it: a ring opens over
+  it with everything it offers them right now, and `Ver` for what there is to say of the
+  thing. Putting them down on it has them do what it is mainly for, as ever
+- A small thought over somebody's head is something they want. Select them to see what, and
+  click `Ánimo` in their panel for what they want, what weighs on them and what has lifted
+  their spirits or brought them down
+- In the wheel, what only they can be told for being how they are wears a star
 - Click a resident to see their needs, their credits, what they carry, what they are doing and
   how they feel about the others. Click a pantry or a crate to see what is inside and whose it is, or the shop's
   counter to see what is on sale and at what price

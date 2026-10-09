@@ -62,6 +62,20 @@ def _within(point: Point, tile: Tile) -> bool:
     return abs(point[0] - tile[0]) <= 0.5 and abs(point[1] - tile[1]) <= 0.5
 
 
+# How much of each need weighs on somebody's spirits, and of what ails their body.
+MOOD_WEIGHTS = {"hunger": 0.16, "thirst": 0.2, "tiredness": 0.12, "social": 0.08, "stress": 0.24, "boredom": 0.06}
+HEALTH_WEIGHT = 0.2
+HEALTH = "health"
+
+
+def mood_strains(resident: Resident) -> dict[str, float]:
+    """What pulls a resident's spirits down right now, and by how much: each of their needs,
+    and what ails their body, as `health`."""
+    strains = {need: getattr(resident.needs, need) * weight for need, weight in MOOD_WEIGHTS.items()}
+    strains[HEALTH] = max(0.0, 100.0 - resident.health) * HEALTH_WEIGHT
+    return strains
+
+
 @dataclass
 class ActivitySystem:
     routine: RoutineSystem = field(default_factory=RoutineSystem)
@@ -454,15 +468,6 @@ class ActivitySystem:
 
     def _settle_mood(self, resident: Resident) -> None:
         """Let mood drift towards how life currently feels, without becoming another urgent need."""
-        needs = resident.needs
-        strain = (
-            needs.hunger * 0.16
-            + needs.thirst * 0.2
-            + needs.tiredness * 0.12
-            + needs.social * 0.08
-            + needs.stress * 0.24
-            + needs.boredom * 0.06
-            + max(0.0, 100.0 - resident.health) * 0.2
-        )
+        strain = sum(mood_strains(resident).values())
         target = max(0.0, min(100.0, 72.0 - strain))
         resident.adjust_mood((target - resident.mood) * MOOD_DRIFT)

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from save.save_manager import SaveManager
 from simulation.ai.affect import TASK, USE
-from simulation.ai.placing import HAND, LAY, PERSON, POST, SIT, SITE, STAND, SWAP, TAKE_APART, USE_IT
+from simulation.ai.placing import HAND, LAY, PERSON, POST, SIT, SITE, STAND, SWAP, TAKE_APART, USE_IT, WHICH_USE
 from simulation.commands import AffectCommand, ProposeObjectCommand, PutBundleCommand, PutDownCommand
 from simulation.family.children import BED, CARRIED, GROUND, SURFACE, Bundle
 from simulation.health.injury import Injury
@@ -402,6 +402,59 @@ class ThingTests(unittest.TestCase):
         self.assertEqual((found[0].kind, found[0].opens), (PERSON, False))
         result = self.world.apply_command(PutDownCommand("ines", other_id="raul"))
         self.assertEqual((result.ok, result.other_id), (True, None))
+
+
+class SeveralUsesTests(unittest.TestCase):
+    """A thing that offers more than one thing to do (S60), and somebody put down on it (P63)."""
+
+    def setUp(self) -> None:
+        self.world = _settled()
+        self.world.step(30)
+        self.ines = self.world.residents["ines"]
+        self.ines.needs.tiredness = 60.0
+
+    def test_put_down_on_a_bed_they_still_sleep_though_it_offers_more(self) -> None:
+        """What a thing is mainly for is what being put down on it is for, as it was."""
+        world, ines = self.world, self.ines
+        bed = world.interactables["bed_1"]
+        self.assertEqual(
+            [label for label, _kind, _target in world.affect.things_to_do(world, ines, bed)], ["Dormir", "Echarse un rato"]
+        )
+        found = world.placements("ines", object_id="bed_1")
+        self.assertEqual([(each.kind, each.text, each.opens) for each in found if each.kind == USE_IT], [(USE_IT, "Dormir", False)])
+        result = world.apply_command(PutDownCommand("ines", object_id="bed_1"))
+        self.assertEqual((result.ok, result.kind, result.thing_id), (True, USE_IT, None))
+        self.assertEqual(ines.doing, Order(USE_KIND, "bed_1"))
+
+    def test_a_table_which_is_for_nothing_in_particular_asks_what_they_do_there(self) -> None:
+        world, ines = self.world, self.ines
+        ines.needs.stress = 40.0
+        table = next(placed for placed in world.interactables.values() if placed.kind == "table")
+        self.assertIsNone(world.definition_of(table).use)
+        found = world.placements("ines", object_id=table.object_id)
+        asked = [each for each in found if each.kind == USE_IT]
+        self.assertEqual([(each.opens, each.text) for each in asked], [(True, WHICH_USE)])
+        result = world.placing.put(world, "ines", object_id=table.object_id, do=USE_IT)
+        self.assertEqual((result.ok, result.thing_id), (True, table.object_id))
+        self.assertNotEqual(ines.tile, (table.x, table.y), "beside it")
+        self.assertLessEqual(manhattan(ines.tile, (table.x, table.y)), 2)
+        self.assertIsNone(ines.doing, "nothing was set about: it is for the player to say what")
+        # What is then said is an order like any other.
+        _label, kind, target = world.affect.things_to_do(world, ines, table)[0]
+        self.assertTrue(world.apply_command(AffectCommand("ines", kind, target)).ok)
+        world.step(2)
+        self.assertEqual(ines.activity.action, "sit_table")
+
+    def test_a_thing_that_cannot_be_used_for_what_it_is_for_asks_for_what_else_it_offers(self) -> None:
+        """A tank with no water in it is still somewhere to... no: washing wants water too.
+        Where nothing at all can be done with a thing, they are only left beside it."""
+        world, ines = self.world, self.ines
+        tank = next(placed for placed in world.interactables.values() if placed.kind == "water_tank")
+        world.containers[tank.object_id].items.clear()
+        doable = world.affect.things_to_do(world, ines, tank)
+        found = [each for each in world.placements("ines", object_id=tank.object_id) if each.kind == USE_IT]
+        self.assertEqual(bool(found), bool(doable))
+        self.assertTrue(all(each.opens for each in found), "what it is mainly for is not on offer")
 
 
 class SavedTests(unittest.TestCase):

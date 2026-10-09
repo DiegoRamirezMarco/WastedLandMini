@@ -85,6 +85,7 @@ from scenes.hud import (
     LOG_INTENT,
     MINIMAP_INTENT,
     PANEL_KIN_INTENT,
+    PANEL_MOOD_INTENT,
     PANEL_TAB_INTENT,
     PAUSE_INTENT,
     ROSTER_INTENT,
@@ -186,7 +187,7 @@ from ui.object_marks import draw_gem, draw_object_mark, marks_of
 from ui.object_panel import speaks
 from ui.power_board import POWER_INTENT
 from ui.talk_bubble import TAIL as BUBBLE_TAIL
-from ui.talk_bubble import bubble_of, bubble_size, draw_talk_bubble, said_aloud
+from ui.talk_bubble import bubble_of, bubble_size, draw_talk_bubble, said_aloud, wish_shown
 from ui.words_board import (
     ANSWER_FIELD,
     ASKED,
@@ -273,6 +274,8 @@ BOBBING_ICONS = ("alert", "sleep", "push", "ask")
 BARE_ICONS = ("selected", "heart", "friend", "birthday", "push")
 # Over whoever wants a word of the player, for as long as they wait for it (P62).
 ASK_ICON = "ask"
+# Over whoever wants something for themselves, for as long as they do (P63).
+WISH_ICON = "wish"
 # Over whoever is pushing their post, and over whoever it has just gone badly for.
 PUSH_ICON = "push"
 ACCIDENT_EVENT = "work_accident"
@@ -501,6 +504,9 @@ class GlobalView:
         # Where each thing with something to say, or to hold, was last drawn, to be picked
         # there; why each thing that stands idle does; and where the mark of each was drawn.
         self.thing_hitboxes: dict[str, pygame.Rect] = {}
+        # Where each thing there is something to do with was last drawn: a click there, with
+        # somebody selected, asks what they are to do with it (P63).
+        self.use_hitboxes: dict[str, pygame.Rect] = {}
         self.object_marks: dict[str, pygame.Rect] = {}
         self._idle: dict[str, str] = {}
         # Decision the player asked to open by clicking a resident. The game shell picks it up.
@@ -795,6 +801,11 @@ class GlobalView:
                 self._sound("select")
                 self.hud.select_resident(picked[-1])
                 self._hear(picked[-1])
+            elif any(rect.collidepoint(position) for rect in self.use_hitboxes.values()) and self._ring_of(
+                [object_id for object_id, rect in self.use_hitboxes.items() if rect.collidepoint(position)][-1]
+            ):
+                # With somebody selected, a thing they could do something with asks what (P63).
+                return
             else:
                 # What things are kept in is looked into from in here, as it was under the roof,
                 # and so is anything else with something to say of itself.
@@ -904,6 +915,7 @@ class GlobalView:
         self.hitboxes = {}
         self.container_hitboxes = {}
         self.thing_hitboxes = {}
+        self.use_hitboxes = {}
         self.object_marks = {}
         self._idle = marks_of(self.world)
         self.task_bars = {}
@@ -1187,6 +1199,10 @@ class GlobalView:
                 self.hud.select_resident(picked[-1])
                 self._hear(picked[-1])
             else:
+                # With somebody selected, a thing they could do something with asks what (P63).
+                usable = [object_id for object_id, rect in self.use_hitboxes.items() if rect.collidepoint(position)]
+                if usable and self._ring_of(usable[-1]):
+                    return
                 # A thing with something to say of itself, or to hold: the one drawn last is in front.
                 things = [object_id for object_id, rect in self.thing_hitboxes.items() if rect.collidepoint(position)]
                 self.hud.select_object(things[-1] if things else None)
@@ -1310,6 +1326,9 @@ class GlobalView:
             self.hud.toggle_panel_tab()
         elif intent == PANEL_KIN_INTENT:
             self.hud.toggle_panel_kin()
+        elif intent == PANEL_MOOD_INTENT:
+            self._sound("click")
+            self.hud.toggle_panel_mood()
         elif intent == FAMILY_INTENT:
             self.requested_family = True
         elif intent == AFFECT_INTENT:
@@ -1327,6 +1346,10 @@ class GlobalView:
             self._cancel_order(intent[1])
         elif isinstance(intent, tuple) and intent[0] == "affect":
             self._affect(intent[1], None)
+        elif isinstance(intent, tuple) and intent[0] == "thing_panel":
+            # From the ring of a thing to what there is to say of it.
+            self._close_wheel()
+            self.hud.select_object(intent[1])
         elif isinstance(intent, tuple) and intent[0] == "affect_target":
             self._affect(intent[1], intent[2])
         elif isinstance(intent, tuple) and intent[0] == "scrap":
@@ -1422,6 +1445,9 @@ class GlobalView:
     def _seat_wheel(self) -> None:
         """Tell the wheel where whoever is selected stands on the screen, to be laid out about them."""
         box = self.hitboxes.get(self.hud.selected_id or "")
+        if self.hud.wheel.thing is not None:
+            # The ring of a thing is laid out about the thing.
+            box = self.use_hitboxes.get(self.hud.wheel.thing) or box
         self.hud.wheel.centre = box.center if box is not None else self.viewport.center
 
     def _toggle_affect(self) -> None:
@@ -1452,6 +1478,28 @@ class GlobalView:
             self.hud.wheel.show(resident_id, TASKS, salvage)
         else:
             self.hud.wheel.show(resident_id)
+
+    def _ring_of(self, object_id: str) -> bool:
+        """With somebody selected, open the ring of what they can do with a thing (P63). They
+        are stopped to be told, as the wheel stops them. False where there is nobody to do
+        anything, or nothing they could be told: the thing then shows what there is to say
+        of it, as ever."""
+        resident_id = self.hud.selected_id
+        resident = self.world.residents.get(resident_id or "")
+        placed = self.world.interactables.get(object_id)
+        if resident is None or placed is None or self.world.affect.obstacle(self.world, resident.resident_id) is not None:
+            return False
+        if not self.world.affect.things_to_do(self.world, resident, placed):
+            return False
+        if self.hud.wheel.open:
+            self._close_wheel()
+        held = not self.world.affect.busy(self.world, resident.resident_id)
+        if held and not self.world.apply_command(HoldResidentCommand(resident.resident_id)).ok:
+            return False
+        self._sound("open")
+        self._affected = resident.resident_id if held else None
+        self.hud.wheel.show(resident.resident_id, thing=object_id)
+        return True
 
     def _close_wheel(self) -> None:
         """Shut the wheel. Whoever was stopped for it goes about their day, or on to what they were told."""
@@ -1748,6 +1796,9 @@ class GlobalView:
             self._toggle_affect()
             if self.hud.wheel.open:
                 self._affect_person(result.other_id)
+        elif result.thing_id is not None:
+            # Put down by a thing that is for nothing in particular, it is asked what they do there (P63).
+            self._ring_of(result.thing_id)
 
     def _draw_carry(self) -> None:
         """What is said by the hand while somebody is in it: what it is over, picked out,
@@ -2172,6 +2223,7 @@ class GlobalView:
         self.hitboxes = {}
         self.container_hitboxes = {}
         self.thing_hitboxes = {}
+        self.use_hitboxes = {}
         self.object_marks = {}
         self._idle = marks_of(self.world)
         self.task_bars = {}
@@ -2744,6 +2796,8 @@ class GlobalView:
                 self.container_hitboxes[placed.object_id] = box
             if told:
                 self.thing_hitboxes[placed.object_id] = box
+            if definition.uses and placed.object_id in self.world.interactables:
+                self.use_hitboxes[placed.object_id] = box
             if placed.object_id in self._idle or placed.level > 1 or placed.object_id == self.hud.selected_object:
                 self._overlays.append(lambda: self.mark_thing(placed, box))
 
@@ -3597,6 +3651,9 @@ class GlobalView:
             # The bubble says it better.
             status = None
         icons = [status, self.mark_over(resident.resident_id)]
+        if here_now and resident.resident_id in self.world.wishes_of and resident.resident_id != self.hud.selected_id:
+            # They want something: what, is seen by selecting them.
+            icons.append(WISH_ICON)
         if here_now and any(ask.resident_id == resident.resident_id for ask in self.world.words.asks):
             # They want a word of the player, and wait for it.
             icons.append(ASK_ICON)
@@ -3633,6 +3690,10 @@ class GlobalView:
                 # What they are doing, in a bubble that points at them.
                 y -= MARK_SIZE[1] + MARK_TAIL + 1
                 draw_mark(self.canvas, image, (x, y - lift))
+        wish = self.world.wishes_of.get(resident.resident_id) if here_now and not unseen and not self.overview else None
+        if shown is None and wish is not None and resident.resident_id == self.hud.selected_id:
+            # What whoever is selected wants, while they are saying nothing: the thing, the face or the words.
+            shown = wish_shown(self.world, wish)
         if shown is not None:
             y -= bubble_size(self.font, shown)[1] + BUBBLE_TAIL + 1
             self.talk_bubbles[resident.resident_id] = draw_talk_bubble(

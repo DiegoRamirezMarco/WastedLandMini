@@ -385,6 +385,17 @@ ICONS = {
         "...ee...",
         "...ee...",
     ],
+    # Over whoever wants something for themselves (P63): what is on their mind.
+    "wish": [
+        ".ooooo..",
+        "opppppo.",
+        "oppyppo.",
+        "opyyypo.",
+        "oppyppo.",
+        ".ooooo..",
+        "....oo..",
+        "......o.",
+    ],
     "mood": [
         "..oooo..",
         ".oyyyyo.",

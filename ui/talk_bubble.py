@@ -11,6 +11,7 @@ from graphics.font import ELLIPSIS, LINE_HEIGHT, BitmapFont
 from graphics.item_icons import ICON_SIZE, ItemIcons
 from graphics.palette import PALETTE
 from simulation.residents.resident import Resident
+from simulation.residents.wishes import EAT, HAVE, WITH, Wish
 from simulation.social.talk import Shown
 from simulation.world import SimulationWorld
 from ui.panel import draw_item
@@ -37,6 +38,16 @@ def bubble_of(world: SimulationWorld, resident: Resident) -> Shown | None:
         return None
     turn = ((world.clock.total_minutes - activity.began_at) // TURN_MINUTES) % 2
     return shown if (turn == 0) == activity.brought else None
+
+
+def wish_shown(world: SimulationWorld, wish: Wish) -> Shown:
+    """What somebody wants, as it is seen over them (P63): the picture of the thing, the
+    face of whoever they want to be with, or what they feel like doing, in words."""
+    if wish.kind in (EAT, HAVE):
+        return Shown(item_id=wish.what)
+    if wish.kind == WITH:
+        return Shown(face_id=wish.what)
+    return Shown(text=world.wishes.what(world, wish))
 
 
 def said_aloud(shown: Shown | None) -> str:

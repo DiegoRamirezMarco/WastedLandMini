@@ -36,7 +36,9 @@ from simulation.ai.affect import (
     WITH,
     WORDS,
     AffectOption,
+    split_use,
 )
+from simulation.residents.resident import Resident
 from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
 from simulation.world import SimulationWorld
 from ui.labels import expression_of
@@ -78,6 +80,14 @@ WILL_HELD = "Solo órdenes"
 WILL_FREE_HINT = "Hace su vida por su cuenta. Pulsa para que haga solo lo que se le diga"
 WILL_HELD_HINT = "No hace nada por su cuenta: espera órdenes. Pulsa para devolverle su vida"
 BACK_LABEL = "Volver"
+# The ring of a thing (P63).
+LOOK_LABEL = "Ver"
+LOOK_HINT = "Lo que hay que decir de {thing}"
+THING_HINT = "Lo que puede hacer con esto"
+NOTHING_TO_DO = "Ahora no puede hacer nada con esto"
+# What only somebody can be told, for a trait of theirs (S63): the mark at its corner, and what is said of it.
+OWN_MARK = "trait"
+OWN_HINT = "{said} (solo por ser {trait})"
 CLOSE_LABEL = "Nada"
 ROOT_HINT = "Lo que le digas, lo hará"
 WHO_HINT = "¿Con quién? Elige una cara, o a alguien en el mapa"
@@ -125,14 +135,16 @@ class WheelState:
     branch: str | None = None
     kind: str | None = None
     person: str | None = None
-    # Where on the canvas whoever it is about stands: the ring is laid out about there.
+    # The thing it is open over, where it is the ring of what they can do with a thing (P63).
+    thing: str | None = None
+    # Where on the canvas whoever, or whatever, it is about stands: the ring is laid out about there.
     centre: tuple[int, int] = (0, 0)
 
-    def show(self, about: str, branch: str | None = None, kind: str | None = None) -> None:
-        self.open, self.about, self.branch, self.kind, self.person = True, about, branch, kind, None
+    def show(self, about: str, branch: str | None = None, kind: str | None = None, thing: str | None = None) -> None:
+        self.open, self.about, self.branch, self.kind, self.person, self.thing = True, about, branch, kind, None, thing
 
     def shut(self) -> None:
-        self.open, self.about, self.branch, self.kind, self.person = False, None, None, None, None
+        self.open, self.about, self.branch, self.kind, self.person, self.thing = False, None, None, None, None, None
 
     def back(self) -> bool:
         """Go a step back in what is being chosen. False if there was nothing chosen to go back from."""
@@ -198,18 +210,66 @@ def icon_of(option: AffectOption) -> str:
     return TONE_ICONS.get(option.tone) or GROUP_ICONS.get(option.group, "talk")
 
 
-def _hint(option: AffectOption, said: str) -> str:
+def _hint(option: AffectOption, said: str, world: SimulationWorld | None = None) -> str:
+    if option.trait is not None and world is not None:
+        # What only they can be told, for being how they are (S63).
+        trait = world.registries.traits.find(option.trait) or {}
+        return OWN_HINT.format(said=said, trait=str(trait.get("name", option.trait)))
     return f"{said} ({MARK_WORDS[option.liked]})" if option.liked in MARK_WORDS else said
 
 
-def _option_item(option: AffectOption, intent: Hashable, said: str) -> WheelItem:
-    return WheelItem(intent, option.name or option.label, _hint(option, said), icon_of(option), mark=MARKS.get(option.liked or ""))
+def _option_item(option: AffectOption, intent: Hashable, said: str, world: SimulationWorld | None = None) -> WheelItem:
+    mark = OWN_MARK if option.trait is not None else MARKS.get(option.liked or "")
+    return WheelItem(intent, option.name or option.label, _hint(option, said, world), icon_of(option), mark=mark)
+
+
+def thing_intent(object_id: str) -> tuple[str, str]:
+    """To see what there is to say of a thing, from the ring of what can be done with it."""
+    return ("thing_panel", object_id)
+
+
+def use_icon(world: SimulationWorld, object_id: str, action: str | None) -> str:
+    """The icon one of the things to do with a thing goes by: what it does for whoever does it."""
+    placed = world.interactables.get(object_id)
+    use = world.definition_of(placed).use_for(action) if placed is not None else None
+    if use is None:
+        return "work"
+    if use.trains is not None:
+        return "train"
+    if use.heals:
+        return "medicine"
+    if use.consumes is not None:
+        return "food" if use.consumes == "food" else "water"
+    if use.unaware:
+        return "moon"
+    return "leisure"
+
+
+def _thing_view(world: SimulationWorld, resident: Resident, state: WheelState) -> WheelView | None:
+    """The ring of a thing (P63): what whoever is selected can do with it as things stand,
+    what it is mainly for first, and the way to what is said of the thing."""
+    placed = world.interactables.get(state.thing or "")
+    if placed is None:
+        return None
+    definition = world.definition_of(placed)
+    named = f"{definition.article} {definition.name}"
+    items = []
+    for label, kind, target in world.affect.things_to_do(world, resident, placed):
+        object_id, action = split_use(target)
+        items.append(WheelItem(target_intent(kind, target), label, f"{label}: {named}", use_icon(world, object_id, action)))
+    items.append(WheelItem(thing_intent(placed.object_id), LOOK_LABEL, LOOK_HINT.format(thing=named), "study"))
+    close = WheelItem(CLOSE_INTENT, CLOSE_LABEL, "Nada, que siga", "close")
+    hint = THING_HINT if len(items) > 1 else NOTHING_TO_DO
+    return WheelView(f"{resident.name}: {definition.name}", items[:MOST_ENTRIES], close, hint)
 
 
 def wheel_view(world: SimulationWorld, resident_id: str, state: WheelState) -> WheelView:
     """What the wheel about a resident shows, by what has been chosen in it so far."""
     resident = world.residents.get(resident_id)
     name = resident.name if resident is not None else ""
+    of_thing = _thing_view(world, resident, state) if resident is not None and state.thing is not None else None
+    if of_thing is not None:
+        return of_thing
     options = world.affect_options(resident_id)
     back = WheelItem(BACK_INTENT, BACK_LABEL, BACK_LABEL, "back")
     chosen = next((option for option in options if option.kind == state.kind), None)
@@ -230,7 +290,7 @@ def wheel_view(world: SimulationWorld, resident_id: str, state: WheelState) -> W
     if state.branch == SOCIAL and state.person in world.residents:
         other = world.residents[state.person]
         items = [
-            _option_item(option, target_intent(option.kind, other.resident_id), option.said(other.resident_id))
+            _option_item(option, target_intent(option.kind, other.resident_id), option.said(other.resident_id), world)
             for option in world.affect_with(resident_id, other.resident_id)
         ]
         return WheelView(f"{name} con {other.name}", items[:MOST_ENTRIES], back, "Según lo que siente por " + other.name)

@@ -164,6 +164,8 @@ class AffectOption:
     # How they take it, as far as the player has found out: a reaction, or None for what has
     # not shown and for what is the same to everybody.
     liked: str | None = None
+    # The trait of theirs it is for, where only whoever has it can be told this (S63).
+    trait: str | None = None
 
     def said(self, target_id: str | None = None) -> str:
         name = next((name for each, name in self.targets if each == target_id), "")
@@ -443,7 +445,7 @@ class AffectSystem:
         taste = definition.pastime if definition is not None else None
         return AffectOption(
             f"{group}:{name}", group, order.label, targets, name=order.name, tone=order.tone, icon=order.icon,
-            liked=self._known_taste(world, resident, taste),
+            liked=self._known_taste(world, resident, taste), trait=order.trait,
         )
 
     def _known_taste(self, world: "SimulationWorld", resident: Resident, tag: str | None) -> str | None:

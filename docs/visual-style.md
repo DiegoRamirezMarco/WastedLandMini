@@ -274,6 +274,17 @@ on displays of different resolutions.
   map. Only whoever's turn it is has it, and nobody from as far as the map is seen.
 - **Whoever wants a word of the player** wears a red exclamation in the small bubble that
   other marks are shown in, and it bobs as the yellow one of a crisis does.
+- **Whoever wants something for themselves** (P63) wears a thought in that small bubble: a
+  `paper` cloud with a spot of `lamp` in it and two dots trailing down. Selected, what
+  they want is over them in the bubble that talk is shown in.
+- **The ring of a thing** (P63) is the wheel, laid out about the thing and not about
+  whoever is selected, under a heading of who and what. Its buttons are of the hue of
+  what each does. What only somebody can be told for a trait of theirs wears a `lamp`
+  star at its corner, where how they take a pastime is marked.
+- **`Ánimo`**, the name of the bar of their mood, is boxed in `lamp` as the other ways
+  into a panel are, and filled while the panel is turned to it. There, what lifted their
+  spirits is in `lichen` behind a `+`, what brought them down behind an `ember` `-`, and
+  what weighs on them now has its points in `ember` at the right.
 - **The board of words** opens over the corner of the map as the other boards do, under a band
   of the colour of talk. What is written goes in a `shadow` box that is outlined in `lamp`
   while it is being written in, with a mark that blinks where the next letter goes.

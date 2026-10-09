@@ -546,8 +546,9 @@ class PutDownCommand:
     """The player takes a resident up and puts them down somewhere else (P27). They are
     there at once, and what they are put down on is what they set about, as an order: on a
     post, it is theirs; on somebody who has it, the two change posts; on a bed or a pot, they
-    use it; on a seat, they sit; on a site, they take charge of it; on bare ground, they are
-    there and go on with their day.
+    use it for what it is mainly for; by a thing that is for nothing in particular and offers
+    something to do, it is asked which (P63); on a seat, they sit; on a site, they take
+    charge of it; on bare ground, they are there and go on with their day.
 
     One of `object_id`, `other_id` and `site_id` names what or whom they are put down on, and
     `tile` where the hand is: by itself it is whatever lies on that tile. `do` picks one of

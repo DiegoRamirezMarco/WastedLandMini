@@ -39,6 +39,7 @@ PLACED_IMPORTANCE = 10
 NOWHERE = "Ahí no se puede dejar a nadie"
 HERE = "Dejar aquí"
 PLAIN_USE = "Usar"
+WHICH_USE = "Dejar aquí, y elegir qué hace"
 
 
 @dataclass(frozen=True)
@@ -58,6 +59,7 @@ class Placement:
     expected: Expected | None = None
     at_once: bool = False
     # For being put with somebody: whether there is anything the two could be told to do.
+    # For being put by a thing with nothing it is mainly for: that it is asked what they do there.
     opens: bool = False
 
     @property
@@ -73,6 +75,10 @@ class PlaceResult:
     tile: Tile | None = None
     # Who they were put with, where there is something the two could now be told to do.
     other_id: str | None = None
+    # The thing they were put by, where there is nothing it is mainly for that they can do
+    # and none of what else it offers was set about: it is for whoever put them there to
+    # say which (P63).
+    thing_id: str | None = None
 
 
 class PlacingSystem:
@@ -166,7 +172,8 @@ class PlacingSystem:
         )
         self._set_about(world, resident, chosen)
         opened = chosen.target_id if chosen.kind == PERSON and chosen.opens else None
-        return PlaceResult(True, chosen.text, chosen.kind, chosen.tile, opened)
+        asked = chosen.target_id if chosen.kind == USE_IT and chosen.opens else None
+        return PlaceResult(True, chosen.text, chosen.kind, chosen.tile, opened, asked)
 
     def _set_about(self, world: "SimulationWorld", resident: Resident, chosen: Placement) -> None:
         """Have a resident who has just been put down get on with what they were put down on.
@@ -181,7 +188,7 @@ class PlacingSystem:
                 world.staffing.assign(world, resident, chosen.job_id or "", chosen.target_id)
             if resident.post_id == chosen.target_id:
                 order(world, resident_id, f"{TASK}:{TO_POST}", None, now=True)
-        elif chosen.kind == USE_IT:
+        elif chosen.kind == USE_IT and not chosen.opens:
             order(world, resident_id, f"{TASK}:{USE}", chosen.target_id, now=True)
         elif chosen.kind == SIT:
             pastime = self._sitting(world)
@@ -255,6 +262,10 @@ class PlacingSystem:
             spot = ground.onto(footprint, (placed.x, placed.y)) if use.position == "on" else beside
             if spot is not None:
                 found.append(Placement(USE_IT, spot, use.label or PLAIN_USE, object_id))
+        elif beside is not None and world.affect.things_to_do(world, resident, placed):
+            # Nothing it is mainly for that they can do, and something else it offers (S60):
+            # they are put by it, and it is asked which, as it is with a click on it (P63).
+            found.append(Placement(USE_IT, beside, WHICH_USE, object_id, opens=True))
         if definition.seat and ground.fit((placed.x, placed.y)):
             pastime = world.registries.leisure.pastimes.get(self._sitting(world) or "")
             if pastime is not None:

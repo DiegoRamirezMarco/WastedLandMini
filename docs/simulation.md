@@ -27,7 +27,8 @@ The simulation runs without Pygame. Important state changes emit domain events. 
 1. Needs rise (`simulation/residents/needs.py`). Asleep, hunger, thirst and loneliness grow at half pace.
    Wanting to be entertained, `boredom` (S62), rises only awake and in the settlement.
    Mood drifts separately from stress: bad needs and wounds pull it down over time, good days let
-   it recover.
+   it recover. What pulls it down, and by how much, is `mood_strains`, which a resident's
+   panel reads as well (P63).
 2. With no activity, `RoutineSystem` scores every use of every free object, what it is
    mainly for and whatever else can be done with it (S60), and picks the best reachable one:
    - each need the use would lower counts as `(need / 100)²`, weighted by personality.
@@ -554,6 +555,11 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
   was there takes a thing from it, or from where a store's things are kept at hand
   (`pilfering.source`). Either is a `TheftAttempt` like any other.
 - **It costs nothing**, and what is on offer follows from how things stand.
+- **Put down by a thing with nothing it is mainly for that they can do**, and something
+  else to offer (P63), nothing is set about: `Placement.opens` says so before, and
+  `PlaceResult.thing_id` after, for whoever put them there to say which.
+  `AffectSystem.things_to_do` is what can be said. Put down on anything else they do
+  what it is mainly for.
 
 ### Picked up and put down
 

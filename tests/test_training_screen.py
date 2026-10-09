@@ -11,6 +11,7 @@ from graphics.icons import icon_path
 from graphics.object_pictures import PAINTERS
 from graphics.palette import PALETTE
 from graphics.ui_art import GLYPHS, HUES
+from simulation.ai.placing import WHICH_USE
 from simulation.residents.attributes import Attributes
 from simulation.residents.needs import Needs
 from ui.affect_wheel import TASKS
@@ -143,9 +144,12 @@ class TrainingScreenTests(unittest.TestCase):
         self._stand("skipping_rope")
         offered = self.world.placements("ines", object_id=GYM)
         self.assertEqual((offered[0].kind, offered[0].text), ("use", "Entrenar"))
-        # And for whoever it has nothing left to teach, nothing comes of it but standing there.
+        # For whoever it has nothing left to teach there is no training to be put down to. It is
+        # still something to skip with for the sake of it (S60), and it is asked what they do there (P63).
         self.world.residents["ines"].attributes.dexterity = 6.0
-        self.assertNotIn("use", [each.kind for each in self.world.placements("ines", object_id=GYM)])
+        used = [each for each in self.world.placements("ines", object_id=GYM) if each.kind == "use"]
+        self.assertEqual([(each.opens, each.text) for each in used], [(True, WHICH_USE)])
+        self.assertNotIn("Entrenar", [each.text for each in used])
 
 
 if __name__ == "__main__":
