@@ -5816,6 +5816,49 @@ Still to settle, to be asked before it is built:
   which piece it is. Its picture in a square comes of the drawing
 - Pieces inside buildings, on the family tree and where manners are tried
 
+### S67 — Where a trip goes, and when it turns for home (needs S10) — done
+Asked for on 2026-10-09: "ponte con las expediciones, podremos ver a nuestro moñeco andar en
+vista perfil, un fondo post apocaliptico depende de la zona de momento ruinas, ahora lo
+veremos completamente de perfil andando infinitamente mientras el suelo avanza para simular
+movimiento". One batch of four, for this and the two milestones after it:
+- **A click on their face in `Fuera` opens it**, where the map was, as the inside of a
+  building does. The recommendation
+- **Besides walking**, all four that were offered: there and back, stopping at what is come
+  on, the sky going by the hour and the weather, and how long is left
+- **One at a time**: "uno cada vez, mas adelante haremos que se pueda mejorar para que salgan
+  varios". Several going out together is something to be earned later, and is not built
+- **The backdrop is drawn by the player, in an editor.** Not the recommendation, which was
+  for the game to draw it and each layer to take a PNG (P69)
+
+This is what the view needs of the simulation, and nothing of how it looks:
+- **The country out there is data**: `zones` in `data/expeditions.json`, each with an ID and
+  a name. There is one, `ruins`. A trip goes through the first there is, since nothing yet
+  says which: `ExpeditionSystem.zone_of` is the one place that will
+- **A trip knows when it set out and when it turns for home** (`left_at`, `turns_at`): half
+  of it is the way out. What there is to come on is at the far end of it, where it always
+  was in time
+- **What is decided there moves the turn.** Going for it is half an hour further in and half
+  an hour more of the way back; turning back is turning round where they stand
+- **`Expedition.distance` and `heading_back`** say how far from the fence they are, from 0
+  to 1, and which way they face. Nothing in the simulation goes by either
+- **A trip bound for a place somebody came to knows which** (`place`), and `expedition_left`
+  says the zone as it says the place
+- A trip saved before any of this is on its way home, through the first country there is
+
+Decided without asking:
+- **Nothing changes in what a trip brings or risks.** A zone is a name and an ID, with no
+  loot, danger or length of its own yet
+- **The way out is half the trip**, and not a length of its own in the data
+
+Still open here:
+- **What decides the zone of a trip**: the place it is bound for, the job, the player
+- **Whether a zone has its own loot, its own danger and its own length of trip**
+- **Several going out together**, which the player asked to be something earned
+
+Done when: a trip says how far out it is and which way it faces at any minute, what is
+decided at a find moves its turn, and a save from before loads with everybody out on their
+way home.
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

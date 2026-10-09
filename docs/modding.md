@@ -696,6 +696,10 @@ A job that is never to be pushed says `"rush": false`.
   where there is a workshop whose mechanic carries it on, and nowhere else. `to` must be a container kind. `injury` and `injury_kind` are what a bad trip does.
   `find_chance`, `push_on_finds`, `push_on_danger`, `push_on_minutes` and `turn_back_minutes`
   shape the risky find.
+- `zones` in the same file is the country there is out there, by ID: `{"ruins": {"name": "las
+  ruinas"}}`. The name is said after `por` and written at the far end of the way. A trip goes
+  through the first, until something says which. With none, trips go through nowhere that has
+  a name. How a zone looks is not said here (see Backdrops).
 - In `data/decisions.json` the game opens `risky_find` by ID, and an outcome's `"expedition"`
   (`push_on` or `turn_back`) is what it does to the trip.
 

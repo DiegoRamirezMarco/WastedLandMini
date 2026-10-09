@@ -11,7 +11,7 @@ from simulation.events.world_event import WEATHER
 from simulation.items.item import ItemInstance
 from simulation.residents.activity import Activity
 from simulation.residents.resident import Resident
-from simulation.work.expedition import PUSH_ON, TURN_BACK, Expedition
+from simulation.work.expedition import PUSH_ON, TURN_BACK, Expedition, Zone
 from simulation.work.hauling import containers_of_kind
 from simulation.work.job import JobDefinition
 from simulation.work.research import EXPEDITION_DANGER, EXPEDITION_FINDS
@@ -69,6 +69,12 @@ class ExpeditionSystem:
             )
         return True
 
+    def zone_of(self, world: "SimulationWorld", trip: Expedition) -> Zone | None:
+        """The country a trip goes through: the one it set out for if there still is such a
+        one, or else the first there is. None where the data names none."""
+        zones = world.registries.expeditions.zones
+        return next((zone for zone in zones if zone.zone_id == trip.zone), zones[0] if zones else None)
+
     def set_out(self, world: "SimulationWorld", resident: Resident, job: JobDefinition) -> None:
         """Send a resident out. From here on they are away: nobody sees them and they see nobody."""
         rule, settings = job.expedition, world.registries.expeditions
@@ -88,13 +94,19 @@ class ExpeditionSystem:
             finds=finds,
             danger=rule.danger * world.research.factor(world, EXPEDITION_DANGER) * wary,
             find_at=now + minutes // 2 if comes_on_something else None,
+            left_at=now,
+            # Half the trip is the way out, and what there is to come on is at the far end of it.
+            turns_at=now + minutes // 2,
         )
+        zone = self.zone_of(world, resident.expedition)
+        resident.expedition.zone = zone.zone_id if zone is not None else None
         # Whoever knows of a place out there goes to it in its turn, for what is brought from it.
         bound = world.crafts.destination(world, resident)
         said = job.text
         if bound is not None and world.registries.items.find(bound[1].fetch or "") is not None:
             place, brings = bound
             resident.expedition.fetch = brings.fetch
+            resident.expedition.place = place.discovery_id
             resident.expedition.finds = max(1, resident.expedition.finds + brings.finds)
             said = f"sale del asentamiento hacia {place.name}"
         resident.last_expedition_day = world.clock.day
@@ -103,7 +115,10 @@ class ExpeditionSystem:
         world.emit_event(
             DomainEvent(
                 "expedition_left", LEFT_IMPORTANCE, f"{resident.name} {said}", [resident.resident_id],
-                data={"place": bound[0].discovery_id} if bound is not None else {},
+                data={
+                    **({"place": bound[0].discovery_id} if bound is not None else {}),
+                    **({"zone": zone.zone_id} if zone is not None else {}),
+                },
             ),
             at=resident.tile,
         )
@@ -138,9 +153,14 @@ class ExpeditionSystem:
             trip.risked = True
             trip.danger = min(1.0, trip.danger + settings.push_on_danger)
             trip.returns_at += settings.push_on_minutes
+            # Further in for half of what it adds, and the other half is that much more way back.
+            now = world.clock.total_minutes
+            trip.turns_at = min(trip.returns_at, max(trip.turns_at, now + settings.push_on_minutes // 2))
         elif choice == TURN_BACK:
             trip.finds = trip.finds // 2
             trip.returns_at = min(trip.returns_at, world.clock.total_minutes + settings.turn_back_minutes)
+            # They turn round where they stand.
+            trip.turns_at = min(trip.turns_at, world.clock.total_minutes)
 
     def _come_back(self, world: "SimulationWorld", resident: Resident, trip: Expedition) -> None:
         settings = world.registries.expeditions

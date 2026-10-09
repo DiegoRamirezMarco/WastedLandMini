@@ -603,6 +603,10 @@ class SaveManager:
                     find_at=int(trip["find_at"]) if trip.get("find_at") is not None else None,
                     fetch=_text_or_none(trip.get("fetch")),
                     risked=bool(trip.get("risked", False)),
+                    left_at=int(trip.get("left_at", 0)),
+                    turns_at=int(trip.get("turns_at", 0)),
+                    zone=_text_or_none(trip.get("zone")),
+                    place=_text_or_none(trip.get("place")),
                 )
                 if trip is not None
                 else None,

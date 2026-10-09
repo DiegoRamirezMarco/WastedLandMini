@@ -176,7 +176,7 @@ Event types emitted so far:
 | `couple_in_trouble` | A resident wonders whether to leave their partner, and waits for advice | 55 to 69, by anger |
 | `breakup_started` | A resident tells their partner it is over | 55 |
 | `couple_broke_up` | The couple is over | 65 |
-| `expedition_left` | A resident leaves the settlement to scavenge | 15 |
+| `expedition_left` | A resident leaves the settlement to scavenge, with `zone` (the country it goes through) and `place` (the discovery it is bound for) in `data` when there is one | 15 |
 | `risky_find` | A resident out there comes on something that looks dangerous, and waits for advice | 50 |
 | `expedition_returned` | A resident comes back with what they found, with `found` and `kept` (what they keep for themselves under barter, or null) in `data` | 30 |
 | `stranger_at_gate` | Someone asks to be let in, and the guard waits for advice | 55 |

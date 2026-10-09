@@ -206,6 +206,12 @@ room. An argument's importance rises with the resentment between the two.
 - **Out there** a resident is away. They are not on the map, they witness nothing, and nobody can
   walk up to them, not even someone who has made up their mind to. They are paid as on any shift,
   and hunger grows at half pace: they eat as they go from what they took.
+- **There and back.** A trip goes through one of the `zones` of `data/expeditions.json`: the
+  first, while nothing says which. Half of it is the way out and the rest the way home:
+  `Expedition.distance` is how far from the fence they are at a minute, from 0 to 1, and
+  `heading_back` which way they face. What is come on is at the far end. Going for it puts
+  the turn half of what it adds later; turning back puts it where they stand. Nothing that
+  happens goes by any of this: it is there to be shown.
 - **Coming back.** At the end of the trip they are at the cart again with what they found in
   their hands, so many things drawn from the table in `data/expeditions.json`, the commonest
   oftenest. Things from a pack that is not installed are never found. With the trip's `danger` as

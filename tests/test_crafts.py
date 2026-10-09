@@ -590,6 +590,7 @@ class MakingTests(unittest.TestCase):
             trips[day] = sergio.expedition
         self.assertEqual(trips[1].fetch, "scrap")
         self.assertIsNone(trips[2].fetch, "and a day in between for wherever their feet take them")
+        self.assertEqual((trips[1].place, trips[2].place), (waiting.discovery_id, None), "a trip says where it is bound")
         self.assertTrue(any("hacia El Vertedero" in line for line in world.event_log))
 
 

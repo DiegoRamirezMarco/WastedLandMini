@@ -63,7 +63,11 @@ the player told them to do), and for an exchange `began_at` (the game minute it 
 `about` (its subject, as `kind:name`, or nothing), `about_text` (the words for it) and
 `brought` (whether it was this one who brought it up).
 
-A resident's `expedition` is `null` or `returns_at`, `finds`, `danger`, `find_at` and `fetch`.
+A resident's `expedition` is `null` or `returns_at`, `finds`, `danger`, `find_at`, `fetch` and
+`risked`, with `left_at` and `turns_at` (the game minutes at which they set out and turn for
+home), `zone` (the ID of the country it goes through) and `place` (the ID of the discovery it
+is bound for, or `null`) (S67). Without them a trip is on its way home, through the first
+zone the data names: the format has no new version for it.
 
 An item is saved as `id`, `definition_id`, `owner_id`, `condition`, `quantity`, `freshness` (how much
 is left of a hundred in a thing that goes off) and `given_by` (the

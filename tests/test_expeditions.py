@@ -272,6 +272,94 @@ class RiskyFindTests(unittest.TestCase):
         self.assertEqual(self.world.decisions, {})
 
 
+class ThereAndBackTests(unittest.TestCase):
+    """A trip knows when it set out, when it turns for home and what country it goes through (S67)."""
+
+    def setUp(self) -> None:
+        self.world = _settled()
+        self.sergio = _send_out(self.world)
+        self.trip = self.sergio.expedition
+
+    def test_half_of_a_trip_is_the_way_out_and_the_rest_the_way_home(self) -> None:
+        trip, now = self.trip, self.world.clock.total_minutes
+        self.assertEqual(trip.left_at, now)
+        self.assertEqual(trip.turns_at, trip.left_at + (trip.returns_at - trip.left_at) // 2)
+        self.assertFalse(trip.heading_back(now))
+        self.assertEqual(trip.distance(trip.left_at), 0.0)
+        self.assertEqual(trip.distance(trip.turns_at), 1.0)
+        self.assertEqual(trip.distance(trip.returns_at), 0.0)
+        out = [trip.distance(minute) for minute in range(trip.left_at, trip.turns_at + 1)]
+        back = [trip.distance(minute) for minute in range(trip.turns_at, trip.returns_at + 1)]
+        self.assertEqual(out, sorted(out), "further every minute of the way out")
+        self.assertEqual(back, sorted(back, reverse=True), "and nearer every minute of the way home")
+        self.assertTrue(trip.heading_back(trip.turns_at))
+        self.assertEqual(trip.distance(trip.returns_at + 500), 0.0, "held up at the fence, they are at the fence")
+
+    def test_what_is_come_on_is_at_the_far_end_and_what_is_decided_there_moves_the_turn(self) -> None:
+        trip, world = self.trip, self.world
+        trip.find_at = trip.turns_at
+        while not world.decisions:
+            world.step(1)
+        decision = next(iter(world.decisions.values()))
+        now = world.clock.total_minutes
+        self.assertEqual(trip.distance(now), 1.0, "it is as far as they were going")
+        world.apply_command(ChooseOptionCommand(decision.decision_id, "go"))
+        self.assertEqual(trip.turns_at, now + 30, "half of the hour it adds is further in")
+        self.assertFalse(trip.heading_back(now))
+        self.assertLess(trip.turns_at, trip.returns_at)
+
+        self.setUp()
+        trip, world = self.trip, self.world
+        trip.find_at = world.clock.total_minutes + 1
+        while not world.decisions:
+            world.step(1)
+        decision = next(iter(world.decisions.values()))
+        now = world.clock.total_minutes
+        self.assertFalse(trip.heading_back(now))
+        world.apply_command(ChooseOptionCommand(decision.decision_id, "careful"))
+        self.assertEqual(trip.turns_at, now, "they turn round where they stand")
+        self.assertTrue(trip.heading_back(now))
+        self.assertEqual(trip.distance(trip.returns_at), 0.0)
+
+    def test_a_trip_goes_through_the_country_the_data_names(self) -> None:
+        world, trip = self.world, self.trip
+        zones = world.registries.expeditions.zones
+        self.assertEqual([(zone.zone_id, zone.name) for zone in zones], [("ruins", "las ruinas")])
+        self.assertEqual(trip.zone, "ruins")
+        self.assertIs(world.expeditions.zone_of(world, trip), zones[0])
+        self.assertIsNone(trip.place, "bound for nowhere they know of")
+        trip.zone = "a_pack_that_is_gone"
+        self.assertIs(world.expeditions.zone_of(world, trip), zones[0], "country that is no longer known is the first there is")
+        with_none = _registries_with("expeditions.json", '"ruins": {', '"ruins_": {')
+        self.assertEqual(with_none.expeditions.zones[0].zone_id, "ruins_")
+        self.assertEqual(expedition_settings_from_data({}).zones, ())
+        bare = SimulationWorld.demo_world(seed=7, registries=_registries_with("expeditions.json", '"zones"', '"no_zones"'))
+        no_store(bare)
+        bare.relationships.clear()
+        out = _send_out(bare)
+        self.assertIsNone(out.expedition.zone)
+        self.assertIsNone(bare.expeditions.zone_of(bare, out.expedition))
+
+    def test_a_trip_saved_before_any_of_this_is_on_its_way_home(self) -> None:
+        manager = SaveManager()
+        data = manager.to_data(self.world)
+        kept = next(resident for resident in data["residents"] if resident["id"] == "sergio")["expedition"]
+        self.assertEqual(
+            (kept["left_at"], kept["turns_at"], kept["zone"], kept["place"]),
+            (self.trip.left_at, self.trip.turns_at, "ruins", None),
+        )
+        for field in ("left_at", "turns_at", "zone", "place"):
+            del kept[field]
+        loaded = manager.from_data(json.loads(json.dumps(data)))
+        trip, now = loaded.residents["sergio"].expedition, loaded.clock.total_minutes
+        self.assertEqual((trip.returns_at, trip.finds), (self.trip.returns_at, self.trip.finds))
+        self.assertTrue(trip.heading_back(now))
+        self.assertTrue(0.0 <= trip.distance(now) <= 1.0)
+        self.assertEqual(loaded.expeditions.zone_of(loaded, trip).zone_id, "ruins")
+        loaded.step(MINUTES_PER_DAY)
+        self.assertFalse(loaded.residents["sergio"].away)
+
+
 class RepairMaterialTests(unittest.TestCase):
     def setUp(self) -> None:
         self.world = _settled()

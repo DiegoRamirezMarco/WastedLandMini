@@ -1,4 +1,9 @@
 {
+  "zones": {
+    "ruins": {
+      "name": "las ruinas"
+    }
+  },
   "loot": [
     {
       "item": "scrap",

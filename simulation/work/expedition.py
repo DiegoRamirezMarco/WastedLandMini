@@ -39,10 +39,22 @@ class Delivery:
 
 
 @dataclass(frozen=True)
+class Zone:
+    """A kind of country out there, which a trip goes through: what it is called, and nothing
+    more as yet. How it looks is not the simulation's business."""
+
+    zone_id: str
+    name: str
+
+
+@dataclass(frozen=True)
 class ExpeditionSettings:
     """What there is out there, and what becomes of it once it is brought in."""
 
     loot: tuple[LootEntry, ...] = ()
+    # The country there is out there, by ID. The first is where a trip goes that has nowhere
+    # else to: for now, every one of them.
+    zones: tuple[Zone, ...] = ()
     # The first that fits a find says where it goes.
     deliveries: tuple[Delivery, ...] = ()
     # Harm done by a trip that goes badly, and the kind of injury it leaves.
@@ -73,6 +85,27 @@ class Expedition:
     fetch: str | None = None
     # Whether they went on at something worth a risk: what they bring is the likelier to be rare (S64).
     risked: bool = False
+    # Game minute at which they set out, and at which they turn for home (S67). A trip from
+    # before these were kept has been on its way back since for ever.
+    left_at: int = 0
+    turns_at: int = 0
+    # The country it goes through, by ID, and the place out there it is bound for, as the ID
+    # of what was come to: neither for a trip from before they were kept, or that has none.
+    zone: str | None = None
+    place: str | None = None
+
+    def heading_back(self, now: int) -> bool:
+        """Whether they are on their way home by a game minute."""
+        return now >= self.turns_at
+
+    def distance(self, now: int) -> float:
+        """How far from the settlement they are at a game minute: from 0 at the fence to 1 at
+        the furthest they go, out and then back."""
+        if now < self.turns_at:
+            way = self.turns_at - self.left_at
+            return min(1.0, max(0.0, (now - self.left_at) / way)) if way > 0 else 1.0
+        way = self.returns_at - self.turns_at
+        return min(1.0, max(0.0, (self.returns_at - now) / way)) if way > 0 else 0.0
 
 
 def expedition_rule_from_data(job_id: str, data: dict[str, Any]) -> ExpeditionRule:
@@ -92,8 +125,13 @@ def expedition_settings_from_data(data: dict[str, Any]) -> ExpeditionSettings:
     low, high = (int(value) for value in data.get("injury", defaults.injury))
     if not 0 <= low <= high:
         raise ValueError("Expedition injury must be a range that is not negative")
+    zones = tuple(
+        Zone(str(zone_id), str(entry.get("name", zone_id)) if isinstance(entry, dict) else str(zone_id))
+        for zone_id, entry in dict(data.get("zones", {})).items()
+    )
     return ExpeditionSettings(
         loot=loot,
+        zones=zones,
         deliveries=tuple(
             Delivery(
                 str(entry["to"]),
