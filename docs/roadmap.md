@@ -6163,8 +6163,17 @@ sangre". In the trial:
   worse at what that part was for. A medkit stops it
 
 Decided without asking there: bare hands take nothing off; whoever carries something to
-fire shoves by themselves to get room, and anybody else only when told; raiders land no
-telling blows, so the hero loses no part in a fight; and with no leg left nobody gets up.
+fire shoves by themselves to get room, and anybody else only when told; and with no leg
+left nobody gets up. That raiders land no telling blows was put right at once: "los enemigos
+claro que pueden hacer criticos y que nos puedan desmembrar a nuestros muñecos aun que menos
+frecuente. cuanta mas fuerza tengan frente a nuestra constitucion mas probabilidades tendran.
+mete a un enemigo monstruo con garras":
+- **Theirs land telling blows**, the likelier the stronger they are for how firm ours
+  stands, and take parts off ours half as readily as ours off them
+- **A clawed beast**, the Engendro: stronger and tougher than any raider of its level, with
+  claws that cut worse than a knife. Nothing is handed to it to be let by. It is the first
+  of the new enemies asked for with S68, met from the mountain on
+- The options of the trial say who is met, how many and of what level
 
 Decided without asking, in the trial:
 - **A telling blow is never dodged**, and the fight goes on at a fifth of its pace while its
