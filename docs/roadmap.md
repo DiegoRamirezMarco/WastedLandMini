@@ -6196,6 +6196,18 @@ is held for ever; a beast claws at whoever it is on, no faster than it claws; a 
 blow on somebody on the ground is struck with the weapon and not with fists; raiders run out
 of rounds too; and the kneeling is a clip of the trial's own, written as the game's are.
 
+Put right on its being played: "no tienen animacion de agacharse a pegar. no quiero tanto
+texto en pantalla, con que salgan los numeros vale y el critico a camara lenta y la pantalla
+tiembla un poco":
+- **They get down on whoever is on the ground at once**, whatever they were about, where
+  they had waited out the rest of the blow that put them there and whoever was down was all
+  but up again. And whoever is on top has their weight over the other at the dice, so that
+  it lasts some four blows between two as strong as one another
+- **Nothing is written over the fight but numbers**: no words for a dodge, a shove, a fall,
+  a part lost or a telling blow, nor what the dice said, nor what each carries
+- **A telling blow is seen slowly**, for under a second and from a little nearer, and the
+  screen shakes a little: that is all that says it was one
+
 Decided without asking, in the trial:
 - **A telling blow is never dodged**, and the fight goes on at a fifth of its pace while its
   mark is being stopped
