@@ -33,6 +33,8 @@ BODY_CANVAS = "body"
 HEAD_CANVAS = "head"
 # The measures of a doll are kept beside its drawings.
 BUILD_FILE = "build.json"
+# What a piece that is worn is, and the measures of the figure it was drawn over, beside its drawings.
+GARMENT_FILE = "garment.json"
 # No part may be made shorter than this, in the skeleton's own measure, nor a limb be moved
 # further than this from where the body plan joins it on.
 SHORTEST_PART = 0.4
@@ -106,6 +108,16 @@ def build_path(body_id: str) -> str:
     return f"dolls/{body_id}/{BUILD_FILE}"
 
 
+def garment_path(garment_id: str, canvas: str) -> str:
+    """Where the drawing of one canvas of a piece that is worn is kept, below the illustrations folder."""
+    return f"garments/{garment_id}/{canvas}.png"
+
+
+def garment_file(garment_id: str) -> str:
+    """Where what a piece that is worn is, is kept, below the illustrations folder."""
+    return f"garments/{garment_id}/{GARMENT_FILE}"
+
+
 def unsided(name: str) -> str:
     """The name of a bone or part without the side of the body it is on: both arms are one to the measures."""
     for side in SIDES:
@@ -155,6 +167,27 @@ def build_from_data(data: Any) -> DollBuild:
             if isinstance(value, (list, tuple)) and len(value) == 2 and all(isinstance(each, (int, float)) for each in value):
                 target[str(key)] = (float(value[0]), float(value[1]))
     return build
+
+
+@dataclass(frozen=True)
+class WearSlot:
+    """A place on the body for a piece that is worn, such as a helmet: the parts it is drawn on,
+    whichever side of the body each is on."""
+
+    slot_id: str
+    name: str
+    parts: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class Garment:
+    """A piece that is worn: its drawings by canvas, laid out as a doll's are, the slot it goes
+    in, and the measures of the plain figure it was drawn over."""
+
+    garment_id: str
+    slot: str
+    drawings: dict[str, pygame.Surface]
+    build: DollBuild
 
 
 @dataclass(frozen=True)
@@ -240,6 +273,16 @@ class DollTemplate:
     # back from that joint, to go into it without a cut. At 0 a limb has no such end, and all of
     # it bends.
     tip: float = 0.35
+    # The places there are for what is worn, each over the ones before it where two share a part.
+    wear: tuple[WearSlot, ...] = ()
+
+    def slot(self, slot_id: str) -> WearSlot | None:
+        return next((slot for slot in self.wear if slot.slot_id == slot_id), None)
+
+    def worn_on(self, slot_id: str) -> list[str]:
+        """The parts a piece worn in a slot is drawn on, on both sides of the body."""
+        slot = self.slot(slot_id)
+        return [bone for bone in self.parts if unsided(bone) in slot.parts] if slot is not None else []
 
     def adopted(self, canvas: str, drawing: pygame.Surface, build: DollBuild) -> pygame.Surface:
         """A drawing as this template lays its paper out, whichever way it was laid out when drawn.
@@ -579,7 +622,20 @@ def template_from_data(data: dict[str, Any]) -> DollTemplate:
     return DollTemplate(
         unit, canvases, parts, start, _formers(unit, canvases, parts, start, data.get("former")),
         hoses, float(bends.get("round", 1.0)), float(bends.get("volume", 0.0)), float(bends.get("tip", 0.35)),
+        _slots(data.get("wear"), parts),
     )
+
+
+def _slots(data: Any, parts: dict[str, PartSpec]) -> tuple[WearSlot, ...]:
+    """The places for what is worn, in the order they are given: each is drawn on parts the doll has."""
+    known = {unsided(bone) for bone in parts}
+    found = []
+    for slot_id, values in (data or {}).items():
+        drawn_on = tuple(str(part) for part in values.get("parts", ()))
+        if not drawn_on or not set(drawn_on) <= known:
+            raise ValueError(f"What is worn as {slot_id} must be drawn on parts the doll has: {drawn_on}")
+        found.append(WearSlot(str(slot_id), str(values.get("name", slot_id)), drawn_on))
+    return tuple(found)
 
 
 def _check_hoses(hoses: tuple[tuple[str, ...], ...], parts: dict[str, PartSpec], tipped: bool) -> None:
@@ -708,6 +764,8 @@ class Doll:
                 drawing = pygame.transform.smoothscale(drawing, template.canvases[spec.canvas])
             sheets[spec.canvas] = drawing
             masks[bone] = template.cut_mask(bone, drawing)
+        # The drawings it was cut from, by canvas: what is worn is laid over these.
+        self.sheets = sheets
         self._share_out(template, masks)
         for bone, mask in masks.items():
             spec = template.parts[bone]
@@ -1035,6 +1093,13 @@ class DollStore:
         # The game's body plan, which each doll gets with its own measures.
         self.plan = plan
         self._dolls: dict[str, Doll | None] = {}
+        # The pieces there are to wear, read the first time each is asked for, and the dolls that
+        # have been cut with some of them on: by the doll and by what it wears.
+        self._garments: dict[str, Garment | None] = {}
+        self._dressed: dict[tuple[int, tuple[str, ...]], tuple[Doll, Doll]] = {}
+        self._tailor: Any = None
+        # Whether a doll may still be cut with pieces on in this frame, for whoever counts frames.
+        self._may_dress = True
         # How much bending of limbs a frame may be given, for whoever shows many dolls at once.
         self.allowance = rubber.Allowance()
         # Limbs are kept bent for every doll together, past the end of any one store. They are
@@ -1044,6 +1109,7 @@ class DollStore:
     def new_frame(self) -> None:
         """Say that a frame has been shown: the next has its whole allowance of bending."""
         self.allowance.new_frame()
+        self._may_dress = True
 
     def build(self, body_id: str) -> DollBuild:
         """The measures of a body: its own if it has any that can be used.
@@ -1106,9 +1172,80 @@ class DollStore:
     def forget(self, body_id: str) -> None:
         """Have a body's drawings read again, as after they have been changed."""
         self._dolls.pop(body_id, None)
+        # Whatever it was cut with on was cut from the drawings it had.
+        self._dressed.clear()
         if self._illustrations is not None:
             for canvas in self.template.canvases:
                 self._illustrations.forget(doll_path(body_id, canvas))
+
+    @property
+    def tailor(self) -> Any:
+        """What lays a piece over a body, whatever the body is like (`graphics/tailor.py`)."""
+        if self._tailor is None:
+            from graphics.tailor import Tailor
+
+            self._tailor = Tailor(self.template)
+        return self._tailor
+
+    def garment(self, garment_id: str) -> Garment | None:
+        """A piece that is worn, as it was drawn. None unless somebody has drawn it for a slot there is."""
+        if garment_id not in self._garments:
+            self._garments[garment_id] = self._read_garment(garment_id)
+        return self._garments[garment_id]
+
+    def _read_garment(self, garment_id: str) -> Garment | None:
+        root = self._illustrations.root if self._illustrations is not None else None
+        if root is None:
+            return None
+        path = (root / garment_file(garment_id)).resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            return None
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as error:
+            logger.warning("A piece to wear could not be read: %s (%s)", path, error)
+            return None
+        slot = data.get("slot") if isinstance(data, dict) else None
+        if not isinstance(slot, str) or self.template.slot(slot) is None:
+            return None
+        build = build_from_data(data.get("build"))
+        if not self.template.takes(build):
+            build = DollBuild()
+        drawings = {}
+        for canvas in self.template.canvases:
+            picture = self._illustrations.find(garment_path(garment_id, canvas))
+            if picture is not None:
+                drawings[canvas] = self.template.adopted(canvas, picture, build)
+        return Garment(garment_id, slot, drawings, build) if drawings else None
+
+    def dressed(self, doll: Doll | None, worn: Sequence[str], in_turn: bool = False) -> Doll | None:
+        """A doll with pieces on, by what they are called: cut with them the first time it is
+        asked for so, and kept. The doll as it is where there is nothing of them to put on it.
+
+        Cutting one takes a good deal longer than showing it. `in_turn` is for whoever shows many
+        in a frame and counts frames: only one is cut in each, and the rest are seen as they
+        were until their turn comes.
+        """
+        worn = tuple(worn)
+        if doll is None or not worn:
+            return doll
+        key = (doll._token, worn)
+        kept = self._dressed.get(key)
+        if kept is None:
+            if in_turn and not self._may_dress:
+                return doll
+            self._may_dress = False
+            pieces = [piece for piece in map(self.garment, worn) if piece is not None]
+            kept = self._dressed[key] = (doll, self.tailor.dress(doll, pieces) if pieces else doll)
+        return kept[1]
+
+    def forget_garment(self, garment_id: str) -> None:
+        """Have a piece read again, as after it has been drawn anew, and whoever wears it cut again."""
+        self._garments.pop(garment_id, None)
+        self._dressed.clear()
+        if self._illustrations is not None:
+            for canvas in self.template.canvases:
+                self._illustrations.forget(garment_path(garment_id, canvas))
 
 
 def _of_head(doll: Doll, name: str) -> bool:

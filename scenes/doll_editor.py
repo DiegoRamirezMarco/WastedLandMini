@@ -117,6 +117,7 @@ PREVIEW_RATE = 1.2
 PREVIEW_CLIPS = ("walk", "idle", "work", "fight")
 PREVIEW_SECONDS = 4.0
 SAVED_TEXT = "Guardado: ya anda así por el asentamiento"
+FITTING_LABEL = "Probador"
 NOTES_TEXT = (
     "Cada zona de color es una pieza: lo que pintes dentro se mueve con ella. Se dobla por las líneas de puntos.",
     "El maniquí de debajo es solo una referencia para calcar. Naranja: delante. Azul: detrás.",
@@ -215,6 +216,15 @@ class DollEditor:
         y += 16
         self.measures_button = Button.at(font, TOOLS_LEFT, y, "Medidas de partida", ("measures",))
         self.top_buttons = self._row(6, [("<", ("step", -1)), (">", ("step", 1)), ("Guardar", ("save",)), ("Volver", ("close",))], left=HEAD_AT[0])
+        if dolls.template.wear:
+            # The way to where armour is drawn and tried on, before the rest of that row.
+            fitting = Button.at(font, 0, 6, FITTING_LABEL, ("fitting",))
+            fitting.rect.right = HEAD_AT[0] - 8
+            self.top_buttons.append(fitting)
+        # Whoever the armour is to be tried on, once the way there has been pressed.
+        self.requested_fitting: str | None = None
+        # Whatever else a screen made of this one has to press.
+        self.extra_buttons: list[Button] = []
 
     def _row(self, y: int, entries: list[tuple[str, tuple]], left: int = TOOLS_LEFT) -> list[Button]:
         buttons, x = [], left
@@ -228,7 +238,7 @@ class DollEditor:
     def buttons(self) -> list[Button]:
         return [
             *self.top_buttons, *self.tool_buttons, *self.shape_buttons, *self.edit_buttons, self.fill_button,
-            self.guide_button, self.mannequin_button, self.measures_button,
+            self.guide_button, self.mannequin_button, self.measures_button, *self.extra_buttons,
         ]
 
     def open(self, resident_id: str | None) -> None:
@@ -243,6 +253,7 @@ class DollEditor:
         )
         self.resident_id = resident_id if known else (residents[0] if residents else None)
         self.closed = self.resident_id is None
+        self.requested_fitting = None
         self.notice = ""
         self._undo = []
         self._stroke = None
@@ -551,6 +562,8 @@ class DollEditor:
             self.set_build(self.base_template.starting())
         elif intent[0] == "step":
             self.step(intent[1])
+        elif intent[0] == "fitting":
+            self.requested_fitting = self.resident_id
         elif intent[0] == "save":
             self.save()
         elif intent[0] == "close":
@@ -680,23 +693,45 @@ class DollEditor:
         self.time += dt
         self._body.update(dt)
 
-    def render(self) -> None:
-        self.layers.clear()
-        canvas, font = self.canvas, self.font
-        canvas.fill(PALETTE["ink"])
+    def _title(self) -> str:
+        """What is written at the head of the screen: who is being drawn."""
         resident = self.world.residents.get(self.resident_id or "")
         child = self.world.bundles.get(self.resident_id or "")
         if child is not None:
             # Somebody just born: what is drawn is who they will be once grown.
-            title = f"Dibujar a {child.name}, de mayor"
-        else:
-            keepers = self.world.merchants.keepers(self.world)
-            name = resident.name if resident is not None else keepers.get(self.resident_id or "")
-            title = f"Dibujar a {name}" if name else "Dibujar"
-        font.draw(canvas, title, (TOOLS_LEFT, 4), PALETTE["glow"], scale=2)
+            return f"Dibujar a {child.name}, de mayor"
+        keepers = self.world.merchants.keepers(self.world)
+        name = resident.name if resident is not None else keepers.get(self.resident_id or "")
+        return f"Dibujar a {name}" if name else "Dibujar"
+
+    def _caption(self) -> str:
+        """What is written over the figure that moves beside the paper."""
+        if self.tool == MEASURE_TOOL:
+            return MEASURE_PREVIEW
+        return EXAMPLE_PREVIEW if self._showing_example else OWN_PREVIEW
+
+    def _notes(self) -> tuple[str, ...]:
+        """What is said under the tools about how to go about it."""
+        return MEASURE_NOTES if self.tool == MEASURE_TOOL else NOTES_TEXT
+
+    def _lesson(self):
+        """The lesson of the opening of a new settlement that is taught here, while one is."""
+        return lesson_for(self.world, focus=DOLL_FOCUS)
+
+    def _active(self, button: Button) -> bool:
+        """Whether a button is shown pressed in: the tool in hand is."""
+        return button.intent == ("tool", self.tool)
+
+    def render(self) -> None:
+        self.layers.clear()
+        canvas, font = self.canvas, self.font
+        canvas.fill(PALETTE["ink"])
+        font.draw(canvas, self._title(), (TOOLS_LEFT, 4), PALETTE["glow"], scale=2)
         font.draw(canvas, self.notice or "El tiempo está detenido", (TOOLS_LEFT, 30), PALETTE["lamp" if self.notice else "stone"])
         for button in self.top_buttons:
             button.draw(canvas, font)
+        for button in self.extra_buttons:
+            button.draw(canvas, font, active=self._active(button))
 
         font.draw(canvas, "Color", (TOOLS_LEFT, 44), PALETTE["dust"])
         draw_chosen(canvas, CHOSEN, self.color)
@@ -709,10 +744,10 @@ class DollEditor:
             draw_panel(canvas, rect, fill="shadow", border="lamp" if size == self.size else "iron")
             pygame.draw.circle(canvas, PALETTE["bone"], rect.center, max(1, size // 2))
         for button in (*self.tool_buttons, *self.shape_buttons):
-            button.draw(canvas, font, active=button.intent == ("tool", self.tool))
+            button.draw(canvas, font, active=self._active(button))
         self.fill_button.draw(canvas, font, active=self.filled)
         for button in (*self.edit_buttons, self.guide_button, self.mannequin_button, self.measures_button):
-            button.draw(canvas, font)
+            button.draw(canvas, font, active=self._active(button))
 
         for name, area in self.areas.items():
             label = "Cuerpo" if name == BODY_CANVAS else "Cabeza"
@@ -721,22 +756,21 @@ class DollEditor:
             canvas.fill(TRANSPARENT, area)
             self.layers.under(self._show_drawing(name, area))
         measuring = self.tool == MEASURE_TOOL
-        caption = MEASURE_PREVIEW if measuring else (EXAMPLE_PREVIEW if self._showing_example else OWN_PREVIEW)
-        font.draw(canvas, caption, (PREVIEW.x, PREVIEW.y - LINE_HEIGHT - 1), PALETTE["glow" if measuring else "dust"])
+        font.draw(canvas, self._caption(), (PREVIEW.x, PREVIEW.y - LINE_HEIGHT - 1), PALETTE["glow" if measuring else "dust"])
         pygame.draw.rect(canvas, PALETTE["stone"], PREVIEW.inflate(2, 2), 1)
         canvas.fill(TRANSPARENT, PREVIEW)
         self.layers.under(self._show_preview)
 
         if measuring:
             self._render_handles()
-        lesson = lesson_for(self.world, focus=DOLL_FOCUS)
+        lesson = self._lesson()
         if lesson is not None:
             # While the opening of a new settlement teaches drawing, the lesson goes where the notes do.
             draw_lesson(canvas, font, NOTES, self.world, lesson)
             draw_hint(canvas, self._hint_rect(lesson.hint), self.time)
             return
         y = NOTES.y
-        for note in MEASURE_NOTES if measuring else NOTES_TEXT:
+        for note in self._notes():
             for line in font.wrap(note, NOTES.width):
                 if y + LINE_HEIGHT > NOTES.bottom:
                     break

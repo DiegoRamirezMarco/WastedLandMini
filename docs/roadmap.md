@@ -369,7 +369,7 @@ Still open here:
   standing behind a table is in front of it
 - The editor's brush has hard edges and the palette's colours only. There is no picking a colour
   off the drawing, no zoom, and no layers
-- What a doll carries or wears is not shown on it
+- What a doll carries is not shown on it. What it wears is being tried out (P66)
 - The pictures themselves. The first six, for one whole screen, are being made
 - Text is still the pixel font, and bars, buttons and icons are still pixel art
 - Furniture, objects and residents are still pixel art, standing on an illustrated ground
@@ -5733,6 +5733,88 @@ Still open here:
 - Nothing shows over somebody who is bored
 - What each trait opens is not said where a resident is made
 - What has lifted their spirits goes back as far as they remember, and no further
+
+### P66 — Armour cut to any body: a first look — done
+Asked for on 2026-10-08, in plan mode: "investiga como podemos crear armaduras que se podamos
+dibujar igual que todo pero se ajusten a los diferentes cuerpos por muy locos que sea, torso
+hombreras casco pantalones etc". One batch of four:
+- **Drawn over the plain figure**, on the doll's own two papers, with somewhere beside it to
+  try it on. The recommendation
+- **Everything bends** with the limb of rubber it is on. A helmet and a chest plate do not,
+  as a head and a trunk do not. The recommendation
+- **Besides a helmet, a torso, pauldrons and trousers: a cape or a pack, and a mask or
+  goggles.** Boots, and bracers and gloves, were left unticked
+- **A first look, and stop there** to be judged before who wears what is touched. The
+  recommendation
+
+What there is:
+- **A piece is kept by where on the body it is and not where on the paper**
+  (`graphics/tailor.py`): how far along its part, from one joint to the next, and how far
+  from the skin. Laid over somebody it is as long as their part and as wide as they are
+  drawn, behind and in front each by itself, so that a belly swells a plate in front only
+- **Past the skin it is about as thick as it was drawn**: thinner on a thin body and thicker
+  on a stout one, by the root of how many times as wide, and less where their body leaves it
+  no room in the zone of the part
+- **A head has no joints to go by**: a piece on it goes by the way from the middle of what
+  is drawn, and by how far out that reaches each way, hair and all
+- **Where a part ends in a round, the round stays one**; two parts that meet at a joint are
+  measured as one there; and where nothing of a part is drawn nothing is worn on it
+- **What comes of it is a drawing like any other**, laid over the body's own in memory and cut
+  with it into one doll: it bends, turns, is mirrored and grows as the body does, and costs
+  nothing more to show. Nobody's kept drawing is touched
+- **Five places to wear something, as data** (`doll.wear` in `data/skeleton.json`): mask,
+  helmet, torso, trousers and pauldrons, each with the parts it is drawn on
+- **`Probador`, in `Dibujar`** (`scenes/garment_editor.py`): the doll editor's paper and
+  tools, with only where the piece in hand is worn left light and nothing painted outside
+  it. The other pieces show faintly under it. Beside the paper a resident wears every piece,
+  moving; `<` and `>` try them on the next one. `Igual al otro lado` has the far side wear
+  what was painted for the near one
+- **`En el mapa`** keeps the pieces and has everybody on the map seen in them, one more cut
+  in each frame. It is how they are shown and nothing else: no rule of the game, nothing
+  saved with the settlement
+- Pieces are kept in `illustrations/garments/<slot>/`, which belongs to a game being played
+
+Decided without asking:
+- **Hands and feet go bare**, as boots and gloves were left out. A slot is a line of data
+- **A piece drawn for one side is copied to the other with a button**, and not by itself
+- **The skin is taken a little wide**: as far out as the body goes anywhere within six
+  pixels, so that a piece goes straight over a dent and over the round end of a part
+- **Thickness follows width by its root**, between none of it and all of it. With none, a
+  body drawn as a stick was lost in its trousers
+- **Without numpy nobody is seen to wear anything**
+- **The cape is not in this first look**: it wants a paper of its own and to be shown behind
+  the body (P67)
+
+Still open here:
+- **Nobody has tried it with a mouse**: it was driven by scripted presses and looked at in
+  pictures of the game, on the dolls kept in the folder and on bodies made up to be odd
+- **A mask lands by the way from the middle of the head**: on a head with a snout the
+  goggles sit on the snout. A point for the face in `Medidas`, as the neck has, would say
+  where, if it is wanted
+- **A helmet covers all the hair there is**, and is large on a head with a lot of it
+- **On a body drawn right up to the edge of its zones a piece has no room past the skin**
+  and loses the line round it
+- **Inside a building nobody is seen in them**, nor in the family tree
+- Cutting somebody with five pieces on takes about a fifth of a second, once
+
+### S66 — Worn, piece by piece (needs P66) — planned
+- **A thing that is worn says where** (a slot of `doll.wear`), one to a slot, and what is
+  made at the watch as `Defensa` is one of them
+- What is worn is the simulation's to say, and the map shows it in place of the switch (P66)
+
+Still to settle, to be asked before it is built:
+- Who decides what is worn: they themselves, the player from the wheel, or both
+- How what each piece stops adds up, and which wears with a blow
+- Whether a mask and a cape stop anything or are only looks
+- Whether it comes off to sleep
+
+### P67 — The whole wardrobe (needs P66 and S66) — planned
+- **A cape or a pack**: a third paper, with the trunk of the figure to go by. All of it is one
+  part hung from the spine, as a head is from the neck, shown behind the body and fitted to
+  the back
+- **What the watch comes to is drawn in `Probador`** when it is named, with a list to pick
+  which piece it is. Its picture in a square comes of the drawing
+- Pieces inside buildings, on the family tree and where manners are tried
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

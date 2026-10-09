@@ -7,6 +7,7 @@ __pycache__/
 saves/
 # What is drawn in the game belongs to a game being played, as a save does.
 illustrations/dolls/
+illustrations/garments/
 illustrations/objects/
 illustrations/coins/
 illustrations/buildings/*/

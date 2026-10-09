@@ -443,6 +443,9 @@ class GlobalView:
         self._bundle_pictures: dict[tuple, pygame.Surface] = {}
         # Resident the player asked to draw. The game shell picks it up.
         self.requested_editor: str | None = None
+        # The pieces everybody is seen in while armour is being tried out (P66). Only how they
+        # are shown: who wears what is not yet something the settlement knows.
+        self.trying_on: tuple[str, ...] = ()
         # Building the player asked to draw. Kept separate from resident drawings.
         self.requested_building_editor: str | None = None
         # Item definition picked in a resident's or container's inventory.
@@ -2993,7 +2996,7 @@ class GlobalView:
             # Nobody has drawn them: on the window they are a plain figure in their own colours.
             skin = self.bodies.renderer.skin(body_id)
             doll = self.dolls.stand_in(body_id, lambda template: stand_in(template, skin))
-        return doll
+        return self.dolls.dressed(doll, self.trying_on, in_turn=True)
 
     def _doll_for(self, resident: Resident) -> Doll | None:
         """The paper doll a resident is shown as."""

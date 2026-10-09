@@ -1,6 +1,7 @@
 import json
 import logging
 import random
+from collections.abc import Sequence
 from pathlib import Path
 
 import pygame
@@ -24,6 +25,7 @@ from save.save_manager import SaveManager
 from scenes.building_editor import BuildingEditor
 from scenes.coin_editor import CoinEditor
 from scenes.doll_editor import DollEditor
+from scenes.garment_editor import GarmentEditor
 from scenes.family_view import FamilyView
 from scenes.global_view import GlobalView
 from scenes.interaction_view import InteractionView
@@ -72,6 +74,7 @@ DISCOVERY_SCENE = "discovery"
 COIN_SCENE = "coin_editor"
 FAMILY_SCENE = "family"
 MANNER_SCENE = "manners"
+GARMENT_SCENE = "garment_editor"
 NO_DRAWINGS = "No hay carpeta de ilustraciones disponible"
 # Screens that read the keyboard themselves: the way in, and where the first resident is made.
 MENU_SCENE, CREATOR_SCENE = "menu", "creator"
@@ -196,6 +199,22 @@ class Game:
             if self.illustrations.root is not None
             else None
         )
+        # Armour is drawn and tried on beside them, on the same paper, and kept in the same folder.
+        self.garment_editor = (
+            GarmentEditor(
+                self.canvas,
+                self.world,
+                self.font,
+                self.layers,
+                self.illustrations.root,
+                self.dolls,
+                builtin_plan(),
+                self.global_view.bodies.renderer,
+                on_tried=self._try_on,
+            )
+            if self.illustrations.root is not None
+            else None
+        )
         # Buildings use the same illustrations folder, but keep four aligned drawings of their own.
         self.building_editor = (
             BuildingEditor(
@@ -269,6 +288,10 @@ class Game:
     def _report_deed(self, deed: str) -> None:
         """Tell the simulation of something the player has done in an editor, which only the opening cares about."""
         self.world.apply_command(ReportDeedCommand(deed))
+
+    def _try_on(self, worn: Sequence[str]) -> None:
+        """Have everybody on the map seen in pieces of armour, while they are being tried out."""
+        self.global_view.trying_on = tuple(worn)
 
     def _skip_what_cannot_be_drawn(self) -> None:
         """With nowhere to keep drawings there are no editors, and the steps that teach drawing are passed over."""
@@ -383,6 +406,8 @@ class Game:
             return self.creator
         if self.scene_name == EDITOR_SCENE and self.doll_editor is not None:
             return self.doll_editor
+        if self.scene_name == GARMENT_SCENE and self.garment_editor is not None:
+            return self.garment_editor
         if self.scene_name == BUILDING_SCENE and self.building_editor is not None:
             return self.building_editor
         if self.scene_name == OBJECT_SCENE and self.object_editor is not None:
@@ -415,6 +440,7 @@ class Game:
             return
         if key == pygame.K_ESCAPE and self.scene_name in (
             EDITOR_SCENE,
+            GARMENT_SCENE,
             BUILDING_SCENE,
             OBJECT_SCENE,
             COIN_SCENE,
@@ -500,7 +526,20 @@ class Game:
                     self.doll_editor.open(created)
                     self.scene_name = EDITOR_SCENE
             return
-        if self.scene_name == EDITOR_SCENE and (self.doll_editor is None or self.doll_editor.closed):
+        if (
+            self.scene_name == EDITOR_SCENE
+            and self.doll_editor is not None
+            and self.garment_editor is not None
+            and self.doll_editor.requested_fitting is not None
+        ):
+            # From drawing somebody to trying armour on them, and back to the drawing as it was left.
+            self.garment_editor.open(self.doll_editor.requested_fitting)
+            self.doll_editor.requested_fitting = None
+            if not self.garment_editor.closed:
+                self.scene_name = GARMENT_SCENE
+        elif self.scene_name == GARMENT_SCENE and (self.garment_editor is None or self.garment_editor.closed):
+            self.scene_name = EDITOR_SCENE
+        elif self.scene_name == EDITOR_SCENE and (self.doll_editor is None or self.doll_editor.closed):
             self.scene_name = "global"
         elif self.scene_name == BUILDING_SCENE and (self.building_editor is None or self.building_editor.closed):
             self._leave_art()

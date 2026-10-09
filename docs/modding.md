@@ -440,6 +440,17 @@ between the feet, with `y` growing downwards. Angles are in degrees.
   the joint, to go into it without a cut, and at 0 limbs have no such ends and every part
   bends. Leave `hoses` out and every part is pinned as before. Bending needs numpy; without it
   the game shows the parts.
+- `doll.wear` lists the places there are to wear something, in the order they go one over
+  another where two are worn on the same part: a mask under a helmet. Each has a `name`, which
+  is what the player reads, and the `parts` it is drawn on, without their side, as measures
+  are: `upper_arm` is both arms. A piece is drawn over the plain figure with the measures every
+  doll starts from, and kept in `illustrations/garments/<id>/` as the drawings of a doll are,
+  with a `garment.json` that says its `slot` and the `build` of that figure. On somebody it is
+  laid out anew over their own body (`graphics/tailor.py`): as long as each of their parts,
+  as wide as they are drawn, and about as thick past their skin as it was past the figure's.
+  Nothing of it is seen where they have nothing drawn of a part. A new slot is a line here:
+  the game names none. Laying a piece over a body needs numpy; without it nobody is seen to
+  wear anything.
 - A doll's own measures are kept in `illustrations/dolls/<id>/build.json`, written by the
   editor: `joints` says how far each joint of the guide was moved along its part, in the
   skeleton's own measure, by part and end (`shin.end` is the ankle, `upper_arm.start` the

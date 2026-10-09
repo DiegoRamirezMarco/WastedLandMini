@@ -785,6 +785,13 @@
       ["thigh_right", "shin_right", "foot_right"]
     ],
     "hose": {"round": 2.0, "volume": 0.7, "tip": 0.35},
+    "wear": {
+      "mask": {"name": "Máscara", "parts": ["skull"]},
+      "helmet": {"name": "Casco", "parts": ["skull"]},
+      "torso": {"name": "Torso", "parts": ["neck", "spine"]},
+      "legs": {"name": "Pantalones", "parts": ["hips", "thigh", "shin"]},
+      "shoulders": {"name": "Hombreras", "parts": ["upper_arm"]}
+    },
     "former": [
       {
         "canvases": {"body": [24, 24]},
