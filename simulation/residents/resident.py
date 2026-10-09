@@ -7,7 +7,7 @@ from simulation.residents.attributes import Attributes
 from simulation.residents.needs import Needs
 from simulation.residents.personality import Personality
 from simulation.substances.substance import Habit, Intake
-from simulation.work.expedition import Expedition
+from simulation.work.expedition import Expedition, Outing
 from world.map import Tile
 from world.pathfinding import Point
 
@@ -96,6 +96,8 @@ class Resident:
     expedition: Expedition | None = None
     # Day on which they last set out, so that nobody goes twice in a day.
     last_expedition_day: int = 0
+    # The trip the player has made ready for them, for the next time they set out (S68).
+    outing: Outing | None = None
     # Whether they are looking for a job to take, as someone newly arrived is.
     seeks_work: bool = False
     injuries: list[Injury] = field(default_factory=list)

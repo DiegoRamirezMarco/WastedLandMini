@@ -54,7 +54,7 @@ from simulation.social.talk import ASK_KINDS, Ask, VocabularyState, Word
 from simulation.substances.substance import Habit, Intake
 from simulation.tastes.settings import REACTIONS
 from simulation.tastes.taste import KINDS, Taste, TasteProfile
-from simulation.work.expedition import Expedition
+from simulation.work.expedition import Expedition, Outing, ZoneFound
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.tutorial.tutorial import TutorialState
 from simulation.work.research import ResearchState
@@ -319,6 +319,7 @@ class SaveManager:
             "site_count": world.site_count,
             "salvage": [vars(job) for job in world.salvage.values()],
             "discoveries": [asdict(discovery) for discovery in world.discoveries.values()],
+            "zones": {zone_id: vars(found) for zone_id, found in world.zones.items()},
             "discovery_count": world.discovery_count,
             "ledger": {
                 "day": world.accounts.day,
@@ -376,6 +377,7 @@ class SaveManager:
                     "couple_with": resident.couple_with,
                     "expedition": vars(resident.expedition) if resident.expedition is not None else None,
                     "last_expedition_day": resident.last_expedition_day,
+                    "outing": vars(resident.outing) if resident.outing is not None else None,
                     "seeks_work": resident.seeks_work,
                     "injuries": [vars(injury) for injury in resident.injuries],
                     "dosed_until": resident.dosed_until,
@@ -503,6 +505,7 @@ class SaveManager:
             if activity is not None and not all(self._can_stand(world, step) for step in activity.path):
                 activity = None
             day_off = resident_data.get("day_off")
+            outing = resident_data.get("outing")
             trip = resident_data.get("expedition")
             if not isinstance(trip, dict) or activity is None or activity.action != EXPEDITION_ACTION:
                 # Being out there and the trip itself go together: one without the other is dropped.
@@ -607,10 +610,17 @@ class SaveManager:
                     turns_at=int(trip.get("turns_at", 0)),
                     zone=_text_or_none(trip.get("zone")),
                     place=_text_or_none(trip.get("place")),
+                    route=[str(zone_id) for zone_id in _list_or_empty(trip.get("route"))],
+                    stages=[float(end) for end in _list_or_empty(trip.get("stages"))],
+                    out_minutes=max(0, int(trip.get("out_minutes", 0))),
+                    supplies=_units(trip.get("supplies")),
                 )
                 if trip is not None
                 else None,
                 last_expedition_day=int(resident_data.get("last_expedition_day", 0)),
+                outing=Outing(str(outing["zone"]), _units(outing.get("supplies")))
+                if isinstance(outing, dict) and outing.get("zone")
+                else None,
                 seeks_work=bool(resident_data.get("seeks_work", False)),
                 injuries=[
                     Injury(str(injury.get("kind", "bruise")), float(injury.get("severity", 0.0)))
@@ -720,6 +730,7 @@ class SaveManager:
         self._restore_research(world, data, version)
         self._restore_housing(world, data)
         self._restore_ledger(world, data)
+        self._restore_zones(world, data)
         return world
 
     def _restore_ledger(self, world: SimulationWorld, data: dict[str, Any]) -> None:
@@ -776,6 +787,26 @@ class SaveManager:
             world.discoveries[discovery.discovery_id] = discovery
         world.discovery_count = max(int(data.get("discovery_count", 0)), len(world.discoveries))
         world.crafts.restore(world)
+
+    def _restore_zones(self, world: SimulationWorld, data: dict[str, Any]) -> None:
+        """Put back the zones the settlement knows of. A save from before there were any has
+        come to know of as many of the line as the level of whoever goes out furthest."""
+        known = {zone.zone_id for zone in world.registries.expeditions.zones}
+        saved = data.get("zones")
+        if isinstance(saved, dict):
+            for zone_id, found in saved.items():
+                if zone_id in known and isinstance(found, dict):
+                    world.zones[str(zone_id)] = ZoneFound(
+                        str(found.get("name", "")), str(found.get("by", "")), int(found.get("day", 0))
+                    )
+            return
+        line = world.registries.expeditions.line
+        for resident in world.residents.values():
+            job = world.registries.jobs.get(resident.job_id or "")
+            if job is None or job.expedition is None:
+                continue
+            for zone in line[1 : world.crafts.level(world, resident, job.job_id)]:
+                world.zones.setdefault(zone.zone_id, ZoneFound(by=resident.resident_id))
 
     def _restore_politics(self, world: SimulationWorld, data: dict[str, Any]) -> None:
         """Put back the government and what each resident holds about it. A save from before
@@ -1935,6 +1966,13 @@ def _level_of(saved: dict[str, Any]) -> int:
     """How good a thing that was saved is. Common in a save from before things had levels."""
     level = saved.get("level", 1)
     return level if isinstance(level, int) and not isinstance(level, bool) else 1
+
+
+def _units(value: Any) -> dict[str, int]:
+    """Units of things by item ID, as they were saved: nothing for what is not that."""
+    if not isinstance(value, dict):
+        return {}
+    return {str(item_id): int(units) for item_id, units in value.items() if isinstance(units, int) and units > 0}
 
 
 def _text_or_none(value: Any) -> str | None:

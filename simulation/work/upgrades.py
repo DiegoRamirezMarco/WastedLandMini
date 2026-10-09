@@ -234,12 +234,14 @@ class UpgradeSystem:
         )
         return placed.object_id
 
-    def found_level(self, world: "SimulationWorld", dice, risked: bool = False) -> int:
+    def found_level(self, world: "SimulationWorld", dice, risked: bool = False, likelier: float = 1.0) -> int:
         """How rare one thing brought from outside is, drawn with `dice`: seldom anything but
-        common, and the oftener for a risk taken."""
+        common, the oftener for a risk taken, and `likelier` times as often for where it
+        was brought from (S68)."""
         settings = self.settings(world)
         weights = [
-            weight * (settings.risk_factor if risked and index else 1.0) for index, weight in enumerate(settings.found)
+            weight * ((settings.risk_factor if risked else 1.0) * likelier if index else 1.0)
+            for index, weight in enumerate(settings.found)
         ]
         total = sum(weights)
         if total <= 0:

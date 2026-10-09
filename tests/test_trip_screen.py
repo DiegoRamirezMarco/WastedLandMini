@@ -6,7 +6,7 @@ from pathlib import Path
 import pygame
 
 from graphics.backdrop import PLAIN_ART, BackdropStore, backdrops_from_data, builtin_backdrops, draw_strips
-from graphics.backdrop_pictures import PICTURES, painted
+from graphics.backdrop_pictures import PICTURES, painted, pictures
 from scenes.expedition_view import AHEAD, LEAVE_TRIP_INTENT, NOWHERE
 from settings import SCALE
 from simulation.commands import SetPausedCommand, SetSpeedCommand
@@ -51,6 +51,8 @@ class BackdropTests(unittest.TestCase):
         self.assertEqual([layer.layer_id for layer in plan.layers if layer.front], ["front"])
         self.assertTrue(all(layer.name and layer.note for layer in plan.layers), "each says what goes in it")
         self.assertEqual(plan.art_of("ruins"), "ruins")
+        line = SimulationWorld.demo_world().registries.expeditions.line
+        self.assertEqual([plan.art_of(zone.zone_id) for zone in line], ["forest", "ruins", "summit", "plant", "crater"])
         self.assertEqual(plan.art_of("somewhere_a_pack_added"), PLAIN_ART)
 
     def test_what_makes_no_sense_as_a_backdrop_is_rejected(self) -> None:
@@ -90,14 +92,23 @@ class BackdropTests(unittest.TestCase):
         plan = self.plan
         wide, tall = plan.paper
         feet = round(plan.ground * tall)
-        ground = painted("ruins", "ground", plan.paper, plan)
-        for x in range(0, wide, 7):
-            self.assertEqual(ground.get_at((x, feet))[3], 255, "there is ground wherever a foot comes down")
-            self.assertEqual(ground.get_at((x, tall - 1))[3], 255)
-        self.assertEqual(ground.get_bounding_rect().bottom, tall)
-        front = painted("ruins", "front", plan.paper, plan)
-        knees = feet - round(plan.figure * tall * 0.3)
-        self.assertGreaterEqual(front.get_bounding_rect().top, knees)
+        for art in ("forest", "ruins", "summit", "plant", "crater"):
+            self.assertEqual(set(pictures()[art]), {layer.layer_id for layer in plan.layers}, art)
+            sky = painted(art, "sky", plan.paper, plan)
+            self.assertEqual(pygame.mask.from_surface(sky, 254).count(), wide * tall, f"nothing shows through the sky of {art}")
+            ground = painted(art, "ground", plan.paper, plan)
+            for x in range(0, wide, 7):
+                self.assertEqual(ground.get_at((x, feet))[3], 255, f"there is ground wherever a foot comes down in {art}")
+                self.assertEqual(ground.get_at((x, tall - 1))[3], 255)
+            self.assertEqual(ground.get_bounding_rect().bottom, tall)
+            front = painted(art, "front", plan.paper, plan)
+            knees = feet - round(plan.figure * tall * 0.3)
+            self.assertGreaterEqual(front.get_bounding_rect().top, knees, art)
+            for layer_id in ("far", "middle"):
+                drawn = pygame.mask.from_surface(painted(art, layer_id, plan.paper, plan), 254).count()
+                self.assertTrue(0 < drawn < wide * tall, f"{layer_id} of {art} lets what is behind it show")
+        skies = {pygame.image.tobytes(painted(art, "sky", (80, 62), plan), "RGB") for art in pictures() if art != "plain"}
+        self.assertEqual(len(skies), 5, "each has a sky of its own")
 
     def test_layers_fill_the_place_however_far_the_ground_has_gone_by_and_come_round_again(self) -> None:
         strips = self.store.strips("ruins", STAGE[1])
@@ -159,9 +170,9 @@ class TripWordsTests(unittest.TestCase):
         world = SimulationWorld.demo_world(seed=7)
         sergio = _send_out(world)
         trip, now = sergio.expedition, world.clock.total_minutes
-        self.assertEqual(trip_ends(world, sergio), (TRIP_HOME, "Las ruinas"))
+        self.assertEqual(trip_ends(world, sergio), (TRIP_HOME, "El bosque"))
         going, due = trip_lines(world, sergio)
-        self.assertEqual(going, "Sergio se aleja por las ruinas")
+        self.assertEqual(going, "Sergio se aleja por el bosque")
         self.assertEqual(due, f"Llega en {describe_span(trip.returns_at - now)}")
         trip.turns_at = now
         self.assertEqual(trip_lines(world, sergio)[0], "Sergio vuelve al asentamiento")

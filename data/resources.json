@@ -32,6 +32,8 @@
     "stolen": "Robado",
     "taken": "Se lo llevan",
     "given": "Dado en mano",
+    "packed": "Provisiones de un viaje",
+    "unpacked": "Sobró de un viaje",
     "other": "Sin explicar"
   },
   "sourced": {

@@ -46,8 +46,10 @@ def draw_trip_bar(
     stopped: bool,
     ends: tuple[str, str],
     lines: tuple[str, ...],
+    marks: tuple[float, ...] = (),
 ) -> pygame.Rect:
-    """Draw the way and whoever is on it. Returns where their face was put."""
+    """Draw the way and whoever is on it. Returns where their face was put. `marks` are how
+    far along it one stretch of country gives way to the next, from 0 to 1."""
     draw_panel(target, rect)
     left, right = way_ends(rect, face.get_width())
     spot = face_spot(rect, face, share)
@@ -57,6 +59,8 @@ def draw_trip_bar(
     pygame.draw.rect(target, PALETTE["lamp"], (left, y, spot.centerx - left, WAY))
     for end in (left, right):
         pygame.draw.rect(target, PALETTE["bone"], (end - 1, y - POST, 2, POST * 2 + WAY))
+    for mark in marks:
+        pygame.draw.rect(target, PALETTE["dust"], (left + round(mark * (right - left)), y - 1, 1, WAY + 2))
     target.blit(face, spot)
     if not stopped:
         # A mark beside the face, pointing the way they go.

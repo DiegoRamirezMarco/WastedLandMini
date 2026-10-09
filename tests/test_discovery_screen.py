@@ -4,6 +4,7 @@ game shell without a window."""
 import os
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 import pygame
@@ -175,6 +176,12 @@ class DiscoveryScreenTests(unittest.TestCase):
         self.assertEqual(editor.discovery.choices, {"from": "vegetables"})
 
     def test_a_place_is_named_and_not_drawn(self) -> None:
+        # Somewhere to go is what the handcart came to before the country out there was zones
+        # (S68), and what a pack may still have it come to.
+        crafts = self.world.registries.crafts
+        self.world.registries = replace(
+            self.world.registries, crafts=replace(crafts, jobs={**crafts.jobs, "scavenger": "place"})
+        )
         discovery_id = self._comes_to_something("sergio")
         self._frame()
         editor = self.editor

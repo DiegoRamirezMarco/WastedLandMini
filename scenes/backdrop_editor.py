@@ -29,6 +29,8 @@ from scenes.object_editor import (
     ObjectEditor,
 )
 from settings import TILE_SIZE
+from simulation.commands import RenameZoneCommand
+from simulation.work.expedition_system import ZONE_NAME_LENGTH
 from simulation.world import SimulationWorld
 from skeleton.character import Character
 from skeleton.plan import SkeletonPlan
@@ -44,6 +46,9 @@ Walker = tuple[Doll, SkeletonPlan, str, float]
 SAVED_TEXT = "Guardado: ya se ve fuera"
 NOTHING_DRAWN = "Guardado: se ve el del juego"
 ROLL_NOTICE = "Papel corrido"
+FOUND_NOTICE = "¡Zona nueva! Nombre y dibujo"
+NAME_LABEL = "Cambiar nombre"
+NAMING_NOTICE = "Escribe el nombre. Enter"
 PREVIEW_HEADING = "Así pasa mientras alguien anda"
 OTHERS_ON, OTHERS_OFF = "Capas: todas", "Capas: solo esta"
 # Where the row of layers is: over the paper, and under the name of what is being drawn.
@@ -114,6 +119,9 @@ class BackdropEditor(ObjectEditor):
         left = self.layer_buttons[-1].rect.right + 10
         self.roll_buttons = self._row(LAYERS_TOP, [("< Correr", ("roll", -1)), ("Correr >", ("roll", 1))], left=left)
         self.others_button = Button.at(font, PREVIEW.x, PREVIEW.bottom + 4, OTHERS_ON, ("others",))
+        self.name_button = Button.at(font, PREVIEW.x, 24, NAME_LABEL, ("name",))
+        # What is being written as its name, while one is.
+        self.naming: str | None = None
         # The picture the game has of each layer, on the paper, for the ones with nothing drawn.
         self._own: dict[tuple[str, str], pygame.Surface] = {}
         self._body: Character | None = None
@@ -131,11 +139,13 @@ class BackdropEditor(ObjectEditor):
 
     @property
     def buttons(self) -> list[Button]:
-        return [*super().buttons, *self.layer_buttons, *self.roll_buttons, self.others_button]
+        return [*super().buttons, *self.layer_buttons, *self.roll_buttons, self.others_button, self.name_button]
 
-    def open(self, zone_id: str | None, resident_id: str | None = None) -> None:  # type: ignore[override]
+    def open(self, zone_id: str | None, resident_id: str | None = None, found: bool = False) -> None:  # type: ignore[override]
         """Start drawing a zone, from what has been drawn of it so far. `resident_id` is who
-        is seen walking through it beside the paper."""
+        is seen walking through it beside the paper, and `found` that it has only just been
+        come on: its name is the first thing asked."""
+        self.naming = None
         known = {zone.zone_id for zone in self.world.registries.expeditions.zones} | {NOWHERE}
         self.zone = zone_id if zone_id in known else None
         self.kind = self.zone
@@ -158,6 +168,36 @@ class BackdropEditor(ObjectEditor):
                 paper.blit(kept, (0, 0))
             self.drawings[layer.layer_id] = paper
         self._set_layer(self.layer if self.plan.layer(self.layer) is not None else self.plan.layers[0].layer_id)
+        if found:
+            self.notice = FOUND_NOTICE
+            self.naming = ""
+
+    def zone_name(self) -> str:
+        """What the zone on the paper is called."""
+        zone = self.world.registries.expeditions.zone(self.zone)
+        return self.world.expeditions.name_of(self.world, zone) if zone is not None else ""
+
+    def _name_key(self, event: pygame.event.Event) -> None:
+        """A key while the name is being written: Enter says it, Escape leaves it as it was."""
+        written = self.naming or ""
+        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            self.naming = None
+            if written.strip() and self.zone is not None:
+                self.notice = self.world.apply_command(RenameZoneCommand(self.zone, written)).message
+        elif event.key == pygame.K_ESCAPE:
+            self.naming, self.notice = None, ""
+        elif event.key == pygame.K_BACKSPACE:
+            self.naming = written[:-1]
+        else:
+            letter = getattr(event, "unicode", "")
+            if letter and letter.isprintable() and len(written) < ZONE_NAME_LENGTH:
+                self.naming = written + letter
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if self.naming is not None and event.type == pygame.KEYDOWN:
+            self._name_key(event)
+            return
+        super().handle_event(event)
 
     def _set_layer(self, layer_id: str) -> None:
         if self.plan.layer(layer_id) is None or self.zone is None:
@@ -243,7 +283,10 @@ class BackdropEditor(ObjectEditor):
         return True
 
     def _apply(self, intent: tuple) -> None:
-        if intent[0] == "layer":
+        if intent[0] == "name":
+            self.naming = None if self.naming is not None else ""
+            self.notice = NAMING_NOTICE if self.naming is not None else ""
+        elif intent[0] == "layer":
             self._set_layer(intent[1])
         elif intent[0] == "roll":
             self.roll(intent[1])
@@ -257,8 +300,10 @@ class BackdropEditor(ObjectEditor):
     # ----- showing it -----
 
     def _title(self) -> str:
-        zone = next((zone for zone in self.world.registries.expeditions.zones if zone.zone_id == self.zone), None)
-        return f"Dibujar el fondo: {zone.name}" if zone is not None else "Dibujar el fondo"
+        if self.naming is not None:
+            return f"Se llama: {self.naming}_"
+        name = self.zone_name()
+        return f"Dibujar el fondo: {name}" if name else "Dibujar el fondo"
 
     def _lesson(self):
         return None
@@ -281,6 +326,7 @@ class BackdropEditor(ObjectEditor):
         for button in self.roll_buttons:
             button.draw(canvas, font)
         self.others_button.draw(canvas, font, active=self.others_on)
+        self.name_button.draw(canvas, font, active=self.naming is not None)
 
     def _render_legend(self) -> None:
         """What the guide shows, under the paper and as wide as it: there is no room beside it."""

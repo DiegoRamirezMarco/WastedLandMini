@@ -59,21 +59,33 @@ def _round(things: list[Thing], wide: float) -> None:
             thing(along)
 
 
-def _sky(sheet: Sheet, wide: float, chance: random.Random, ground: float) -> None:
+def _sky(
+    sheet: Sheet,
+    wide: float,
+    chance: random.Random,
+    ground: float,
+    high: Color = SKY_HIGH,
+    low: Color = SKY_LOW,
+    sun_color: Color = SUN,
+    cloud_color: Color = CLOUD,
+    haze: Color = HAZE,
+    sun_at: tuple[float, float] = (0.72, 66.0),
+) -> None:
+    """A sky from one colour down to another, with a sun in its haze and long flat clouds."""
     horizon = ground - 8
     bands = 16
     for band in range(bands):
         share = (band / (bands - 1)) ** 1.5
-        sheet.shade(-2, horizon * band / bands, wide + 4, horizon / bands + 1, mix(SKY_HIGH, SKY_LOW, share))
+        sheet.shade(-2, horizon * band / bands, wide + 4, horizon / bands + 1, mix(high, low, share))
     # Behind the ground it is all haze: nothing shows through a gap in what is drawn over it.
-    sheet.shade(-2, horizon - 1, wide + 4, TALL - horizon + 3, SKY_LOW)
+    sheet.shade(-2, horizon - 1, wide + 4, TALL - horizon + 3, low)
     things: list[Thing] = []
-    sun_x, sun_y = wide * 0.72, 66.0
+    sun_x, sun_y = wide * sun_at[0], sun_at[1]
 
     def sun(along: float) -> None:
         for reach, alpha in ((46, 26), (32, 40), (22, 70)):
-            sheet.oval(sun_x + along - reach, sun_y - reach, reach * 2, reach * 2, SUN, alpha)
-        sheet.oval(sun_x + along - 13, sun_y - 13, 26, 26, SUN)
+            sheet.oval(sun_x + along - reach, sun_y - reach, reach * 2, reach * 2, sun_color, alpha)
+        sheet.oval(sun_x + along - 13, sun_y - 13, 26, 26, sun_color)
 
     things.append(sun)
     for _ in range(7):
@@ -82,13 +94,13 @@ def _sky(sheet: Sheet, wide: float, chance: random.Random, ground: float) -> Non
         alpha = chance.randint(70, 130)
 
         def cloud(along: float, x=x, y=y, long=long, thick=thick, alpha=alpha) -> None:
-            sheet.oval(x + along, y, long, thick, CLOUD, alpha)
-            sheet.oval(x + along + long * 0.22, y - thick * 0.5, long * 0.5, thick, CLOUD, alpha)
+            sheet.oval(x + along, y, long, thick, cloud_color, alpha)
+            sheet.oval(x + along + long * 0.22, y - thick * 0.5, long * 0.5, thick, cloud_color, alpha)
 
         things.append(cloud)
     _round(things, wide)
     for step, alpha in enumerate((34, 52, 74)):
-        sheet.shade(-2, horizon - 54 + step * 18, wide + 4, 20, HAZE, alpha)
+        sheet.shade(-2, horizon - 54 + step * 18, wide + 4, 20, haze, alpha)
 
 
 def _broken_top(chance: random.Random, x: float, wide: float, top: float, drop: float) -> list[tuple[float, float]]:
@@ -264,12 +276,22 @@ def _ruins_middle(sheet: Sheet, wide: float, chance: random.Random, ground: floa
     _round(things, wide)
 
 
-def _earth(sheet: Sheet, wide: float, chance: random.Random, ground: float, road: bool = False) -> None:
+def _earth(
+    sheet: Sheet,
+    wide: float,
+    chance: random.Random,
+    ground: float,
+    road: bool = False,
+    earth: Color = EARTH,
+    dry: Color = DRY,
+    stones: Color = STONE,
+) -> None:
+    """Bare ground of a colour, with stones and tufts on it, and a road along it if it has one."""
     top = ground - VERGE
-    sheet.shade(-2, top, wide + 4, TALL - top + 2, EARTH)
+    sheet.shade(-2, top, wide + 4, TALL - top + 2, earth)
     for band, share in enumerate((0.06, 0.12, 0.2)):
         # Darker towards whoever looks on.
-        sheet.shade(-2, ground + ROAD_BELOW + band * 12, wide + 4, TALL, darker(EARTH, share))
+        sheet.shade(-2, ground + ROAD_BELOW + band * 12, wide + 4, TALL, darker(earth, share))
     things: list[Thing] = []
     for _ in range(int(wide // 9)):
         x, y = chance.uniform(0, wide), chance.uniform(top + 2, TALL)
@@ -319,7 +341,7 @@ def _earth(sheet: Sheet, wide: float, chance: random.Random, ground: float, road
     sheet.stroke([(-2, top), (wide + 2, top)], LINE, 1.2)
     for _ in range(int(wide // 15)):
         x, across = chance.uniform(0, wide), chance.uniform(5, 13)
-        color = mix(STONE, EARTH, chance.uniform(0.1, 0.6))
+        color = mix(stones, earth, chance.uniform(0.1, 0.6))
         low = chance.random() < 0.55
         y = chance.uniform(ground + ROAD_BELOW + 4, TALL - 6) if low else top - across * 0.3
 
@@ -333,7 +355,7 @@ def _earth(sheet: Sheet, wide: float, chance: random.Random, ground: float, road
 
         def tuft(along: float, x=x, y=y, blades=blades) -> None:
             for lean, long in blades:
-                sheet.stroke([(x + along, y), (x + along + lean, y - long)], DRY, 0.9)
+                sheet.stroke([(x + along, y), (x + along + lean, y - long)], dry, 0.9)
 
         things.append(tuft)
     _round(things, wide)
@@ -424,10 +446,20 @@ PICTURES: dict[str, dict[str, Layer]] = {
 }
 
 
+def pictures() -> dict[str, dict[str, Layer]]:
+    """Every kind of art the game has, with the zones past the ruins (`graphics.backdrop_zones`)."""
+    if len(PICTURES) <= 2:
+        from graphics.backdrop_zones import ZONE_PICTURES
+
+        PICTURES.update(ZONE_PICTURES)
+    return PICTURES
+
+
 def painted(art: str, layer_id: str, size: Size, plan: BackdropPlan) -> pygame.Surface:
     """The game's own picture of a layer, of one kind of art, at a size."""
-    art = art if art in PICTURES else PLAIN_ART
-    draw = PICTURES[art].get(layer_id)
+    known = pictures()
+    art = art if art in known else PLAIN_ART
+    draw = known[art].get(layer_id)
     if draw is None:
         return pygame.Surface(size, pygame.SRCALPHA)
     sheet, wide = _sheet(size)

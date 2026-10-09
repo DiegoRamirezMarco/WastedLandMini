@@ -260,7 +260,7 @@ def trip_ends(world: SimulationWorld, resident: Resident) -> tuple[str, str]:
     zone = world.expeditions.zone_of(world, trip) if trip is not None else None
     if place is not None and place.named:
         return (TRIP_HOME, place.name)
-    return (TRIP_HOME, zone.name.capitalize() if zone is not None else TRIP_OUT_THERE)
+    return (TRIP_HOME, world.expeditions.name_of(world, zone).capitalize() if zone is not None else TRIP_OUT_THERE)
 
 
 def trip_lines(world: SimulationWorld, resident: Resident) -> tuple[str, str]:
@@ -269,9 +269,10 @@ def trip_lines(world: SimulationWorld, resident: Resident) -> tuple[str, str]:
     if trip is None:
         return ("", "")
     now = world.clock.total_minutes
-    zone = world.expeditions.zone_of(world, trip)
+    # They are said to be in the zone they are in, which is not always the one they are bound for.
+    zone = world.expeditions.zone_now(world, trip)
     place = world.discoveries.get(trip.place or "")
-    through = f" por {zone.name}" if zone is not None else ""
+    through = f" por {world.expeditions.name_of(world, zone)}" if zone is not None else ""
     waiting = any(decision.resident_id == resident.resident_id for decision in world.decisions.values())
     if waiting:
         going = TRIP_STOPPED.format(name=resident.name)

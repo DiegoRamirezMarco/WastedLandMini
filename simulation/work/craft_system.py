@@ -121,6 +121,8 @@ class CraftSystem:
                 data={"resident_id": resident.resident_id, "job": job.job_id, "level": level},
             )
         )
+        # A job done out there brings the next stretch of country with each level (S68).
+        world.expeditions.levelled(world, resident, job, level)
         kind = self.kind_of(world, job.job_id)
         if kind is None:
             return

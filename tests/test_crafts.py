@@ -59,6 +59,14 @@ def _level_up(world: SimulationWorld, resident_id: str, level: int = 2) -> Disco
     return waiting[-1] if waiting else None
 
 
+def _with_places(world: SimulationWorld) -> SimulationWorld:
+    """The same settlement with the handcart teaching somewhere to go, as it did before the
+    country out there was zones (S68) and as a pack still may have it."""
+    crafts = world.registries.crafts
+    world.registries = replace(world.registries, crafts=replace(crafts, jobs={**crafts.jobs, "scavenger": "place"}))
+    return world
+
+
 def _learn(world: SimulationWorld, resident_id: str, name: str, **choices: str) -> Discovery:
     """Have a resident come to something at their job, named and picked."""
     discovery = _level_up(world, resident_id, world.crafts.level(world, world.residents[resident_id], world.residents[resident_id].job_id) + 1)
@@ -87,7 +95,7 @@ class DataTests(unittest.TestCase):
             set(settings.kinds), {"crop", "dish", "drink", "substance", "remedy", "tool", "weapon", "place"}
         )
         self.assertEqual(settings.jobs["farmer"], "crop")
-        self.assertEqual(settings.jobs["scavenger"], "place")
+        self.assertNotIn("scavenger", settings.jobs, "what the handcart comes to is a stretch of country (S68)")
 
     def test_every_job_that_teaches_is_a_job_and_the_rest_teach_nothing(self) -> None:
         world = SimulationWorld.demo_world()
@@ -572,7 +580,7 @@ class MakingTests(unittest.TestCase):
         self.assertEqual(tomas.health, 100.0)
 
     def test_whoever_knows_of_a_place_goes_there_in_its_turn_for_what_it_gives(self) -> None:
-        world = _settled()
+        world = _with_places(_settled())
         waiting = _level_up(world, "sergio")
         self.assertEqual(
             [option.option_id for option in world.crafts.options(world, waiting)["brings"]],
@@ -678,7 +686,7 @@ class TeachingTests(unittest.TestCase):
 
 class SaveTests(unittest.TestCase):
     def test_what_was_come_to_and_who_knows_it_come_back(self) -> None:
-        world = _settled()
+        world = _with_places(_settled())
         tomato = _learn(world, "raul", "tomate", grows="vine")
         waiting = _level_up(world, "ines")
         place = _learn(world, "sergio", "El Vertedero", brings="scrap")

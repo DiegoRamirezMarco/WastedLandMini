@@ -27,6 +27,8 @@ EATEN, DRUNK, USED, BURNT, DOSED, BUILT, STUDIED, MENDED, SOLD, RATIONED, SPOILE
     "eaten", "drunk", "used", "burnt", "dosed", "built", "studied", "mended", "sold", "rationed", "spoiled",
     "raided", "stolen", "taken", "given",
 )
+# What is handed to somebody to go far on, and what they bring back of it (S68).
+PACKED, UNPACKED = "packed", "unpacked"
 # What the count at the end of a day found that nothing written down accounts for.
 OTHER = "other"
 

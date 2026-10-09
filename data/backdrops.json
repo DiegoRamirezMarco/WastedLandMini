@@ -39,8 +39,20 @@
     }
   ],
   "zones": {
+    "forest": {
+      "art": "forest"
+    },
     "ruins": {
       "art": "ruins"
+    },
+    "summit": {
+      "art": "summit"
+    },
+    "plant": {
+      "art": "plant"
+    },
+    "crater": {
+      "art": "crater"
     }
   }
 }

@@ -137,6 +137,8 @@ from simulation.commands import (
     SurfaceCommand,
     UndecorateCommand,
     PutBundleCommand,
+    PlanTripCommand,
+    CancelTripCommand,
     PutDownCommand,
     SentenceCommand,
     SetPausedCommand,
@@ -172,6 +174,7 @@ from simulation.work.construction import BUILD_ACTION, FINISHED_EVENT
 from simulation.work.work_system import WORK_ACTION
 from simulation.politics.proposal import ENACT_LAW, REPEAL_LAW
 from simulation.work.craft_system import FOUND_EVENT
+from simulation.work.expedition_system import ZONE_FOUND_EVENT
 from simulation.residents.activity import PROTEST_ACTION
 from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
@@ -187,6 +190,10 @@ from ui.law_board import named_items, picked_degree, picked_params
 from ui.labels import away_residents, has_birthday, rarity_color, talk_line
 from ui.object_marks import draw_gem, draw_object_mark, marks_of
 from ui.object_panel import speaks
+from ui.outing_board import CANCEL_INTENT as TRIP_CANCEL_INTENT
+from ui.outing_board import DRAW_INTENT as TRIP_DRAW_INTENT
+from ui.outing_board import PLAN_INTENT as TRIP_PLAN_INTENT
+from ui.outing_board import TRIPS_INTENT, filled, provisions, travellers
 from ui.power_board import POWER_INTENT
 from ui.talk_bubble import TAIL as BUBBLE_TAIL
 from ui.talk_bubble import bubble_of, bubble_size, draw_talk_bubble, said_aloud, wish_shown
@@ -466,6 +473,8 @@ class GlobalView:
         # The country out there the player asked to draw, by the ID of its zone, and who was
         # being watched going through it (P69).
         self.requested_backdrop_editor: tuple[str, str | None] | None = None
+        # The zone that has just been found, while the screen it is named and drawn on is to open for it.
+        self.found_zone: str | None = None
         # Whether the player asked for the families of the whole settlement.
         self.requested_family = False
         # Pictures made outside the game, and where they are put to go straight on the window.
@@ -723,6 +732,7 @@ class GlobalView:
         if self.inside is None:
             self._minimap_kept = self.hud.minimap_rect is not None
         self.inside = room_id
+        self.hud.indoors = True
         # There is no map to find one's way on in there.
         self.hud.minimap_rect = None
         self._press, self._drag_last, self._dragging, self._press_on = None, None, False, None
@@ -733,6 +743,7 @@ class GlobalView:
         if self.inside is None:
             return
         self.inside = None
+        self.hud.indoors = False
         self.interior.naming = None
         self.interior.decorating, self.interior.decor_held, self.interior.decor_removing = False, None, False
         self.hud.minimap_rect = self._minimap_rect if self._minimap_kept else None
@@ -808,6 +819,7 @@ class GlobalView:
         if intent == DRAW_BACKDROP_INTENT and watched is not None:
             self._sound("open")
             self.requested_backdrop_editor = (self.expedition.zone_id(watched), watched.resident_id)
+            self.found_zone = None
             return
         if self.hud.covers(position):
             return
@@ -1179,6 +1191,10 @@ class GlobalView:
                 found = str(event.data.get("discovery") or "")
                 if found in self.world.discoveries and not self.world.discoveries[found].named:
                     self.requested_discovery = found
+            elif event.event_type == ZONE_FOUND_EVENT and self.expedition.backdrops.available:
+                # Somebody has come on a new stretch of country: the next thing is to name it and draw it.
+                self.requested_backdrop_editor = (str(event.data.get("zone") or ""), event.data.get("resident_id"))
+                self.found_zone = str(event.data.get("zone") or "")
             elif event.event_type == ACCIDENT_EVENT and event.participants:
                 self._mark(event.participants[0], ACCIDENT_MARK)
             elif event.event_type == WEDDING_EVENT:
@@ -1356,6 +1372,12 @@ class GlobalView:
             self.hud.toggle_fund()
         elif intent == POWER_INTENT:
             self.hud.toggle_power()
+        elif intent == TRIPS_INTENT:
+            self.hud.toggle_trips()
+        elif intent in (TRIP_PLAN_INTENT, TRIP_CANCEL_INTENT, TRIP_DRAW_INTENT) or (
+            isinstance(intent, tuple) and intent and intent[0] in ("trip_who", "trip_zone", "trip_more")
+        ):
+            self._trip(intent)
         elif intent == WORDS_INTENT:
             self.hud.toggle_words()
         elif intent in (WORDS_GIVE_INTENT, WORDS_BACK_INTENT) or (isinstance(intent, tuple) and str(intent[0]).startswith("words_")):
@@ -1986,6 +2008,46 @@ class GlobalView:
         elif self._affected is not None and not self.world.affect.is_held(self.world, resident_id):
             if not self.world.apply_command(HoldResidentCommand(resident_id)).ok:
                 self._close_wheel()
+
+    def _trip(self, intent: tuple) -> None:
+        """Something pressed on the board of trips: who it is on, how far they are to go, what
+        is handed to them, and making it ready or undoing it."""
+        hud, world = self.hud, self.world
+        entry = hud.outing
+        if intent[0] == "trip_who":
+            going = [resident.resident_id for resident in travellers(world)]
+            if going:
+                at = going.index(entry.resident_id) if entry.resident_id in going else 0
+                entry.resident_id = going[(at + intent[1]) % len(going)]
+                hud.read_outing()
+        elif intent[0] == "trip_zone":
+            # As far as this, with what it takes and no more: it can be changed a unit at a time after.
+            entry.zone_id = intent[1]
+            entry.supplies = filled(world, entry, intent[1])
+        elif intent[0] == "trip_more":
+            there = dict(provisions(world, entry))
+            units = entry.supplies.get(intent[1], 0) + intent[2]
+            entry.supplies[intent[1]] = max(0, min(there.get(intent[1], 0), units))
+            resident = world.residents.get(entry.resident_id)
+            gets_to = world.expeditions.gets_to(world, resident, entry.supplies) if resident is not None else None
+            # What is handed over says how far: the way fills as far as it reaches.
+            entry.zone_id = gets_to.zone_id if gets_to is not None else entry.zone_id
+        elif intent == TRIP_PLAN_INTENT:
+            resident = world.residents.get(entry.resident_id)
+            gets_to = world.expeditions.gets_to(world, resident, entry.supplies) if resident is not None else None
+            zone_id = entry.zone_id or (gets_to.zone_id if gets_to is not None else "")
+            result = world.apply_command(PlanTripCommand(entry.resident_id, zone_id, dict(entry.supplies)))
+            hud.notify(result.message)
+            if result.ok:
+                self._sound("open")
+                hud.read_outing()
+        elif intent == TRIP_CANCEL_INTENT:
+            hud.notify(world.apply_command(CancelTripCommand(entry.resident_id)).message)
+            hud.read_outing()
+        elif intent == TRIP_DRAW_INTENT and entry.zone_id:
+            zone = world.registries.expeditions.zone(entry.zone_id)
+            if zone is not None and world.expeditions.is_found(world, zone):
+                self.requested_backdrop_editor = (entry.zone_id, entry.resident_id or None)
 
     def _law(self, intent: tuple) -> None:
         """Something pressed beside a law on the government's panel: how far it would go, what

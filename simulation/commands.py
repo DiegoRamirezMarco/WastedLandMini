@@ -12,6 +12,7 @@ from simulation.justice.justice_system import JusticeResult
 from simulation.politics.government import PoliticsResult
 from simulation.social.talk import TalkResult
 from simulation.work.craft import CraftResult
+from simulation.work.expedition import TripResult
 from simulation.work.research import ResearchResult
 from world.map import Tile
 from world.urbanism import UrbanismResult
@@ -205,6 +206,15 @@ class CommandTarget(Protocol):
         ...
 
     def name_discovery(self, discovery_id: str, name: str, choices: Mapping[str, str] | None = None) -> CraftResult:
+        ...
+
+    def plan_trip(self, resident_id: str, zone_id: str, supplies: Mapping[str, int] | None = None) -> TripResult:
+        ...
+
+    def cancel_trip(self, resident_id: str) -> TripResult:
+        ...
+
+    def rename_zone(self, zone_id: str, name: str) -> TripResult:
         ...
 
     def give(self, resident_id: str, definition_id: str) -> GiveResult:
@@ -940,6 +950,42 @@ class GiveCommand:
 
     def apply(self, world: CommandTarget) -> GiveResult:
         return world.give(self.resident_id, self.item_id)
+
+
+@dataclass(frozen=True)
+class PlanTripCommand:
+    """The player makes a trip ready for somebody whose job is done out there (S68): the zone
+    it goes to, of those they know the way to, and what is handed to them to get there, in
+    units by item ID, out of what is everybody's. It leaves the stores at once, and they go
+    on it the next time they set out. The result says why not where it cannot be."""
+
+    resident_id: str
+    zone_id: str
+    supplies: Mapping[str, int] = field(default_factory=dict)
+
+    def apply(self, world: CommandTarget) -> TripResult:
+        return world.plan_trip(self.resident_id, self.zone_id, self.supplies)
+
+
+@dataclass(frozen=True)
+class CancelTripCommand:
+    """The player undoes the trip made ready for somebody: they carry back what was handed to them."""
+
+    resident_id: str
+
+    def apply(self, world: CommandTarget) -> TripResult:
+        return world.cancel_trip(self.resident_id)
+
+
+@dataclass(frozen=True)
+class RenameZoneCommand:
+    """The player says what a zone out there is called. Empty, what the game calls it."""
+
+    zone_id: str
+    name: str
+
+    def apply(self, world: CommandTarget) -> TripResult:
+        return world.rename_zone(self.zone_id, self.name)
 
 
 @dataclass(frozen=True)

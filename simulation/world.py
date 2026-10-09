@@ -69,6 +69,7 @@ from simulation.work.finds import FindSystem
 from simulation.work.construction import ConstructionSystem
 from simulation.work.upgrades import NOBODY_KEEPS, UpgradeSystem
 from simulation.work.wear import WearSystem
+from simulation.work.expedition import TripResult, ZoneFound
 from simulation.work.expedition_system import ExpeditionSystem
 from simulation.work.research import ResearchResult, ResearchState, ResearchSystem
 from simulation.work.rush import RushSystem
@@ -112,6 +113,8 @@ class SimulationWorld:
     giving: GiveSystem = field(default_factory=GiveSystem)
     # What residents have come to at their jobs, by discovery ID: named by the player, or waiting to be.
     discoveries: dict[str, Discovery] = field(default_factory=dict)
+    # The zones out there the settlement has come to know of, past the first, by ID (S68).
+    zones: dict[str, ZoneFound] = field(default_factory=dict)
     discovery_count: int = 0
     interventions: InterventionSystem = field(default_factory=InterventionSystem)
     affect: AffectSystem = field(default_factory=AffectSystem)
@@ -505,6 +508,19 @@ class SimulationWorld:
     def give(self, resident_id: str, definition_id: str) -> GiveResult:
         """Put in a resident's hands a unit of a thing that is everybody's (S59)."""
         return self.giving.give(self, resident_id, definition_id)
+
+    def plan_trip(self, resident_id: str, zone_id: str, supplies: Mapping[str, int] | None = None) -> TripResult:
+        """Make a trip ready for somebody whose job is done out there: how far, and what is
+        handed to them out of what is everybody's to get there."""
+        return self.expeditions.plan(self, resident_id, zone_id, supplies or {})
+
+    def cancel_trip(self, resident_id: str) -> TripResult:
+        """Undo the trip made ready for somebody."""
+        return self.expeditions.cancel(self, resident_id)
+
+    def rename_zone(self, zone_id: str, name: str) -> TripResult:
+        """Say what a zone the settlement knows of is called."""
+        return self.expeditions.rename(self, zone_id, name)
 
     def name_discovery(self, discovery_id: str, name: str, choices: Mapping[str, str] | None = None) -> CraftResult:
         """Say what something a resident has come to at their job is called, and what is picked of it."""

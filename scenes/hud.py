@@ -62,6 +62,16 @@ from ui.labels import (
 )
 from ui.layout import Layout, layout_for
 from ui.object_panel import STORE_HEADING, ObjectView, draw_object_view, object_view
+from ui.outing_board import PANEL_WIDTH as OUTING_WIDTH
+from ui.outing_board import (
+    TRIPS_INTENT,
+    OutingEntry,
+    draw_outing_board,
+    outing_board_height,
+    outing_buttons,
+    traveller,
+    travellers,
+)
 from ui.power_board import PANEL_WIDTH as POWER_WIDTH
 from ui.power_board import POWER_INTENT, draw_power_board, power_board_height, power_buttons
 from ui.research_board import PANEL_WIDTH as RESEARCH_WIDTH
@@ -164,6 +174,7 @@ CLOCK_FOCUS = "clock"
 STORES_TITLE = "Almacén: lo que es de todos"
 SENTENCE_HINT = "! {name}, culpable: di qué se le da en Gobierno, Castigos"
 AWAY_LABEL = "Fuera"
+TRIPS_LABEL = "Viajes"
 STORES_EMPTY = "No queda nada"
 # What is everybody's can be put in the hands of whoever is selected, a unit at a time (P65).
 GIVE_LABEL = "Dar"
@@ -292,6 +303,11 @@ class Hud:
         self.government_open = False
         self.fund_open = False
         self.power_open = False
+        # The board of trips, and what is being made ready on it (P70).
+        self.trips_open = False
+        self.outing = OutingEntry()
+        # Whether a building is being looked at from inside: its own buttons are in that corner.
+        self.indoors = False
         # The board of words (P62), and what the player is at on it: what it shows, and what
         # is being written there.
         self.words_open = False
@@ -423,10 +439,15 @@ class Hud:
         if waiting is not None:
             fixed.append(waiting)
         fixed += self.ask_buttons()
+        trips = self.trips_button()
+        if trips is not None:
+            fixed.append(trips)
         if self.words_open:
             return fixed + words_buttons(self.font, self.words_rect(), self.world, self.words_entry)
         if self.power_open:
             return fixed + power_buttons(self.font, self.power_rect(), self.world)
+        if self.trips_open:
+            return fixed + outing_buttons(self.font, self.trips_rect(), self.world, self.outing)
         if self.research_open:
             return fixed + study_buttons(self.font, self.research_rect(), self.world)
         if self.government_open:
@@ -450,7 +471,7 @@ class Hud:
         """Open one of the panels that share a corner, or shut it if it is the one open, and shut the rest."""
         for name in (
             "log_open", "jobs_open", "stores_open", "research_open", "government_open", "fund_open", "trade_open",
-            "power_open", "words_open",
+            "power_open", "words_open", "trips_open",
         ):
             setattr(self, name, name == panel and not getattr(self, name))
         self.fund_entry = None
@@ -485,6 +506,24 @@ class Hud:
 
     def toggle_power(self) -> None:
         self._open_only("power_open")
+
+    def toggle_trips(self) -> None:
+        """Open the board of trips, or shut it: on whoever is selected if they go out, with
+        the trip made ready for them if there is one."""
+        self._open_only("trips_open")
+        if self.trips_open:
+            self.outing = OutingEntry(self.selected_id or "")
+            self.read_outing()
+
+    def read_outing(self) -> None:
+        """Put on the board the trip that is made ready for whoever it is on, if one is."""
+        resident = traveller(self.world, self.outing)
+        kept = resident.outing if resident is not None else None
+        self.outing = OutingEntry(
+            resident.resident_id if resident is not None else "",
+            kept.zone if kept is not None else "",
+            dict(kept.supplies) if kept is not None else {},
+        )
 
     def toggle_words(self) -> None:
         """Open the board of words, or shut it: on whoever is selected, if anybody is, and
@@ -762,6 +801,9 @@ class Hud:
         panels += [self.government_rect()] if self.government_open else []
         panels += [self.fund_rect()] if self.fund_open else []
         panels += [self.power_rect()] if self.power_open else []
+        panels += [self.trips_rect()] if self.trips_open else []
+        trips = self.trips_button()
+        panels += [trips.rect] if trips is not None else []
         panels += [self.trade_rect()] if self.trading else []
         if any(rect is not None and rect.collidepoint(position) for rect in panels):
             return True
@@ -786,6 +828,9 @@ class Hud:
 
     def fund_rect(self) -> pygame.Rect:
         return self._float(FUND_WIDTH, fund_board_height(self.font, self.world, self.fund_entry))
+
+    def trips_rect(self) -> pygame.Rect:
+        return self._float(OUTING_WIDTH, outing_board_height(self.world, self.outing))
 
     def power_rect(self) -> pygame.Rect:
         return self._float(POWER_WIDTH, power_board_height(self.world))
@@ -879,6 +924,20 @@ class Hud:
             top += BUTTON_HEIGHT + 2
         return buttons
 
+    def trips_button(self) -> Button | None:
+        """The way to the board of trips, while anybody has a job done out there: under
+        whatever else is in that corner of the map. The menu has no row to spare for it."""
+        if self.indoors or not travellers(self.world):
+            return None
+        area = self.layout.map
+        found = self.discovery_button()
+        corner = [
+            self.outlook_rect(), self.tutorial_rect(), self.away_rect(), self.redraw_rect(),
+            found.rect if found is not None else None, *(button.rect for button in self.ask_buttons()),
+        ]
+        top = max((rect.bottom for rect in corner if rect is not None), default=area.y) + MARGIN
+        return Button.at(self.font, area.x + MARGIN, top, TRIPS_LABEL, TRIPS_INTENT)
+
     def away_rect(self) -> pygame.Rect | None:
         """Where the faces of whoever is outside the settlement go, while anybody is: in
         the corner of the map, under the forecasts."""
@@ -950,6 +1009,9 @@ class Hud:
         for button in self.ask_buttons():
             # So does whoever wants a word, until they are given one or told not now.
             button.draw(self.canvas, self.font, active=self.lit)
+        trips = self.trips_button()
+        if trips is not None:
+            trips.draw(self.canvas, self.font, active=self.trips_open)
         asked = self.redraw_rect()
         if asked is not None and self.redraw is not None:
             draw_panel(self.canvas, asked, fill="shadow", border="copper")
@@ -966,6 +1028,8 @@ class Hud:
             draw_research_board(self.canvas, self.font, self.research_rect(), self.world)
         if self.power_open:
             draw_power_board(self.canvas, self.font, self.power_rect(), self.world)
+        if self.trips_open:
+            draw_outing_board(self.canvas, self.font, self.trips_rect(), self.world, self.outing)
         if self.words_open:
             self._tidy_words()
             draw_words_board(
@@ -1062,6 +1126,7 @@ class Hud:
             GOVERNMENT_INTENT: self.government_open,
             FUND_INTENT: self.fund_open,
             POWER_INTENT: self.power_open,
+            TRIPS_INTENT: self.trips_open,
         }
         return open_panels.get(intent, False)
 

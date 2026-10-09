@@ -177,6 +177,9 @@ Event types emitted so far:
 | `breakup_started` | A resident tells their partner it is over | 55 |
 | `couple_broke_up` | The couple is over | 65 |
 | `expedition_left` | A resident leaves the settlement to scavenge, with `zone` (the country it goes through) and `place` (the discovery it is bound for) in `data` when there is one | 15 |
+| `trip_planned` | The player makes a trip ready for somebody, with `zone` and `supplies` in `data` | 15 |
+| `zone_found` | Somebody comes to a level of a job done out there and with it on the next zone of the line, with `zone` and `level` in `data` | 60 |
+| `zone_named` | The player says what a zone is called | 30 |
 | `risky_find` | A resident out there comes on something that looks dangerous, and waits for advice | 50 |
 | `expedition_returned` | A resident comes back with what they found, with `found` and `kept` (what they keep for themselves under barter, or null) in `data` | 30 |
 | `stranger_at_gate` | Someone asks to be let in, and the guard waits for advice | 55 |

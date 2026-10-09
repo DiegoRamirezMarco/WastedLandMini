@@ -98,7 +98,7 @@ class _Shell(unittest.TestCase):
         editor.release()
 
     def _file(self, layer_id: str) -> Path:
-        return self.folder / backdrop_path("ruins", layer_id)
+        return self.folder / backdrop_path("forest", layer_id)
 
 
 class BackdropEditorTests(_Shell):
@@ -111,8 +111,8 @@ class BackdropEditorTests(_Shell):
         editor = self._open()
         self.assertEqual(self.game.scene_name, BACKDROP_SCENE)
         self.assertIs(self.game.active_scene, editor)
-        self.assertEqual((editor.zone, editor.resident_id, editor.closed), ("ruins", "sergio", False))
-        self.assertEqual(editor._title(), "Dibujar el fondo: las ruinas")
+        self.assertEqual((editor.zone, editor.resident_id, editor.closed), ("forest", "sergio", False))
+        self.assertEqual(editor._title(), "Dibujar el fondo: el bosque")
         # Time stands still while it is open.
         minute = self.world.clock.total_minutes
         self.game.advance_simulation(5.0)
@@ -206,7 +206,7 @@ class BackdropEditorTests(_Shell):
         self.assertEqual(editor.notice, SAVED_TEXT)
         self.assertTrue(self._file("sky").is_file())
         self.assertEqual([path.name for path in self._file("sky").parent.iterdir()], ["sky.png"])
-        self.assertTrue(self.trips.backdrops.drawn("ruins"))
+        self.assertTrue(self.trips.backdrops.drawn("forest"))
         # Opened again it is there to go on from, and wiped clean and saved it is the game's again.
         editor.closed = True
         self.game.sync_scenes()
@@ -215,7 +215,7 @@ class BackdropEditorTests(_Shell):
         editor._apply(("clear",))
         self.assertTrue(editor.save())
         self.assertFalse(self._file("sky").exists())
-        self.assertFalse(self.trips.backdrops.drawn("ruins"))
+        self.assertFalse(self.trips.backdrops.drawn("forest"))
 
     def test_what_is_drawn_is_what_goes_by_behind_whoever_is_out(self) -> None:
         stage = self.view.layers.on_screen(self.view.viewport)
@@ -238,7 +238,7 @@ class BackdropEditorTests(_Shell):
         self.assertEqual(self.view.outside, "sergio")
         self.assertEqual(sky(), SKY)
         # The layers nobody drew are still the ones the game has: there is ground under their feet.
-        ground = next(strip for strip in self.trips.backdrops.strips("ruins", stage.height) if strip.layer.layer_id == "ground")
+        ground = next(strip for strip in self.trips.backdrops.strips("forest", stage.height) if strip.layer.layer_id == "ground")
         self.assertGreater(ground.picture.get_bounding_rect().width, 0)
 
     def test_the_whole_of_it_goes_by_beside_the_paper_with_them_walking_in_it(self) -> None:

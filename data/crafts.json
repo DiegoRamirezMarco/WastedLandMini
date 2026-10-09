@@ -13,8 +13,7 @@
     "chemist": "substance",
     "medic": "remedy",
     "mechanic": "tool",
-    "guard": "weapon",
-    "scavenger": "place"
+    "guard": "weapon"
   },
   "kinds": {
     "crop": {

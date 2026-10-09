@@ -206,8 +206,16 @@ room. An argument's importance rises with the resentment between the two.
 - **Out there** a resident is away. They are not on the map, they witness nothing, and nobody can
   walk up to them, not even someone who has made up their mind to. They are paid as on any shift,
   and hunger grows at half pace: they eat as they go from what they took.
-- **There and back.** A trip goes through one of the `zones` of `data/expeditions.json`: the
-  first, while nothing says which. Half of it is the way out and the rest the way home:
+- **How far.** The `zones` of `data/expeditions.json` lie in a line. Only the first is known:
+  each level somebody reaches at a job done out there brings the next (`zone_found`), and
+  each goes as far as their own level. Left to themselves they keep to the first. The
+  player makes a trip ready (`PlanTripCommand`): how far, and the food and water handed over
+  to get there, which leave the stores at once. That trip goes through every zone on the
+  way, is longer and riskier by what each adds, and brings what there is where it got to.
+  Getting there uses up what was handed over; turning round sooner brings home, of each
+  thing, as much as there was of the way left to go.
+- **There and back.** A trip is bound for one of the `zones` of `data/expeditions.json`: the
+  first, unless one was made ready. Half of it is the way out and the rest the way home:
   `Expedition.distance` is how far from the fence they are at a minute, from 0 to 1, and
   `heading_back` which way they face. What is come on is at the far end. Going for it puts
   the turn half of what it adds later; turning back puts it where they stand. Nothing that

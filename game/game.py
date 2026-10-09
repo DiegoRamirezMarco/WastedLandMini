@@ -660,7 +660,10 @@ class Game:
             and self.global_view.requested_backdrop_editor is not None
             and self.backdrop_editor is not None
         ):
-            self.backdrop_editor.open(*self.global_view.requested_backdrop_editor)
+            zone_id, resident_id = self.global_view.requested_backdrop_editor
+            # One that has only just been found is named first.
+            self.backdrop_editor.open(zone_id, resident_id, found=zone_id == self.global_view.found_zone)
+            self.global_view.found_zone = None
             if not self.backdrop_editor.closed:
                 self.scene_name = BACKDROP_SCENE
         elif self.scene_name == "global" and self.global_view.requested_voice is not None and self.voice_editor is not None:

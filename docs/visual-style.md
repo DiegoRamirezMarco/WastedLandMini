@@ -496,6 +496,10 @@ the style contract as the illustrations are.
   streaks of `sand` going with the wind, and its tint over it all.
 - Their name and what is over their head go on the canvas, as on the map. The way of the
   trip is a small panel in the sky (`ui/trip_bar.py`).
+- A trip past the first zone shows the backdrop of the zone they are in (P70), changing as
+  they cross into the next, and the way in the sky has a mark where each gives way. The
+  game has a backdrop for each of the five of the line: `ruins` in
+  `graphics/backdrop_pictures.py` and the rest in `graphics/backdrop_zones.py`.
 - The layers of a zone are drawn in `scenes/backdrop_editor.py` (P69), on the paper at one
   canvas pixel to one of its own, a layer at a time, with the others faint under and over
   it. Its guide is the game's layer, a line in `ember` where feet come down and a box as

@@ -109,18 +109,19 @@ class FindSystem:
         return [discovery for discovery in world.discoveries.values() if discovery.source and not discovery.named]
 
     def maybe(
-        self, world: "SimulationWorld", source_id: str, by: Resident | None = None, by_name: str = ""
+        self, world: "SimulationWorld", source_id: str, by: Resident | None = None, by_name: str = "", likelier: float = 1.0
     ) -> Discovery | None:
         """Something has come into the settlement one of the ways things do: now and then
         there is something among it that nobody knows. `by` is whoever found it, where
-        anybody did, and `by_name` who is said to have where nobody of the settlement did."""
+        anybody did, and `by_name` who is said to have where nobody of the settlement did.
+        `likelier` is how many times as likely it is this once, as it is far from home (S68)."""
         settings = self.settings(world)
         source = settings.sources.get(source_id)
         if source is None or not settings.enabled or len(self.waiting(world)) >= settings.most_waiting:
             return None
         who = by.resident_id if by is not None else ""
         dice = SimulationRNG.keyed(world.rng.seed, "find", source_id, who, world.clock.total_minutes)
-        if dice.random() >= source.chance:
+        if dice.random() >= source.chance * likelier:
             return None
         return self.find(world, source_id, by, by_name, dice)
 

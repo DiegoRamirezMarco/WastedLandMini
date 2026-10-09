@@ -5962,6 +5962,192 @@ Still open here:
 Done when: from somebody walking out there the player opens the paper, paints a layer, keeps
 it, and sees it go by behind them, with the layers left alone still the game's.
 
+### S68 — Country in a line, and what it takes to go far (needs S67 and S47) — done
+Asked for on 2026-10-09: "Cuando un rebuscador sube de nivel puede encontrar una nueva zona, Ha
+encontrado nueva zona! y ahi ya la dibujamos. tendremos 5 preparadas nosotros pero podran editar
+nombre y dibujo". Two batches, six questions, and every answer on the zones in the user's own
+words:
+- **The zones lie in a line**: "estas zonas son lineales para llegar a la 2 has de pasar primero
+  por la 1 osea estan mas lejos"
+- **Which they are**: "Bosque, ruinas de ciudad, Cima de montaña, Central nuclear, crater
+  nuclear", and a last one apart, reached by a thing, "(mapa de X) Zona Extraña cosmica". The
+  five I had put forward, with the ruins first, were not taken
+- **What a zone changes**: what is brought, the level of the raiders, how long the trip is and
+  how rare what is brought, all four that were offered, and "Nuevos enemigos"
+- **Each zone makes new things likelier**: "aumenta la posibilidad de nuevos items ¡nuevo fruta,
+  arma, lo que sea, Encontrado ! de rareza alta"
+- **The player says how far**: "tu indicas la zona y dura mas o menos, eso implica mas tiempo
+  mas riesgo y gastar en el mas recursos para que llegue"
+- **Provisions are a bar that is filled**: "te salen hasta donde llegaria con segun vas dandole,
+  es como rellenar la barra de distancia con recursos, los recursos se los das en el momento
+  que sale. si vuelve antes trae el % restante si llega se consumen todos"
+- **A map opens a zone for ever**, over a map being one trip, which was the recommendation.
+  "El mercader o un rebuscador tiene una posibilidad de encontrar mas mapas con rarezas
+  aleatorias (cuanto mas rareza mas dificil de salir)" (S69)
+
+Built:
+- **Five zones in a line, as data** (`zones` in `data/expeditions.json`): the forest at the
+  gate, the ruins of the city, the mountain top, the nuclear plant and the crater. Each says
+  the minutes it adds to a trip, the provisions it takes to cross, the danger it adds, how
+  many more things are brought from it, how much likelier each is to be rare and something
+  nobody knows to be among them, the levels of whoever lies in wait there, and what there is
+  there
+- **Only the first is known.** Each level somebody reaches at a job done out there brings the
+  next, if nobody had found it: `zone_found`, "¡Sergio ha encontrado una nueva zona!". It is
+  the settlement's from then on, with the name the game gives it until the player says
+  another (`RenameZoneCommand`)
+- **Each goes as far as their own level**, of the zones that have been found
+- **Somewhere to go is no longer what the handcart comes to.** The kind is still in the data
+  for a pack, and for what an older save had come to, which is kept and leads nowhere
+- **A trip is made ready** (`PlanTripCommand`): how far, and what is handed over to get there,
+  in units of what is everybody's. Food and water are what count (`provisions`), a unit of
+  either for one of the way; the zones ask for 0, 2, 3, 4 and 5, each on top of the ones
+  before it. It leaves the stores at once, and they go on it the next time they set out
+- **Left to themselves they keep to the first zone**, as every trip did until now, with
+  nothing handed to them
+- **A trip goes through every zone on the way**, out and home, each taking of the way what it
+  takes of the time. It is that much longer and that much likelier to end badly
+- **What is brought is what there is where they got to**, that many more things, rarer, and
+  the likelier to have among it something nobody knows
+- **Getting there uses up everything; turning round sooner brings home what was not used**:
+  of each thing, as much as there was of the way left to go. Past the first zone what is
+  come on may be anywhere from four tenths of the way out, and the way home from it is as
+  long as the way there was
+- `trip_planned`, `zone_found` and `zone_named` say each of those. Saved: the zones known
+  and their names, the trip made ready for each, and the route of a trip. No new version of
+  the format: a save from before knows as far as whoever goes out furthest
+
+Decided without asking:
+- **The first zone is the forest, and it has what there was anywhere**: a trip with nothing
+  handed over is what a trip was, to the unit, so that a settlement lives as it did. The
+  ruins that were drawn for P68 are the second zone
+- **Each goes as far as their own level, and nobody is taught the way.** What S47 answered,
+  that what somebody learns is theirs and can be shown to others, is kept for things that are
+  made. If whoever found a zone is gone it is still known, named and drawn
+- **A zone does not wait to be named**: it can be gone to from the moment it is found
+- **Food and water alike, a unit for one of the way**, whatever the food and however rare
+- **The trip made ready is gone on the next time they would set out**, in their shift and
+  once a day, and not at once
+- **Made ready and not gone on, it stays ready.** Undone, what was handed over is theirs to
+  carry back, as what they find is
+- **What is brought back unused is common and fresh**, whatever it was
+- **Raiders' levels are only said**: nobody lies in wait yet (see the fight, below)
+
+Still open here:
+- **New enemies for each zone**, which the user asked for: only raiders are being made first
+- **What each zone asks, adds and gives is a first guess**
+- **Nothing is eaten or drunk out there but for the way it buys**: hunger goes on at half pace
+- **A trip to the crater is some sixteen hours**: they are back in the small hours
+
+Done when: a level brings a zone, a trip made ready with enough handed over goes through
+every zone to it and brings back what there is there, one turned round sooner brings home
+what was not used, and a trip with nothing handed over is what a trip always was.
+
+### P70 — Trips made ready, and five zones to look at (needs S68 and P69) — done
+- **`Viajes`, a button in the corner of the map**, under `Fuera`, while anybody has a job done
+  out there: who goes out, with their level, and the line of zones with what each asks and
+  who lies in wait there. The ones nobody has found are `???`,
+  and the ones they do not know the way to cannot be pressed
+- **`Hasta aquí` fills the way that far** with what it takes, a little of each thing. `+` and
+  `-` change it a unit at a time, and the way fills or empties with it: as far as it reaches
+  is as far as they go. A bar says it, with a mark where each zone is reached
+- **`Preparar viaje`** takes it from the stores; `Deshacer` gives it back. The board says
+  what is made ready and about how many hours it is
+- **A zone found opens the paper it is drawn on, by itself**, with its name the first thing
+  asked. `Cambiar nombre` there, and `Nombre y dibujo` on the board, are the way back to it
+- **The trip seen goes through each zone in its turn**: the backdrop is the one of the zone
+  they are in, the way in the sky has a mark where one gives way to the next, and they are
+  said to be where they are and bound for where they are bound
+- **Four more zones drawn by the game** (`graphics/backdrop_zones.py`): the forest, with
+  pines and bare trees and a path worn along it; the mountain top, with peaks in snow and
+  masts; the plant, with its towers, its domes and its barrels; and the crater, dark, with
+  what glows in its cracks. Each has a sky of its own
+
+Decided without asking:
+- **The board opens from the corner of the map**, and not from the handcart or a resident's
+  panel. The menu has no row to spare: one more goes under where advice is asked
+- **The backdrop changes from one frame to the next** on crossing into a zone
+- **`Dibujar fondo` out there is the zone they are in**
+- **A zone found while its finder is out opens its paper all the same**
+
+Still open here:
+- **Nobody has tried it with a mouse**: it was driven by scripted presses and looked at in
+  pictures of the game
+- **There is no key for the board**
+- **The cosmic zone and the maps are not built** (S69)
+
+Done when: the player opens `Viajes`, presses how far, sees the way fill, makes the trip
+ready, and watches them go through each zone to it; and a zone found opens to be named and
+drawn.
+
+### S69 — Maps (needs S68) — planned
+Answered with S68: "una ultima y especial que se consigue mediante un objeto (mapa de X) Zona
+Extraña cosmica a parte de estas el mercader o un rebuscador tiene una posibilidad de encontrar
+mas mapas con rarezas aleatorias (cuanto mas rareza mas dificil de salir)", and a map opens a
+zone for ever.
+
+- **A map is a thing**, with a rarity. Used, it opens a zone off the line (`apart`), which
+  can be gone to from then on with nothing gone through first
+- **The strange zone** is the one the game has ready for it, with a look of its own
+- **The merchant and whoever goes out come on more maps now and then**, of any rarity. The
+  rarer the map, the higher the level of what is there and the harder to come back from
+- Each zone a map opens is named and drawn, as any is
+
+Still to settle, to be asked before it is built:
+- Where the first map of the strange zone comes from
+- What the zones of the other maps look like until they are drawn: one look for them all, or
+  one taken from those there are
+- Whether a zone off the line asks for provisions, and how many
+
+### S70 — Coming on raiders (needs S68) — tried apart from the game, to be judged
+Asked for on 2026-10-09: "vamos a integrar al primer enemigo, saqueador. ¡ x Se ha topado con
+Saqueadores ! y combate sencillo divertido pero muy sencillo prompon varios que encajen. los
+enemigos tendran niveles y estadisticas propias, armas CC escalan con Fuerza y destreza
+(depende del arma) y armas a distancia con Destreza y Sentidos, armas de energia con Sentidos y
+Mente. Si quieres crea esta mecanica en un nuevo proyecto a parte (Combate Expediciones) sin
+tener que pisar el proyecto original y luego si vemos que va bien lo implementamos". Four fights
+were put forward, and one batch of four asked:
+- **A blow in time**, of the four: everybody strikes by themselves at their own pace, a
+  measure of a telling blow fills, and a mark is stopped for double or triple. The
+  recommendation, over three buttons by turns, a throw of dice, and deciding only beforehand
+- **Everything is at stake**, all four that were offered: they come back hurt, they are
+  robbed, they may die or be maimed, and there is loot if they win
+- **A decision first, and then by itself**: fight, run or pay, as with what is come on; with
+  no answer they decide; unwatched it goes to its end alone. The recommendation
+- **How many**: "todos a la vez y si no tocas nada el moñeco elige a quien pegar". Not the
+  recommendation, which was one after another
+
+It is not in the game. It is in a folder beside it, `CombateExpediciones`, with a repository
+of its own that is not pushed anywhere, to be played and judged first:
+- **`combat/` is the rules, with no pygame**, written to be carried into `simulation/` as
+  they are: the same seed and the same presses are the same fight
+- **Weapons go by two attributes of their kind**, each weapon saying how much of which: a
+  baton is nearly all strength and a knife nearly all dexterity. One that goes by anything
+  else does not load
+- **Raiders of four sorts**, with a level, attributes and health of their own: thugs and
+  cutters from the first level, gunners from the second and those with energy weapons from
+  the fourth. One in the forest, up to three from the mountain, and several get in one
+  another's way
+- **`main.py` shows it from the side** with the game's own backdrops and dolls, read and
+  never written; `simulate.py` says how fights come out unwatched, zone by zone
+
+Decided without asking, in the trial:
+- **A telling blow is never dodged**, and the fight goes on at a fifth of its pace while its
+  mark is being stopped
+- **They patch themselves up when badly off**, watched or not, and run by themselves only
+  when nobody is watching
+- **Untold, they hit whoever is nearest going down**
+- **Fallen, they are always robbed**, die about one time in eight and lose a limb nearly one
+  in five
+- **Energy weapons are what raiders of the fourth level up carry**: there are none in the
+  settlement yet
+
+Still to settle, to be asked before it is brought in:
+- How often raiders are come on in a trip, and where along it
+- Where medkits come from, and what is handed over to be let by
+- Whether what is worn (P66, S66) stops anything
+- The new enemies of each zone, which the user asked for with S68
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

@@ -1,9 +1,199 @@
 {
   "zones": {
+    "forest": {
+      "name": "el bosque",
+      "raiders": [
+        1,
+        1
+      ]
+    },
     "ruins": {
-      "name": "las ruinas"
+      "name": "las ruinas de ciudad",
+      "minutes": 150,
+      "supplies": 2,
+      "danger": 0.04,
+      "more": 1,
+      "rare": 1.6,
+      "finds": 1.5,
+      "raiders": [
+        1,
+        2
+      ],
+      "loot": [
+        {
+          "item": "scrap",
+          "weight": 5
+        },
+        {
+          "item": "canned_beans",
+          "weight": 3
+        },
+        {
+          "item": "fuel",
+          "weight": 3
+        },
+        {
+          "item": "water",
+          "weight": 1
+        },
+        {
+          "item": "pizza_radioactiva",
+          "weight": 0.5
+        },
+        {
+          "item": "medicine",
+          "weight": 0.4
+        },
+        {
+          "item": "hoe",
+          "weight": 0.4
+        },
+        {
+          "item": "rusty_knife",
+          "weight": 0.3
+        },
+        {
+          "item": "old_radio",
+          "weight": 0.2
+        }
+      ]
+    },
+    "summit": {
+      "name": "la cima de la montaña",
+      "minutes": 180,
+      "supplies": 3,
+      "danger": 0.05,
+      "more": 2,
+      "rare": 2.4,
+      "finds": 2.0,
+      "raiders": [
+        2,
+        3
+      ],
+      "loot": [
+        {
+          "item": "water",
+          "weight": 4
+        },
+        {
+          "item": "fuel",
+          "weight": 3
+        },
+        {
+          "item": "medicine",
+          "weight": 1.5
+        },
+        {
+          "item": "scrap",
+          "weight": 2
+        },
+        {
+          "item": "old_radio",
+          "weight": 0.8
+        },
+        {
+          "item": "rusty_knife",
+          "weight": 0.6
+        },
+        {
+          "item": "baton",
+          "weight": 0.4
+        }
+      ]
+    },
+    "plant": {
+      "name": "la central nuclear",
+      "minutes": 210,
+      "supplies": 4,
+      "danger": 0.07,
+      "more": 3,
+      "rare": 3.4,
+      "finds": 2.6,
+      "raiders": [
+        3,
+        4
+      ],
+      "loot": [
+        {
+          "item": "fuel",
+          "weight": 5
+        },
+        {
+          "item": "scrap",
+          "weight": 4
+        },
+        {
+          "item": "medicine",
+          "weight": 2
+        },
+        {
+          "item": "old_radio",
+          "weight": 1
+        },
+        {
+          "item": "sedative",
+          "weight": 0.6
+        },
+        {
+          "item": "baton",
+          "weight": 0.5
+        }
+      ]
+    },
+    "crater": {
+      "name": "el cráter nuclear",
+      "minutes": 240,
+      "supplies": 5,
+      "danger": 0.1,
+      "more": 4,
+      "rare": 5.0,
+      "finds": 3.5,
+      "raiders": [
+        4,
+        5
+      ],
+      "loot": [
+        {
+          "item": "scrap",
+          "weight": 4
+        },
+        {
+          "item": "medicine",
+          "weight": 3
+        },
+        {
+          "item": "fuel",
+          "weight": 3
+        },
+        {
+          "item": "pizza_radioactiva",
+          "weight": 2
+        },
+        {
+          "item": "old_radio",
+          "weight": 1
+        },
+        {
+          "item": "rusty_knife",
+          "weight": 0.8
+        },
+        {
+          "item": "syringe",
+          "weight": 0.5
+        }
+      ]
     }
   },
+  "provisions": [
+    {
+      "category": "food",
+      "worth": 1
+    },
+    {
+      "category": "water",
+      "worth": 1
+    }
+  ],
   "loot": [
     {
       "item": "scrap",

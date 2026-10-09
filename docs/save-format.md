@@ -67,7 +67,15 @@ A resident's `expedition` is `null` or `returns_at`, `finds`, `danger`, `find_at
 `risked`, with `left_at` and `turns_at` (the game minutes at which they set out and turn for
 home), `zone` (the ID of the country it goes through) and `place` (the ID of the discovery it
 is bound for, or `null`) (S67). Without them a trip is on its way home, through the first
-zone the data names: the format has no new version for it.
+zone the data names: the format has no new version for it. A trip past the first zone also
+has `route` (the zones it goes through, the furthest last), `stages` (how far along the way
+each ends, from 0 to 1), `out_minutes` (what the way out was to take) and `supplies` (what
+was handed over for it, in units by item ID) (S68).
+
+A resident's `outing` is `null` or the trip made ready for them: `zone` and `supplies`.
+`zones` at the top is the zones the settlement has found past the first, by ID, each with
+`name` (empty for the game's), `by` and `day`. A save with no `zones` knows as many of the
+line as the level of whoever goes out furthest.
 
 An item is saved as `id`, `definition_id`, `owner_id`, `condition`, `quantity`, `freshness` (how much
 is left of a hundred in a thing that goes off) and `given_by` (the

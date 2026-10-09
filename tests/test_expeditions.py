@@ -324,14 +324,14 @@ class ThereAndBackTests(unittest.TestCase):
     def test_a_trip_goes_through_the_country_the_data_names(self) -> None:
         world, trip = self.world, self.trip
         zones = world.registries.expeditions.zones
-        self.assertEqual([(zone.zone_id, zone.name) for zone in zones], [("ruins", "las ruinas")])
-        self.assertEqual(trip.zone, "ruins")
+        self.assertEqual((zones[0].zone_id, zones[0].name), ("forest", "el bosque"))
+        self.assertEqual(trip.zone, "forest", "left to themselves they keep to the first there is")
         self.assertIs(world.expeditions.zone_of(world, trip), zones[0])
         self.assertIsNone(trip.place, "bound for nowhere they know of")
         trip.zone = "a_pack_that_is_gone"
         self.assertIs(world.expeditions.zone_of(world, trip), zones[0], "country that is no longer known is the first there is")
-        with_none = _registries_with("expeditions.json", '"ruins": {', '"ruins_": {')
-        self.assertEqual(with_none.expeditions.zones[0].zone_id, "ruins_")
+        with_none = _registries_with("expeditions.json", '"forest": {', '"forest_": {')
+        self.assertEqual(with_none.expeditions.zones[0].zone_id, "forest_")
         self.assertEqual(expedition_settings_from_data({}).zones, ())
         bare = SimulationWorld.demo_world(seed=7, registries=_registries_with("expeditions.json", '"zones"', '"no_zones"'))
         no_store(bare)
@@ -346,16 +346,16 @@ class ThereAndBackTests(unittest.TestCase):
         kept = next(resident for resident in data["residents"] if resident["id"] == "sergio")["expedition"]
         self.assertEqual(
             (kept["left_at"], kept["turns_at"], kept["zone"], kept["place"]),
-            (self.trip.left_at, self.trip.turns_at, "ruins", None),
+            (self.trip.left_at, self.trip.turns_at, "forest", None),
         )
-        for field in ("left_at", "turns_at", "zone", "place"):
+        for field in ("left_at", "turns_at", "zone", "place", "route", "stages", "out_minutes", "supplies"):
             del kept[field]
         loaded = manager.from_data(json.loads(json.dumps(data)))
         trip, now = loaded.residents["sergio"].expedition, loaded.clock.total_minutes
         self.assertEqual((trip.returns_at, trip.finds), (self.trip.returns_at, self.trip.finds))
         self.assertTrue(trip.heading_back(now))
         self.assertTrue(0.0 <= trip.distance(now) <= 1.0)
-        self.assertEqual(loaded.expeditions.zone_of(loaded, trip).zone_id, "ruins")
+        self.assertEqual(loaded.expeditions.zone_of(loaded, trip).zone_id, "forest")
         loaded.step(MINUTES_PER_DAY)
         self.assertFalse(loaded.residents["sergio"].away)
 

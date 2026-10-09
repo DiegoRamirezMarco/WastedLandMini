@@ -435,6 +435,13 @@ def _drop(p: Pen) -> None:
     p.arc(24, 29.5, 9, 110, 170, 3, p.light)
 
 
+def _signpost(p: Pen) -> None:
+    p.box(21.5, 8, 5, 34, 1.5)
+    p.poly([(9, 9.5), (33, 9.5), (41, 16.5), (33, 23.5), (9, 23.5)])
+    p.poly([(39, 26), (15, 26), (7, 32), (15, 38), (39, 38)], p.soft)
+    p.line([(14, 16.5), (30, 16.5)], 2.0, p.light)
+
+
 def _bolt(p: Pen) -> None:
     p.poly([(29.5, 3), (9.5, 27.5), (21.5, 27.5), (17, 45), (38.5, 19), (26, 19)])
     p.poly([(27.5, 8), (15.5, 24), (19.5, 24)], p.light)
@@ -586,6 +593,7 @@ GLYPHS: dict[str, Glyph] = {
     "government": _hall,
     "events": _bell,
     "map": _map,
+    "trips": _signpost,
     "save": _disk,
     "urbanism": _town,
     "draw": _pencil,
@@ -624,6 +632,7 @@ HUES: dict[str, Color] = {
     "government": (146, 98, 170),
     "events": (214, 84, 96),
     "map": (112, 160, 78),
+    "trips": (206, 142, 84),
     "save": (76, 118, 176),
     "urbanism": (226, 134, 62),
     "draw": (212, 104, 148),

@@ -103,9 +103,9 @@ class ExpeditionView:
         return next((button.intent for button in self.buttons() if button.contains(position)), None)
 
     def zone_id(self, resident: Resident) -> str:
-        """The country whoever is out goes through, by ID."""
+        """The zone whoever is out is in right now, by ID: each of those on their way, in its turn."""
         trip = resident.expedition
-        zone = self.view.world.expeditions.zone_of(self.view.world, trip) if trip is not None else None
+        zone = self.view.world.expeditions.zone_now(self.view.world, trip) if trip is not None else None
         return zone.zone_id if zone is not None else NOWHERE
 
     def stopped(self, resident: Resident) -> bool:
@@ -298,4 +298,6 @@ class ExpeditionView:
             self.stopped(resident),
             trip_ends(world, resident),
             trip_lines(world, resident),
+            # Where one zone gives way to the next, along the way.
+            tuple(trip.stages[:-1]) if trip is not None else (),
         )
