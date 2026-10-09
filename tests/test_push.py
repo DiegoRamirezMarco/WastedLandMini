@@ -128,7 +128,7 @@ class RushDataTests(unittest.TestCase):
             changed(check_minutes=0),
             changed(tired_risk=0.5),
             changed(level_relief=2),
-            changed(per_minute={"boredom": 1}),
+            changed(per_minute={"luck": 1}),
             changed(mishaps={"plague": {"weight": 1}}),
             changed(mishaps={"hurt": {"weight": 1}}),
             changed(mishaps={"spoil": {"weight": 0, "fraction": 0.2}}),

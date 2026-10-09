@@ -25,17 +25,29 @@ The simulation runs without Pygame. Important state changes emit domain events. 
 ## What a resident does each minute
 
 1. Needs rise (`simulation/residents/needs.py`). Asleep, hunger, thirst and loneliness grow at half pace.
+   Wanting to be entertained, `boredom` (S62), rises only awake and in the settlement.
    Mood drifts separately from stress: bad needs and wounds pull it down over time, good days let
    it recover.
 2. With no activity, `RoutineSystem` scores every use of every free object, what it is
    mainly for and whatever else can be done with it (S60), and picks the best reachable one:
-   - each need the use would lower counts as `(need / 100)²`, weighted by personality;
+   - each need the use would lower counts as `(need / 100)²`, weighted by personality.
+     `boredom` counts for under half of that (`BOREDOM_WEIGHT`), so that nobody leaves their
+     post for it;
    - a use with `preferred_hours` counts double inside that window and a fifth outside it,
      though the penalty fades as the need grows desperate, so the exhausted nap by day;
    - food is judged by how much it relieves, so a cooked meal is worth a longer walk than a tin;
    - bed loses its appeal with hunger: nobody settles down to sleep on an empty stomach;
    - distance costs a little, and a small random amount from the project RNG breaks ties;
-   - wandering has a low constant score, so it wins when nothing is pressing.
+   - wandering has a low constant score, so it wins when nothing is pressing;
+   - from `PASTIME_FROM` of boredom, each pastime of `data/leisure.json` is scored as well
+     (S62): by the boredom and the stress it would lower, a quarter more or less by the
+     taste they have for it. The rest there is in one is not counted, no dice are thrown
+     for it and no taste is made. None is offered in a storm, or while a law they keep has
+     them indoors or quiet. One they wish for (S61) is offered however bored they are;
+   - going over to talk to somebody gains `COMPANY_PULL` of what their boredom counts for.
+   A pastime nobody told them to, and a use of a thing that is not what it is mainly for,
+   end when work calls (`LeisureSystem.called_away`): when `WorkSystem.candidate` has
+   something for them to do.
 3. `ActivitySystem` walks the resident along the path (2 tiles per minute, each to any of the
    eight around; see "Getting there" below), then applies the use
    until its minutes run out or the needs it lowers reach zero. A use with `until` ends when
@@ -962,8 +974,8 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
   the wish met there and then (`WishSystem.handed`).
 - **Seeing to it.** `WishSystem.pull` is added to the score of everything they could do
   next that would meet it: talking to that resident, doing that, and eating or drinking
-  from a container where there is some of what they want. Nothing is added while a law
-  they keep has them indoors, or in a storm. `ItemSystem.best_food` picks what they
+  from a container where there is some of what they want. Nothing is added while their
+  shift is on, while a law they keep has them indoors, or in a storm. `ItemSystem.best_food` picks what they
   fancied where there is some among what they may take.
 - **The end of it.** Met or, at `until`, let go: their mood moves by `met_mood` or
   `lapsed_mood` and a memory tagged `wish` is made, of value `met_value` or

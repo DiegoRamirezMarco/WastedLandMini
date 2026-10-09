@@ -890,6 +890,13 @@ the wheel, and an `icon`: one of the game's icons, or a file of that name in
 A pastime with somebody is an exchange in `data/social.json` with a `pastime`, offered from
 `leisure` in `data/affect.json`. The two may not share a name.
 
+Wanting to be entertained is a need, `boredom` (S62), beside `hunger`, `thirst`, `tiredness`,
+`social` and `stress`. Whatever changes needs can name it: `per_minute` on a pastime, on a
+`use` of an object, on an exchange and on a job, and the `effects` of an item. Below zero
+passes the time and above it bores. Residents take up a pastime unasked once they are bored
+enough, the sooner the more it takes off them and the better they like it, and weigh
+whatever else lowers it with the rest of what they could do.
+
 ## Taking things apart
 
 - An object in `data/interactables.json`, or in a pack, may have `"salvage": {"item": "scrap",

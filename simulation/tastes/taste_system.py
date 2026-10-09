@@ -112,6 +112,14 @@ class TasteSystem:
         """How much a resident likes an item, by the tastes they have so far. Makes none."""
         return liking(self.profile(world, resident), definition, world.registries.tastes)
 
+    def inclination(self, world: "SimulationWorld", resident: Resident, kind: str, name: str) -> float:
+        """How much a resident would take to something: by the taste they have for it, or
+        the leaning they would come to it with. Makes none."""
+        taste = self.profile(world, resident).of(kind).get(name)
+        if taste is not None:
+            return taste.value
+        return leaning_for(world.rng.seed, resident.resident_id, kind, name, world.registries.tastes) or 0.0
+
     def fancy(self, world: "SimulationWorld", resident: Resident, definition: ItemDefinition) -> float:
         """How much a resident makes of an item they know of and may never have had: by the
         tastes they have, and the leanings they would come to it with for the rest. Makes

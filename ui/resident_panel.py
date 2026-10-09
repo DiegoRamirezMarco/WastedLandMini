@@ -47,7 +47,14 @@ from ui.panel import draw_bar, draw_item, draw_panel
 PADDING = 6
 BAR_LEFT = 44
 BAR_ROW = 10
-NEED_COLORS = {"hunger": "sand", "thirst": "teal", "tiredness": "dust", "social": "rose", "stress": "ember"}
+NEED_COLORS = {
+    "hunger": "sand",
+    "thirst": "teal",
+    "tiredness": "dust",
+    "social": "rose",
+    "stress": "ember",
+    "boredom": "mist",
+}
 HEALTH_LABEL = "Salud"
 HEALTH_COLOR = "lichen"
 MOOD_LABEL = "Ánimo"

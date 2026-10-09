@@ -89,6 +89,8 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- `boredom` joined a resident's `needs` with S62, with no new version: in a save without
+  it everybody is as bored as somebody new, 15 of 100.
 - **Version 51** added `wishes` (S61): what each resident wants right now, as a list of
   `resident_id`, `kind` (`eat`, `with`, `have`, `do`), `what` (an item, a resident or an
   action, by ID), and `since` and `until` in game minutes. In a save from before nobody

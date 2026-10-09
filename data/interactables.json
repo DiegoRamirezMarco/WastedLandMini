@@ -34,7 +34,8 @@
         "text": "se echa un rato en la cama",
         "minutes": 40,
         "per_minute": {
-          "stress": -0.12
+          "stress": -0.12,
+          "boredom": -0.1
         },
         "position": "on"
       }
@@ -72,7 +73,8 @@
       "minutes": 60,
       "per_minute": {
         "social": -0.1,
-        "stress": -0.15
+        "stress": -0.15,
+        "boredom": -0.35
       },
       "capacity": 4,
       "interruptible": true
@@ -92,7 +94,8 @@
         "minutes": 30,
         "per_minute": {
           "stress": -0.2,
-          "social": -0.15
+          "social": -0.15,
+          "boredom": -0.8
         },
         "capacity": 4,
         "interruptible": true,
@@ -120,7 +123,8 @@
         "text": "se sienta a la mesa",
         "minutes": 30,
         "per_minute": {
-          "stress": -0.12
+          "stress": -0.12,
+          "boredom": -0.25
         },
         "capacity": 2,
         "interruptible": true
@@ -350,7 +354,8 @@
         "text": "se lava en el depósito",
         "minutes": 10,
         "per_minute": {
-          "stress": -0.3
+          "stress": -0.3,
+          "boredom": -0.2
         }
       }
     ]
@@ -479,7 +484,8 @@
       "label": "Escuchar la radio",
       "minutes": 20,
       "per_minute": {
-        "stress": -0.12
+        "stress": -0.12,
+        "boredom": -0.6
       },
       "capacity": 3,
       "interruptible": true,
@@ -504,7 +510,8 @@
         "minutes": 20,
         "per_minute": {
           "stress": -0.25,
-          "tiredness": 0.04
+          "tiredness": 0.04,
+          "boredom": -1.0
         },
         "capacity": 3,
         "interruptible": true,
@@ -632,7 +639,8 @@
         "text": "se lava en el pozo",
         "minutes": 10,
         "per_minute": {
-          "stress": -0.3
+          "stress": -0.3,
+          "boredom": -0.2
         }
       }
     ]
@@ -702,7 +710,8 @@
         "text": "juega una partida de ajedrez",
         "minutes": 40,
         "per_minute": {
-          "stress": -0.15
+          "stress": -0.15,
+          "boredom": -0.9
         },
         "interruptible": true
       }
@@ -735,7 +744,8 @@
         "text": "echa unos dardos a la diana",
         "minutes": 20,
         "per_minute": {
-          "stress": -0.2
+          "stress": -0.2,
+          "boredom": -0.9
         },
         "interruptible": true
       }
@@ -769,7 +779,8 @@
         "minutes": 15,
         "per_minute": {
           "stress": -0.2,
-          "tiredness": 0.05
+          "tiredness": 0.05,
+          "boredom": -0.9
         }
       }
     ]
@@ -802,7 +813,8 @@
         "minutes": 15,
         "per_minute": {
           "stress": -0.4,
-          "tiredness": 0.04
+          "tiredness": 0.04,
+          "boredom": -0.5
         }
       }
     ]

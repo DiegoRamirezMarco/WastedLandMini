@@ -172,6 +172,8 @@ class TrainingTests(unittest.TestCase):
         self.assertIsNotNone(world.definition_of(target).use_named("darts"))
         aim = world.attributes.trains(world, target)
         before = world.attributes.raw(world, raul, aim)
+        # With no shift to be called to: what is taken up to pass the time is left for work (S62).
+        raul.job_id = raul.post_id = None
         raul.activity = Activity("darts", target.object_id, minutes_left=20, using=True)
         self.assertIsNone(world.attributes.training(world, raul))
         for _ in range(10):

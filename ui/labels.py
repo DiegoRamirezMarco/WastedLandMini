@@ -27,7 +27,14 @@ from simulation.work.salvage import SALVAGE_ACTION
 from simulation.work.work_system import HAUL_ACTION, WORK_ACTION
 from simulation.world import SimulationWorld
 
-NEED_LABELS = {"hunger": "Hambre", "thirst": "Sed", "tiredness": "Sueño", "social": "Social", "stress": "Estrés"}
+NEED_LABELS = {
+    "hunger": "Hambre",
+    "thirst": "Sed",
+    "tiredness": "Sueño",
+    "social": "Social",
+    "stress": "Estrés",
+    "boredom": "Tedio",
+}
 FEELING_LABELS = {"affection": "afecto", "resentment": "rencor"}
 TALKING_ABOUT = "{name} y {other} están hablando sobre {about}"
 MINUTES_PER_DAY = 24 * 60

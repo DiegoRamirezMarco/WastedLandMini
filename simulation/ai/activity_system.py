@@ -434,6 +434,9 @@ class ActivitySystem:
                 relieved = True
             if trained_out:
                 relieved = True
+            if placed is not None and use is not world.definition_of(placed).use and world.leisure.called_away(world, resident, activity):
+                # What a thing offers beside what it is for is for time of their own (S62).
+                relieved = True
             if use.heals and resident.health >= RECOVERED_HEALTH and not world.substances.seen_through(world, resident, use):
                 # Mended, and with nobody seeing them through anything, they get up.
                 relieved = True
@@ -458,6 +461,7 @@ class ActivitySystem:
             + needs.tiredness * 0.12
             + needs.social * 0.08
             + needs.stress * 0.24
+            + needs.boredom * 0.06
             + max(0.0, 100.0 - resident.health) * 0.2
         )
         target = max(0.0, min(100.0, 72.0 - strain))

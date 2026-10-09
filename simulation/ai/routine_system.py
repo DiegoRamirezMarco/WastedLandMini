@@ -18,8 +18,11 @@ from simulation.residents.activity import (
     Activity,
 )
 from simulation.residents.manner import SIT
-from simulation.residents.needs import NEED_NAMES
+from simulation.ai.leisure import Pastime
+from simulation.residents.needs import BOREDOM, NEED_NAMES
+from simulation.residents.wishes import DO
 from simulation.residents.resident import Resident
+from simulation.tastes.taste import TAG
 from simulation.social.bonds import TRYST, TRYST_ACTION
 from simulation.social.social_system import SocialSystem
 from simulation.work.construction import BUILD_ACTIONS
@@ -61,6 +64,16 @@ def in_hours(hour: int, window: tuple[int, int]) -> bool:
     """True if `hour` is inside `window`, which may wrap past midnight (e.g. 22 to 7)."""
     start, end = window
     return start <= hour < end if start <= end else hour >= start or hour < end
+
+
+# How bored somebody has to be to take up a pastime of their own accord (S62).
+PASTIME_FROM = 45.0
+# How much liking a pastime, or loathing it, tells in taking it up: a quarter either way at most.
+PASTIME_LIKING = 400.0
+# The need that only a bed answers.
+REST_NEED = "tiredness"
+# How much of wanting to be entertained goes to seeking somebody to talk to.
+COMPANY_PULL = 0.3
 
 
 @dataclass
@@ -106,10 +119,12 @@ class RoutineSystem:
                         # until somebody takes one up.
                         score, grain = score * EXTRA_USE_APPEAL, 0.0
                     scored.append(ScoredAction(use.action, score + pull + grain, placed.object_id))
+        # Company passes the time too: whoever is bored is that much the readier to seek it (S62).
+        company = COMPANY_PULL * need_urgency(resident, BOREDOM)
         for talk in () if hushed else self.social.candidates(world, resident):
             if indoors and not laws.under_same_roof(world, resident, world.residents[talk.partner_id].tile):
                 continue
-            scored.append(ScoredAction(talk.name, talk.score + self._noise(world), partner_id=talk.partner_id))
+            scored.append(ScoredAction(talk.name, talk.score + company + self._noise(world), partner_id=talk.partner_id))
         for tryst in () if hushed or indoors else world.bonds.candidates(world, resident):
             scored.append(ScoredAction(tryst.name, tryst.score + self._noise(world), partner_id=tryst.partner_id))
         for handle in self.items.candidates(world, resident):
@@ -140,10 +155,18 @@ class RoutineSystem:
             # The worse their nerves, the sooner they get out of it.
             wish = SHELTER_SCORE + 0.5 * need_urgency(resident, "stress")
             scored.append(ScoredAction(SHELTER_ACTION, wish + self._noise(world)))
+        if not indoors and not hushed and not world.happenings.is_stormy(world):
+            # A pastime of their own (S62), each for what it would take off them. Like what a
+            # thing offers beside what it is for, they are weighed with none of the grain of chance.
+            for pastime in world.registries.leisure.pastimes.values():
+                score = self._score_pastime(world, resident, pastime)
+                if score is not None:
+                    scored.append(ScoredAction(pastime.pastime_id, score))
         scored.append(ScoredAction(WANDER_ACTION, WANDER_SCORE + self._noise(world)))
-        if resident.resident_id in world.wishes_of and not indoors and not world.happenings.is_stormy(world):
+        if resident.resident_id in world.wishes_of and work is None and not indoors and not world.happenings.is_stormy(world):
             # Whoever wants something is a little the readier to do what would meet it (S61).
-            # It can wait, though: for the law that has them indoors, and for the weather.
+            # It can wait, though: for their shift, for the law that has them indoors, and
+            # for the weather.
             scored = [replace(each, score=each.score + world.wishes.pull(world, resident, each)) for each in scored]
         return scored
 
@@ -241,6 +264,8 @@ class RoutineSystem:
                 activity = world.merchants.plan(world, resident)
             elif candidate.name == SLEEP_ROUGH_ACTION:
                 return world.family.plan_rough(world, resident)
+            elif candidate.target_id is None and candidate.name in world.registries.leisure.pastimes:
+                activity = world.leisure.plan(world, resident, candidate.name)
             elif candidate.target_id is None:
                 return self._wander(world, resident)
             else:
@@ -251,6 +276,25 @@ class RoutineSystem:
 
     def _noise(self, world: "SimulationWorld") -> float:
         return world.rng.random() * SCORE_NOISE
+
+    def _score_pastime(self, world: "SimulationWorld", resident: Resident, pastime: Pastime) -> float | None:
+        """How much a resident wants to pass the time one way right now: by what it would take
+        off them, more or less of it by how they like that sort of thing. None for anybody not
+        bored enough to bother, unless it is the very thing they wish they were doing (S61).
+
+        The rest there is in one is not counted: rest is a bed's, and nobody naps in place of
+        a night's sleep."""
+        wish = world.wishes_of.get(resident.resident_id)
+        wished = wish is not None and wish.kind == DO and wish.what == pastime.pastime_id
+        if resident.needs.boredom < PASTIME_FROM and not wished:
+            return None
+        relief = sum(
+            need_urgency(resident, need)
+            for need, delta in pastime.per_minute.items()
+            if delta < 0 and need in NEED_NAMES and need != REST_NEED
+        )
+        liking = world.tastes.inclination(world, resident, TAG, pastime.taste) if pastime.taste is not None else 0.0
+        return relief * (1.0 + liking / PASTIME_LIKING)
 
     def _score_use(
         self, world: "SimulationWorld", resident: Resident, placed: Interactable, use: UseDefinition

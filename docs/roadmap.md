@@ -5466,10 +5466,94 @@ Still open here:
 - What somebody is like does not tell in what they wish for, beyond their tastes
 - Nobody wishes for something to do with somebody: a game of chess is played alone (S60)
 
-### S62 — Leisure of their own accord (needs S49 and S31) — planned
+### S62 — Leisure of their own accord (needs S49 and S60) — done
 - **Wanting to be entertained is a need of its own**, which tedium and work raise and pastimes
   and things lower. With time on their hands residents pass it unasked (S49 left it open)
 - Run with it and without it over many seeds before it is taken as good
+
+What there is:
+- **A sixth need, `boredom`**, with a bar of its own on a resident's panel, `Tedio`. It is a
+  need like the rest: whatever changes needs, by the minute or at a stroke, can name it, as
+  data
+- **It sets in with time awake**, some sixty of the hundred in a day, and not asleep nor
+  away from the settlement. **Work adds a little** at every job
+- **What passes it, as data**: every pastime (S49); a fire to sit by, a radio to listen to,
+  and everything a thing offers beside what it is for (S60); a friendly exchange, a game of
+  cards and a dance most of all; and a thing found that is for passing the time with (S59),
+  which whoever carries one takes out. Not a quarrel, and not a drink at the bar
+- **Residents weigh it with their other needs** when they choose what to do, at under half
+  of what a need of the body weighs: bored to tears, and as fond of a pastime as anybody
+  can be, is still less than work is worth, and a test holds that nobody leaves their post
+  for it
+- **With time on their hands and bored enough, they take up a pastime unasked**: from 45 of
+  tedium each of the four is weighed for the tedium and the nerves it would take off them,
+  a quarter more or less by how they like that sort of thing. Not in a storm, nor while a
+  law they keep has them indoors or quiet
+- **A pastime somebody wishes for (S61) is weighed bored or not**, so that wish is seen to
+  as the others are
+- **Whoever is bored is the readier to seek company**: some of what they want entertaining
+  goes to going over to talk to somebody, which passes the time as a pastime does
+- **Time of their own ends when their shift begins**: a pastime nobody told them to, and
+  what a thing offers beside what it is for, are left when work calls, and what somebody
+  wishes for (S61) does not pull at them while it does. What they were told to do, they
+  see through
+- **Nothing that is not a bed is rest** (S60): the rest there is in a doze, or in sitting
+  down, is not counted when a pastime is weighed. Nobody naps in place of a night's sleep
+- **Weighing a pastime throws none of the settlement's dice and makes no taste**: how they
+  would take to it is read off the taste they have, or the leaning they would come to it
+  with (`TasteSystem.inclination`)
+- **It weighs on their spirits a little**: six of mood at its worst
+- **Saved with the other needs.** In a save from before everybody is as bored as somebody
+  new is, which is hardly
+- **Measured** over eighteen seeds of six weeks, with it and without, in the same tree:
+  nobody dies either way, with as much food at the end (108 either way) and the same
+  spirits (56.4 against 57.1). A settlement of ten spends some five hours a day among them
+  all at pastimes and at what things offer for the sake of it, where it spent one, and
+  their nerves are the better for it (2.5 of stress against 4.8). Some of it comes out of
+  talk: 493 chats against 531, and as many quarrels (127). Left alone they now meet two
+  wishes in three themselves, where they met half
+- **Four weeks of storms and raiders, seed by seed**: with it nobody's need of the body, of
+  company or of quiet reaches the top in any of eighteen seeds, where without it somebody's
+  did in three. Raiders find the guard at the gate in sixteen of them, and in the other
+  two it is his night off
+
+Decided without asking:
+- **It does not wait for S31**, which is not built: what there is to do is still pastimes,
+  things and exchanges, as data, and wanting to be entertained is what has them chosen
+- **How fast, how much it weighs and from where**: a first guess, measured as above, in
+  `simulation/residents/needs.py`, `simulation/ai/utility_ai.py` and
+  `simulation/ai/routine_system.py`, and what each thing takes off it in the data
+- **Drink is no answer to tedium.** Nobody takes to the bar for want of something to do:
+  asking somebody for a drink passes the time, for the company
+- **Company passes it by half of what was first written**: at the full figure a couple of
+  chats a day left nobody ever bored, and no pastime was taken up
+- **How much of it goes to seeking company**: three tenths. With none, time of their own
+  came out of talk, a sixth fewer chats, and what they feel for each other grew a fifth the
+  slower. With half, there was as much talk as ever and a fifth more quarrels, since going
+  over to somebody is how a quarrel starts as well. At three tenths there are as many
+  quarrels as there were and a little less talk
+- **Time of their own ends with their shift** because the first measure of it showed the
+  guard not at the gate when raiders came, in three seeds of eighteen where it had been
+  none: he was still at a pastime begun before his watch. Whoever is at the fire or the
+  radio when their shift begins stays as late as they always did: those are what the
+  things are for, and were not touched
+- **Two tests held by something else than what they say, and say it now**: the range a
+  trip's finds fall in is the job's by who goes and what is known, and not the job's
+  alone, which held at one seed; and a need there is not, in the test of pushing, is no
+  longer `boredom`. No seed was moved
+- **Nobody trains unasked, still** (S57). What was added to the things to train at is taken
+  up unasked now, and the test that nobody went near them holds instead that nobody
+  trains there
+- **No order of its own.** Being told to pass the time one way, or to use a thing, was
+  there already (S49, S60)
+- **`Tedio`**, for the bar
+
+Still open here:
+- Nobody tires of the same pastime, or of the same thing
+- Nothing is done together of their own accord but what is an exchange between two: that
+  is S31
+- Nothing shows over somebody who is bored
+- Children are as bored as anybody
 
 ### S63 — Blows, theft, and what goes with what somebody is like (needs S48 and S60) — planned
 The user's words: "La parte agresiva, pegar, robar, acciones especiales que vayan con los

@@ -17,7 +17,8 @@
     "interruptible": true,
     "per_minute": {
       "tiredness": 0.02,
-      "social": -0.03
+      "social": -0.03,
+      "boredom": 0.02
     },
     "produces": {
       "item": "vegetables",
@@ -62,7 +63,8 @@
       "carry": 10
     },
     "per_minute": {
-      "social": -0.03
+      "social": -0.03,
+      "boredom": 0.02
     },
     "priority": 5
   },
@@ -79,7 +81,8 @@
     "text": "abre la cantina",
     "interruptible": true,
     "per_minute": {
-      "social": -0.08
+      "social": -0.08,
+      "boredom": 0.02
     },
     "priority": 1,
     "produces": {
@@ -110,7 +113,8 @@
     "interruptible": true,
     "sight_bonus": 8,
     "per_minute": {
-      "social": -0.04
+      "social": -0.04,
+      "boredom": 0.02
     },
     "priority": 3,
     "watch_for": "raid"
@@ -132,7 +136,8 @@
     "text": "abre la enfermería",
     "interruptible": true,
     "per_minute": {
-      "social": -0.03
+      "social": -0.03,
+      "boredom": 0.02
     },
     "supplies": {
       "item": "medicine",
@@ -159,7 +164,8 @@
     "text": "abre el taller",
     "interruptible": true,
     "per_minute": {
-      "social": -0.03
+      "social": -0.03,
+      "boredom": 0.02
     },
     "supplies": {
       "item": "fuel",
@@ -186,7 +192,8 @@
     "text": "abre la tienda",
     "interruptible": true,
     "per_minute": {
-      "social": -0.06
+      "social": -0.06,
+      "boredom": 0.02
     },
     "priority": 2
   },
@@ -214,7 +221,10 @@
       ],
       "danger": 0.12
     },
-    "outdoors": true
+    "outdoors": true,
+    "per_minute": {
+      "boredom": 0.02
+    }
   },
   "water_carrier": {
     "name": "Agua",
@@ -229,7 +239,8 @@
     "text": "se pone a sacar agua",
     "interruptible": true,
     "per_minute": {
-      "tiredness": 0.03
+      "tiredness": 0.03,
+      "boredom": 0.02
     },
     "produces": {
       "item": "water",
@@ -260,7 +271,8 @@
     "text": "se pone a estudiar",
     "interruptible": true,
     "per_minute": {
-      "social": -0.04
+      "social": -0.04,
+      "boredom": 0.02
     },
     "priority": 2,
     "research": true
@@ -282,7 +294,8 @@
     "text": "se pone con sus mezclas",
     "interruptible": true,
     "per_minute": {
-      "social": -0.04
+      "social": -0.04,
+      "boredom": 0.02
     },
     "priority": 1,
     "produces": {

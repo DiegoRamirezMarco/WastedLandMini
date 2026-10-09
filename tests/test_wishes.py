@@ -357,6 +357,27 @@ class MetTests(unittest.TestCase):
             kept_in = talk()
         self.assertAlmostEqual(plain - kept_in, world.registries.wishes.pull)
 
+    def test_a_wish_waits_for_their_shift(self) -> None:
+        world = SimulationWorld.demo_world()
+        world.clock.hour = 11
+        worker = next(resident for resident in world.residents.values() if world.work.candidate(world, resident) is not None)
+        other = next(each for each in world.residents.values() if each is not worker and not each.away)
+        worker.needs = Needs(hunger=0, thirst=0, tiredness=0, social=60, stress=0)
+        worker.activity = None
+        world.wishes.make(world, worker, WITH, other.resident_id)
+        routine = world.activities.routine
+
+        def talk() -> float | None:
+            return next((each.score for each in routine.candidates(world, worker) if each.partner_id == other.resident_id), None)
+
+        seeds = world.rng.get_state()
+        at_work = talk()
+        worker.job_id = worker.post_id = None
+        world.rng.set_state(seeds)
+        free = talk()
+        if at_work is not None and free is not None:
+            self.assertGreater(free, at_work, "with their shift on, what they want does not pull")
+
     def test_left_to_themselves_some_wishes_are_met_and_some_are_not(self) -> None:
         world = SimulationWorld.demo_world(seed=4)
         _settings(world, chance=0.2)

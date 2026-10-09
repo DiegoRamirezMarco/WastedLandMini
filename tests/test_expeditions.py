@@ -7,10 +7,12 @@ from save.save_manager import SaveManager
 from simulation.commands import ChooseOptionCommand
 from simulation.knowledge.knowledge_system import witnesses_of
 from simulation.registries import DATA_DIR, BuiltInRegistries
+from simulation.residents.attributes import SENSES
 from simulation.residents.needs import Needs
 from simulation.social.social_system import SocialSystem
 from simulation.work.expedition import expedition_rule_from_data, expedition_settings_from_data
 from simulation.work.expedition_system import EXPEDITION_ACTION, RISKY_FIND
+from simulation.work.research import EXPEDITION_FINDS
 from simulation.world import SimulationWorld
 from tests.worlds import no_store
 
@@ -92,7 +94,15 @@ class SettingOutTests(unittest.TestCase):
         trip = sergio.expedition
         gone_for = trip.returns_at - self.world.clock.total_minutes
         self.assertTrue(239 <= gone_for <= 360, gone_for)
-        self.assertTrue(3 <= trip.finds <= 6)
+        job = self.world.registries.jobs["scavenger"]
+        factor = (
+            self.world.research.factor(self.world, EXPEDITION_FINDS)
+            * self.world.attributes.factor(self.world, sergio, SENSES, "finds")
+            * self.world.crafts.pace(self.world, sergio, job)
+        )
+        least, most = job.expedition.finds
+        self.assertEqual((least, most), (3, 6))
+        self.assertTrue(round(least * factor) <= trip.finds <= round(most * factor), (trip.finds, factor))
         _run(self.world, 200)
         self.assertTrue(sergio.away)
 

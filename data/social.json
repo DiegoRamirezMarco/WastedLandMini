@@ -8,7 +8,8 @@
     "importance": 10,
     "per_minute": {
       "social": -1.0,
-      "stress": -0.1
+      "stress": -0.1,
+      "boredom": -0.3
     },
     "relationship": {
       "affection": 1.0,
@@ -62,7 +63,8 @@
     "importance": 30,
     "per_minute": {
       "social": -1.0,
-      "stress": -0.3
+      "stress": -0.3,
+      "boredom": -0.2
     },
     "relationship": {
       "resentment": -8.0,
@@ -119,7 +121,8 @@
     "importance": 45,
     "per_minute": {
       "social": -0.5,
-      "stress": 0.3
+      "stress": 0.3,
+      "boredom": -0.25
     },
     "relationship": {
       "trust": 1.0
@@ -141,7 +144,8 @@
     "importance": 40,
     "per_minute": {
       "social": -1.0,
-      "stress": -0.4
+      "stress": -0.4,
+      "boredom": -0.5
     },
     "relationship": {
       "affection": 3.0,
@@ -190,7 +194,8 @@
     "importance": 50,
     "per_minute": {
       "social": -0.5,
-      "stress": 0.3
+      "stress": 0.3,
+      "boredom": -0.25
     },
     "relationship": {
       "trust": 1.0
@@ -212,7 +217,8 @@
     "importance": 10,
     "per_minute": {
       "social": -1.0,
-      "stress": -0.3
+      "stress": -0.3,
+      "boredom": -0.6
     },
     "relationship": {
       "affection": 1.5,
@@ -237,7 +243,8 @@
     "importance": 15,
     "per_minute": {
       "social": -1.5,
-      "stress": -1.5
+      "stress": -1.5,
+      "boredom": -0.25
     },
     "relationship": {
       "affection": 2.5,
@@ -261,7 +268,8 @@
     "importance": 20,
     "per_minute": {
       "social": -0.8,
-      "stress": -0.1
+      "stress": -0.1,
+      "boredom": -0.5
     },
     "relationship": {
       "attraction": 6.0,
@@ -284,7 +292,8 @@
     "importance": 25,
     "per_minute": {
       "social": -1.0,
-      "stress": -1.0
+      "stress": -1.0,
+      "boredom": -0.5
     },
     "relationship": {
       "affection": 2.0,
@@ -335,7 +344,8 @@
     "importance": 12,
     "per_minute": {
       "social": -1.0,
-      "stress": -0.4
+      "stress": -0.4,
+      "boredom": -0.7
     },
     "relationship": {
       "affection": 1.5,
@@ -360,7 +370,8 @@
     "importance": 12,
     "per_minute": {
       "social": -1.2,
-      "stress": -0.3
+      "stress": -0.3,
+      "boredom": -0.6
     },
     "relationship": {
       "affection": 1.5,
@@ -387,7 +398,8 @@
     "per_minute": {
       "social": -1.2,
       "stress": -0.5,
-      "tiredness": 0.1
+      "tiredness": 0.1,
+      "boredom": -0.75
     },
     "relationship": {
       "affection": 2.0,
@@ -411,7 +423,8 @@
     ],
     "importance": 12,
     "per_minute": {
-      "social": -0.5
+      "social": -0.5,
+      "boredom": -0.4
     },
     "relationship": {
       "affection": 0.5

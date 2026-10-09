@@ -141,7 +141,7 @@ class LeisureSystem:
         # What it takes off them goes by how they like it. What it costs them does not.
         resident.needs.apply({need: delta * share if delta < 0 else delta for need, delta in pastime.per_minute.items()})
         activity.minutes_left -= 1
-        if activity.minutes_left <= 0 or world.activities.urgent_needs(world, resident):
+        if activity.minutes_left <= 0 or world.activities.urgent_needs(world, resident) or self.called_away(world, resident, activity):
             resident.activity = None
             resident.current_action = "idle"
             return
@@ -149,6 +149,11 @@ class LeisureSystem:
             # Got to where they were going, they go on somewhere else.
             activity.path = world.activities.routine.stroll(world, resident)
         resident.current_action = "walking" if activity.path else pastime.pastime_id
+
+    def called_away(self, world: "SimulationWorld", resident: Resident, activity: Activity) -> bool:
+        """Whether what somebody took up to pass the time is over because work calls (S62):
+        it was time on their hands, and their shift has begun. Not what they were told to do."""
+        return not activity.ordered and world.work.candidate(world, resident) is not None
 
     def _begin(self, world: "SimulationWorld", resident: Resident, pastime: Pastime) -> None:
         settings = world.registries.leisure

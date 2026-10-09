@@ -61,7 +61,7 @@
         "category": "tool",
         "tags": ["trinket"],
         "value": [10, 30],
-        "effects": {"stress": [-12, -5]},
+        "effects": {"stress": [-12, -5], "boredom": [-30, -15]},
         "properties": {"wear": 4, "scrap": 1},
         "preference_tags": ["weird"]
       }
@@ -74,7 +74,7 @@
         "category": "tool",
         "tags": ["trinket", "toy"],
         "value": [8, 20],
-        "effects": {"stress": [-8, -3], "social": [-10, -4]},
+        "effects": {"stress": [-8, -3], "social": [-10, -4], "boredom": [-40, -20]},
         "properties": {"wear": 6, "scrap": 1},
         "preference_tags": ["cute"]
       }

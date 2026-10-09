@@ -24,7 +24,7 @@ from simulation.knowledge.fact import Belief, Fact
 from simulation.memory.memory import Memory
 from simulation.registries import DEFAULT_MAP_ID, BuiltInRegistries, builtin_registries
 from simulation.residents.activity import Activity, Order
-from simulation.residents.needs import Needs
+from simulation.residents.needs import BOREDOM_START, Needs
 from simulation.residents.wishes import KINDS as WISH_KINDS
 from simulation.residents.wishes import Wish
 from simulation.politics.government import MEASURES
@@ -519,6 +519,8 @@ class SaveManager:
                     tiredness=float(needs_data.get("tiredness", 10.0)),
                     social=float(needs_data.get("social", 20.0)),
                     stress=float(needs_data.get("stress", 10.0)),
+                    # Nobody was bored in a save from before there was such a thing (S62).
+                    boredom=float(needs_data.get("boredom", BOREDOM_START)),
                 ),
                 personality=Personality(
                     aggression=float(personality_data.get("aggression", 50.0)),
