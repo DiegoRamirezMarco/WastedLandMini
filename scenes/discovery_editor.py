@@ -16,8 +16,10 @@ from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from scenes.item_editor import ART_AREA, ART_SIZE, ERASER_TOOL, TOOLS_LEFT, ItemEditor
 from simulation.commands import NameDiscoveryCommand
+from simulation.tastes.taste import TAG, key_of
 from simulation.work.craft import Discovery, KindDefinition, OptionDefinition
 from simulation.world import SimulationWorld
+from ui.labels import NEED_LABELS
 from ui.panel import draw_panel
 
 # The folder of `custom_content/` the pictures of what was come to are kept in, by item ID.
@@ -38,6 +40,14 @@ GAME_DECIDES = "Lo demás lo pone el juego: lo que alimenta, lo que vale y a qu�
 PLACE_DECIDES = "Lo demás lo pone el juego: cuánto se trae y lo que se arriesga."
 WAITS = "Si lo dejas para luego, nadie lo hace hasta que le pongas nombre."
 ICON_LABEL = "Dibújalo"
+# For what was found, and not come to at a job (P65).
+THERE_ARE = "Hay {units}."
+FOUND_WAITS = "Si lo dejas para luego, espera en la puerta hasta que tenga nombre."
+SETTLED_TITLE = "Lo que es"
+FOUND_DECIDES = "Todo eso lo ha puesto el juego. Tuyo es cómo se llama y cómo se dibuja."
+TO_THE_TASTE = "Para quien guste de {tastes}"
+WORTH = "Vale {value}"
+CURES = "Cura"
 
 
 class DiscoveryEditor(ItemEditor):
@@ -74,7 +84,22 @@ class DiscoveryEditor(ItemEditor):
     @property
     def kind(self) -> KindDefinition | None:
         discovery = self.discovery
-        return self.world.registries.crafts.kinds.get(discovery.kind) if discovery is not None else None
+        return self.world.crafts.kind_for(self.world, discovery) if discovery is not None else None
+
+    def settled(self) -> list[str]:
+        """What the game has settled of a thing that was found, in a few lines: what it
+        does, who it is to the taste of, and what it is worth."""
+        discovery = self.discovery
+        preview = self.world.crafts.preview(self.world, discovery) if discovery is not None else None
+        if preview is None:
+            return []
+        lines = [f"{NEED_LABELS.get(need, need)}: {delta:+g}" for need, delta in preview["effects"].items()]
+        if preview["properties"].get("dose"):
+            lines.append(CURES)
+        tastes = [self.world.tastes.label(self.world, key_of(TAG, tag)) for tag in preview["preference_tags"]]
+        if tastes:
+            lines.append(TO_THE_TASTE.format(tastes=", ".join(tastes)))
+        return [*lines, WORTH.format(value=preview["base_value"])]
 
     @property
     def drawn(self) -> bool:
@@ -220,6 +245,9 @@ class DiscoveryEditor(ItemEditor):
         font.draw(canvas, kind.ask or f"¿Qué {kind.name} es?", (TOOLS_LEFT, 4), PALETTE["glow"], scale=2)
         where = f", nivel {discovery.level} de {job.name.lower()}" if job is not None else ""
         said = self.notice or f"{discovery.by_name}{where}. {WAITS}"
+        if discovery.source and not self.notice:
+            # It was found, and nobody makes it (P65): where it came from, and how many there are.
+            said = f"{self.world.finds.told(self.world, discovery)} {THERE_ARE.format(units=discovery.units)} {FOUND_WAITS}"
         font.draw(canvas, font.truncate(said, 590), (TOOLS_LEFT, 30), PALETTE["lamp" if self.notice else "stone"])
         for button in self.top_buttons:
             button.draw(canvas, font, active=button.intent == ("save",) and bool(self.name.strip()))
@@ -250,6 +278,13 @@ class DiscoveryEditor(ItemEditor):
                     font.draw(canvas, line, (box.x, box.bottom + 2 + index * LINE_HEIGHT), PALETTE["dust"])
             y = box.bottom + LINE_HEIGHT * 2 + 10
         note = GAME_DECIDES if self.drawn else PLACE_DECIDES
+        if discovery.source:
+            # What was found is all the game's to say, and it says it: there is nothing to pick.
+            font.draw(canvas, SETTLED_TITLE, (FIELDS_LEFT, y - LINE_HEIGHT - 1), PALETTE["sand"])
+            for line in self.settled():
+                font.draw(canvas, font.truncate(line, FIELD_WIDTH), (FIELDS_LEFT, y), PALETTE["bone"])
+                y += LINE_HEIGHT
+            note = FOUND_DECIDES
         if self.open_choice is None:
             for index, line in enumerate(font.wrap(note, FIELD_WIDTH)):
                 font.draw(canvas, line, (FIELDS_LEFT, y + 6 + index * LINE_HEIGHT), PALETTE["stone"])

@@ -5213,7 +5213,6 @@ Decided without asking:
 - **How good it is does not go by how much was risked for it** (S64)
 
 Still open here:
-- Giving is on no screen: P65
 - A thing cannot be taken back out of somebody's hands
 - Nobody gives the player's present away, or minds its being given to somebody else
 - What is found is never a tool, a vice or somewhere to go
@@ -5276,9 +5275,32 @@ Still open here:
 - Nothing shows that a subject was the player's and not theirs
 - The notice of who asks does not say what, until it is pressed
 
-### P65 — A thing handed over, and one found, on screen (needs S59) — planned
-- Giving a thing out of the `Almacén` or a crate to somebody, and drawing and naming what
-  nobody knows
+### P65 — A thing handed over, and one found, on screen (needs S59) — done
+What there is:
+- **The `Almacén` gives.** With somebody selected, each thing it lists has `Dar` at the end of
+  its row: a press puts one in their hands, and it says under the bar that they have it. It
+  stays open, to give another. With nobody selected it says to choose somebody
+- **`Dar` over what a resident carries** opens the `Almacén` for them
+- **How they took it is seen over them**, as a meal is: relish or disgust
+- **What nobody knows is named and drawn where what a job teaches is** (P54): the screen
+  opens when it turns up, with time stopped. It says what the thing is, in its kind's
+  words, where it came from and how many there are, and lists what the game has settled:
+  what it does to each need, whose taste it is to and what it is worth. There is nothing to
+  pick. Left for later, it waits under a notice of its own, `Hay algo que nadie conoce:
+  ponle nombre`
+
+Decided without asking:
+- **Giving is done from the `Almacén`**, which lists just what there is to give: what is
+  everybody's, wherever it is kept. The answer named the crates too, and what is in them is
+  listed there with the rest
+- **A press gives one**, and nothing is asked before it
+- **The game says what it has settled before the thing is named**, so that it can be drawn
+  and called for what it is
+
+Still open here:
+- A thing cannot be dragged onto somebody to give it them (P27)
+- What a crate holds cannot be given from the crate's own panel
+- The `Almacén` does not say what whoever is selected makes of each thing, where it is known
 
 ### S60 — More than one thing to do with a thing (needs S30 and P27) — planned
 The third layer: what is done with things and with each other.

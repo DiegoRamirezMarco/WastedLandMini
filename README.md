@@ -220,6 +220,11 @@ python -m simulation.headless --days 7 --seed 7
 - Whoever is talking has a bubble over them with what the talk is about: the picture of a
   thing, the face of whoever it is about, or the words. Click either of the two to read it
   under the bar, and at the foot of their panel
+- `Almacén` in the menu with somebody selected, or `Dar` over what they carry: `Dar` beside
+  a thing puts one in their hands, and how they take it is seen over them
+- When something nobody knows turns up, the screen to name and draw it opens: it says what
+  the thing is and does, and the name and the drawing are yours. `Luego` leaves it waiting
+  under a notice in the corner of the map
 - A red `!` over somebody, and a notice in the corner of the map, is a resident who wants a
   word of you: click either, write it and press `Intro`, or `Ahora no`
 - `Palabras`, at the foot of the list of residents and over what a resident carries, or `H`:

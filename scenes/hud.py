@@ -77,6 +77,7 @@ from ui.resident_panel import (
     roster_tree_hitbox,
     roster_words_hitbox,
     words_hitbox,
+    give_hitbox,
     draw_resident_panel,
     draw_roster,
     inventory_hitboxes,
@@ -108,7 +109,7 @@ from ui.tutorial_panel import draw_tutorial, tutorial_button, tutorial_height
 MARGIN = 6
 # What has been going on is read here and nowhere else, so it is given room for whole lines.
 LOG_SIZE = (340, 232)
-STORES_WIDTH = 184
+STORES_WIDTH = 214
 OUTLOOK_WIDTH = 300
 OUTLOOK_PADDING = 4
 # Rows of the menu on the left: compact enough for the game and editor controls together. Each
@@ -139,6 +140,7 @@ DISCOVERY_INTENT = ("discovery",)
 ASK_NOTICE = "{name} te pregunta algo"
 DISCOVERY_ONE = "{name} sabe algo nuevo: ponle nombre"
 DISCOVERY_MANY = "{count} cosas nuevas por nombrar"
+DISCOVERY_FOUND = "Hay algo que nadie conoce: ponle nombre"
 FUND_INTENT = ("fund_board",)
 ROSTER_INTENT = ("roster",)
 MINIMAP_INTENT = ("minimap",)
@@ -161,6 +163,11 @@ STORES_TITLE = "Almacén: lo que es de todos"
 SENTENCE_HINT = "! {name}, culpable: di qué se le da en Gobierno, Castigos"
 AWAY_LABEL = "Fuera"
 STORES_EMPTY = "No queda nada"
+# What is everybody's can be put in the hands of whoever is selected, a unit at a time (P65).
+GIVE_LABEL = "Dar"
+GIVE_TO = "Lo que pulses se le da a {name}."
+GIVE_NOBODY = "Elige a alguien y podrás darle de esto."
+GIVE_OPEN_INTENT = ("give_open",)
 STORES_BAND = MARGIN + LINE_HEIGHT - 1
 
 
@@ -198,6 +205,10 @@ def edit_item_intent(definition_id: str) -> tuple[str, str]:
 
 def scrap_intent(instance_id: str) -> tuple[str, str]:
     return ("scrap", instance_id)
+
+
+def give_intent(definition_id: str) -> tuple[str, str]:
+    return ("give", definition_id)
 
 
 @dataclass(frozen=True)
@@ -425,6 +436,8 @@ class Hud:
             return fixed + trade_buttons(
                 self.font, self.trade_rect(), self.world, self.trade_buy, self.trade_sell, self.drawable
             )
+        if self.stores_open:
+            return fixed + self.give_buttons()
         if not self.jobs_open:
             return fixed
         return fixed + board_buttons(self.font, self.jobs_rect(), self.world, self.selected_id)
@@ -691,6 +704,12 @@ class Hud:
             and debug_hitbox(self.layout.panel).collidepoint(position)
         ):
             return TASTE_DEBUG_INTENT
+        if (
+            self.selected_id in self.world.residents
+            and self.panel_tab == LIFE_TAB
+            and give_hitbox(self.layout.panel, self.world, self.world.residents[self.selected_id]).collidepoint(position)
+        ):
+            return GIVE_OPEN_INTENT
         for rect, definition_id in self._inventory_items():
             if rect.collidepoint(position):
                 return edit_item_intent(definition_id)
@@ -770,7 +789,32 @@ class Hud:
 
     def stores_rect(self) -> pygame.Rect:
         rows = max(1, len(settlement_stock(self.world)))
-        return self._float(STORES_WIDTH, MARGIN * 2 + LINE_HEIGHT + 4 + rows * (ITEM_ICON_SIZE[1] + 2))
+        return self._float(STORES_WIDTH, MARGIN * 2 + LINE_HEIGHT * 2 + 6 + rows * (ITEM_ICON_SIZE[1] + 2))
+
+    def _stores_rows(self) -> list[tuple[str, int, pygame.Rect]]:
+        """What the Almacén lists that fits in it: the item, how many, and where its row is."""
+        rect = self.stores_rect()
+        y = rect.y + MARGIN - 1 + LINE_HEIGHT * 2 + 6
+        rows = []
+        for definition_id, quantity in settlement_stock(self.world):
+            row = pygame.Rect(rect.x + MARGIN, y, rect.width - MARGIN * 2, ITEM_ICON_SIZE[1])
+            if row.bottom > rect.bottom - 2:
+                break
+            rows.append((definition_id, quantity, row))
+            y += ITEM_ICON_SIZE[1] + 2
+        return rows
+
+    def give_buttons(self) -> list[Button]:
+        """What is pressed to put a unit of a thing in the hands of whoever is selected: at
+        the end of its row in the Almacén, while somebody is."""
+        if self.selected_id not in self.world.residents:
+            return []
+        buttons = []
+        for definition_id, _quantity, row in self._stores_rows():
+            button = Button.at(self.font, 0, row.y + 1, GIVE_LABEL, give_intent(definition_id))
+            button.rect.right = row.right
+            buttons.append(button)
+        return buttons
 
     def outlook_rect(self) -> pygame.Rect | None:
         """Where the forecasts the settlement has heard are listed, when it has heard any."""
@@ -797,7 +841,7 @@ class Hud:
         if not waiting:
             return None
         label = (
-            DISCOVERY_ONE.format(name=waiting[0].by_name)
+            (DISCOVERY_FOUND if waiting[0].source else DISCOVERY_ONE.format(name=waiting[0].by_name))
             if len(waiting) == 1
             else DISCOVERY_MANY.format(count=len(waiting))
         )
@@ -1107,14 +1151,19 @@ class Hud:
         x, y = rect.x + MARGIN, rect.y + MARGIN - 1
         self.font.draw(self.canvas, STORES_TITLE, (x, y), PALETTE["paper"])
         y += LINE_HEIGHT + 4
-        stock = settlement_stock(self.world)
-        if not stock:
+        selected = self.world.residents.get(self.selected_id or "")
+        hint = GIVE_TO.format(name=selected.name) if selected is not None else GIVE_NOBODY
+        self.font.draw(self.canvas, self.font.truncate(hint, rect.width - MARGIN * 2), (x, y), PALETTE["stone"])
+        y += LINE_HEIGHT + 2
+        rows = self._stores_rows()
+        if not rows:
             self.font.draw(self.canvas, STORES_EMPTY, (x, y + 3), PALETTE["stone"])
-        for definition_id, quantity in stock:
-            if y + ITEM_ICON_SIZE[1] > rect.bottom - 2:
-                break
-            draw_item(self.canvas, self.icons, definition_id, pygame.Rect(x, y, *ITEM_ICON_SIZE))
+        buttons = self.give_buttons()
+        room = rect.width - MARGIN * 2 - ITEM_ICON_SIZE[0] - 4 - (buttons[0].rect.width + 4 if buttons else 0)
+        for definition_id, quantity, row in rows:
+            draw_item(self.canvas, self.icons, definition_id, pygame.Rect(row.topleft, ITEM_ICON_SIZE))
             name = self.world.registries.items.resolve(definition_id).name
-            text = self.font.truncate(f"{name} x{quantity}", rect.width - MARGIN * 2 - ITEM_ICON_SIZE[0] - 4)
-            self.font.draw(self.canvas, text, (x + ITEM_ICON_SIZE[0] + 4, y + 3), PALETTE["bone"])
-            y += ITEM_ICON_SIZE[1] + 2
+            text = self.font.truncate(f"{name} x{quantity}", room)
+            self.font.draw(self.canvas, text, (row.x + ITEM_ICON_SIZE[0] + 4, row.y + 3), PALETTE["bone"])
+        for button in buttons:
+            button.draw(self.canvas, self.font)

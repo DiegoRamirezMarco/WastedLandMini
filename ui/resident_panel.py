@@ -107,6 +107,9 @@ MANNERS_WIDTH = 46
 # of the roster (P62).
 WORDS_LABEL = "Palabras"
 WORDS_WIDTH = 52
+# Beside it, the way to put something of the settlement's in their hands (P65).
+GIVE_LABEL = "Dar"
+GIVE_WIDTH = 26
 # A switch on the tastes for looking at the figures the game keeps to itself. Not for play.
 DEBUG_LABEL = "Debug"
 DEBUG_WIDTH = 34
@@ -226,6 +229,12 @@ def words_hitbox(panel: pygame.Rect, world: SimulationWorld, resident: Resident)
     top = _relationships_top(panel, world, resident)
     top += len(relationship_rows(world, resident, MAX_RELATIONSHIPS)) * RELATIONSHIP_ROW + 4
     return pygame.Rect(panel.right - PADDING - WORDS_WIDTH, top - 1, WORDS_WIDTH, LINE_HEIGHT)
+
+
+def give_hitbox(panel: pygame.Rect, world: SimulationWorld, resident: Resident) -> pygame.Rect:
+    """Where what is everybody's is asked for, to give them some of it: beside the way to their words."""
+    words = words_hitbox(panel, world, resident)
+    return pygame.Rect(words.left - 3 - GIVE_WIDTH, words.y, GIVE_WIDTH, words.height)
 
 
 def _kin_top(panel: pygame.Rect) -> int:
@@ -548,6 +557,9 @@ def draw_resident_panel(
     y = _title(target, font, INVENTORY_TITLE, x, y, inner)
     draw_panel(target, words, fill="shadow", border="lamp")
     font.draw(target, WORDS_LABEL, (words.centerx - font.width(WORDS_LABEL) // 2, words.y), PALETTE["glow"])
+    give = give_hitbox(panel, world, resident)
+    draw_panel(target, give, fill="shadow", border="lamp")
+    font.draw(target, GIVE_LABEL, (give.centerx - font.width(GIVE_LABEL) // 2, give.y), PALETTE["glow"])
     y = _draw_item_grid(target, font, icons, (x, y), inner, world, resident)
     if has_shop(world):
         _draw_affordable(target, font, icons, (x, y), world, resident, inner)

@@ -75,6 +75,7 @@ from scenes.hud import (
     FAMILY_INTENT,
     FUND_INTENT,
     DISCOVERY_INTENT,
+    GIVE_OPEN_INTENT,
     GOVERNMENT_INTENT,
     VOICE_INTENT,
     DRAW_INTENT,
@@ -114,6 +115,7 @@ from simulation.commands import (
     AnswerAskCommand,
     CompostCommand,
     DismissAskCommand,
+    GiveCommand,
     SetNicknameCommand,
     SetPhraseCommand,
     TalkAboutCommand,
@@ -1256,6 +1258,13 @@ class GlobalView:
             self._propose_sale(intent[1], intent[2])
         elif isinstance(intent, tuple) and intent[0] == "choose_government":
             self._choose_government(intent[1])
+        elif intent == GIVE_OPEN_INTENT:
+            # What there is to give is what the Almacén lists (P65).
+            if not self.hud.stores_open:
+                self.hud.toggle_stores()
+        elif isinstance(intent, tuple) and intent[0] == "give":
+            if self.hud.selected_id in self.world.residents:
+                self._said(self.world.apply_command(GiveCommand(self.hud.selected_id, intent[1])))
         elif intent == DISCOVERY_INTENT:
             waiting = self.world.crafts.waiting(self.world)
             self.requested_discovery = waiting[0].discovery_id if waiting else None
