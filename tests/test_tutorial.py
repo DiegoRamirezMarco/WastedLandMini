@@ -753,7 +753,9 @@ class DrawingLessonsTests(unittest.TestCase):
 
     def _measure(self, editor) -> None:
         """Take the measures in hand and make the legs a little shorter, by the ankle."""
-        self._click(self._button(editor, ("tool", "measure")))
+        if editor.tool != "measure":
+            # Pressed again it is put down: it is taken up only if it is not in hand.
+            self._click(self._button(editor, ("tool", "measure")))
         body = editor.areas["body"]
         ankle = next(handle for handle in editor.joint_handles("body") if handle.key == "shin.end")
         start = (round(body.x + ankle.point[0]), round(body.y + ankle.point[1]))

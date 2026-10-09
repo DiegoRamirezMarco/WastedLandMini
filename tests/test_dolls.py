@@ -835,7 +835,8 @@ class DollEditorTests(unittest.TestCase):
 
     def test_strokes_paint_the_canvas_under_the_mouse_and_can_be_undone(self) -> None:
         editor = self._open("raul")
-        body, head = editor.areas[BODY_CANVAS], editor.areas[HEAD_CANVAS]
+        body = editor.areas[BODY_CANVAS]
+        self.assertEqual(list(editor.areas), [BODY_CANVAS], "one paper is up at a time: the body's first")
         self.assertEqual(_painted(editor.drawings[BODY_CANVAS]), 0)
         ember = next(rect for rect, color in editor.swatches if color == PALETTE["ember"])
         self._click(ember.center)
@@ -849,8 +850,12 @@ class DollEditorTests(unittest.TestCase):
         stroke = _painted(drawing)
         # A thicker brush, on the other canvas.
         self._click(editor.brush_buttons[-1][0].center)
+        self._click(self._button(editor, ("tab", "head")).rect.center)
+        head = editor.areas[HEAD_CANVAS]
         self._click((head.x + 80, head.y + 80))
-        self.assertGreater(_painted(editor.drawings[HEAD_CANVAS]), 100)
+        dab = _painted(editor.drawings[HEAD_CANVAS])
+        self.assertGreater(dab, 100)
+        self._click(self._button(editor, ("tab", "body")).rect.center)
         # The rubber takes paint off, and the bucket pours it in.
         self._click(self._button(editor, ("tool", "eraser")).rect.center)
         self._click((body.x + 80, body.y + 60))
@@ -864,8 +869,9 @@ class DollEditorTests(unittest.TestCase):
         self.assertEqual(editor.drawings[BODY_CANVAS].get_at((200, 300))[3], 0)
         editor.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z, mod=pygame.KMOD_CTRL))
         self.assertEqual(_painted(editor.drawings[BODY_CANVAS]), stroke)
+        # Only the paper that is up is wiped.
         self._click(self._button(editor, ("clear",)).rect.center)
-        self.assertEqual(_painted(editor.drawings[BODY_CANVAS]) + _painted(editor.drawings[HEAD_CANVAS]), 0)
+        self.assertEqual((_painted(editor.drawings[BODY_CANVAS]), _painted(editor.drawings[HEAD_CANVAS])), (0, dab))
         self._show()
 
     def test_the_guide_goes_under_over_or_away_and_the_drawing_shows_at_twice_its_size(self) -> None:
@@ -873,8 +879,10 @@ class DollEditorTests(unittest.TestCase):
         body = editor.areas[BODY_CANVAS]
         spot = ((body.x + 160) * SCALE, (body.y + 80) * SCALE)
         with_guide = tuple(self._show().get_at(spot))[:3]
-        self._click(editor.guide_button.rect.center)
-        self._click(editor.guide_button.rect.center)
+        # The guide is seldom moved: it is behind the cog.
+        self._click(self._button(editor, ("cog",)).rect.center)
+        self._click(self._button(editor, ("guide",)).rect.center)
+        self._click(self._button(editor, ("guide",)).rect.center)
         self.assertEqual(editor.guide, "off")
         self.assertNotEqual(tuple(self._show().get_at(spot))[:3], with_guide, "under the trunk the guide was tinting the paper")
         editor.color = RED
@@ -906,13 +914,16 @@ class DollEditorTests(unittest.TestCase):
         doll = view._doll_of("paco")
         self.assertIsNone(game.dolls.get("paco"))
         self.assertEqual(set(doll.parts), set(template.parts))
-        # It is what the editor gives to start a drawing of them from.
+        # What the editor gives to start a drawing of them from is a plain figure too, but
+        # one with its trunk seen from the front, as a trunk is drawn to be turned.
         editor = self._open("paco")
         self._click(editor.mannequin_button.rect.center)
-        for canvas, drawing in stand_in(editor.template, skin).items():
-            self.assertEqual(
-                pygame.image.tobytes(editor.drawings[canvas], "RGBA"), pygame.image.tobytes(drawing, "RGBA"), canvas
-            )
+        self.assertGreater(_painted(editor.drawings[BODY_CANVAS]), 5000)
+        self.assertEqual(editor.trunk_drawn, "front")
+        trunk = editor.template.parts["spine"]
+        row = round((trunk.start[1] + trunk.end[1]) / 2)
+        solid = [x for x in range(editor.drawings[BODY_CANVAS].get_width()) if abs(x - trunk.start[0]) < 100 and editor.drawings[BODY_CANVAS].get_at((x, row))[3]]
+        self.assertAlmostEqual(trunk.start[0] - solid[0], solid[-1] - trunk.start[0], delta=3)
 
     def test_a_saved_drawing_is_cut_into_a_doll_that_walks_the_map_and_gives_them_a_face(self) -> None:
         game, view = self.game, self.game.global_view

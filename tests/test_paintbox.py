@@ -385,19 +385,26 @@ class PaintingInTheEditorsTests(unittest.TestCase):
     def test_the_body_s_paper_has_the_head_and_the_figure_beside_it_and_none_of_them_overlap(self) -> None:
         editor = self.game.doll_editor
         editor.open("nuria")
-        from scenes.doll_editor import PREVIEW
+        from scenes.studio import SHOW
 
-        body, head = editor.areas[BODY_CANVAS], editor.areas[HEAD_CANVAS]
+        # One paper is up at a time, as large as it is drawn, with the figure that moves beside it.
+        body = editor.areas[BODY_CANVAS]
+        self.assertEqual(list(editor.areas), [BODY_CANVAS])
         self.assertEqual(body.size, editor.template.canvases[BODY_CANVAS])
-        self.assertGreaterEqual(head.left, body.right)
-        self.assertGreaterEqual(PREVIEW.left, body.right)
-        self.assertFalse(head.colliderect(PREVIEW))
+        self.assertGreaterEqual(SHOW.left, body.right)
         screen = self.game.canvas.get_rect()
-        self.assertTrue(all(screen.contains(rect) for rect in (body, head, PREVIEW)))
-        tools = [button.rect for button in editor.buttons if button not in editor.top_buttons]
+        self.assertTrue(all(screen.contains(rect) for rect in (body, SHOW)))
+        tools = [button.rect for button in editor.buttons]
         tools += [rect for rect, _ in (*editor.swatches, *editor.brush_buttons)] + [editor.field.rect]
-        self.assertTrue(all(rect.right <= body.left for rect in tools), "the tools are clear of the paper")
+        self.assertTrue(all(screen.contains(rect) for rect in tools))
+        self.assertTrue(all(not rect.colliderect(body) and not rect.colliderect(SHOW) for rect in tools), "the tools are clear of the paper")
         self.assertTrue(all(not one.colliderect(other) for index, one in enumerate(tools) for other in tools[index + 1 :]))
+        # The head's paper takes its place, twice as large as it is drawn.
+        self._click(editor, next(button for button in editor.buttons if button.intent == ("tab", "head")).rect.center)
+        head = editor.areas[HEAD_CANVAS]
+        self.assertEqual(list(editor.areas), [HEAD_CANVAS])
+        self.assertEqual(head.size, tuple(2 * side for side in editor.template.canvases[HEAD_CANVAS]))
+        self.assertTrue(screen.contains(head) and not head.colliderect(SHOW))
         self._frame(editor)
 
     def test_a_colour_off_the_field_paints_like_any_other(self) -> None:
@@ -422,7 +429,7 @@ class PaintingInTheEditorsTests(unittest.TestCase):
     def test_shapes_are_laid_down_on_a_resident_s_paper_and_undone_like_a_stroke(self) -> None:
         editor = self.game.doll_editor
         editor.open("nuria")
-        body, head = editor.areas[BODY_CANVAS], editor.areas[HEAD_CANVAS]
+        body = editor.areas[BODY_CANVAS]
         self._tool(editor, "box")
         self._event(editor, pygame.MOUSEBUTTONDOWN, (body.x + 150, body.y + 70), button=1)
         self._event(editor, pygame.MOUSEMOTION, (body.x + 230, body.y + 140), rel=(0, 0), buttons=(1, 0, 0))
@@ -436,8 +443,12 @@ class PaintingInTheEditorsTests(unittest.TestCase):
 
         self._click(editor, next(button for button in editor.buttons if button.intent == ("fill",)).rect.center)
         self._tool(editor, "oval")
-        self._drag(editor, (head.x + 40, head.y + 50), (head.x + 150, head.y + 150))
+        # On the head's paper, which is put up in the body's place and shown twice as large.
+        self._click(editor, next(button for button in editor.buttons if button.intent == ("tab", "head")).rect.center)
+        head = editor.areas[HEAD_CANVAS]
+        self._drag(editor, (head.x + 80, head.y + 100), (head.x + 300, head.y + 300))
         self.assertEqual(tuple(editor.drawings[HEAD_CANVAS].get_at((95, 100)))[:3], editor.color)
+        self._click(editor, next(button for button in editor.buttons if button.intent == ("tab", "body")).rect.center)
         self._tool(editor, "line")
         before = self._painted(editor.drawings[BODY_CANVAS])
         self._drag(editor, (body.x + 30, body.y + 40), (body.x + 55, body.y + 180))

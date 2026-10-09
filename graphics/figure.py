@@ -123,6 +123,13 @@ class Figures:
         self.hands.forget(body_id)
         self.feet.forget(body_id)
 
+    def changed(self, body_id: str) -> None:
+        """Say that a body has been drawn anew by somebody who still has its face, its hands
+        and its feet in hand: what is kept of how it was drawn is read again, and they are
+        left as they are."""
+        self._said.pop(body_id, None)
+        self._matched.pop(body_id, None)
+
     def said(self, body_id: str | None) -> Said:
         """What has been said of a body besides its measures. Somebody with nothing kept, as
         one nobody has drawn, has a trunk seen from its side: the plain figure has."""

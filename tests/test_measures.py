@@ -295,9 +295,12 @@ class MeasuringInTheEditorTests(unittest.TestCase):
         return next(button for button in self.editor.buttons if button.intent == intent).rect.center
 
     def _joint(self, key: str, canvas: str = BODY_CANVAS) -> tuple[float, float]:
-        area = self.editor.areas[canvas]
+        if canvas not in self.editor.areas:
+            # One paper is up at a time: the one asked for is put up.
+            self._click(self._button(("tab", canvas)))
+        area, zoom = self.editor.areas[canvas], self.editor.zooms.get(canvas, 1)
         handle = next(handle for handle in self.editor.joint_handles(canvas) if handle.key == key)
-        return (area.x + handle.point[0], area.y + handle.point[1])
+        return (area.x + handle.point[0] * zoom, area.y + handle.point[1] * zoom)
 
     def _frame(self) -> None:
         self.editor.update(1 / 60)
@@ -351,10 +354,12 @@ class MeasuringInTheEditorTests(unittest.TestCase):
         neck = self._joint("skull.start", "head")
         self._drag(moved["skull.start"], (moved["skull.start"][0], moved["skull.start"][1] - per_unit))
         self.assertEqual(self.editor.build.points, {"skull.start": (0.0, 1.0)})
-        self.assertEqual(self._joint("skull.start", "head"), (neck[0], neck[1] + self.editor.template.unit))
+        # The head's paper is shown twice as large as it is drawn.
+        zoom = self.editor.zooms["head"]
+        self.assertEqual(self._joint("skull.start", "head"), (neck[0], neck[1] + self.editor.template.unit * zoom))
         # And the neck can be taken hold of there as well, and goes any way.
         neck = self._joint("skull.start", "head")
-        self._drag(neck, (neck[0] - 8, neck[1] - 16))
+        self._drag(neck, (neck[0] - 8 * zoom, neck[1] - 16 * zoom))
         self.assertEqual(self.editor.build.points, {"skull.start": (-0.5, 0.0)})
         self._frame()
 
@@ -375,7 +380,8 @@ class MeasuringInTheEditorTests(unittest.TestCase):
         self.assertEqual(self.editor.build, self.start)
         self.editor.open("paco")
         self.assertEqual(self.editor.build.joints, {"thigh.end": -1.5})
-        # The measures to start from are a button away.
+        # The measures to start from are behind the cog.
+        self._click(self._button(("cog",)))
         self._click(self._button(("measures",)))
         self.assertEqual(self.editor.build, self.start)
         self.assertAlmostEqual(

@@ -6311,12 +6311,53 @@ Done when: a body kept from before is asked for from the front, from three quart
 behind and comes turned; one drawn from the front comes wrapped; and every test there was
 passes with the paper laid out anew.
 
-### P72 — Dolls that turn: one screen to draw them on (needs P71) — planned
-- The one screen of the project it was tried in takes the place of the screen residents are
-  drawn on: a tab each for the body, the head, the face and the hands and feet, tiles with
-  pictures and no words, and the doll beside the work, turned with a bar
-- What the game's own screen had stays: who there is to draw, their names, the lessons of
-  the opening and the fitting room for armour
+### P72 — Dolls that turn: one screen to draw them on (needs P71) — done
+- **One screen takes the place of the one residents were drawn on** (`scenes/studio.py`), as
+  it was tried apart from the game: everything to press is a tile with a picture on it, and
+  says what it is when the mouse rests on it. Asked for there as "mas amigable mas accesible
+  menos texto y mas iconos"
+- **A tab each for the body, the head, the face and the hands and feet**: one paper is up at
+  a time, the body's as large as it is drawn and the head's twice as large
+- **The doll is beside the work, large**, with a bar under it that turns it by hand from
+  behind to one side, the front, the other side and behind again, tiles for what it is at,
+  and one that leaves it turning by itself
+- **On the tab of the face** a strip of tiles: the first puts the head up large, to take hold
+  of each piece and put it where it goes; the rest put up the paper of each piece
+- **On the tab of the hands**: hands made and not drawn, how large and with how many fingers,
+  and the same for feet; the colour picked is of whichever has the frame, and of the line
+  round them while its tile is lit, which may be thinner, thicker or not there at all
+- **On the tab of the body**: the plain figure, the measures, the far arm and leg taken from
+  the near ones (then they are not on the paper), the back of the trunk on a paper of its
+  own, and the fitting room. Behind the cog: the guide, how deep the trunk is, the measures
+  to start from, and whether the trunk was drawn from the front
+- **What the game's own screen had is there**: who there is to draw is who lives there, keeps
+  a stall or was just born, by their names; the doll beside the work walks and fights in
+  their manner; the lessons of the opening are taught under the tools, and done by doing
+  them; Escape leaves without saving, after shutting what is behind the cog
+- **Somebody drawn before is said to be**: their trunk is on the paper as it was drawn, from
+  its side, and beside it they turn by rule as the settlement shows them. Beginning from the
+  plain figure, wiping the paper or the tile behind the cog says it is drawn from the front
+- **What is kept is what is shown beside the paper**: a paper nobody has drawn on, while
+  another has been, is kept as the plain figure. Nobody walks the map with no head
+
+Decided without asking:
+- **Armour is still tried on in the screen it had** (P66), which is the old one with other
+  papers, and keeps the old look: it is left for when armour is judged
+- **The papers of the old screen stay in the code for that**, with the body's moved up to
+  fit, now that it is taller
+- **Taking the measures in hand again puts them down**, as every tile that is lit does
+- **Wiping wipes the paper that is up**, and the plain figure fills the one that is up
+- **There is nobody new to begin** where there is a settlement: who is drawn is who is there
+
+Still open here:
+- **Nobody has tried it with a mouse in the game**: it was driven by scripted presses, and
+  looked at in pictures of the game with the drawings there are
+- **What the plain figure gives to start from is not in the colour of whoever is drawn**, as
+  it was: it is the one colour, with its trunk seen from the front
+- **The two screens for drawing a body are two lots of the same code** until armour moves
+
+Done when: the menu opens the one screen on whoever is picked; they are drawn tab by tab and
+kept; the lessons of the opening are done in it; and somebody drawn before opens as they were.
 
 ### P73 — Dolls that turn: in the settlement (needs P71) — planned
 - On the map, indoors and out on a trip, somebody walking down is seen from the front, and

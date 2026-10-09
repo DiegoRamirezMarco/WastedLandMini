@@ -16,6 +16,7 @@ from graphics.assets import ASSETS_DIR, AssetStore
 from graphics.coin_art import CoinArt
 from graphics.doll import DollStore, load_template
 from graphics.face_renderer import FaceRenderer
+from graphics.figure import Figures
 from graphics.font import FONT_SHEET, SHEET_SIZE, BitmapFont
 from graphics.illustrations import ILLUSTRATIONS_DIR, Illustrations
 from graphics.item_icons import ItemIcons
@@ -25,7 +26,7 @@ from save.save_manager import SaveManager
 from scenes.backdrop_editor import BackdropEditor
 from scenes.building_editor import BuildingEditor
 from scenes.coin_editor import CoinEditor
-from scenes.doll_editor import DollEditor
+from scenes.studio import Studio
 from scenes.garment_editor import GarmentEditor
 from scenes.family_view import FamilyView
 from scenes.global_view import GlobalView
@@ -128,6 +129,8 @@ class Game:
         self.faces = FaceRenderer(self.assets, self.custom, self.illustrations, Looks(self.assets))
         # Residents whose body has been drawn, cut into parts that move.
         self.dolls = DollStore(self.illustrations, load_template(), builtin_plan())
+        # Every doll turned whichever way it is shown, with its face, its hands and its feet.
+        self.figures = Figures(self.dolls, self.illustrations.root)
         self.music = load_music_settings(DATA_DIR / "audio.json")
         # A sound of the player's own, in the folder for them, is played in place of the game's.
         self.audio = AudioManager(
@@ -186,17 +189,21 @@ class Game:
         )
         # Where residents are drawn, if there is a folder to keep the drawings in.
         self.doll_editor = (
-            DollEditor(
+            Studio(
                 self.canvas,
-                self.world,
                 self.font,
                 self.layers,
                 self.illustrations.root,
                 self.dolls,
                 builtin_plan(),
-                self.global_view.bodies.renderer,
-                on_saved=self.faces.forget,
+                self.figures.faces,
+                self.figures.hands,
+                self.figures.feet,
+                world=self.world,
+                on_saved=self._drawn,
                 on_deed=self._report_deed,
+                # Armour is tried on in a screen of its own, where there is one.
+                can_fit=True,
             )
             if self.illustrations.root is not None
             else None
@@ -300,6 +307,11 @@ class Game:
         preview = MannerPreview(self.canvas, self.layers, builtin_plan(), self.dolls, self.world.registries, self.icons)
         self.creator = ResidentCreator(self.canvas, self.world, self.font, self.layers, preview)
         self.manner_editor = MannerEditor(self.canvas, self.world, self.font, preview, self.layers)
+
+    def _drawn(self, resident_id: str) -> None:
+        """Somebody has been drawn anew: their portrait and how they are turned are made again."""
+        self.faces.forget(resident_id)
+        self.figures.changed(resident_id)
 
     def _report_deed(self, deed: str) -> None:
         """Tell the simulation of something the player has done in an editor, which only the opening cares about."""
