@@ -6208,6 +6208,23 @@ tiembla un poco":
 - **A telling blow is seen slowly**, for under a second and from a little nearer, and the
   screen shakes a little: that is all that says it was one
 
+And then: "si se desangra sale chorros de sangre de la zona amputada, si lo tiran al suelo
+le salen estrellitas. KO al finalizar en grande y recuerda no tienen porque perder brazos y
+piernas, y muchas mas partes por donde seccionar el cuerpo, todos los puntos de flexion del
+esqueleto son mutilables":
+- **A limb comes off at any joint it bends at**: shoulder, elbow or wrist, hip, knee or
+  ankle; one cut already can be cut again nearer the trunk. With the blow that kills it is
+  the head, or the body in two at the waist. The game's body plan has no part for a hand, a
+  foot or the trunk yet: the trial adds them to it as it reads it
+- **Blood comes in jets out of the joint that was cut through**, in beats, until it is seen to
+- **Whoever is on the ground has stars going round their head**
+- **KO, large, when the last one falls**, before how it ended is told
+
+Decided without asking there: a limb cut anywhere is of no use, so that a hand gone is as an
+arm gone and a foot as a leg; they bleed by how many places they are open, not by how many
+parts are gone; and what they come back without is said by where each limb was cut nearest
+the trunk.
+
 Decided without asking, in the trial:
 - **A telling blow is never dodged**, and the fight goes on at a fifth of its pace while its
   mark is being stopped
