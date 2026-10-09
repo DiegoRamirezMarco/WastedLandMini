@@ -6144,6 +6144,14 @@ in the trial, with nothing asked:
 - **Bodies are the game's own over its own physics**; blood flies and stays on the ground;
   and bruises, blood and burns stay on the part of the body they fell on
 
+And on playing that: "hazlo en el mismo main con opciones en esc. la fuerza es demasiado fuerte
+y ni si quiera conectan, los golpes deben hacerse pegados el uno al otro no a distancia, al
+menos los cuerpo a cuerpo". Looked at frame by frame and put right in the trial:
+- **A blow is seen coming, is furthest out the moment it lands, and reaches**: whoever
+  strikes steps in by as much as it takes, with what they hold in their hand
+- **Blows throw a body about far less** than on the game's map, and it can be set
+- **Escape opens the options**, in place of what was typed at a prompt
+
 Decided without asking, in the trial:
 - **A telling blow is never dodged**, and the fight goes on at a fifth of its pace while its
   mark is being stopped
