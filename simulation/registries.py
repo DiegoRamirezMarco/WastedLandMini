@@ -36,6 +36,7 @@ from simulation.housing.decor import DecorSettings, decor_settings_from_data
 from simulation.housing.housing import HousingSettings, housing_settings_from_data
 from simulation.tutorial.tutorial import BUILDING, JOB, OBJECT, TutorialDefinition, tutorial_definition_from_data
 from simulation.work.craft import CraftSettings, craft_settings_from_data
+from simulation.work.finds import FindSettings, find_settings_from_data
 from simulation.work.construction import ConstructionSettings, construction_settings_from_data
 from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
@@ -169,6 +170,8 @@ class BuiltInRegistries:
     attributes: AttributeSettings = field(default_factory=AttributeSettings)
     # The levels of a job, and the kinds of thing each job teaches.
     crafts: CraftSettings = field(default_factory=CraftSettings)
+    # The kinds of thing nobody knows that turn up, and where from (S59).
+    finds: FindSettings = field(default_factory=FindSettings)
     injuries: dict[str, InjuryDefinition] = field(default_factory=dict)
     # Limbs a resident can lose for good, by limb ID.
     limbs: dict[str, LimbDefinition] = field(default_factory=dict)
@@ -298,6 +301,9 @@ class BuiltInRegistries:
         crafts_path = root / "crafts.json"
         if crafts_path.is_file():
             registries.crafts = craft_settings_from_data(_read_object(crafts_path))
+        finds_path = root / "finds.json"
+        if finds_path.is_file():
+            registries.finds = find_settings_from_data(_read_object(finds_path))
         attributes_path = root / "attributes.json"
         if attributes_path.is_file():
             registries.attributes = attribute_settings_from_data(_read_object(attributes_path))
@@ -395,6 +401,9 @@ class BuiltInRegistries:
         unknown = sorted(set(self.spoilage.compost_on) - set(self.interactables.kinds()))
         if unknown:
             raise ValueError(f"Compost is put on kinds of object there are not: {unknown}")
+        both = sorted(set(self.finds.kinds) & set(self.crafts.kinds))
+        if both:
+            raise ValueError(f"A kind of thing to find is called as one a job teaches: {both}")
         group, _, name = self.talk.order.partition(":")
         if self.talk.order and name not in self.affect.shared(group):
             raise ValueError(f"Who is told what to talk about is told something there is not: {self.talk.order}")

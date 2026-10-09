@@ -88,8 +88,10 @@ Event types emitted so far:
 | `fight_started` | Two residents come to blows | 60, plus up to 20 with resentment, plus 15 |
 | `injured` | A resident comes out of something hurt | 45 |
 | `trade_level` | A resident reaches a level of their job, with `resident_id`, `job` and `level` in `data` | 40 |
-| `discovery_made` | A level brings somebody something new that waits to be named, with `discovery`, `resident_id`, `job`, `kind` and `level` | 60 |
-| `discovery_named` | The player says what it is, with `discovery`, `resident_id`, `kind`, `item`, `name` and `choices` | 55 |
+| `discovery_made` | A level brings somebody something new that waits to be named, with `discovery`, `resident_id`, `job`, `kind` and `level`. Or something nobody knows has turned up (S59), with `source` and `units` in place of `job` and `level`, and no `resident_id` where nobody of the settlement found it | 60 |
+| `discovery_named` | The player says what it is, with `discovery`, `resident_id`, `kind`, `item`, `name` and `choices`, or `source` for what was found | 55 |
+| `find_brought` | What there was of something found is in the settlement now that it has a name, with `discovery`, `item`, `units` and `owner` (whose it is, or `null` for what waits at the gate) | 30 |
+| `thing_given` | The player puts a thing in a resident's hands, with `resident_id` and `item_id`. How they take it is a `taste_reaction` with `how` as `handed` | 20 |
 | `trade_taught`, `trade_lost` | Somebody learns a thing from whoever knows it (`discovery`, `teacher`, `learner`), or the last who knew one is gone (`discovery`, `resident_id`, `item`) | 40, 50 |
 | `thing_made` | A post that makes nothing of its own finishes one of what its worker has come to, with `item` and `container` | 10 |
 | `attribute_grew` | Somebody comes to a whole point more of an attribute by using it, with `resident_id`, `attribute` and `level` in `data` | 20 |

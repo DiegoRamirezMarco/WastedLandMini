@@ -151,16 +151,32 @@ class CraftSystem:
     # ----- what waits to be named, and naming it -----
 
     def waiting(self, world: "SimulationWorld") -> list[Discovery]:
-        """What residents who are still here have come to that the player has not named yet, oldest first."""
+        """What the player has not named yet, oldest first: what residents who are still here
+        have come to at their jobs, and what has been found (S59), whoever found it."""
         return [
             discovery
             for discovery in world.discoveries.values()
-            if not discovery.named and discovery.by in world.residents
+            if not discovery.named and (discovery.by in world.residents or discovery.source)
         ]
+
+    def kind_for(self, world: "SimulationWorld", discovery: Discovery) -> KindDefinition | None:
+        """The kind of thing a discovery is: one a job teaches, or, for what was found, one
+        of those there are to find."""
+        kinds = world.registries.finds.kinds if discovery.source else self.settings(world).kinds
+        return kinds.get(discovery.kind)
+
+    def preview(self, world: "SimulationWorld", discovery: Discovery) -> dict[str, Any] | None:
+        """The item a discovery will be, as the game has settled it, before it has a name:
+        with the first of whatever there is to pick. None for what is no thing."""
+        kind = self.kind_for(world, discovery)
+        if kind is None or kind.item is None:
+            return None
+        picked = {choice_id: options[0] for choice_id, options in self.options(world, discovery).items() if options}
+        return self._item_data(world, discovery, kind, picked)
 
     def options(self, world: "SimulationWorld", discovery: Discovery) -> dict[str, list[OptionDefinition]]:
         """What there is to pick for a discovery, by choice ID, as things stand."""
-        kind = self.settings(world).kinds.get(discovery.kind)
+        kind = self.kind_for(world, discovery)
         if kind is None:
             return {}
         found: dict[str, list[OptionDefinition]] = {}
@@ -193,7 +209,7 @@ class CraftSystem:
             return CraftResult(False, "No hay tal cosa que nombrar")
         if discovery.named:
             return CraftResult(False, f"Eso ya se llama {discovery.name}", discovery_id)
-        kind = settings.kinds.get(discovery.kind)
+        kind = self.kind_for(world, discovery)
         if kind is None:
             return CraftResult(False, "Ya no hay manera de hacer una cosa así", discovery_id)
         name = " ".join(str(name).split())[: settings.name_length].strip()
@@ -222,6 +238,22 @@ class CraftSystem:
                 discovery.name, discovery.choices, discovery.item = "", {}, {}
                 return CraftResult(False, f"No sale nada que sirva: {error}", discovery_id)
             discovery.item_id = discovery.item["id"]
+        if discovery.source:
+            # It was found, and nobody makes it: what there is of it is brought in (S59).
+            world.emit_event(
+                DomainEvent(
+                    NAMED_EVENT,
+                    NAMED_IMPORTANCE,
+                    f"Lo que nadie conocía ya tiene nombre: {name}",
+                    [discovery.by] if discovery.by in world.residents else [],
+                    data={
+                        "discovery": discovery_id, "resident_id": discovery.by, "kind": kind.kind_id,
+                        "item": discovery.item_id, "name": name, "source": discovery.source,
+                    },
+                )
+            )
+            world.finds.named(world, discovery)
+            return CraftResult(True, f"Se llama {name}", discovery_id)
         maker = world.residents.get(discovery.by)
         if maker is not None:
             maker.makes[discovery_id] = world.clock.day
@@ -279,7 +311,9 @@ class CraftSystem:
             "article": article_for(discovery.name),
             "category": str(spec["category"]),
             "base_value": max(0, round(_settle(own, spec.get("value", 0)) * better)),
-            "description": f"{_capital(kind.name)} de {discovery.by_name}.",
+            "description": (
+                world.finds.told(world, discovery) if discovery.source else f"{_capital(kind.name)} de {discovery.by_name}."
+            ),
             "tags": tags,
             "effects": effects,
             "properties": properties,
@@ -539,7 +573,13 @@ class CraftSystem:
                     data={"discovery": discovery_id, "resident_id": resident.resident_id, "item": discovery.item_id},
                 )
             )
-        for discovery_id in [each.discovery_id for each in world.discoveries.values() if not each.named and each.by == resident.resident_id]:
+        forgotten = [
+            each.discovery_id
+            for each in world.discoveries.values()
+            # What was found for everybody is still at the gate, whoever found it.
+            if not each.named and each.by == resident.resident_id and (not each.source or each.owner == resident.resident_id)
+        ]
+        for discovery_id in forgotten:
             del world.discoveries[discovery_id]
 
 

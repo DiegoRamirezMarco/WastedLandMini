@@ -5150,7 +5150,7 @@ Still open here:
 - A word has no gender or number: the patterns are written to read with any
 - Nobody makes up a word, a phrase or a name by themselves
 
-### S59 — Handed over, and found (needs S58 and S19) — planned
+### S59 — Handed over, and found (needs S58 and S19) — done
 - **A thing is put into a resident's hands by the player**, and how they take it is seen and
   said (S19)
 - **What is found outside may be something nobody knows**, which the player draws, names and
@@ -5166,6 +5166,58 @@ Asked on 2026-10-09, and answered:
 - **The player draws it and names it, and no more**: what it is and what it does is the
   game's to settle when it is found. Not the recommendation, which had the player say what
   kind of thing it is as well
+
+What there is, of which giving is on no screen until P65:
+- **A thing is put in a resident's hands** with `GiveCommand`: one unit of something that is
+  everybody's, out of wherever it is kept, the stores, a crate or the shop's counter, at once
+  and with nobody carrying it. It is theirs from then on, as rare and as fresh as it was
+- **They take it as their tastes have them** (S19), one of the five ways: it moves their
+  mood, it is said, `Marta se alegra de tener un guiso caliente`, something of their taste
+  for it shows, and they remember it, well or badly. Taken as it comes, nothing is said
+- **It is in the settlement's books**, as given
+- **Something nobody knows turns up now and then**, four ways: with whoever comes back from
+  outside, 15 times in a hundred and one to three of it; left as a sample by whoever comes to
+  trade, 30 in a hundred and one or two; inside something taken apart, 8 in a hundred; and
+  in the pockets of whoever comes to stay, 35 in a hundred, which is theirs
+- **The game settles what it is**, out of five kinds: something to eat, something to drink, a
+  knick-knack, a toy and a remedy. What it does, what it is worth and what it tastes of
+  come of a die of its own, the same for the same settlement and find, and can be had
+  before it is named (`CraftSystem.preview`). The kinds are data, `data/finds.json`, each
+  written as a kind a job teaches (S47) with nothing to pick
+- **It waits to be named** as what is come to at a job does, by the same command and with
+  the same event, `discovery_made`. Up to two wait, and while they do no more turn up
+- **Named, it is an item like any other.** What there was of it waits at the gate and is
+  carried in as what is bought is; what a newcomer brought goes into their hands. Nobody
+  makes it. If whoever found it has gone, what was for everybody still waits, and what was
+  their own went with them
+- **Two events**, `thing_given` and `find_brought`, and `source` on `discovery_made` and
+  `discovery_named`. Saved, version 50: where a discovery came from, how many of it wait
+  and whose they are
+- **None of it throws the settlement's dice**, and with nobody to name them finds change
+  nothing that happens: the same seed gives the same days with them and without
+
+Decided without asking:
+- **One unit at a time**, and out of anything that is everybody's wherever it is kept, the
+  shop's counter too. What is somebody's own in a chest is not the player's to give
+- **Giving moves nothing of what they make of the player**: the answer was that how it is
+  taken is seen and said, and it is. They are the gladder or the sorrier for it, and no more
+- **They remember it always**, the better or the worse by how they took it
+- **The four ways a thing comes in**, and how often by each. The answer was "de cualquier
+  sitio": these are the ways things come in from outside. What a job makes is come to at
+  the job, as it was (S47)
+- **What a caravan brings that nobody knows is left as a sample**, and costs nothing
+- **Five kinds, and none is a tool of a job or anything that gets hold of somebody**: a tool
+  is for a job, which is picked, and a vice needs working out that a name does not give
+- **There is none of it until it has a name**, so that nothing goes round without one
+- **No more than two wait at once**
+- **How good it is does not go by how much was risked for it** (S64)
+
+Still open here:
+- Giving is on no screen: P65
+- A thing cannot be taken back out of somebody's hands
+- Nobody gives the player's present away, or minds its being given to somebody else
+- What is found is never a tool, a vice or somewhere to go
+- A find nobody names waits for ever
 
 ### P62 — Words on screen (needs S58) — done
 What S58 brought, on screen. What S59 brings is P65.

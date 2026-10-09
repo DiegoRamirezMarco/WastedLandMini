@@ -862,6 +862,17 @@ nobody in it knows what they say, no dice are thrown for them and nothing is dec
   seeing it or being told. An owner who merely sees the empty spot knows something is missing,
   and is upset, but not who to blame.
 - Talking things out after a crisis gives stolen things back.
+- **Handed over** (S59). `GiveSystem.give` takes a unit of a thing that is nobody's own out of
+  whichever container holds one and puts it in a resident's hands as theirs, as rare and as
+  fresh as it was. They take it as `TasteSystem.react` has them, as a thing `handed`: there
+  is no giver to be fond of. It is written in the books as `given`, and remembered.
+- **Found** (S59). `FindSystem.maybe` is asked wherever things come in from outside: a
+  return from a trip, a caravan arriving, something taken apart, somebody come to stay. By
+  a die of its own, keyed by where, who and when, it now and then makes a `Discovery` with a
+  `source`: one of the kinds of `data/finds.json`, with so many `units` and, where whoever
+  found it keeps it, an `owner`. It waits to be named as what is come to at a job does, and
+  `CraftSystem.name` makes an item of it the same way; `FindSystem.named` then puts the
+  units at the gate, as the settlement's, or in the owner's hands. Nobody makes it.
 
 ## Tastes
 

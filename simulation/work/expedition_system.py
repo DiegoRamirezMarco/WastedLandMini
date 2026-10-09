@@ -175,6 +175,8 @@ class ExpeditionSystem:
                 world.stock(resident.inventory, item_id, 1, None, world.upgrades.found_level(world, dice, trip.risked))
             if units > 0:
                 world.ledger.record(world, item_id, units, FOUND, by=resident.resident_id)
+        # Now and then there is something among it that nobody knows (S59).
+        world.finds.maybe(world, "expedition", resident)
         said = f"{resident.name} vuelve de fuera con {haul}" if haul else f"{resident.name} vuelve de fuera de vacío"
         if kept is not None:
             mine = world.registries.items.resolve(kept)

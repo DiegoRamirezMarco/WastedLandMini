@@ -115,6 +115,11 @@ class Discovery:
     # is not a thing.
     item_id: str | None = None
     item: dict[str, Any] = field(default_factory=dict)
+    # For what was found and not come to at a job (S59): where it came from, how many of it
+    # there are until it is named, and whose they are then. Nobody's is the settlement's.
+    source: str = ""
+    units: int = 0
+    owner: str | None = None
 
     @property
     def named(self) -> bool:
@@ -167,7 +172,7 @@ def _option(option_id: str, data: Any, where: str) -> OptionDefinition:
     return option
 
 
-def _kind(kind_id: str, data: Any) -> KindDefinition:
+def kind_from_data(kind_id: str, data: Any) -> KindDefinition:
     if not isinstance(data, dict) or "name" not in data:
         raise ValueError(f"Kind {kind_id} of thing to learn needs a name")
     item = data.get("item")
@@ -206,7 +211,7 @@ def _kind(kind_id: str, data: Any) -> KindDefinition:
 
 def craft_settings_from_data(data: dict[str, Any]) -> CraftSettings:
     defaults = CraftSettings()
-    kinds = {str(kind_id): _kind(str(kind_id), values) for kind_id, values in data.get("kinds", {}).items()}
+    kinds = {str(kind_id): kind_from_data(str(kind_id), values) for kind_id, values in data.get("kinds", {}).items()}
     jobs = {str(job_id): str(kind_id) for job_id, kind_id in data.get("jobs", {}).items()}
     unknown = sorted(set(jobs.values()) - set(kinds))
     if unknown:

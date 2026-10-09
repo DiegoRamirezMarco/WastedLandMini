@@ -556,6 +556,26 @@ looks and nothing of what happens.
 - What a made item is good for is its data: `speed` on a tool, `dose` and `mends_<injury>` on
   a medicine, `armour`, and `damage` and `raid` on a weapon.
 
+## Finds
+
+`data/finds.json` is what turns up that nobody knows, and where from. Without the file
+nothing ever does.
+
+- `kinds` lists the kinds of thing there are to find, each written as a kind of
+  `data/crafts.json` with an `item` and no `choices`: the game settles all of it, and the
+  player gives it a name and a drawing. `ask` is what the player is told it is, and `weight`
+  how often it turns up beside the others. A kind here cannot be called as one there.
+- `sources` are the ways a thing comes in: `expedition`, `caravan`, `salvage` and
+  `newcomer` are the ones the game asks at. Each has a `chance` from 0 to 1, how many
+  `units` come as a pair of numbers, what is said when it turns up (`found`) and what is
+  said of the thing ever after (`told`), both with `{name}` for whoever found it, and
+  `keeps` where it is theirs and not the settlement's.
+- `most_waiting` is how many may wait to be named before no more turn up, and `nobody` who is
+  said to have found what nobody in particular did.
+
+How a thing put in somebody's hands by the player is said to be taken is `lines.handed` in
+`data/tastes.json`, by reaction, with `{name}` and `{thing}`.
+
 ## Jobs
 
 `data/jobs.json` defines the settlement's posts:

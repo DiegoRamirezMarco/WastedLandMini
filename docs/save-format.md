@@ -8,7 +8,7 @@ Never save render-only state. Store stable IDs for residents, item definitions a
 
 | Field | Content |
 |---|---|
-| `version` | `49` |
+| `version` | `50` |
 | `clock` | Day, hour, minute, tick size, paused, speed |
 | `rng` | Seed and generator state, so randomness continues where it left off |
 | `event_rng` | The same for the generator that world events are rolled with |
@@ -88,6 +88,10 @@ them after the map definition was loaded.
 - **Version 33** added `tile` and `cart` to `merchant`. Whoever was at the gate in an older
   save is found a place as they would be on coming. A place that is not two whole numbers
   is none.
+- **Version 50** added `source`, `units` and `owner` on a discovery (S59): where something
+  that was found came from, how many of it wait to be named and whose they are then.
+  In a save from before every discovery was come to at a job. A discovery with a `source`
+  is kept if its kind is one of those there are to find.
 - **Version 49** added `words`, and `about`, `about_text`, `brought` and `began_at` on an
   activity (S58). A save from before has no words and no talk under way is about anything.
   Whatever of `words` is not as it should be is left out: a word without its ID or its

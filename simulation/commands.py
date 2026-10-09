@@ -7,6 +7,7 @@ from simulation.economy.power import PowerResult
 from simulation.economy.spoilage import SpoilResult
 from simulation.economy.terms import TradeResult
 from simulation.housing.housing import HousingResult
+from simulation.items.giving import GiveResult
 from simulation.justice.justice_system import JusticeResult
 from simulation.politics.government import PoliticsResult
 from simulation.social.talk import TalkResult
@@ -204,6 +205,9 @@ class CommandTarget(Protocol):
         ...
 
     def name_discovery(self, discovery_id: str, name: str, choices: Mapping[str, str] | None = None) -> CraftResult:
+        ...
+
+    def give(self, resident_id: str, definition_id: str) -> GiveResult:
         ...
 
     def accuse(self, accused_id: str, fact_id: str | None = None) -> JusticeResult:
@@ -921,6 +925,20 @@ class SetIdentityCommand:
     def apply(self, world: CommandTarget) -> bool:
         """Returns whether they are now so: there must be such a resident, and it must make sense."""
         return world.set_identity(self.resident_id, self.sex, self.gender, self.drawn_to)
+
+
+@dataclass(frozen=True)
+class GiveCommand:
+    """The player puts a thing in a resident's hands (S59): one unit of something that is
+    everybody's, out of wherever it is kept, at once and with nobody carrying it. It is theirs
+    from then on, and they take it as their tastes have them. The result says why not where
+    it cannot be: nobody there, or none of it that is everybody's."""
+
+    resident_id: str
+    item_id: str
+
+    def apply(self, world: CommandTarget) -> GiveResult:
+        return world.give(self.resident_id, self.item_id)
 
 
 @dataclass(frozen=True)

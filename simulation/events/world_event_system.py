@@ -390,6 +390,8 @@ class WorldEventSystem:
             at=resident.tile,
             fact_text=f"{newcomer.name} llegó al asentamiento",
         )
+        # They may have something of their own with them that nobody here knows (S59).
+        world.finds.maybe(world, "newcomer", resident)
         return resident
 
     # ----- whether and how -----

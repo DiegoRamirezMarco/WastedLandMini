@@ -12,6 +12,8 @@ HATED, DISLIKED, NEUTRAL, LIKED, LOVED = "hated", "disliked", "neutral", "liked"
 REACTIONS = (HATED, DISLIKED, NEUTRAL, LIKED, LOVED)
 # What a reaction is to: a meal, a drink, a thing used, a thing handed over.
 EATEN, DRUNK, USED, GIVEN = "eaten", "drunk", "used", "given"
+# A thing put in their hands by the player, who is nobody to be fond of for it (S59).
+HANDED = "handed"
 UNKNOWN, SUSPECTED, KNOWN = "unknown", "suspected", "known"
 # What may be passing between two people when a taste in people comes into it: any friendly
 # exchange, a piece of gossip, or being told what to do.

@@ -30,6 +30,7 @@ from simulation.health.health_system import HealthSystem
 from simulation.health.injury import Death
 from simulation.items.inventory import Inventory
 from simulation.items.item import ItemInstance
+from simulation.items.giving import GiveResult, GiveSystem
 from simulation.items.item_system import ItemSystem
 from simulation.items.theft import TheftAttempt
 from simulation.knowledge.fact import Fact, KnowledgeStore
@@ -62,6 +63,7 @@ from simulation.tutorial.tutorial import TutorialState
 from simulation.tutorial.tutorial_system import TutorialSystem
 from simulation.work.craft import CraftResult, Discovery
 from simulation.work.craft_system import CraftSystem
+from simulation.work.finds import FindSystem
 from simulation.work.construction import ConstructionSystem
 from simulation.work.upgrades import NOBODY_KEEPS, UpgradeSystem
 from simulation.work.wear import WearSystem
@@ -100,6 +102,9 @@ class SimulationWorld:
     activities: ActivitySystem = field(default_factory=ActivitySystem)
     attributes: AttributeSystem = field(default_factory=AttributeSystem)
     crafts: CraftSystem = field(default_factory=CraftSystem)
+    # What turns up that nobody knows, and things put in somebody's hands by the player (S59).
+    finds: FindSystem = field(default_factory=FindSystem)
+    giving: GiveSystem = field(default_factory=GiveSystem)
     # What residents have come to at their jobs, by discovery ID: named by the player, or waiting to be.
     discoveries: dict[str, Discovery] = field(default_factory=dict)
     discovery_count: int = 0
@@ -488,6 +493,10 @@ class SimulationWorld:
         """Take in the player's first resident. Returns their ID, or None if there is already someone."""
         resident = found_resident(self, name, age, personality, traits, manners, identity, attributes)
         return resident.resident_id if resident is not None else None
+
+    def give(self, resident_id: str, definition_id: str) -> GiveResult:
+        """Put in a resident's hands a unit of a thing that is everybody's (S59)."""
+        return self.giving.give(self, resident_id, definition_id)
 
     def name_discovery(self, discovery_id: str, name: str, choices: Mapping[str, str] | None = None) -> CraftResult:
         """Say what something a resident has come to at their job is called, and what is picked of it."""

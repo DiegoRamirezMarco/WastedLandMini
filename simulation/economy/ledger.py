@@ -23,9 +23,9 @@ if TYPE_CHECKING:
 MADE, FOUND, SALVAGED, BOUGHT, ARRIVED, RETURNED, HANDED = (
     "made", "found", "salvaged", "bought", "arrived", "returned", "handed",
 )
-EATEN, DRUNK, USED, BURNT, DOSED, BUILT, STUDIED, MENDED, SOLD, RATIONED, SPOILED, RAIDED, STOLEN, TAKEN = (
+EATEN, DRUNK, USED, BURNT, DOSED, BUILT, STUDIED, MENDED, SOLD, RATIONED, SPOILED, RAIDED, STOLEN, TAKEN, GIVEN = (
     "eaten", "drunk", "used", "burnt", "dosed", "built", "studied", "mended", "sold", "rationed", "spoiled",
-    "raided", "stolen", "taken",
+    "raided", "stolen", "taken", "given",
 )
 # What the count at the end of a day found that nothing written down accounts for.
 OTHER = "other"

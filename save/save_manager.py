@@ -165,7 +165,7 @@ FIRST_TILE_VERSION = 2
 
 
 class SaveManager:
-    CURRENT_VERSION = 49
+    CURRENT_VERSION = 50
 
     def save(self, world: SimulationWorld, path: Path) -> None:
         path.write_text(json.dumps(self.to_data(world), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -741,8 +741,10 @@ class SaveManager:
     def _restore_discoveries(self, world: SimulationWorld, data: dict[str, Any]) -> None:
         """Put back what residents have come to at their jobs, and the items that were made of
         it, before anything that may be one of them is. A save from before has none."""
-        kinds = world.registries.crafts.kinds
         for saved in _list_or_empty(data.get("discoveries")):
+            # What was found (S59) is one of the kinds there are to find, and the rest one a job teaches.
+            found = isinstance(saved, dict) and bool(saved.get("source"))
+            kinds = world.registries.finds.kinds if found else world.registries.crafts.kinds
             if not isinstance(saved, dict) or "discovery_id" not in saved or saved.get("kind") not in kinds:
                 # A kind of thing that is no longer defined cannot be made, and is forgotten.
                 continue
@@ -758,6 +760,9 @@ class SaveManager:
                 choices={str(key): str(value) for key, value in _object_or_empty(saved.get("choices")).items()},
                 item_id=_text_or_none(saved.get("item_id")),
                 item=dict(_object_or_empty(saved.get("item"))),
+                source=str(saved.get("source") or ""),
+                units=max(0, int(saved["units"])) if isinstance(saved.get("units"), int) else 0,
+                owner=_text_or_none(saved.get("owner")),
             )
             world.discoveries[discovery.discovery_id] = discovery
         world.discovery_count = max(int(data.get("discovery_count", 0)), len(world.discoveries))

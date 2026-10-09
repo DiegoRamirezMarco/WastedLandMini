@@ -193,6 +193,8 @@ class SalvageSystem:
         world.urbanism.invalidate_routes(world, tiles, target_ids={placed.object_id})
         world.stock(resident.inventory, rule.item, rule.units, None)
         world.ledger.record(world, rule.item, rule.units, SALVAGED, by=resident.resident_id)
+        # Something nobody knows may have been inside (S59).
+        world.finds.maybe(world, "salvage", resident)
         self._leave(resident)
         world.emit_event(
             DomainEvent(

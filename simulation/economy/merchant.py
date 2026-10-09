@@ -116,6 +116,8 @@ class MerchantSystem:
             fact_text=f"hay {definition.name} en la puerta",
             expires_at=leaves_at,
         )
+        # Whoever trades far and wide may leave something nobody here has seen (S59).
+        world.finds.maybe(world, "caravan", by_name=definition.name)
         if fact is None:
             return
         world.merchant.fact_id = fact.fact_id

@@ -102,6 +102,12 @@
       "liked": "{name} agradece {thing} a {giver}",
       "loved": "{name} recibe {thing} de {giver} con una alegría enorme"
     },
+    "handed": {
+      "hated": "{name} recibe {thing} con mala cara",
+      "disliked": "{name} recibe {thing} sin entusiasmo",
+      "liked": "{name} se alegra de tener {thing}",
+      "loved": "{name} recibe {thing} con una alegría enorme"
+    },
     "mentioned": {
       "hated": "{name} le cuenta a {other} que detesta {label}",
       "disliked": "{name} le cuenta a {other} que evita {label}",
