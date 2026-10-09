@@ -11,6 +11,7 @@ from scenes.expedition_view import AHEAD, LEAVE_TRIP_INTENT, NOWHERE
 from settings import SCALE
 from simulation.commands import SetPausedCommand, SetSpeedCommand
 from simulation.events.world_event import Weather
+from simulation.work.expedition import Expedition
 from simulation.world import SimulationWorld
 from ui.labels import TRIP_HOME, describe_span, trip_ends, trip_lines
 from ui.trip_bar import face_spot, trip_bar_height, way_ends
@@ -214,7 +215,7 @@ class _Shell(unittest.TestCase):
     def _watch(self) -> None:
         """Press the face of whoever is out, in the corner of the map."""
         self.view.render()
-        self.assertEqual(list(self.view.away_boxes), ["sergio"])
+        self.assertIn("sergio", self.view.away_boxes)
         self.view.click(self.view.away_boxes["sergio"].center)
 
     def _frames(self, count: int = 30) -> None:
@@ -238,8 +239,9 @@ class TripScreenTests(_Shell):
         self.view.render()
         self.assertIsNone(self.view.outside)
         self.assertIsNotNone(self.hud.minimap_rect)
-        self.assertNotIn(self.trips.leave_button, self.trips.buttons()[1:])
         self._watch()
+        self.assertEqual(self.trips.click(self.trips.leave_button.rect.center), LEAVE_TRIP_INTENT)
+        self.assertIsNone(self.trips.click(self.view.viewport.center))
         self.assertEqual((self.view.outside, self.hud.selected_id), ("sergio", "sergio"))
         self.assertIsNone(self.hud.minimap_rect, "there is no map out there to find the way on")
         self.view.render()
@@ -254,6 +256,27 @@ class TripScreenTests(_Shell):
         self.assertIsNotNone(self.hud.minimap_rect)
         self.view.render()
         self.assertNotEqual(self.view.in_view(), (set(), []))
+
+    def test_with_two_out_they_are_seen_one_at_a_time_and_the_faces_say_which(self) -> None:
+        now = self.world.clock.total_minutes
+        marta = self.world.residents["marta"]
+        marta.expedition = Expedition(returns_at=now + 200, finds=1, danger=0.0, left_at=now - 200, turns_at=now - 10)
+        self._watch()
+        self.view.render()
+        self.assertEqual(set(self.view.away_boxes), {"sergio", "marta"})
+        self.assertGreater(self.view.hitboxes["sergio"].height, 60, "whoever is watched is picked where they walk")
+        self.assertEqual(self.view.hitboxes["marta"], self.view.away_boxes["marta"])
+        self.assertFalse(self.trips.heading_back(self.sergio))
+        # The other face is the other trip, without going back to the map for it.
+        self.view.click(self.view.away_boxes["marta"].center)
+        self.assertEqual((self.view.outside, self.hud.selected_id), ("marta", "marta"))
+        self._frames(2)
+        self.assertGreater(self.view.hitboxes["marta"].height, 60)
+        self.assertTrue(self.trips.heading_back(marta))
+        self.assertAlmostEqual(self.trips.lead, 1.0 - AHEAD, places=2, msg="found facing home, and not brought across")
+        self.assertEqual(trip_lines(self.world, marta)[0], "Marta vuelve al asentamiento")
+        self.view.click(self.view.away_boxes["sergio"].center)
+        self.assertEqual(self.view.outside, "sergio")
 
     def test_only_whoever_is_out_can_be_watched(self) -> None:
         self.assertFalse(self.view.watch("marta"))
