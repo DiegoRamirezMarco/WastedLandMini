@@ -6131,6 +6131,19 @@ of its own that is not pushed anywhere, to be played and judged first:
 - **`main.py` shows it from the side** with the game's own backdrops and dolls, read and
   never written; `simulate.py` says how fights come out unwatched, zone by zone
 
+Asked for on seeing it, the same day: "los combates cuerpo a cuerpo deben de estar pegados
+incluso poder meter sangre y moratones seria espectacular... si el combate tuviese fisicas
+podrian hasta desestavilizarse y caer", and "vamos a probar version con CC y pistola". Built
+in the trial, with nothing asked:
+- **There is ground between them**, and a weapon for the hand has to be carried right up to
+  whoever it is used on. What is fired is fired from where they stand
+- **A weapon for the hand and something to fire, both at once**: they fire while there is
+  ground between and strike once there is none. Read so, and not as two fights to compare
+- **A hard blow makes them reel and a harder one puts them on the ground**, by how much of
+  what they can take it was. A telling blow at close quarters always floors
+- **Bodies are the game's own over its own physics**; blood flies and stays on the ground;
+  and bruises, blood and burns stay on the part of the body they fell on
+
 Decided without asking, in the trial:
 - **A telling blow is never dodged**, and the fight goes on at a fifth of its pace while its
   mark is being stopped
