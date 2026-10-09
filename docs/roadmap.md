@@ -6220,6 +6220,11 @@ esqueleto son mutilables":
 - **Whoever is on the ground has stars going round their head**
 - **KO, large, when the last one falls**, before how it ended is told
 
+And: "extremidades mas pequeñas son mas probables que las grandes (mano > hombro)":
+- **The smaller the part, the likelier it is the one that comes off**: a hand or a foot four
+  times as often as a whole arm or leg, a forearm or half a leg twice. Decided without
+  asking: a head three times as often as the body in two
+
 Decided without asking there: a limb cut anywhere is of no use, so that a hand gone is as an
 arm gone and a foot as a leg; they bleed by how many places they are open, not by how many
 parts are gone; and what they come back without is said by where each limb was cut nearest
