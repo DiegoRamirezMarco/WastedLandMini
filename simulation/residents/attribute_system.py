@@ -191,14 +191,16 @@ class AttributeSystem:
 
     def training(self, world: "SimulationWorld", resident: Resident) -> tuple[str, float] | None:
         """What a resident is training right now and how far along the next point of it they
-        are, from 0 to 1. None for whoever is not at a thing to train at."""
+        are, from 0 to 1. None for whoever is not at a thing to train at, and for whoever
+        is at one for something else it offers (S60): a game of darts trains nothing."""
         activity = resident.activity
         if activity is None or not activity.using or activity.path:
             return None
-        name = self.trains(world, world.interactables.get(activity.target_id or ""))
-        if name is None:
+        placed = world.interactables.get(activity.target_id or "")
+        use = world.definition_of(placed).use_named(activity.action) if placed is not None else None
+        if use is None or use.trains not in ATTRIBUTES:
             return None
-        return name, self.raw(world, resident, name) % 1.0
+        return use.trains, self.raw(world, resident, use.trains) % 1.0
 
     def tick_day(self, world: "SimulationWorld") -> None:
         """A day of leading tells on whoever leads."""

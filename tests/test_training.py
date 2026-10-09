@@ -12,6 +12,7 @@ from save.save_manager import SaveManager
 from simulation.ai.affect import TASK, TRAIN
 from simulation.commands import AffectCommand, PutDownCommand
 from simulation.registries import DATA_DIR, BuiltInRegistries
+from simulation.residents.activity import Activity
 from simulation.residents.attribute_system import GREW_EVENT
 from simulation.residents.attributes import ATTRIBUTES, Attributes
 from simulation.residents.needs import Needs
@@ -154,10 +155,32 @@ class TrainingTests(unittest.TestCase):
         world = self.world
         for index, kind in enumerate(FOR):
             _stand(world, kind, object_id=f"gym_{index}")
+        gyms = {f"gym_{index}" for index in range(len(FOR))}
+        passed = set()
         for _ in range(2 * DAY):
             world.step(1)
-            self.assertFalse(any(world.users_of(f"gym_{index}") for index in range(len(FOR))), world.clock.label)
-        self.assertFalse(any(world.attributes.training(world, each) for each in world.residents.values()))
+            # Whoever is at one of them is passing the time there (S60), which trains nothing.
+            self.assertFalse(any(world.attributes.training(world, each) for each in world.residents.values()), world.clock.label)
+            passed |= {
+                each.activity.action for each in world.residents.values() if each.activity is not None and each.activity.target_id in gyms
+            }
+        self.assertNotIn("train", passed)
+
+    def test_whoever_passes_the_time_at_one_of_them_trains_nothing(self) -> None:
+        world, raul = self.world, self.raul
+        target = _stand(world, "target", object_id="gym_target")
+        self.assertIsNotNone(world.definition_of(target).use_named("darts"))
+        aim = world.attributes.trains(world, target)
+        before = world.attributes.raw(world, raul, aim)
+        raul.activity = Activity("darts", target.object_id, minutes_left=20, using=True)
+        self.assertIsNone(world.attributes.training(world, raul))
+        for _ in range(10):
+            world.step(1)
+            raul.needs.hunger = raul.needs.thirst = 0.0
+        self.assertEqual(raul.activity.action, "darts")
+        self.assertEqual(world.attributes.raw(world, raul, aim), before)
+        raul.activity = Activity("train", target.object_id, minutes_left=20, using=True)
+        self.assertEqual(world.attributes.training(world, raul)[0], aim)
 
     def test_a_thing_takes_an_attribute_as_far_as_it_is_good_and_no_further(self) -> None:
         world, raul = self.world, self.raul
