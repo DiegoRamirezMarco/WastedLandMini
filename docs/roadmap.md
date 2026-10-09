@@ -6152,6 +6152,20 @@ menos los cuerpo a cuerpo". Looked at frame by frame and put right in the trial:
 - **Blows throw a body about far less** than on the game's map, and it can be set
 - **Escape opens the options**, in place of what was typed at a prompt
 
+And then: "mete que puedan empujar, un critico puede derribar o desmembrar una parte (cabeza
+solo si el critico lo mata) los desmembramientos bajan de poco en poco la vida porque pierden
+sangre". In the trial:
+- **A shove**, right up to somebody: next to no harm, but they go back, late with their next
+  blow, and may go down. Raiders shove too
+- **A telling blow floors or takes a part off**, by the weapon and by how well its mark was
+  stopped: an arm or a leg, and a head only with the blow that kills
+- **Whoever has lost a part bleeds a little every second** for each part gone, and is the
+  worse at what that part was for. A medkit stops it
+
+Decided without asking there: bare hands take nothing off; whoever carries something to
+fire shoves by themselves to get room, and anybody else only when told; raiders land no
+telling blows, so the hero loses no part in a fight; and with no leg left nobody gets up.
+
 Decided without asking, in the trial:
 - **A telling blow is never dodged**, and the fight goes on at a fifth of its pace while its
   mark is being stopped
