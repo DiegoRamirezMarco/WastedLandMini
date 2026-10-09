@@ -863,7 +863,7 @@ class InteriorView:
             # Whoever sleeps on the floor in here lies down on it as they would outside.
             clip, phase = rough if rough is not None else (clip, turn % 1.0)
             character.stand(*ground_spot(x, y), facing, clip, phase, overlay)
-            shown = view._shown(resident.resident_id, doll, yaw, clip, gone)
+            shown = view._shown(resident.resident_id, doll, yaw, clip, gone, view._look_of(resident, rough is not None))
             pose = character.local_pose()
             if shown is not None:
                 pose = view.figures.posed(shown, pose, facing)
@@ -976,7 +976,7 @@ class InteriorView:
         across, down = layout.cell / TILE_SIZE, layout.depth / TILE_SIZE
         bed = pygame.Rect(left, top, definition.width * layout.cell, definition.height * layout.depth)
         doll = view._doll_for(resident)
-        lying = view._shown(resident.resident_id, doll) if doll is not None else None
+        lying = view._shown(resident.resident_id, doll, look=view._eyes_shut()) if doll is not None else None
         if lying is not None:
             # With whatever face they have been given on.
             doll = lying.doll

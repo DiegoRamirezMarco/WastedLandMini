@@ -13,13 +13,19 @@ goes round with it. That is a first guess and no more, there to be put right by 
 
 Which pieces there are, how large their paper is and how each goes round is data, in
 `data/face.json`.
+
+A face moves (`FaceLook`): its eyes shut, its mouth opens, and its brows and its mouth say how
+whoever wears it feels. All of that is worked out from the one drawing of each piece: an eye
+is brought down to a line, a mouth is made taller, a brow leans, the ends of a mouth go up or
+down. An eye shut and a mouth open may be drawn too, each on a paper of its own, and where one
+has been it is that and not the rule. How far each thing goes is data as well (`moves`).
 """
 
 import copy
 import json
 import logging
 import math
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -81,6 +87,89 @@ EAR_TURNED_FROM = 135.0
 WIDTH_STEP = 4
 NARROWEST, WIDEST = 0.2, 2.0
 CLEAR = (0, 0, 0, 0)
+# What a paper that stands for a piece moved one way is for: an eye shut, a mouth open.
+SHUT, OPEN = "shut", "open"
+# Which end of a brow as it is drawn is the one nearer the nose: its right, since the one
+# drawn is the one on the left of the paper. A brow that leans has that end up.
+INNER_END = 1.0
+
+
+@dataclass(frozen=True)
+class FaceLook:
+    """What a face is doing: how far its eyes are shut and its mouth is open, each in so many
+    steps from not at all, and how whoever wears it feels. Nothing of it said, it is the face
+    as it was drawn."""
+
+    lids: int = 0
+    mouth: int = 0
+    mood: str = ""
+
+    def __bool__(self) -> bool:
+        return bool(self.lids or self.mouth or self.mood)
+
+
+@dataclass(frozen=True)
+class Shift:
+    """How a piece is moved to say how somebody feels: how far it leans, in degrees, the end
+    nearer the nose up; how far up it goes, as a share of how tall its paper is; and how far
+    its ends are bent down, the same way, its middle going up a third as far."""
+
+    tilt: float = 0.0
+    lift: float = 0.0
+    bend: float = 0.0
+
+
+@dataclass(frozen=True)
+class FaceMoves:
+    """How a face moves by rule. By kind of piece, how wide and how tall it is at each step
+    of shutting and of opening, against how it was drawn; by feeling and by kind of piece,
+    how it is moved; and which kinds of piece the face of a body nobody has drawn has."""
+
+    shut: dict[str, tuple[tuple[float, float], ...]] = field(default_factory=dict)
+    open: dict[str, tuple[tuple[float, float], ...]] = field(default_factory=dict)
+    moods: dict[str, dict[str, Shift]] = field(default_factory=dict)
+    plain: tuple[str, ...] = ()
+    # What each feeling is called, where it is offered to be looked at.
+    mood_names: dict[str, str] = field(default_factory=dict)
+    # What a piece shut all the way is by rule, in place of itself brought down to nothing:
+    # a line as wide as it was drawn, the darkest colour it has, so thick and sagging so far
+    # in its middle, both as shares of how tall its paper is. No line with no thickness.
+    lid_thick: float = 0.0
+    lid_sag: float = 0.0
+    # Between how many and how many seconds a face blinks, each its own, and how long a
+    # blink lasts. How many steps of opening and shutting a mouth goes through in a second
+    # of speaking, and of chewing, which opens it no more than the first step.
+    blink_every: tuple[float, float] = (0.0, 0.0)
+    blink_lasts: float = 0.0
+    talk_rate: float = 0.0
+    chew_rate: float = 0.0
+
+    def lids_at(self, seconds: float, own: float) -> int:
+        """How far shut the eyes of a face are at a moment, by blinking: `own` is somewhere
+        from nothing to one, and each face has its own, so that no two blink together."""
+        steps = self.steps(SHUT)
+        least, most = self.blink_every
+        if not steps or self.blink_lasts <= 0 or least <= 0:
+            return 0
+        every = least + (most - least) * own
+        into = (seconds + every * own) % every / self.blink_lasts
+        if into >= 1.0:
+            return 0
+        # Shut in the middle of it, and on the way there and back before and after.
+        return steps if 1 / 3 <= into < 2 / 3 else max(1, steps - 1)
+
+    def mouth_at(self, seconds: float, own: float, chewing: bool = False) -> int:
+        """How far open the mouth of a face is at a moment of speaking, or of chewing."""
+        steps = min(1, self.steps(OPEN)) if chewing else self.steps(OPEN)
+        rate = self.chew_rate if chewing else self.talk_rate
+        if not steps or rate <= 0:
+            return 0
+        there_and_back = [*range(steps + 1), *range(steps - 1, 0, -1)]
+        return there_and_back[int((seconds + own) * rate) % len(there_and_back)]
+
+    def steps(self, which: str) -> int:
+        """In how many steps a face shuts its eyes, or opens its mouth."""
+        return max((len(steps) for steps in (self.shut if which == SHUT else self.open).values()), default=0)
 
 
 @dataclass(frozen=True)
@@ -171,10 +260,18 @@ class FaceKind:
     # behind it: the two are one head of hair, with one line round the two of them and none
     # between them. Seen from the front nothing opens, and it opens by degrees as the head turns.
     opens_on: str = ""
+    # A kind of piece that this one is another drawing of, and of that piece doing what: an
+    # eye shut, a mouth open. It is no piece of its own, and has no place on the head: where
+    # it has been drawn it is shown in place of the other when the other is doing that.
+    stands_for: str = ""
+    when: str = ""
 
     @property
     def instances(self) -> tuple[str, ...]:
-        """What each of its pieces on a head is called: one, or the two of a pair."""
+        """What each of its pieces on a head is called: one, or the two of a pair. None for a
+        paper that is another drawing of a piece."""
+        if self.stands_for:
+            return ()
         return (f"{self.kind_id}_{NEAR}", f"{self.kind_id}_{FAR}") if self.paired else (self.kind_id,)
 
 
@@ -243,6 +340,11 @@ class FaceRules:
     # How near the edge of the head, in halves of its width, the far edge of a flat piece may come.
     inside: float
     body: BodyTurn
+    moves: FaceMoves = FaceMoves()
+
+    def drawn_as(self, kind_id: str, when: str) -> FaceKind | None:
+        """The paper that is another drawing of a kind of piece doing something, if there is one."""
+        return next((kind for kind in self.kinds.values() if kind.stands_for == kind_id and kind.when == when), None)
 
     def kind_of(self, instance: str) -> FaceKind:
         return self.kinds[instance.removesuffix(f"_{NEAR}").removesuffix(f"_{FAR}")]
@@ -281,11 +383,15 @@ def rules_from_data(data: dict[str, Any]) -> FaceRules:
             behind=bool(values.get("behind", False)), under_body=bool(values.get("under_body", False)),
             comes_over_behind=str(values.get("comes_over_behind", "")),
             opens_on=str(values.get("opens_on", "")),
+            stands_for=str(values.get("stands_for", "")),
+            when=str(values.get("when", "")),
         )
     for kind in kinds.values():
-        for marker in (kind.comes_over_behind, kind.opens_on):
+        for marker in (kind.comes_over_behind, kind.opens_on, kind.stands_for):
             if marker and marker not in kinds:
                 raise ValueError(f"{kind.kind_id} goes by a kind of piece there is not: {marker}")
+        if kind.stands_for and (kind.when not in (SHUT, OPEN) or kinds[kind.stands_for].paper != kind.paper):
+            raise ValueError(f"{kind.kind_id} is no drawing of {kind.stands_for} shut or open on paper of its size")
     views = {str(view): float(yaw) for view, yaw in data["views"].items()}
     if views.get(FRONT) != 0.0 or len(set(views.values())) != len(views):
         raise ValueError("A face needs a view from the front, at no turn at all, and no two views at the same turn")
@@ -312,7 +418,41 @@ def rules_from_data(data: dict[str, Any]) -> FaceRules:
     )
     return FaceRules(
         kinds, views, names, max(1, int(data.get("steps", 12))), float(data.get("flat", 0.75)),
-        float(data.get("inside", 0.97)), turn,
+        float(data.get("inside", 0.97)), turn, moves_from_data(data.get("moves", {}), kinds),
+    )
+
+
+def moves_from_data(data: dict[str, Any], kinds: dict[str, FaceKind]) -> FaceMoves:
+    def steps(which: str) -> dict[str, tuple[tuple[float, float], ...]]:
+        found = {}
+        for kind_id, sizes in data.get(which, {}).items():
+            if kind_id not in kinds:
+                raise ValueError(f"A face moves a kind of piece there is not: {kind_id}")
+            found[str(kind_id)] = tuple((max(0.05, float(wide)), max(0.05, float(tall))) for wide, tall in sizes)
+        return found
+
+    moods, names = {}, {}
+    for mood, by_kind in data.get("moods", {}).items():
+        moods[str(mood)] = {}
+        names[str(mood)] = str(by_kind.get("name", mood))
+        for kind_id, shift in by_kind.items():
+            if kind_id == "name":
+                continue
+            if kind_id not in kinds:
+                raise ValueError(f"A face moves a kind of piece there is not: {kind_id}")
+            moods[str(mood)][str(kind_id)] = Shift(
+                float(shift.get("tilt", 0.0)), float(shift.get("lift", 0.0)), float(shift.get("bend", 0.0))
+            )
+    plain = tuple(str(kind_id) for kind_id in data.get("plain", ()))
+    for kind_id in plain:
+        if kind_id not in kinds:
+            raise ValueError(f"A plain face has a kind of piece there is not: {kind_id}")
+    lid, blink, talk = data.get("lid", {}), data.get("blink", {}), data.get("talk", {})
+    every = blink.get("every", (0.0, 0.0))
+    return FaceMoves(
+        steps(SHUT), steps(OPEN), moods, plain, names, float(lid.get("thick", 0.0)), float(lid.get("sag", 0.0)),
+        (float(every[0]), float(every[1])), float(blink.get("lasts", 0.0)),
+        float(talk.get("rate", 0.0)), float(talk.get("chew", 0.0)),
     )
 
 
@@ -399,7 +539,8 @@ class Face:
             self.drawings[kind.kind_id] = paper
         # By piece and by view: only where somebody has said. The rest is worked out.
         self.keys: dict[str, dict[str, Key]] = {piece: dict(views) for piece, views in (keys or {}).items()}
-        self._sized: dict[tuple[str, bool, int], pygame.Surface] = {}
+        self._sized: dict[tuple, pygame.Surface] = {}
+        self._moved: dict[tuple, pygame.Surface] = {}
         self._painted: dict[str, pygame.Rect] = {}
         # How many times it has changed, drawing or place: whoever shows it elsewhere goes by this.
         self.revision = 0
@@ -407,6 +548,7 @@ class Face:
     def touch(self) -> None:
         """Say that a drawing has changed: nothing made from the drawings is kept."""
         self._sized.clear()
+        self._moved.clear()
         self._painted.clear()
         self.revision += 1
 
@@ -420,6 +562,54 @@ class Face:
     def drawn(self) -> bool:
         """Whether any piece has been drawn at all."""
         return any(self.painted(kind_id).width for kind_id in self.drawings)
+
+    def doing(self, kind_id: str, look: "FaceLook | None") -> tuple:
+        """What a kind of piece is to be shown as for a face that is doing something: which
+        paper it is taken from, how wide and how tall against how that was drawn, and how it
+        is moved to say how its wearer feels. Nothing at all for a piece that is as it was drawn."""
+        if not look:
+            return ()
+        moves = self.rules.moves
+        source, size, lid = kind_id, (1.0, 1.0), False
+        for which, steps, step in ((SHUT, moves.shut.get(kind_id, ()), look.lids), (OPEN, moves.open.get(kind_id, ()), look.mouth)):
+            if not steps or step <= 0:
+                continue
+            step = min(step, len(steps))
+            other = self.rules.drawn_as(kind_id, which)
+            if other is not None and step == len(steps) and self.painted(other.kind_id).width:
+                # All the way there, and somebody has drawn it so: their drawing, and no rule.
+                source = other.kind_id
+            elif which == SHUT and step == len(steps) and moves.lid_thick > 0:
+                lid = True
+            else:
+                size = steps[step - 1]
+        shift = moves.moods.get(look.mood, {}).get(kind_id, Shift())
+        if source == kind_id and size == (1.0, 1.0) and shift == Shift() and not lid:
+            return ()
+        return (source, size, shift, lid)
+
+    def _done(self, doing: tuple) -> pygame.Surface:
+        """A piece doing something: a picture whose middle is the middle of its paper, which
+        it may be larger or smaller than."""
+        if doing not in self._moved:
+            source, (wide, tall), shift, lid = doing
+            picture = self.drawings[source]
+            box = self.painted(source)
+            if lid and box.width > 2:
+                moves = self.rules.moves
+                picture = _lid(picture, box, moves.lid_thick * picture.get_height(), moves.lid_sag * picture.get_height())
+                box = picture.get_bounding_rect()
+            if shift.bend and box.width > 2:
+                picture = _bent(picture, box, shift.bend * picture.get_height())
+            if shift.tilt:
+                picture = pygame.transform.rotozoom(picture, shift.tilt * INNER_END, 1.0)
+            if shift.lift:
+                picture = _lifted(picture, shift.lift * self.drawings[source].get_height())
+            if (wide, tall) != (1.0, 1.0):
+                size = (max(1, round(picture.get_width() * wide)), max(1, round(picture.get_height() * tall)))
+                picture = pygame.transform.smoothscale(picture, size)
+            self._moved[doing] = picture
+        return self._moved[doing]
 
     def said(self, piece: str, view: str) -> bool:
         """Whether where a piece goes in a view is somebody's say, and not worked out."""
@@ -470,15 +660,17 @@ class Face:
             first.wide + (second.wide - first.wide) * share, nearer.shown, nearer.behind,
         )
 
-    def _picture(self, piece: str, wide: float, other_way: bool = False) -> pygame.Surface:
+    def _picture(self, piece: str, wide: float, other_way: bool = False, look: "FaceLook | None" = None) -> pygame.Surface:
         """A piece as wide as it is seen, and in a mirror if it is the far one of a pair: or
-        if it is not, for one told to be the `other_way` about."""
+        if it is not, for one told to be the `other_way` about. With a `look`, it is doing
+        whatever a face with that look has it do."""
         kind = self.rules.kind_of(piece)
         mirrored = (kind.paired and piece.endswith(f"_{FAR}")) != other_way
         hundredths = max(WIDTH_STEP, round(wide * 100 / WIDTH_STEP) * WIDTH_STEP)
-        key = (kind.kind_id, mirrored, hundredths)
+        doing = self.doing(kind.kind_id, look)
+        key = (kind.kind_id, mirrored, hundredths, doing)
         if key not in self._sized:
-            picture = self.drawings[kind.kind_id]
+            picture = self._done(doing) if doing else self.drawings[kind.kind_id]
             if mirrored:
                 picture = pygame.transform.flip(picture, True, False)
             if hundredths != 100:
@@ -487,10 +679,12 @@ class Face:
             self._sized[key] = picture
         return self._sized[key]
 
-    def laid(self, head_drawing: pygame.Surface, yaw: float) -> list[tuple[str, Key, pygame.Surface, pygame.Rect]]:
+    def laid(
+        self, head_drawing: pygame.Surface, yaw: float, look: "FaceLook | None" = None
+    ) -> list[tuple[str, Key, pygame.Surface, pygame.Rect]]:
         """Every piece that has been drawn as it goes on a head turned some way, the lowest
         first: what it is called, where it is, its picture, and where on the head's paper the
-        painted part of that picture falls."""
+        painted part of that picture falls. With a `look`, each is doing what that has it do."""
         head, canvas = head_of(head_drawing), head_drawing.get_size()
         found = []
         for piece in self.rules.instances:
@@ -498,7 +692,7 @@ class Face:
             if not self.painted(kind.kind_id).width:
                 continue
             key = self.at(piece, yaw, head, canvas)
-            picture = self._picture(piece, key.wide)
+            picture = self._picture(piece, key.wide, look=look)
             corner = (round(key.x - picture.get_width() / 2), round(key.y - picture.get_height() / 2))
             found.append((piece, key, picture, picture.get_bounding_rect().move(corner)))
         return found
@@ -529,17 +723,20 @@ class Face:
             back.blit(picture, (box.x - room.x, box.y - room.y), painted)
         return back, room.topleft
 
-    def fronting(self, head_drawing: pygame.Surface, yaw: float) -> tuple[pygame.Surface, tuple[int, int]]:
+    def fronting(
+        self, head_drawing: pygame.Surface, yaw: float, look: "FaceLook | None" = None
+    ) -> tuple[pygame.Surface, tuple[int, int]]:
         """A head with its face on it, turned some way, as it goes on a doll: a picture, and where
         on the head's paper its corner is. It is as large as what is on it, which may go past
-        the paper: hair that has gone forwards does. What is behind the whole body is left out."""
+        the paper: hair that has gone forwards does. What is behind the whole body is left out.
+        With a `look`, the face is doing what that has it do."""
         paper = head_drawing.get_rect()
         boxes = [
-            box for piece, key, _, box in self.laid(head_drawing, yaw)
+            box for piece, key, _, box in self.laid(head_drawing, yaw, look)
             if key.shown and box.width and not self._under_body(piece, key)
         ]
         room = paper.unionall(boxes)
-        return self.composed(head_drawing, yaw, backed=False, room=room), room.topleft
+        return self.composed(head_drawing, yaw, backed=False, room=room, look=look), room.topleft
 
     def behind(self, head_drawing: pygame.Surface, yaw: float) -> tuple[pygame.Surface, tuple[int, int]]:
         """A head seen from behind, `yaw` degrees round from facing the screen and so more than
@@ -600,16 +797,18 @@ class Face:
         ghosts: bool = False,
         backed: bool = True,
         room: pygame.Rect | None = None,
+        look: "FaceLook | None" = None,
     ) -> pygame.Surface:
         """A head with its face on it, turned some way: one picture, as large as the head's paper.
 
         With `ghosts`, what is not seen in that turn is shown faintly, to be taken hold of.
         Without `backed`, what is behind the whole body is left out: that is `backing`. `room`
         is another part of the paper to show, or more than the paper, in place of all of it.
+        With a `look`, the face is doing what that has it do.
         """
         room = room if room is not None else head_drawing.get_rect()
         whole = pygame.Surface(room.size, pygame.SRCALPHA)
-        pieces = self.laid(head_drawing, yaw)
+        pieces = self.laid(head_drawing, yaw, look)
 
         def lay(behind: bool) -> None:
             for piece, key, picture, box in pieces:
@@ -767,6 +966,69 @@ class Face:
 
     def to_data(self) -> dict[str, Any]:
         return {"keys": {piece: {view: key.to_data() for view, key in views.items()} for piece, views in self.keys.items() if views}}
+
+
+def _bent(picture: pygame.Surface, box: pygame.Rect, down: float) -> pygame.Surface:
+    """A picture with the ends of what is painted on it brought down by so many pixels, and
+    up by less than nothing: its middle goes the other way a third as far, so that it stays
+    about where it was. Its own middle is where it was, on a picture that much taller."""
+    reach = math.ceil(abs(down))
+    width, height = picture.get_size()
+    bent = pygame.Surface((width, height + 2 * reach), pygame.SRCALPHA)
+    half = max(1.0, box.width / 2)
+    for x in range(box.left, box.right):
+        out = (x + 0.5 - box.centerx) / half
+        bent.blit(picture, (x, reach + round(down * (out * out - 1 / 3))), (x, 0, 1, height))
+    return bent
+
+
+def _lid(picture: pygame.Surface, box: pygame.Rect, thick: float, sag: float) -> pygame.Surface:
+    """An eye shut, by rule: a line where the eye was, as wide as it was painted and the
+    darkest colour it has, so thick, and sagging so far in its middle."""
+    darkest, least = (0, 0, 0), 766
+    for x in range(box.left, box.right):
+        for y in range(box.top, box.bottom):
+            red, green, blue, alpha = picture.get_at((x, y))
+            if alpha >= 200 and red + green + blue < least:
+                darkest, least = (red, green, blue), red + green + blue
+    shut = pygame.Surface(picture.get_size(), pygame.SRCALPHA)
+    wide = max(2, round(thick))
+    half = box.width / 2 - wide / 2
+    points = []
+    for step in range(13):
+        out = step / 6 - 1.0
+        points.append((box.centerx + out * half, box.centery + sag * (1.0 - out * out) - sag / 2))
+    pygame.draw.lines(shut, darkest, False, points, wide)
+    for point in points:
+        pygame.draw.circle(shut, darkest, point, wide / 2)
+    return shut
+
+
+def _lifted(picture: pygame.Surface, up: float) -> pygame.Surface:
+    """A picture with what is on it so many pixels further up: its own middle is where it
+    was, on a picture that much taller."""
+    reach = math.ceil(abs(up))
+    lifted = pygame.Surface((picture.get_width(), picture.get_height() + 2 * reach), pygame.SRCALPHA)
+    lifted.blit(picture, (0, reach - round(up)))
+    return lifted
+
+
+def plain_face(rules: FaceRules, head_drawing: pygame.Surface, example: Any) -> "Face":
+    """The face of a body nobody has drawn: a plain piece of each kind a plain face has,
+    made by `example` as the pieces a face is tried with are. It is the game's, as the figure
+    it goes on is, until somebody draws their own."""
+    face = Face(rules)
+    head, canvas = head_of(head_drawing), head_drawing.get_size()
+    at = (min(canvas[0] - 1, max(0, round(head.x))), min(canvas[1] - 1, max(0, round(head.y))))
+    red, green, blue, alpha = head_drawing.get_at(at)
+    skin = (red, green, blue) if alpha else (214, 170, 130)
+    for kind_id in rules.moves.plain:
+        kind = rules.kinds[kind_id]
+        picture = example(kind_id, kind.paper, skin, face.on_paper(kind_id, head, canvas))
+        if picture is not None:
+            face.drawings[kind_id] = picture
+    face.touch()
+    return face
 
 
 def keys_from_data(rules: FaceRules, data: Any) -> dict[str, dict[str, Key]]:

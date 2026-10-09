@@ -24,7 +24,7 @@ from graphics.doll import (
     unsided,
 )
 from graphics.doll_guide import NOTE_INK, build_guide, label_spots, name_ink, piece_spots, piece_zone, piece_zones, reference
-from graphics.face import FaceStore, faced
+from graphics.face import BEHIND_FROM, FaceLook, FaceStore, faced, with_head
 from graphics.figure import FRONT_DRAWN, SIDE_DRAWN, TRUNK_KEY
 from graphics.face_examples import plain_head
 from graphics.foot import Feet, FootStore, Made
@@ -617,9 +617,20 @@ class DollPaper:
         turn = self.faces.rules.body
         return fronted(self.template, figure, turn.trunk, turn.depth)
 
-    def _seen(self, yaw: float, round_by: float | None = None) -> Doll | None:
+    def _seen(self, yaw: float, round_by: float | None = None, look: FaceLook | None = None) -> Doll | None:
         """The doll beside the paper with its head `yaw` degrees round and its body `round_by`:
-        as it was drawn, with no word of how far round its body is. The figure of the guide has no face."""
+        as it was drawn, with no word of how far round its body is. The figure of the guide has no face.
+        With a `look`, its face is doing what that has it do."""
+        if look:
+            plain = self._seen(yaw, round_by)
+            face = self.faces.get(self.resident_id) if self.faces is not None and self.resident_id is not None else None
+            if plain is None or face is None or not face.drawn or self._showing_example or abs(yaw) > BEHIND_FROM:
+                return plain
+            key = (yaw, round_by, look)
+            if key not in self._turned:
+                head = self.to_show()[HEAD_CANVAS]
+                self._turned[key] = with_head(plain, face.fronting(head, yaw, look), face.backing(head, yaw))
+            return self._turned[key]
         doll = self._preview
         if doll is None or self.faces is None:
             return doll

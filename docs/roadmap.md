@@ -6407,6 +6407,105 @@ Done when: somebody walking down the map is seen from the front and walking up i
 behind, coming round by degrees; indoors the same; and somebody at something is seen from
 their side.
 
+### More and better animations: the list (2026-10-10)
+Asked for as "hacen falta mas y mejores animaciones hagamos una lista primero". The list that
+was put to them, as it stands. They said to begin with the first two of the order: the face
+and talking, and walking seen from the front and from behind (P74 to P76).
+
+What is missing:
+- **Talking and dealing with each other**: speaking with the hands and listening; laughing,
+  waving; a hug, a kiss, flirting; an insult, a pointed finger, a shove, cowering; comforting
+  and crying, saying sorry; dancing alone and with somebody, singing; cards, chess and
+  stories, at which they only sit
+- **Jobs**: of eleven only the farmer has a way of its own. Cook, bartender, guard, medic,
+  mechanic, shopkeeper, scavenger, water carrier, researcher, chemist
+- **Things that are used**: drinking, washing, darts, training, repairing, buying and
+  trading, the radio, getting into a bed and out of it
+- **Moving about**: running, limping, staggering, trudging, sneaking, walking under a load,
+  sitting down and getting up, children skipping
+- **How they are, standing**: sad, glad, furious, afraid; hungry, cold, in pain, coughing;
+  a yawn; brooding; protesting; at an assembly, clapping, voting; serving a sentence
+- **With the player**: taking an order or refusing it, landing when put down, looking at the
+  pointer
+
+What is to be better:
+- **Walking seen from the front and from behind** (P76)
+- **The face** (P74)
+- **More gestures at rest, by personality**: there are four, the same for everybody
+- **Made hands**: four ways of holding them, and none to point, to wave or to hold a glass
+- **Work with bare hands, and eating**: short rounds of four poses
+- **Doing things facing the window**: all but walking and standing is seen from the side
+
+The order put to them: the face and talking; walking from the front and from behind; dealing
+with each other; jobs; moving about and how they are; the rest. The fight of the trips is not
+in it: it is tried apart, and not judged (S70).
+
+### P74 — Faces that move (needs P71) — done
+Asked before it:
+- where shutting an eye, opening a mouth and wearing a feeling come from: **"Por regla y
+  dibujable"**. The game works it out from the one drawing of each piece, and whoever draws
+  an eye shut or a mouth open has theirs shown instead
+- what of those with no face of pieces, which today is everybody: **"Cara de serie en figuras
+  lisas"**. The figure the game draws of whoever nobody has drawn has a plain face that
+  moves. Whoever was drawn with their face on their head has a face that stays still until
+  they are drawn one of pieces
+
+- **A face does things** (`FaceLook` in `graphics/face.py`): its eyes shut in two steps, its
+  mouth opens in two, and it wears being glad, sad or furious
+- **By rule, from the one drawing of each piece**: an eye half shut is itself brought down,
+  and shut it is a line as wide as it was, the darkest colour it has; a mouth opens taller
+  and a little narrower; a brow leans, the end by the nose up for whoever is sad and down
+  for whoever is furious, and goes up for whoever is glad; the ends of a mouth go up or down
+- **And drawn, where somebody has**: an eye shut and a mouth open have a paper each on the
+  tab of the face, beside the papers of the pieces. Nobody has to draw them
+- **How far each thing goes is data** (`moves` in `data/face.json`): the steps, the feelings
+  and what each does to which piece, how often a face blinks and how fast a mouth goes
+- **On the map, indoors and out on a trip they blink**, each in their own time; their mouths
+  go while it is their turn to speak, and less while they chew; they wear how things stand
+  with them, as their faces beside their names do; asleep, in a bed or on the ground, and
+  lying where they fell, their eyes are shut
+- **Whoever nobody has drawn has a plain face**: eyes, brows, a mouth, a nose and ears on
+  the figure the game draws of them, until they are drawn
+- **Where a face is shown by itself it is the face of pieces**, from the front and feeling
+  what they feel: beside their name, in their panel and over whoever wants to be with them.
+  It was the bare head, since the head of somebody with a face of pieces has nothing on it
+- **On the screen they are drawn on the doll beside the work blinks**, a tile has it feel
+  each way in turn and another has it speak; and while an eye shut or a mouth open is being
+  drawn it holds that
+
+Decided without asking:
+- **The feelings are the three the game had faces for** (glad, sad, furious), chosen as they
+  were for the faces beside their names
+- **A drawing stands for the last step only**: half shut and half open are always the rule
+- **No face looks at anybody**: an eye is one piece, with its white, and has nothing to move
+  inside it
+- **Seen from behind nothing of a face is worked out**
+
+Still open here:
+- **Nobody in the game has a face of pieces yet** but those nobody has drawn: the faces the
+  player drew stay still until they are drawn again on the tab of the face
+- **Nobody has looked at it with a mouse**: it was read in strips of consecutive frames of
+  the game, and in pictures of the screen
+- **A feeling by rule on a mouth drawn already smiling or already sad** bends it further or
+  back, and may not read as meant: there is no paper yet for a mouth of each feeling
+
+Done when: on the map whoever has a face of pieces blinks, moves their mouth when they speak
+and wears how they feel; whoever nobody has drawn has a plain face that does; and an eye
+drawn shut is the one shown when they blink.
+
+### P75 — Talking with the hands (needs P74) — planned
+Asked before it: whether each resident speaks in a way of their own: **"segun la personalidad
+pero luego elegibles"**. The game gives each a way of speaking by their personality, and it
+can be chosen after, where their ways of walking and eating are.
+
+- Three ways of speaking, as there are of walking and of eating; listening, laughing and
+  waving are everybody's
+- Whoever speaks is whoever has the words over them; the other listens
+
+### P76 — Walking seen from the front and from behind (needs P73) — planned
+- Looked at in a strip of the walk turned by rule: from the front and from behind the legs
+  hardly move and the arms stay at the sides, with corners where a forearm folds to nothing
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

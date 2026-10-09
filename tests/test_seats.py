@@ -184,7 +184,7 @@ class SittingOnASeatTests(unittest.TestCase):
         view.render()
         self.game.present()
         doll = view._doll_of("raul")
-        depth = next(entry[0] for entry in view._doll_draws if entry[1] is doll)
+        depth = next(entry[0] for entry in view._doll_draws if entry[1] is view.doll_shown["raul"])
         stool_foot = (raul.y + 1) * TILE_SIZE
         self.assertGreater(depth, stool_foot, "drawn after the stool, which stands on the same tile")
         # Standing on that tile with nothing to do they are where their feet are, as anybody is.
@@ -192,7 +192,7 @@ class SittingOnASeatTests(unittest.TestCase):
         self.assertIsNone(view._seat_under(raul))
         view.render()
         self.game.present()
-        standing = next(entry[0] for entry in view._doll_draws if entry[1] is doll)
+        standing = next(entry[0] for entry in view._doll_draws if entry[1] is view.doll_shown["raul"])
         self.assertLess(standing, stool_foot)
         # Eating on a seat, they eat with their arms over the way anybody sits on one.
         raul.activity = Activity("eat", "pantry_1", minutes_left=10, using=True, item_id="canned_beans")

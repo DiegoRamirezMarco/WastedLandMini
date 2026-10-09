@@ -131,6 +131,7 @@ class Game:
         self.dolls = DollStore(self.illustrations, load_template(), builtin_plan())
         # Every doll turned whichever way it is shown, with its face, its hands and its feet.
         self.figures = Figures(self.dolls, self.illustrations.root)
+        self.faces.pieces = self.figures.portrait
         self.music = load_music_settings(DATA_DIR / "audio.json")
         # A sound of the player's own, in the folder for them, is played in place of the game's.
         self.audio = AudioManager(

@@ -13,6 +13,7 @@ from graphics.building_renderer import FACADE_ROWS, BuildingRenderer, building_a
 from graphics.bundle import bundle_height, bundle_picture, ground_blanket
 from graphics.crumbs import Crumb, CrumbArt, crumbs
 from graphics.doll import DOLL_FACINGS, Doll, DollStore, draw_doll
+from graphics.face import SHUT, FaceLook
 from graphics.figure import Figures, Shown
 from graphics.face_renderer import FaceRenderer
 from graphics.font import CELL_SIZE, BitmapFont
@@ -188,7 +189,7 @@ from ui.trade_board import DEAL_INTENT as TRADE_DEAL_INTENT
 from ui.trade_board import DRAW_INTENT as TRADE_DRAW_INTENT
 from ui.bubble import MARK_SIZE, MARK_TAIL, PLACARD_SIZE, PLACARD_STICK, draw_mark, draw_placard
 from ui.law_board import named_items, picked_degree, picked_params
-from ui.labels import away_residents, has_birthday, rarity_color, talk_line
+from ui.labels import away_residents, expression_of, has_birthday, rarity_color, talk_line
 from ui.object_marks import draw_gem, draw_object_mark, marks_of
 from ui.object_panel import speaks
 from ui.outing_board import CANCEL_INTENT as TRIP_CANCEL_INTENT
@@ -3154,7 +3155,8 @@ class GlobalView:
             pose = None
             if doll is not None:
                 # Knocked about, a body is wherever physics has it, seen from its side.
-                shown = self._shown(resident.resident_id, doll, None if character.physical else yaw, clip, gone)
+                look = self._look_of(resident, asleep or rough is not None)
+                shown = self._shown(resident.resident_id, doll, None if character.physical else yaw, clip, gone, look)
                 if shown is not None and not character.physical:
                     pose = self.figures.posed(shown, character.local_pose(), character.facing)
                 skeleton = character.skeleton if character.physical else self._posed_skeleton(resident.resident_id, character, pose)
@@ -3316,19 +3318,49 @@ class GlobalView:
         return facing, abs(yaw), None if first else gone
 
     def _shown(
-        self, body_id: str, doll: Doll, yaw: float | None = None, clip: str | None = None, gone: float | None = None
+        self,
+        body_id: str,
+        doll: Doll,
+        yaw: float | None = None,
+        clip: str | None = None,
+        gone: float | None = None,
+        look: FaceLook | None = None,
     ) -> Shown | None:
         """A doll as it is shown, turned so far round from facing whoever looks, or seen from
-        its side: with its face on, and whatever hands and feet it has that are made, held as
-        what it is at has them. None with nothing to turn dolls."""
+        its side: with its face on, doing what `look` has it do, and whatever hands and feet
+        it has that are made, held as what it is at has them. None with nothing to turn dolls."""
         if self.figures is None:
             self.doll_shown[body_id] = doll
             return None
         if clip is not None:
             self.figures.settle(body_id, clip, gone)
-        shown = self.figures.shown(body_id, doll, yaw, MAP_TURN_STEP)
+        shown = self.figures.shown(body_id, doll, yaw, MAP_TURN_STEP, look)
         self.doll_shown[body_id] = shown.doll
         return shown
+
+    def _eyes_shut(self) -> FaceLook | None:
+        """The face of whoever sleeps, or will not get up again."""
+        return FaceLook(lids=self.figures.rules.moves.steps(SHUT)) if self.figures is not None else None
+
+    def _look_of(self, resident: Resident, asleep: bool = False) -> FaceLook | None:
+        """What the face of a resident is doing right now: it blinks, each in their own time;
+        its mouth goes while it is their turn to speak, and while they chew; and it wears how
+        things stand with them. Asleep, its eyes are shut and that is all."""
+        if self.figures is None:
+            return None
+        if asleep:
+            return self._eyes_shut()
+        moves = self.figures.rules.moves
+        # Nobody blinks or speaks in step with anybody else.
+        own = sum(map(ord, resident.resident_id)) % 97 / 97
+        mouth = 0
+        activity = resident.activity
+        if said_aloud(bubble_of(self.world, resident)):
+            mouth = moves.mouth_at(self.time, own)
+        elif activity is not None and activity.using and activity.action == EAT_ACTION:
+            mouth = moves.mouth_at(self.time, own, chewing=True)
+        mood = expression_of(self.world, resident)
+        return FaceLook(moves.lids_at(self.time, own), mouth, mood if mood in moves.moods else "")
 
     def bundle_spot(self, bundle: Bundle) -> tuple[float, float, float]:
         """Where a child in its blanket is shown: the middle of its foot in map pixels, and how
@@ -3393,7 +3425,7 @@ class GlobalView:
 
         def draw() -> None:
             if doll is not None:
-                shown = self._shown(remains.body_id, doll)
+                shown = self._shown(remains.body_id, doll, look=self._eyes_shut())
                 self._doll_draws.append((
                     remains.skeleton.ground, shown.doll if shown is not None else doll, remains.skeleton, None, 1.0, (0.0, 0.0),
                     shown.made if shown is not None else None,
@@ -3772,7 +3804,7 @@ class GlobalView:
 
         def draw() -> None:
             if doll is not None:
-                shown = self._shown(resident.resident_id, doll)
+                shown = self._shown(resident.resident_id, doll, look=self._eyes_shut())
                 self._doll_draws.append((bed.bottom, shown.doll if shown is not None else doll, None, neck, 1.0, (0.0, 0.0), None))
             else:
                 self._blit(head, (bed.left + LYING_HEAD_OFFSET[0], bed.top + LYING_HEAD_OFFSET[1]))
@@ -3832,7 +3864,7 @@ class GlobalView:
                 detail = self._cell / TILE_SIZE
                 blanket = self.rough_blanket(max(4, round(ROUGH_SIZE[0] * detail)), max(2, round(ROUGH_SIZE[1] * detail)))
                 self._rough.append((float(bottom) - 0.2, area, blanket))
-                shown = self._shown(resident.resident_id, doll)
+                shown = self._shown(resident.resident_id, doll, look=self._eyes_shut())
                 self._doll_draws.append((float(bottom), shown.doll if shown is not None else doll, None, neck, 1.0, (0.0, 0.0), None))
             else:
                 self._blit(self.rough_blanket(round(ROUGH_SIZE[0]), round(ROUGH_SIZE[1])), (round(area[0]), round(area[1])))

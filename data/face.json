@@ -34,7 +34,22 @@
       "name": "Pelo delante", "paper": [192, 192], "zoom": 2,
       "turn": "shift", "out": 0.1, "narrowest": 1.0, "over_head": true,
       "opens_on": "hair_back"
-    }
+    },
+    "eye_shut": {"name": "Ojo cerrado", "paper": [56, 40], "zoom": 6, "stands_for": "eye", "when": "shut"},
+    "mouth_open": {"name": "Boca abierta", "paper": [80, 40], "zoom": 4, "stands_for": "mouth", "when": "open"}
+  },
+  "moves": {
+    "shut": {"eye": [[1.0, 0.5], [1.0, 0.14]]},
+    "lid": {"thick": 0.09, "sag": 0.12},
+    "blink": {"every": [2.6, 5.8], "lasts": 0.16},
+    "talk": {"rate": 9.0, "chew": 3.5},
+    "open": {"mouth": [[0.94, 1.3], [0.86, 1.7]]},
+    "moods": {
+      "happy": {"name": "Contento", "brow": {"lift": 0.16}, "mouth": {"bend": -0.2}},
+      "sad": {"name": "Triste", "brow": {"tilt": 16, "lift": 0.04}, "mouth": {"bend": 0.24}},
+      "angry": {"name": "Furioso", "brow": {"tilt": -18, "lift": -0.16}, "mouth": {"bend": 0.14}}
+    },
+    "plain": ["ear", "mouth", "nose", "eye", "brow", "eye_shut", "mouth_open"]
   },
   "body": {
     "nearest": 45,

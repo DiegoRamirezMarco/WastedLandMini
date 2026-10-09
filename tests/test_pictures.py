@@ -248,7 +248,7 @@ class PicturesOnTheMapTests(unittest.TestCase):
             paco.x, paco.y, paco.trail, paco.activity = table.x, row, [], Activity("wander", minutes_left=600, using=True)
             self._window()
             foot = (table.y + 1) * TILE_SIZE
-            mine = next(entry[0] for entry in view._doll_draws if entry[1] is view._doll_of("paco"))
+            mine = next(entry[0] for entry in view._doll_draws if entry[1] is view.doll_shown["paco"])
             self.assertEqual(mine > foot - 0.5, in_front, "by how far down the map their feet are")
 
     def test_the_map_is_drawn_again_when_a_building_goes_up(self) -> None:

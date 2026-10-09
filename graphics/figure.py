@@ -28,7 +28,8 @@ from typing import Any
 import pygame
 
 from graphics.doll import BODY_CANVAS, DOLL_FACINGS, HEAD_CANVAS, Doll, DollStore, draw_doll
-from graphics.face import BEHIND_BY, BEHIND_FROM, FaceRules, FaceStore, _dissolved, faced, with_head
+from graphics.face import BEHIND_BY, BEHIND_FROM, Face, FaceLook, FaceRules, FaceStore, _dissolved, faced, plain_face, with_head
+from graphics.face_examples import example
 from graphics.face import load_rules as load_face_rules
 from graphics.foot import Feet, FootRules, FootStore, Made
 from graphics.foot import load_rules as load_foot_rules
@@ -126,6 +127,10 @@ class Figures:
         self._apart: dict[int, tuple[Doll, dict[str, float]]] = {}
         # The backs of heads that have their faces drawn on them, by the doll each is of.
         self._backs: dict[int, tuple[Doll, pygame.Surface]] = {}
+        # The faces of bodies nobody has drawn, by whose each is, with the head it was made for.
+        self._plain: dict[str, tuple[pygame.Surface, Face]] = {}
+        # Dolls with their faces doing something, by the doll each is and what its face does.
+        self._looks: dict[tuple, tuple[Doll, Doll]] = {}
         # Which doll the made hands and feet of each body were last told about.
         self._matched: dict[str, int] = {}
 
@@ -142,6 +147,7 @@ class Figures:
         """Have everything about a body read again, as after it has been drawn or changed."""
         self._said.pop(body_id, None)
         self._matched.pop(body_id, None)
+        self._plain.pop(body_id, None)
         self.faces.forget(body_id)
         self.hands.forget(body_id)
         self.feet.forget(body_id)
@@ -215,6 +221,50 @@ class Figures:
             kept = self._cut[key] = (doll, Doll(doll.template, sheets, doll.plan, without))
         return kept[1]
 
+    def face_of(self, body_id: str | None, doll: Doll | None = None) -> Face | None:
+        """The face of a body: its own, of pieces, if it has been drawn one. A body nobody
+        has drawn at all, shown as `doll`, the figure the game draws of it, has a plain one
+        that is the game's too. One drawn with its face on its head has no pieces."""
+        if body_id is None:
+            return None
+        face = self.faces.get(body_id)
+        if face.drawn or doll is None or not self.rules.moves.plain or self.dolls.get(body_id) is not None:
+            return face
+        head = doll.sheets.get(HEAD_CANVAS)
+        if head is None:
+            return face
+        kept = self._plain.get(body_id)
+        if kept is None or kept[0] is not head:
+            kept = self._plain[body_id] = (head, plain_face(self.rules, head, example))
+        return kept[1]
+
+    def _looking(self, doll: Doll, face: Face, head: pygame.Surface, yaw: float, look: FaceLook) -> Doll:
+        """A doll turned some way with its face doing something: the same body, and another head."""
+        key = (id(doll), yaw, look, id(face), face.revision)
+        kept = self._looks.get(key)
+        if kept is None or kept[0] is not doll:
+            if len(self._looks) > 384:
+                self._looks.clear()
+            kept = self._looks[key] = (doll, with_head(doll, face.fronting(head, yaw, look), face.backing(head, yaw)))
+        return kept[1]
+
+    def portrait(self, body_id: str, expression: str, size: tuple[int, int]) -> pygame.Surface | None:
+        """The head of a body that has a face of pieces, seen from the front and feeling
+        some way, brought to a size: for wherever a face is shown by itself. None for a body
+        with no such face, whose head as it was drawn is all there is of it."""
+        face = self.faces.get(body_id)
+        head = self.dolls.drawings(body_id).get(HEAD_CANVAS) if face.drawn else None
+        if head is None:
+            return None
+        look = FaceLook(mood=expression if expression in self.rules.moves.moods else "")
+        boxes = [box for _, key, _, box in face.laid(head, 0.0, look) if key.shown and box.width]
+        room = head.get_rect().unionall(boxes)
+        # As large a square as takes all of it, the head in the middle across.
+        side = max(room.width, room.height)
+        room = pygame.Rect(room.centerx - side // 2, room.y - (side - room.height) // 2, side, side)
+        whole = face.composed(head, 0.0, room=room, look=look)
+        return whole if whole.get_size() == tuple(size) else pygame.transform.smoothscale(whole, size)
+
     def _behind(self, doll: Doll, head: pygame.Surface, yaw: float) -> Doll:
         """A doll whose face is drawn on its head, turned so far round: from behind its head is
         plain, the face fading as it goes round as one made of pieces does."""
@@ -239,14 +289,23 @@ class Figures:
         gone = (yaw - BEHIND_FROM) / (BEHIND_BY - BEHIND_FROM)
         return with_head(doll, _dissolved((head, (0, 0)), (plain, (0, 0)), gone))
 
-    def shown(self, body_id: str | None, doll: Doll, yaw: float | None = None, step: float | None = None) -> Shown:
+    def shown(
+        self,
+        body_id: str | None,
+        doll: Doll,
+        yaw: float | None = None,
+        step: float | None = None,
+        look: FaceLook | None = None,
+    ) -> Shown:
         """A doll turned `yaw` degrees round from facing whoever looks, as far as right behind
         at twice what its side is: from its side if it is not said. `doll` is the body as it
         was cut, with whatever it wears on, and `body_id` whose it is, if anybody's.
 
         `step` is in what steps of a turn it is kept turned, in degrees, where that is coarser
         than a head is: many are shown at once on a map, small, and each way one is turned is
-        made once and kept."""
+        made once and kept.
+
+        `look` is what its face is doing, if it has one of pieces and it is not seen from behind."""
         rules = self.rules
         if yaw is not None and step:
             yaw = max(0.0, min(2.0 * rules.side, round(abs(yaw) / step) * step))
@@ -259,12 +318,13 @@ class Figures:
         if said.drawn == SIDE_DRAWN and not as_drawn and self._turned.spent and not self._is_cut(doll, True, without):
             # Its trunk has yet to be made into one seen from the front, and enough has been
             # made in this frame: until there is time it is its drawing, seen from its side.
-            return self.shown(body_id, doll)
+            return self.shown(body_id, doll, look=look)
         base = self._again(doll, said.drawn == SIDE_DRAWN and not as_drawn, without, said.depth)
 
+        face = self.face_of(body_id, doll)
+        head = base.sheets.get(HEAD_CANVAS)
+
         def turn(to: float) -> Doll:
-            face = self.faces.get(body_id) if body_id is not None else None
-            head = base.sheets.get(HEAD_CANVAS)
             seen = faced(base, face, head, to) if head is not None else base
             if head is not None and (face is None or not face.drawn):
                 seen = self._behind(base, head, to)
@@ -276,9 +336,10 @@ class Figures:
                 seen = far_darker(seen, SHADE * round(from_side * SHADE_STEPS) / SHADE_STEPS)
             return seen
 
-        face = self.faces.get(body_id) if body_id is not None else None
-        who = (base._token, face.revision if face is not None else 0)
+        who = (base._token, id(face), face.revision if face is not None else 0)
         turned = self._turned.seen(who, yaw, turn)
+        if look and face is not None and head is not None and face.drawn and yaw <= BEHIND_FROM:
+            turned = self._looking(turned, face, head, yaw, look)
         if made is not None:
             made_yaw = None if as_drawn else yaw
             for kind in made.kinds:

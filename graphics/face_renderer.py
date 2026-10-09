@@ -1,6 +1,7 @@
 """Builds a resident's face from stacked layers, or from custom PNGs when a pack provides them."""
 
 from collections import Counter
+from collections.abc import Callable
 
 import pygame
 
@@ -68,6 +69,9 @@ class FaceRenderer:
         self._illustrations = illustrations
         self._cache: dict[tuple[str, str], pygame.Surface] = {}
         self._markers: dict[tuple[str, str], pygame.Surface] = {}
+        # Whoever puts together the head of somebody whose face is of pieces, feeling some
+        # way and at a size, if anybody does: None from it for a body with no such face.
+        self.pieces: Callable[[str, str, tuple[int, int]], pygame.Surface | None] | None = None
 
     def face(self, face_id: str, expression: str = DEFAULT_EXPRESSION) -> pygame.Surface:
         """Return the 64×64 face of `face_id` showing `expression`."""
@@ -96,8 +100,10 @@ class FaceRenderer:
                 return self._illustrations.fitted(f"{folder}/{name}", size)
         if len(available) == 1:
             return self._illustrations.fitted(f"{folder}/{available[0]}", size)
-        # Nobody has drawn their face, but they may have drawn their head, for their body.
-        return self._illustrations.fitted(DRAWN_HEAD.replace("{id}", face_id), size)
+        # Nobody has drawn their face, but they may have drawn their head, for their body:
+        # with a face of pieces on it, if they drew one, and without it just the head.
+        made = self.pieces(face_id, expression, size) if self.pieces is not None else None
+        return made if made is not None else self._illustrations.fitted(DRAWN_HEAD.replace("{id}", face_id), size)
 
     def forget(self, face_id: str) -> None:
         """Have a resident's face made again the next time it is asked for, as after it has been drawn anew."""

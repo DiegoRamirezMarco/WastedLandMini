@@ -177,7 +177,7 @@ class SleepingOnTheGroundTests(unittest.TestCase):
         self.raul.activity = Activity(SLEEP_ROUGH_ACTION, minutes_left=400, using=True)
 
     def _doll_draw(self):
-        return next((entry for entry in self.view._doll_draws if entry[1] is self.view._doll_of("raul")), None)
+        return next((entry for entry in self.view._doll_draws if entry[1] is self.view.doll_shown.get("raul")), None)
 
     def test_on_the_window_they_are_seen_to_lie_down_curl_up_and_get_up_again(self) -> None:
         view, body = self.view, None

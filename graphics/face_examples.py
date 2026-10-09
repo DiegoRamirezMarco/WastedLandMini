@@ -34,12 +34,32 @@ def _eye(size: Size, skin: Color, head: Head) -> pygame.Surface:
     return paper
 
 
+def _eye_shut(size: Size, skin: Color, head: Head) -> pygame.Surface:
+    paper = pygame.Surface(size, pygame.SRCALPHA)
+    box = paper.get_rect().inflate(-size[0] // 2, -size[1] // 3)
+    # A lid down over it: a line that sags, with the lashes at its ends.
+    pygame.draw.arc(paper, LINE, box.inflate(6, 0).move(0, -box.height // 2), 3.5, 5.9, 4)
+    return paper
+
+
+def _mouth_open(size: Size, skin: Color, head: Head) -> pygame.Surface:
+    paper = pygame.Surface(size, pygame.SRCALPHA)
+    box = pygame.Rect(0, 0, size[0] * 3 // 10, size[1] * 3 // 5)
+    box.center = (size[0] // 2, size[1] // 2)
+    pygame.draw.ellipse(paper, LINE, box.inflate(6, 6))
+    pygame.draw.ellipse(paper, darker(LIPS, 0.45), box)
+    # A tongue at the foot of it.
+    pygame.draw.ellipse(paper, LIPS, pygame.Rect(box.left + 2, box.centery + 1, box.width - 4, box.height // 2 - 1))
+    return paper
+
+
 def _brow(size: Size, skin: Color, head: Head) -> pygame.Surface:
     paper = pygame.Surface(size, pygame.SRCALPHA)
     left, right, middle = size[0] // 4, size[0] * 3 // 4, size[1] // 2
-    # Lower at the end nearer the nose, which is the left of the one on the far side.
-    pygame.draw.line(paper, HAIR, (left, middle + 3), (right, middle - 3), 6)
-    for end in ((left, middle + 3), (right, middle - 3)):
+    # Level, a little higher in its middle: it says nothing until the face it is on feels something.
+    points = [(left, middle + 1), (size[0] // 2, middle - 1), (right, middle + 1)]
+    pygame.draw.lines(paper, HAIR, False, points, 6)
+    for end in points:
         pygame.draw.circle(paper, HAIR, end, 3)
     return paper
 
@@ -111,6 +131,7 @@ def _hair(size: Size, skin: Color, head: Head) -> pygame.Surface:
 
 EXAMPLES: dict[str, Callable[[Size, Color, Head], pygame.Surface]] = {
     "eye": _eye, "brow": _brow, "mouth": _mouth, "nose": _nose, "ear": _ear, "hair": _hair, "hair_back": _hair_back,
+    "eye_shut": _eye_shut, "mouth_open": _mouth_open,
 }
 
 

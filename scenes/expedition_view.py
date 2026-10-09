@@ -182,7 +182,7 @@ class ExpeditionView:
             skeleton = view._posed_skeleton(resident.resident_id, character)
             # Out there they are seen from their side all the way, with their face on and
             # whatever hands and feet they have that are made.
-            shown = view._shown(resident.resident_id, doll, None, clip)
+            shown = view._shown(resident.resident_id, doll, None, clip, look=view._look_of(resident))
             seen, made = (shown.doll, shown.made) if shown is not None else (doll, None)
             reach = doll.standing(plan)
             sole = (0.0, reach[3])

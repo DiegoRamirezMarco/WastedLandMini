@@ -272,6 +272,34 @@ def _eye(p: Pen) -> None:
     p.circle(27.5, 20.5, 2.6, p.light)
 
 
+def _eye_shut(p: Pen) -> None:
+    # A lid down, and its lashes under it.
+    p.arc(24, 2, 26, 42, 138, 7.5)
+    for x, y, to_x, to_y in ((10, 27, 6, 35), (24, 30, 24, 39), (38, 27, 42, 35)):
+        p.line([(x, y), (to_x, to_y)], 5)
+
+
+def _mouth_open(p: Pen) -> None:
+    p.poly([(24, 6), (37, 11), (42, 24), (37, 37), (24, 42), (11, 37), (6, 24), (11, 11)])
+    p.circle(24, 22, 11.5, p.cut)
+    p.circle(24, 32, 7, p.soft)
+
+
+def _mood(p: Pen) -> None:
+    # A face, and a smile on it.
+    p.circle(24, 24, 21)
+    p.circle(16, 19, 3.6, p.cut)
+    p.circle(32, 19, 3.6, p.cut)
+    p.arc(24, 20, 13, 30, 150, 4.5, p.cut)
+
+
+def _talk(p: Pen) -> None:
+    # What is said, in the air, and where it comes from.
+    p.poly([(5, 8), (43, 8), (43, 32), (24, 32), (13, 43), (15, 32), (5, 32)])
+    for x in (15, 24, 33):
+        p.circle(x, 20, 2.8, p.cut)
+
+
 def _brow(p: Pen) -> None:
     p.arc(24, 44, 26, 222, 318, 8.5)
 
@@ -423,6 +451,10 @@ ICONS: dict[str, tuple] = {
     "eye": (_eye, FACE),
     "brow": (_brow, FACE),
     "mouth": (_mouth, FACE),
+    "eye_shut": (_eye_shut, FACE),
+    "mouth_open": (_mouth_open, FACE),
+    "mood": (_mood, MOVING),
+    "talk": (_talk, MOVING),
     "nose": (_nose, FACE),
     "ear": (_ear, FACE),
     "hair": (_hair_front, FACE),

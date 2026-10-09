@@ -21,7 +21,7 @@ from typing import Any
 import pygame
 
 from graphics.doll import BODY_CANVAS, DOLL_FACINGS, HEAD_CANVAS, DollStore, draw_doll
-from graphics.face import FaceStore
+from graphics.face import OPEN, SHUT, FaceLook, FaceStore
 from graphics.figure import FRONT_DRAWN, SIDE_DRAWN
 from graphics.font import LINE_HEIGHT, BitmapFont
 from graphics.foot import FootStore, Made
@@ -202,6 +202,9 @@ class Studio:
         # the doll was before it was turned to be seen from behind for that.
         self.back_paper, self._yaw_before = False, 45.0
         self.time = 0.0
+        # How the doll beside the work feels, and whether it is speaking: to see its face at it.
+        self.mood = ""
+        self.talking = False
         self._character = Character(plan)
         self._character.life, self._character.at_ease = Life(random.Random(0)), True
         self._seen_with: tuple | None = None
@@ -379,6 +382,19 @@ class Studio:
             self.hand.bar = pygame.Rect(WORK.x + 50, WORK.y + 344, WORK.width - 100, 10)
             self.color = self.hand.chosen_color()
 
+    def _look(self) -> FaceLook:
+        """What the face of the doll beside the work is doing: it blinks, it speaks and feels
+        as its tiles say, and while an eye shut or a mouth open is being drawn it holds that."""
+        rules = self.face.rules
+        moves = rules.moves
+        lids, mouth = moves.lids_at(self.time, 0.37), moves.mouth_at(self.time, 0.0) if self.talking else 0
+        held = rules.kinds.get(self.face.kind) if self.tab == FACE_TAB and not self.arranging else None
+        if held is not None and held.when == SHUT:
+            lids = moves.steps(SHUT)
+        elif held is not None and held.when == OPEN:
+            mouth = moves.steps(OPEN)
+        return FaceLook(lids, mouth, self.mood)
+
     def _lay_out_face(self) -> None:
         face = self.face
         if self.arranging:
@@ -499,11 +515,26 @@ class Studio:
 
         if tab == FACE_TAB:
             kinds = [("place", ("place",), "Colocar", "Arrastra cada pieza a su sitio. Rueda: ancho. Clic derecho: ocultar.")]
-            kinds += [(kind.kind_id, ("kind", kind.kind_id), kind.name, "Se dibuja uno; el otro es su espejo." if kind.paired else "") for kind in face.rules.kinds.values()]
+            for kind in face.rules.kinds.values():
+                said = "Se dibuja uno; el otro es su espejo." if kind.paired else ""
+                if kind.stands_for:
+                    # Another drawing of a piece: nobody has to make it.
+                    said = f"Si no lo dibujas, el juego lo saca de: {face.rules.kinds[kind.stands_for].name}."
+                kinds.append((kind.kind_id, ("kind", kind.kind_id), kind.name, said))
+            moves = face.rules.moves
+            feels = moves.mood_names.get(self.mood, "Normal")
+            kinds += [
+                ("mood", ("mood",), f"Ánimo: {feels}", "Cómo se siente el muñeco de al lado: su cara lo dice."),
+                ("talk", ("talk",), "Hablar", "El muñeco de al lado mueve la boca, para ver cómo le queda."),
+            ]
             strip = self._row(WORK.x, STRIP_Y, SMALL, kinds, 25)
             strip[0].lit = self.arranging
             for button in strip[1:]:
                 button.lit = not self.arranging and button.intent == ("kind", face.kind)
+                if button.intent == ("mood",):
+                    button.lit = bool(self.mood)
+                elif button.intent == ("talk",):
+                    button.lit = self.talking
             found += strip
         elif tab == HANDS_TAB:
             poses = [(f"hand_{pose_id}", ("pose", pose_id), pose.name) for pose_id, pose in hand.rules.poses.items()]
@@ -611,6 +642,13 @@ class Studio:
             self.arranging = False
             self.face.kind = intent[1]
             self._lay_out_face()
+        elif kind == "mood":
+            # Each feeling in turn, and then none again.
+            moods = ["", *self.face.rules.moves.moods]
+            self.mood = moods[(moods.index(self.mood) + 1) % len(moods)] if self.mood in moods else ""
+            self.say(f"Ánimo: {self.face.rules.moves.mood_names.get(self.mood, 'Normal')}")
+        elif kind == "talk":
+            self.talking = not self.talking
         else:
             # Everything else is the page's own to do, as it always did.
             if self.tab == HANDS_TAB and kind in ("made", "size", "fingers", "feet_made", "feet_size"):
@@ -909,7 +947,7 @@ class Studio:
         # The body goes as far round as the head, whatever it is at: what it does is seen
         # less across the screen the nearer the front it is (`graphics/turn.py`).
         round_by = body_yaw(rules.body, head_yaw, standing=True)
-        doll = body._seen(head_yaw, round_by)
+        doll = body._seen(head_yaw, round_by, self._look())
         if doll is None:
             return
         facing = DOLL_FACINGS["right" if self.yaw >= 0 else "left"]
