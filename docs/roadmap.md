@@ -6359,9 +6359,53 @@ Still open here:
 Done when: the menu opens the one screen on whoever is picked; they are drawn tab by tab and
 kept; the lessons of the opening are done in it; and somebody drawn before opens as they were.
 
-### P73 — Dolls that turn: in the settlement (needs P71) — planned
-- On the map, indoors and out on a trip, somebody walking down is seen from the front, and
-  walking up from behind, coming round by degrees
+### P73 — Dolls that turn: in the settlement (needs P71) — done
+Asked before it: what of the turning goes into the game ("Todo, también el mapa"), what
+becomes of whoever was drawn before ("Se convierten solos") and how they are seen on the map
+("De frente y de espaldas").
+
+- **On the map and indoors, somebody walking down is seen from the front, and walking up from
+  behind**: across, they are seen from their side, as they were. Walking aslant they are part
+  of the way round
+- **They come round by degrees**, half a turn in a third of a second, the shorter way: and
+  through the front from one side to the other, since nobody turns their back to do that.
+  Seen for the first time they are already the way they face. Time standing still, nobody turns
+- **Standing with nothing to do they face the way they were left facing**, which for somebody
+  who has not walked yet is down the map: towards whoever looks
+- **At something, they are at it from their side**: sitting, eating, working, talking,
+  fighting, asleep on the ground, in the player's hand or knocked about, as every clip has it
+- **What they hold is where their hands are**, turned as they are
+- **Their faces of pieces, and their hands and feet that are made, are on them everywhere**:
+  on the map, indoors, in a bed, lying where they fell and out on a trip
+- **Whoever was drawn before turns by rule**, and so does whoever nobody has drawn: from
+  their side they are their drawing as it was
+- **A head with its face drawn on it has none on the back of it**: from behind it is all one
+  colour with the line round it, that of the top of it if a good share of the head is that
+  colour, which is its hair, and if not the one there is most of in it
+
+Decided without asking:
+- **Out on a trip they are seen from their side all the way** (S67): they walk across it
+- **On the map a body is kept turned in steps of 22.5 degrees**, coarser than beside the
+  paper: each way a body is turned is made once and kept, and there are many of them
+- **One body is turned a new way in a frame**, and making a trunk drawn from its side into
+  one seen from the front counts as that: whoever waits is shown the nearest way they have
+  been turned, which at first is their drawing from its side
+- **They turn by the clock bodies move by**: as fast as the game is going
+
+Still open here:
+- **Nobody has played it with a mouse**: it was looked at in pictures of the game with the
+  drawings there are, and timed there. The first time a body turns each way costs a frame of
+  some 40 to 90 thousandths of a second; after that it costs what it did
+- **Arms and legs are their drawing from the side whichever way the body faces**, as beside
+  the paper
+- **What is done from the side is done from the side**: nobody eats or works facing the
+  window, and a seat is sat on from the side
+- **Armour** (P66) was drawn for a trunk seen from its side, and has not been looked at on
+  one that turns
+
+Done when: somebody walking down the map is seen from the front and walking up it from
+behind, coming round by degrees; indoors the same; and somebody at something is seen from
+their side.
 
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the

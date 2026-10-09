@@ -28,7 +28,7 @@ from typing import Any
 import pygame
 
 from graphics.doll import BODY_CANVAS, DOLL_FACINGS, HEAD_CANVAS, Doll, DollStore, draw_doll
-from graphics.face import FaceRules, FaceStore, faced
+from graphics.face import BEHIND_BY, BEHIND_FROM, FaceRules, FaceStore, _dissolved, faced, with_head
 from graphics.face import load_rules as load_face_rules
 from graphics.foot import Feet, FootRules, FootStore, Made
 from graphics.foot import load_rules as load_foot_rules
@@ -38,7 +38,7 @@ from graphics.hose import Allowance
 from graphics.joined import colour_at, half_width_at
 from graphics.sides import DARKER, OWN, SHADE, WAYS, far_darker
 from graphics.turn import Turned, limbs_apart, turned_pose
-from graphics.volume import fronted, turned_body
+from graphics.volume import fronted, main_colour, plain_back, turned_body
 from skeleton.plan import FACINGS, SkeletonPlan
 from skeleton.rig import Skeleton
 
@@ -53,10 +53,31 @@ BACK_DRAWING = "back"
 # How far round the end of a limb its colour is looked for, in pixels of the drawing, for a
 # hand or a foot that is made to be given.
 MATCH_REACH = 7
+# A head with its face drawn on it has none on the back of it. From behind it is all one
+# colour, the one there is most of in so much of it from the top down, which is its hair if
+# it has any: and what is dark within so much of its edge, as a share of how wide it is, is
+# the line round it and is left.
+HEAD_TOP = 0.34
+HEAD_LINE = 0.035
+# What is at the top of a head is its hair if so much of the whole head is that colour: less,
+# and it is a tuft or a hat band, and the back of the head is the colour of the head.
+HAIR_AT_LEAST = 0.2
 # How many dolls may be turned a way they have not been turned yet in one frame.
-TURNED_A_FRAME = 2
+TURNED_A_FRAME = 1
 # In how many steps the far side goes from in the shade to out of it as a body turns.
 SHADE_STEPS = 4
+
+
+def _hair(head: pygame.Surface, colour: tuple[int, int, int] | None) -> tuple[int, int, int] | None:
+    """The colour found at the top of a head, if enough of the head is that colour for it to
+    be its hair: None if not, for the colour there is most of in all of it."""
+    if colour is None:
+        return None
+    rgb = pygame.surfarray.array3d(head)
+    solid = pygame.surfarray.array_alpha(head) >= 128
+    # Colours a shade apart are one colour, as they are when the most of one is looked for.
+    same = solid & ((rgb >> 4) == [value >> 4 for value in colour]).all(axis=2)
+    return colour if solid.any() and same.sum() >= solid.sum() * HAIR_AT_LEAST else None
 
 
 @dataclass(frozen=True)
@@ -103,6 +124,8 @@ class Figures:
         # the front, or without the hands and feet that are made. By the doll each was cut from.
         self._cut: dict[tuple[int, bool, tuple[str, ...]], tuple[Doll, Doll]] = {}
         self._apart: dict[int, tuple[Doll, dict[str, float]]] = {}
+        # The backs of heads that have their faces drawn on them, by the doll each is of.
+        self._backs: dict[int, tuple[Doll, pygame.Surface]] = {}
         # Which doll the made hands and feet of each body were last told about.
         self._matched: dict[str, int] = {}
 
@@ -168,6 +191,11 @@ class Figures:
             feet.stands = -ankle[1] if ankle is not None and ankle[1] < 0 else None
         return Made(hands, feet)
 
+    def _is_cut(self, doll: Doll, front: bool, without: tuple[str, ...]) -> bool:
+        """Whether a doll has been cut again that way already."""
+        kept = self._cut.get((doll._token, front, tuple(sorted({*doll.without, *without}))))
+        return kept is not None and kept[0] is doll
+
     def _again(self, doll: Doll, front: bool, without: tuple[str, ...], depth: float) -> Doll:
         """A doll cut again from the drawings of another: its trunk made into one seen from
         the front, if it is to be, and without the parts that are made instead."""
@@ -177,6 +205,8 @@ class Figures:
         key = (doll._token, front, without)
         kept = self._cut.get(key)
         if kept is None or kept[0] is not doll:
+            # Cutting a doll again is not quick: it counts as one turned a new way.
+            self._turned.take()
             sheets = dict(doll.sheets)
             if front and BODY_CANVAS in sheets:
                 sheets[BODY_CANVAS] = fronted(doll.template, sheets[BODY_CANVAS], self.rules.body.trunk, depth)
@@ -185,23 +215,59 @@ class Figures:
             kept = self._cut[key] = (doll, Doll(doll.template, sheets, doll.plan, without))
         return kept[1]
 
-    def shown(self, body_id: str | None, doll: Doll, yaw: float | None = None) -> Shown:
+    def _behind(self, doll: Doll, head: pygame.Surface, yaw: float) -> Doll:
+        """A doll whose face is drawn on its head, turned so far round: from behind its head is
+        plain, the face fading as it goes round as one made of pieces does."""
+        if yaw <= BEHIND_FROM:
+            return doll
+        kept = self._backs.get(doll._token)
+        if kept is None or kept[0] is not doll:
+            box = head.get_bounding_rect()
+            if not box.width:
+                return doll
+            top = head.subsurface((box.x, box.y, box.width, max(1, round(box.height * HEAD_TOP))))
+            try:
+                plain = plain_back(head, max(1, round(box.width * HEAD_LINE)), (), _hair(head, main_colour(top)))
+            except (pygame.error, ValueError, TypeError):
+                plain = head
+            if len(self._backs) > 256:
+                self._backs.clear()
+            kept = self._backs[doll._token] = (doll, plain)
+        plain = kept[1]
+        if yaw >= BEHIND_BY:
+            return with_head(doll, (plain, (0, 0)))
+        gone = (yaw - BEHIND_FROM) / (BEHIND_BY - BEHIND_FROM)
+        return with_head(doll, _dissolved((head, (0, 0)), (plain, (0, 0)), gone))
+
+    def shown(self, body_id: str | None, doll: Doll, yaw: float | None = None, step: float | None = None) -> Shown:
         """A doll turned `yaw` degrees round from facing whoever looks, as far as right behind
         at twice what its side is: from its side if it is not said. `doll` is the body as it
-        was cut, with whatever it wears on, and `body_id` whose it is, if anybody's."""
+        was cut, with whatever it wears on, and `body_id` whose it is, if anybody's.
+
+        `step` is in what steps of a turn it is kept turned, in degrees, where that is coarser
+        than a head is: many are shown at once on a map, small, and each way one is turned is
+        made once and kept."""
         rules = self.rules
+        if yaw is not None and step:
+            yaw = max(0.0, min(2.0 * rules.side, round(abs(yaw) / step) * step))
         yaw = rules.side if yaw is None else rules.yaw_of(rules.stepped(yaw, behind=True))
         said = self.said(body_id)
         made = self.made(body_id, doll)
         without = made.bones if made is not None else ()
         # From its side, one drawn from its side is its drawing as it ever was.
         as_drawn = said.drawn == SIDE_DRAWN and abs(yaw - rules.side) < 1e-6
+        if said.drawn == SIDE_DRAWN and not as_drawn and self._turned.spent and not self._is_cut(doll, True, without):
+            # Its trunk has yet to be made into one seen from the front, and enough has been
+            # made in this frame: until there is time it is its drawing, seen from its side.
+            return self.shown(body_id, doll)
         base = self._again(doll, said.drawn == SIDE_DRAWN and not as_drawn, without, said.depth)
 
         def turn(to: float) -> Doll:
             face = self.faces.get(body_id) if body_id is not None else None
             head = base.sheets.get(HEAD_CANVAS)
             seen = faced(base, face, head, to) if head is not None else base
+            if head is not None and (face is None or not face.drawn):
+                seen = self._behind(base, head, to)
             if said.drawn == SIDE_DRAWN and abs(to - rules.side) < 1e-6:
                 return seen
             seen = turned_body(seen, rules.body, to, said.depth, rules.side, said.back)

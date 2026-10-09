@@ -170,6 +170,7 @@ class Game:
             self.illustrations, self.layers, self.dolls, self.voices,
         )
         self.global_view.sound = self.audio.interface
+        self.global_view.figures = self.figures
         # Advice is asked for in the dock under the map, with the settlement left on show around it.
         self.interaction_view = InteractionView(
             self.canvas,
@@ -742,6 +743,7 @@ class Game:
         """Put the frame the active scene has just drawn on the window, or on another surface of its size."""
         self.layers.compose(screen if screen is not None else self.screen, self.canvas)
         self.dolls.new_frame()
+        self.figures.new_frame()
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Give one input event to the shell, and then to the scene on show."""

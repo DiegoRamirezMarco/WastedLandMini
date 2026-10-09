@@ -395,7 +395,9 @@ def main_colour(image: pygame.Surface) -> tuple[int, int, int] | None:
     return (red, green, blue)
 
 
-def plain_back(image: pygame.Surface, line: int, zones: Sequence[pygame.Surface] = ()) -> pygame.Surface:
+def plain_back(
+    image: pygame.Surface, line: int, zones: Sequence[pygame.Surface] = (), colour: tuple[int, int, int] | None = None
+) -> pygame.Surface:
     """A drawing of a trunk with nothing on it but the line round it: all of it the colour
     there is most of, and what is dark within `line` pixels of its edge left as it is. It is
     the back of a trunk nobody has drawn the back of.
@@ -403,8 +405,10 @@ def plain_back(image: pygame.Surface, line: int, zones: Sequence[pygame.Surface]
     `zones` are parts of it that are each the colour there is most of in them, where that is
     not the colour of the whole: solid where each is, the later over the earlier. What is worn
     under the hips is its own colour from behind, and not that of the skin above it.
+
+    `colour` is the colour it is to be, where that is not the one there is most of in it.
     """
-    colour = main_colour(image)
+    colour = colour if colour is not None else main_colour(image)
     if colour is None:
         return image
     width, height = image.get_size()

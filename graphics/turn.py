@@ -153,6 +153,15 @@ class Turned:
     def new_frame(self) -> None:
         self._left = self.a_frame
 
+    @property
+    def spent(self) -> bool:
+        """Whether no more may be turned a new way in this frame."""
+        return self._left <= 0
+
+    def take(self) -> None:
+        """Count something else that is not quick as one doll turned a new way in this frame."""
+        self._left -= 1
+
     def forget(self, who: Hashable) -> None:
         """Let go of every way one doll was turned: its drawing has changed."""
         self._kept.pop(who, None)

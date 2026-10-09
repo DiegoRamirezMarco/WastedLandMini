@@ -180,6 +180,10 @@ class ExpeditionView:
             character.at_ease = stopped
             character.stand(0.0, 0.0, facing, clip, turn % 1.0)
             skeleton = view._posed_skeleton(resident.resident_id, character)
+            # Out there they are seen from their side all the way, with their face on and
+            # whatever hands and feet they have that are made.
+            shown = view._shown(resident.resident_id, doll, None, clip)
+            seen, made = (shown.doll, shown.made) if shown is not None else (doll, None)
             reach = doll.standing(plan)
             sole = (0.0, reach[3])
             # Their soles are on the ground, wherever under them the spot between their feet is.
@@ -194,8 +198,8 @@ class ExpeditionView:
 
             def draw(target: pygame.Surface, corner: tuple[int, int]) -> None:
                 draw_doll(
-                    target, doll, plan, skeleton, (corner[0] + origin[0], corner[1] + origin[1]), detail,
-                    view.dolls.allowance, grown, sole,
+                    target, seen, plan, skeleton, (corner[0] + origin[0], corner[1] + origin[1]), detail,
+                    view.dolls.allowance, grown, sole, hands=made,
                 )
 
             return draw, box

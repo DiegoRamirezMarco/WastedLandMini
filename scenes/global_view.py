@@ -13,6 +13,7 @@ from graphics.building_renderer import FACADE_ROWS, BuildingRenderer, building_a
 from graphics.bundle import bundle_height, bundle_picture, ground_blanket
 from graphics.crumbs import Crumb, CrumbArt, crumbs
 from graphics.doll import DOLL_FACINGS, Doll, DollStore, draw_doll
+from graphics.figure import Figures, Shown
 from graphics.face_renderer import FaceRenderer
 from graphics.font import CELL_SIZE, BitmapFont
 from graphics.icons import ICON_SIZE, icon_path
@@ -404,7 +405,16 @@ Held = InHand | Gripped | Sparks
 # the skeleton it is laid over or, for someone lying under a blanket, where their neck is. Then
 # how much of its drawn size the body is shown at, and the spot between its feet that it is
 # brought down about.
-DollDraw = tuple[float, Doll, Skeleton | None, tuple[float, float] | None, float, tuple[float, float]]
+# The last is whatever of the doll is made and not drawn: its hands, its feet.
+DollDraw = tuple[float, Doll, Skeleton | None, tuple[float, float] | None, float, tuple[float, float], object | None]
+# How fast a body comes round to the way it walks, in degrees a second, and in what steps
+# of a turn it is kept turned: coarser than beside the paper it is drawn on, since there are
+# many of them and each way one is turned is made once.
+TURN_SPEED = 540.0
+MAP_TURN_STEP = 22.5
+# How far round from facing whoever looks a body is that walks each way, to the right: one
+# that walks to the left is as far round the other way.
+TO_FRONT, TO_SIDE, TO_BEHIND = 0.0, 90.0, 180.0
 # The body every child nobody has drawn is shown with.
 CHILD_BODY = "child"
 BORN_EVENT = "child_born"
@@ -440,6 +450,13 @@ class GlobalView:
         self.dolls = dolls if layers is not None else None
         self._doll_facing: dict[str, str] = {}
         self._doll_draws: list[DollDraw] = []
+        # What turns dolls, where there is a window to show them on: whoever has it gives it.
+        self.figures: Figures | None = None
+        # How far round each body is, to the right or to the left of facing whoever looks, and
+        # when it was last asked: it comes round to the way it walks by degrees.
+        self._turns: dict[str, tuple[float, float]] = {}
+        # The doll each body was last shown as: its own, turned whichever way it was.
+        self.doll_shown: dict[str, Doll] = {}
         self._held: list[Held] = []
         self._crumb_art = CrumbArt()
         self._bolt_art = BoltArt()
@@ -2700,9 +2717,9 @@ class GlobalView:
                 if kind == 0:
                     show(entry[1], entry[2])
                     continue
-                _, doll, skeleton, neck, grown, foot = entry
+                _, doll, skeleton, neck, grown, foot, made = entry
                 if skeleton is not None:
-                    draw_doll(screen, doll, plan, skeleton, origin, detail, allowance, grown, foot)
+                    draw_doll(screen, doll, plan, skeleton, origin, detail, allowance, grown, foot, hands=made)
                     continue
                 # Lying under a blanket: only the head, upright on the pillow.
                 head = doll.placed(HEAD_BONE, False, detail, math.pi)
@@ -3050,8 +3067,11 @@ class GlobalView:
         x += 0.0 if carried else self.sway(resident)
         # Somebody not yet grown has a smaller body under the head they were drawn with.
         grown = grown_share(self.world, resident)
+        # Which way they walk or stand, before it is brought to one side or the other: a doll
+        # comes round to it.
+        heading, lean = facing, None if carried else self._lean(resident)
         if doll is not None:
-            facing = self._side_facing(resident.resident_id, (None if carried else self._lean(resident)) or facing)
+            facing = self._side_facing(resident.resident_id, lean or facing)
         top = round(y * TILE_SIZE)
         spot = ground_spot(x, y)
         # Where a body stands at rest, which is what is picked with the mouse whatever it is doing.
@@ -3112,6 +3132,14 @@ class GlobalView:
         )
         if not carried:
             self._pocketing(resident, character)
+        yaw = gone = None
+        if doll is not None and self.figures is not None:
+            # Whoever is at something is at it from their side, as every clip has it. Walking,
+            # or standing with nothing to do, they are seen from wherever they face.
+            busy = carried or asleep or rough is not None or (
+                stride is None and (clip != IDLE_CLIP or overlay is not None or self._seat_of(resident) is not None)
+            )
+            facing, yaw, gone = self._turned(resident.resident_id, None if busy else self._heading(heading, lean), facing)
         # A doll turns smoothly; the game's own bodies go from one kept picture to the next.
         character.stand(spot[0], spot[1], facing, clip, phase if doll is not None else index / frames, overlay)
 
@@ -3123,12 +3151,20 @@ class GlobalView:
             depth = IN_HAND_DEPTH
 
         def draw() -> None:
+            pose = None
             if doll is not None:
-                skeleton = character.skeleton if character.physical else self._posed_skeleton(resident.resident_id, character)
+                # Knocked about, a body is wherever physics has it, seen from its side.
+                shown = self._shown(resident.resident_id, doll, None if character.physical else yaw, clip, gone)
+                if shown is not None and not character.physical:
+                    pose = self.figures.posed(shown, character.local_pose(), character.facing)
+                skeleton = character.skeleton if character.physical else self._posed_skeleton(resident.resident_id, character, pose)
                 if carried and not character.physical:
                     # Held by the scruff of the neck, they swing from it as the hand moves.
                     self._hang(skeleton, (float(spot[0]), float(spot[1]) - HANG))
-                self._doll_draws.append((depth, doll, skeleton, None, grown, sole))
+                self._doll_draws.append((
+                    depth, shown.doll if shown is not None else doll, skeleton, None, grown, sole,
+                    shown.made if shown is not None else None,
+                ))
             elif character.physical:
                 # Reeling from a blow or knocked down: drawn joint by joint, wherever physics has them.
                 renderer.draw_limp(
@@ -3150,7 +3186,11 @@ class GlobalView:
             self.hitboxes[resident.resident_id] = hitbox
             held = len(self._held)
             if not character.physical:
-                self._hold_all(resident, facing, character.pose(), spot[1], turn, stride, (grown, sole), clip)
+                # What is in their hands is where their hands are, turned as they are.
+                where = character.pose() if pose is None else {
+                    name: (character.x + x, character.y + y) for name, (x, y) in pose.items()
+                }
+                self._hold_all(resident, facing, where, spot[1], turn, stride, (grown, sole), clip)
             # What is held up higher than their head, as a meal is by somebody sitting, is not
             # written over: their name goes above it.
             tops = [top for top in map(self._top_of, self._held[held:]) if top is not None]
@@ -3215,15 +3255,80 @@ class GlobalView:
             self._doll_facing[resident_id] = DOLL_FACINGS[facing]
         return self._doll_facing.get(resident_id, DOLL_FACING)
 
-    def _posed_skeleton(self, resident_id: str, character) -> Skeleton:
-        """A skeleton standing as a resident's body is right now, to lay their doll over."""
+    def _posed_skeleton(self, resident_id: str, character, pose: dict | None = None) -> Skeleton:
+        """A skeleton standing as a resident's body is right now, to lay their doll over: or as
+        `pose` has it, where that is their body turned some way."""
         plan = character.plan
         key = (resident_id, character.facing, tuple(character.lost), id(plan))
         if key not in self._posed:
             self._posed[key] = Skeleton(plan, character.facing, character.lost)
         skeleton = self._posed[key]
-        skeleton.set_pose(character.local_pose(), character.x, character.y)
+        skeleton.set_pose(pose if pose is not None else character.local_pose(), character.x, character.y)
         return skeleton
+
+    @staticmethod
+    def _heading(facing: str, lean: str | None) -> float | None:
+        """How far round from facing whoever looks a body is that walks or stands facing one
+        way, leaning to one side or the other as it goes: to the right, and less than nothing
+        to the left. Down the map is towards whoever looks, and up it is away."""
+        if facing in ("right", "left"):
+            return TO_SIDE if facing == "right" else -TO_SIDE
+        aslant = {None: 0.0, "right": 1.0, "left": -1.0}.get(lean, 0.0)
+        if facing == "down":
+            return TO_FRONT + aslant * (TO_SIDE - TO_FRONT) / 2
+        if facing == "up":
+            return (TO_BEHIND - (TO_BEHIND - TO_SIDE) / 2) * aslant if aslant else TO_BEHIND
+        return None
+
+    def _turned(self, resident_id: str, towards: float | None, side: str) -> tuple[str, float, float]:
+        """Bring a body round towards the way it faces, by as much as the time gone by allows:
+        the side its skeleton is posed for, how far round it now is from facing whoever looks,
+        and how long it has been since it was last asked, which is None the first time.
+
+        `towards` is how far round it is to be, to the right or, less than nothing, to the
+        left; with none it is to be seen from its side, the one it is on. It goes round the
+        shorter way, and through the front where both are as long: nobody turns their back to
+        go from one side to the other.
+        """
+        right = side == DOLL_FACINGS["right"]
+        # By the clock bodies move by: it stands still while the game does, and goes as fast.
+        now = self.bodies.clock
+        yaw, asked = self._turns.get(resident_id, (None, now))
+        if towards is None:
+            # From their side: the one that what they are at has them on.
+            towards = TO_SIDE if right else -TO_SIDE
+        # Seen for the first time, they are already the way they face.
+        first = yaw is None
+        if first:
+            yaw = towards
+        gone = max(0.0, now - asked)
+        way = (towards - yaw + 180.0) % 360.0 - 180.0
+        if abs(abs(way) - 180.0) < 1e-6:
+            way = -180.0 if yaw > 0 else 180.0
+        step = TURN_SPEED * gone
+        yaw = towards if abs(way) <= step else yaw + math.copysign(step, way)
+        yaw = (yaw + 180.0) % 360.0 - 180.0
+        self._turns[resident_id] = (yaw, now)
+        # Right in front and right behind it is on the side it was on.
+        on_right = right if abs(yaw) < 1e-6 or abs(abs(yaw) - 180.0) < 1e-6 else yaw > 0
+        facing = DOLL_FACINGS["right" if on_right else "left"]
+        self._doll_facing[resident_id] = facing
+        return facing, abs(yaw), None if first else gone
+
+    def _shown(
+        self, body_id: str, doll: Doll, yaw: float | None = None, clip: str | None = None, gone: float | None = None
+    ) -> Shown | None:
+        """A doll as it is shown, turned so far round from facing whoever looks, or seen from
+        its side: with its face on, and whatever hands and feet it has that are made, held as
+        what it is at has them. None with nothing to turn dolls."""
+        if self.figures is None:
+            self.doll_shown[body_id] = doll
+            return None
+        if clip is not None:
+            self.figures.settle(body_id, clip, gone)
+        shown = self.figures.shown(body_id, doll, yaw, MAP_TURN_STEP)
+        self.doll_shown[body_id] = shown.doll
+        return shown
 
     def bundle_spot(self, bundle: Bundle) -> tuple[float, float, float]:
         """Where a child in its blanket is shown: the middle of its foot in map pixels, and how
@@ -3288,7 +3393,11 @@ class GlobalView:
 
         def draw() -> None:
             if doll is not None:
-                self._doll_draws.append((remains.skeleton.ground, doll, remains.skeleton, None, 1.0, (0.0, 0.0)))
+                shown = self._shown(remains.body_id, doll)
+                self._doll_draws.append((
+                    remains.skeleton.ground, shown.doll if shown is not None else doll, remains.skeleton, None, 1.0, (0.0, 0.0),
+                    shown.made if shown is not None else None,
+                ))
                 return
             self.bodies.draw_remains(self._scene, remains, self._scene_origin)
 
@@ -3663,7 +3772,8 @@ class GlobalView:
 
         def draw() -> None:
             if doll is not None:
-                self._doll_draws.append((bed.bottom, doll, None, neck, 1.0, (0.0, 0.0)))
+                shown = self._shown(resident.resident_id, doll)
+                self._doll_draws.append((bed.bottom, shown.doll if shown is not None else doll, None, neck, 1.0, (0.0, 0.0), None))
             else:
                 self._blit(head, (bed.left + LYING_HEAD_OFFSET[0], bed.top + LYING_HEAD_OFFSET[1]))
             hitbox = self._canvas_rect(bed)
@@ -3722,7 +3832,8 @@ class GlobalView:
                 detail = self._cell / TILE_SIZE
                 blanket = self.rough_blanket(max(4, round(ROUGH_SIZE[0] * detail)), max(2, round(ROUGH_SIZE[1] * detail)))
                 self._rough.append((float(bottom) - 0.2, area, blanket))
-                self._doll_draws.append((float(bottom), doll, None, neck, 1.0, (0.0, 0.0)))
+                shown = self._shown(resident.resident_id, doll)
+                self._doll_draws.append((float(bottom), shown.doll if shown is not None else doll, None, neck, 1.0, (0.0, 0.0), None))
             else:
                 self._blit(self.rough_blanket(round(ROUGH_SIZE[0]), round(ROUGH_SIZE[1])), (round(area[0]), round(area[1])))
                 self._blit(head, (round(neck[0]) - head.get_width() // 2, round(neck[1]) - head.get_height()))

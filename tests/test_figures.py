@@ -68,6 +68,7 @@ class FiguresTests(unittest.TestCase):
         self.assertIsNone(side.made)
         # Seen from the front its trunk is made into one seen from the front: wider, and the
         # same to either side of its middle. Nobody has drawn it again.
+        cast.new_frame()
         front = cast.shown("old", doll, 0.0)
         self.assertIsNot(front.doll, doll)
         self.assertGreater(self.width(front.doll), self.width(doll) * 1.3)
@@ -145,6 +146,7 @@ class FiguresTests(unittest.TestCase):
         cast = self.cast()
         doll = cast.dolls.get("old")
         front = cast.shown("old", doll, 0.0)
+        cast.new_frame()
         quarter = cast.shown("old", doll, 45.0)
         self.assertIsNot(quarter.doll, front.doll)
         # No more in this frame: it is shown the nearest way it has been turned.
@@ -155,6 +157,48 @@ class FiguresTests(unittest.TestCase):
         cast.new_frame()
         self.assertIs(cast.shown("old", doll, 0.0).doll, front.doll)
 
+    def test_a_body_whose_trunk_has_yet_to_be_made_waits_its_turn_seen_from_its_side(self) -> None:
+        for name in ("one", "other"):
+            self.keep(name, self.plain)
+        cast = self.cast()
+        one, other = cast.dolls.get("one"), cast.dolls.get("other")
+        self.assertIsNot(cast.shown("one", one, 0.0).doll, one)
+        # Enough has been made in this frame: the other is its drawing, from its side.
+        waiting = cast.shown("other", other, 0.0)
+        self.assertIs(waiting.doll, other)
+        self.assertEqual(waiting.yaw, cast.side)
+        cast.new_frame()
+        turned = cast.shown("other", other, 0.0)
+        self.assertIsNot(turned.doll, other)
+        self.assertEqual(turned.yaw, 0.0)
+
+    def test_on_a_map_a_body_is_kept_turned_in_coarser_steps(self) -> None:
+        self.keep("old", self.plain)
+        cast = self.cast()
+        doll = cast.dolls.get("old")
+        self.assertEqual(cast.shown("old", doll, 30.0, 22.5).yaw, 22.5)
+        cast.new_frame()
+        self.assertEqual(cast.shown("old", doll, 35.0, 22.5).yaw, 45.0)
+        cast.new_frame()
+        self.assertEqual(cast.shown("old", doll, 200.0, 22.5).yaw, 180.0)
+        self.assertEqual(cast.shown("old", doll, 95.0, 22.5).yaw, cast.side)
+
+    def test_a_head_with_its_face_drawn_on_it_has_none_on_the_back_of_it(self) -> None:
+        drawn = dict(self.plain)
+        head = drawn[HEAD_CANVAS] = drawn[HEAD_CANVAS].copy()
+        box = head.get_bounding_rect()
+        # An eye, where one drawn from the side has it.
+        pygame.draw.circle(head, GREEN, (box.centerx + box.width // 5, box.centery), 5)
+        self.keep("old", drawn)
+        cast = self.cast()
+        doll = cast.dolls.get("old")
+        self.assertGreater(greens(cast.shown("old", doll, 0.0).doll.parts["skull"].image), 30)
+        cast.new_frame()
+        behind = cast.shown("old", doll, 180.0).doll.parts["skull"].image
+        self.assertEqual(greens(behind), 0)
+        # It is as large as it was, with the line round it.
+        self.assertAlmostEqual(pygame.mask.from_surface(behind).count(), pygame.mask.from_surface(doll.parts["skull"].image).count(), delta=40)
+
     def test_a_pose_goes_round_with_the_body_and_is_as_it_was_from_its_side(self) -> None:
         self.keep("old", self.plain)
         cast = self.cast()
@@ -162,6 +206,7 @@ class FiguresTests(unittest.TestCase):
         facing = DOLL_FACINGS["right"]
         pose = doll.plan.pose(facing, "walk", 0.3)
         self.assertIs(cast.posed(cast.shown("old", doll), pose, facing), pose)
+        cast.new_frame()
         front = cast.posed(cast.shown("old", doll, 0.0), pose, facing)
         self.assertGreater(front["shoulder_left"][0], front["chest"][0])
         self.assertLess(front["shoulder_right"][0], front["chest"][0])
@@ -171,6 +216,7 @@ class FiguresTests(unittest.TestCase):
         cast = self.cast()
         doll = cast.dolls.stand_in("nobody", lambda template: figures(template, tones_of(SKIN, LINE), 5))
         self.assertIs(cast.shown(None, doll).doll, doll)
+        cast.new_frame()
         self.assertGreater(self.width(cast.shown(None, doll, 0.0).doll), self.width(doll) * 1.3)
         self.assertEqual(cast.said("nobody").drawn, SIDE_DRAWN)
         self.assertIn(HEAD_CANVAS, doll.sheets)

@@ -831,7 +831,17 @@ class InteriorView:
         renderer = view.bodies.renderer
         # As on the map, what they carry is in their pockets and their hands are free.
         if doll is not None:
-            facing = view._side_facing(resident.resident_id, view._lean(resident) or facing)
+            # Which way they walk or stand, before it is brought to one side or the other.
+            heading, lean = facing, None if carried else view._lean(resident)
+            facing = view._side_facing(resident.resident_id, lean or facing)
+            yaw = gone = None
+            rough = None if carried else view._rough_pose(resident, stride)
+            if view.figures is not None:
+                # As on the map: at something, they are at it from their side.
+                busy = carried or rough is not None or (
+                    stride is None and (clip != IDLE_CLIP or overlay is not None or view._seat_of(resident) is not None)
+                )
+                facing, yaw, gone = view._turned(resident.resident_id, None if busy else view._heading(heading, lean), facing)
             plan = doll.plan if doll.plan is not None else view.bodies.plan
             key = (resident.resident_id, facing, id(plan))
             if key not in self._skeletons:
@@ -851,11 +861,14 @@ class InteriorView:
             if not carried:
                 view._pocketing(resident, character)
             # Whoever sleeps on the floor in here lies down on it as they would outside.
-            rough = None if carried else view._rough_pose(resident, stride)
             clip, phase = rough if rough is not None else (clip, turn % 1.0)
             character.stand(*ground_spot(x, y), facing, clip, phase, overlay)
+            shown = view._shown(resident.resident_id, doll, yaw, clip, gone)
             pose = character.local_pose()
+            if shown is not None:
+                pose = view.figures.posed(shown, pose, facing)
             skeleton.set_pose(pose)
+            seen, made = (shown.doll, shown.made) if shown is not None else (doll, None)
             if carried:
                 # Held by the scruff of the neck, they swing from it as the hand moves.
                 view._hang(skeleton, (0.0, -HANG))
@@ -875,8 +888,8 @@ class InteriorView:
                 if not carried:
                     self._shadow(target, corner, foot, layout)
                 draw_doll(
-                    target, doll, plan, skeleton, (corner[0] + foot[0], corner[1] + foot[1]), detail,
-                    view.dolls.allowance, grown, sole,
+                    target, seen, plan, skeleton, (corner[0] + foot[0], corner[1] + foot[1]), detail,
+                    view.dolls.allowance, grown, sole, hands=made,
                 )
                 self._show_held(target, held, (corner[0] + foot[0], corner[1] + foot[1]), detail)
 
@@ -963,6 +976,10 @@ class InteriorView:
         across, down = layout.cell / TILE_SIZE, layout.depth / TILE_SIZE
         bed = pygame.Rect(left, top, definition.width * layout.cell, definition.height * layout.depth)
         doll = view._doll_for(resident)
+        lying = view._shown(resident.resident_id, doll) if doll is not None else None
+        if lying is not None:
+            # With whatever face they have been given on.
+            doll = lying.doll
         head = doll.placed(HEAD_BONE, False, across, math.pi) if doll is not None else None
         own = self._own(layout, definition)
         if head is not None:

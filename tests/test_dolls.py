@@ -949,9 +949,12 @@ class DollEditorTests(unittest.TestCase):
         view.centre_on((20, 14))
         window = self._show()
         shown = [entry[1] for entry in view._doll_draws]
-        self.assertEqual(shown.count(doll), 1, "he is his own drawing now")
+        # Facing down the map he is seen from the front: his own drawing, turned.
+        mine = view.doll_shown["raul"]
+        self.assertEqual(shown.count(mine), 1, "he is his own drawing now")
+        self.assertIs(mine.sheets[HEAD_CANVAS], doll.sheets[HEAD_CANVAS])
         # Whoever else is in view has not been drawn, and is the figure the game draws of them.
-        self.assertTrue(all(other is doll or other not in (None, doll) for other in shown))
+        self.assertTrue(all(other is mine or other not in (None, mine, doll) for other in shown))
         self.assertIsNone(game.dolls.get("marta"))
         self.assertTrue(game.layers.active)
         self.assertEqual(game.canvas.get_at(view.viewport.center)[3], 0, "the map is on the window, under the canvas")
@@ -1013,8 +1016,9 @@ class DollEditorTests(unittest.TestCase):
         shown = [entry[1] for entry in view._doll_draws]
         self.assertGreaterEqual(len(shown), 3, "all three are on the window, with whoever else is in view")
         self.assertIsNone(game.dolls.get("tomas"), "Tomás has not been drawn")
-        self.assertIn(view._doll_of("tomas"), shown, "so he is the figure the game draws of him")
-        self.assertIn(game.dolls.get("raul"), shown)
+        self.assertIn(view.doll_shown["tomas"], shown, "so he is the figure the game draws of him")
+        self.assertIn(view.doll_shown["raul"], shown)
+        self.assertIs(view.doll_shown["raul"].sheets[HEAD_CANVAS], game.dolls.get("raul").sheets[HEAD_CANVAS])
         world.health.hurt(world, raul, 22, "fracture", "una prueba", tomas)
         lucia.injuries = [Injury("cut", 99)]
         world.health.hurt(world, lucia, 5, "bruise", "una prueba", tomas)
@@ -1033,7 +1037,7 @@ class DollEditorTests(unittest.TestCase):
         view.centre_on((bed.x, bed.y))
         view.roofs_on = False
         self._show()
-        lying = [entry for entry in view._doll_draws if entry[2] is None and entry[1] is game.dolls.get("raul")]
+        lying = [entry for entry in view._doll_draws if entry[2] is None and entry[1] is view.doll_shown["raul"]]
         self.assertEqual(len(lying), 1)
         self.assertIsNotNone(lying[0][3])
 
