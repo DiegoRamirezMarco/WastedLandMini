@@ -59,6 +59,23 @@ class OnTheGround:
 
 
 @dataclass(frozen=True)
+class Talking:
+    """How two who have something to say to each other are shown. Whoever speaks does so in
+    their own way, and `speak` is the way of anybody with none; the other listens. At what
+    is told to make somebody laugh, whoever hears it laughs. Whoever brought it up greets
+    the other first, for so many minutes of the game. And some of what two do together is
+    not talk at all: `silent`, by what it is."""
+
+    speak: Doing = Doing()
+    listen: Doing = Doing()
+    laugh: Doing | None = None
+    laugh_at: tuple[str, ...] = ()
+    greet: Doing | None = None
+    greet_minutes: float = 0.0
+    silent: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class Poses:
     # By the ID of the item, or of the prop, that is held.
     handles: dict[str, Handle] = field(default_factory=dict)
@@ -75,6 +92,8 @@ class Poses:
     # Sitting on something that is for sitting on, in place of one's own way of sitting on the
     # ground. None where whoever has a seat under them sits as they would without.
     seat: Doing | None = None
+    # Talking. None where two who talk stand as anybody stands.
+    talk: Talking | None = None
 
     def working(self, job_id: str | None, with_tool: bool) -> Doing:
         """How somebody at their post is shown, by their job and whether they have its tool in hand."""
@@ -123,7 +142,20 @@ def poses_from_data(data: dict[str, Any]) -> Poses:
             raise ValueError("Sleeping on the ground is lying down, lying there and getting up: it needs all three")
         rough = OnTheGround(*(_doing(said[part], f"Sleeping on the ground ({part})") for part in ("down", "asleep", "up")))
     seat = _doing(data["seat"], "Sitting on a seat") if "seat" in data else None
-    return Poses(handles, work, jobs, _doing(data.get("build"), "Building", work), pocket, rough, seat)
+    talk = None
+    if "talk" in data:
+        said = data["talk"]
+        if not isinstance(said, dict) or not {"speak", "listen"} <= said.keys():
+            raise ValueError("Talking is speaking and listening: it needs both")
+        talk = Talking(
+            _doing(said["speak"], "Speaking"), _doing(said["listen"], "Listening"),
+            _doing(said["laugh"], "Laughing") if "laugh" in said else None,
+            tuple(str(action) for action in said.get("laugh_at", ())),
+            _doing(said["greet"], "Greeting") if "greet" in said else None,
+            max(0.0, float(said.get("greet_minutes", 0.0))),
+            tuple(str(action) for action in said.get("silent", ())),
+        )
+    return Poses(handles, work, jobs, _doing(data.get("build"), "Building", work), pocket, rough, seat, talk)
 
 
 def load_poses(path: Path = POSES_PATH) -> Poses:

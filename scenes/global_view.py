@@ -167,7 +167,7 @@ from simulation.family.children import Bundle
 from simulation.ai.navigation import seat_at
 from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item_system import USE_ITEM_ACTION
-from simulation.residents.manner import ARGUE, EAT, FIGHT, SIT, WALK
+from simulation.residents.manner import ARGUE, EAT, FIGHT, SIT, TALK, WALK
 from simulation.social.talk import ASK_SUBJECT
 from simulation.social.talk import TAKEN_EVENT as SUBJECT_TAKEN_EVENT
 from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
@@ -198,7 +198,7 @@ from ui.outing_board import PLAN_INTENT as TRIP_PLAN_INTENT
 from ui.outing_board import TRIPS_INTENT, filled, provisions, travellers
 from ui.power_board import POWER_INTENT
 from ui.talk_bubble import TAIL as BUBBLE_TAIL
-from ui.talk_bubble import bubble_of, bubble_size, draw_talk_bubble, said_aloud, wish_shown
+from ui.talk_bubble import TURN_MINUTES, bubble_of, bubble_size, draw_talk_bubble, said_aloud, wish_shown
 from ui.words_board import (
     ANSWER_FIELD,
     ASKED,
@@ -3355,7 +3355,7 @@ class GlobalView:
         own = sum(map(ord, resident.resident_id)) % 97 / 97
         mouth = 0
         activity = resident.activity
-        if said_aloud(bubble_of(self.world, resident)):
+        if self._speaking(resident):
             mouth = moves.mouth_at(self.time, own)
         elif activity is not None and activity.using and activity.action == EAT_ACTION:
             mouth = moves.mouth_at(self.time, own, chewing=True)
@@ -3480,9 +3480,13 @@ class GlobalView:
                 return (*self._way_of(resident, FIGHT), None)
             if self._arguing(resident):
                 return (*self._way_of(resident, ARGUE), None)
-            # What two sit down to, they sit down to: cards, a story.
+            # What two sit down to, they sit down to: cards, a story. And whatever they
+            # have to say to each other they say with their hands, sitting or standing.
             together = self._seat_of(resident)
-            return (*together, None) if together is not None else (IDLE_CLIP, 0.0, None)
+            talk = self._talk_of(resident)
+            if talk is None:
+                return (*together, None) if together is not None else (IDLE_CLIP, 0.0, None)
+            return (together[0], talk[1], talk[0]) if together is not None else (*talk, None)
         seat = self._seat_of(resident)
         if activity.action == EAT_ACTION:
             clip, rate = self._way_of(resident, EAT)
@@ -3492,6 +3496,38 @@ class GlobalView:
         if work is not None:
             return (work[0].clip, work[0].rate, None)
         return (*seat, None) if seat is not None else (IDLE_CLIP, 0.0, None)
+
+    def _speaking(self, resident: Resident) -> bool:
+        """Whether a resident is saying something right now: a phrase of their own has come
+        out, or they are talking with somebody and it is their turn."""
+        if said_aloud(bubble_of(self.world, resident)):
+            return True
+        activity = resident.activity
+        if activity is None or not activity.using or activity.partner_id is None:
+            return False
+        turn = ((self.world.clock.total_minutes - activity.began_at) // TURN_MINUTES) % 2
+        return (turn == 0) == activity.brought
+
+    def _talk_of(self, resident: Resident) -> tuple[str, float] | None:
+        """The clip of somebody who is with another, saying something or being told it, and
+        how fast it goes: speaking in their own way while it is their turn, and listening
+        while it is not; laughing at what is told to make them laugh; and greeting the other
+        as it begins, if it was they who brought it up. None where nothing is made of talk, or
+        what the two are at is not talk."""
+        talk = self.poses.talk
+        activity = resident.activity
+        if talk is None or activity is None or activity.partner_id is None or activity.action in talk.silent:
+            return None
+        minutes = self.world.clock.total_minutes - activity.began_at
+        if talk.greet is not None and activity.brought and minutes < talk.greet_minutes:
+            return (talk.greet.clip, talk.greet.rate)
+        if self._speaking(resident):
+            kind = self.world.registries.manners.kind_for(TALK)
+            manner = self.world.manner_of(resident, kind.kind_id) if kind is not None else None
+            return (manner.clip, manner.rate) if manner is not None else (talk.speak.clip, talk.speak.rate)
+        if talk.laugh is not None and activity.action in talk.laugh_at:
+            return (talk.laugh.clip, talk.laugh.rate)
+        return (talk.listen.clip, talk.listen.rate)
 
     def _lower_in(self, plan, facing: str, clip: str) -> float:
         """How much lower than standing the top of a body is in a clip, as it begins it, in map pixels."""

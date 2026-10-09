@@ -10,8 +10,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 # What a body is doing when a kind of manner shows.
-WALK, EAT, FIGHT, ARGUE, SIT = "walk", "eat", "fight", "argue", "sit"
-OCCASIONS = (WALK, EAT, FIGHT, ARGUE, SIT)
+WALK, EAT, FIGHT, ARGUE, SIT, TALK = "walk", "eat", "fight", "argue", "sit", "talk"
+OCCASIONS = (WALK, EAT, FIGHT, ARGUE, SIT, TALK)
+# The middle of what somebody's nature is measured in, and how far it is from there to either end.
+NATURE_MIDDLE, NATURE_REACH = 50.0, 50.0
 IDLE_CLIP = "idle"
 
 
@@ -40,6 +42,18 @@ class MannerDefinition:
     # Turns of the clip a second. For walking, turns to a step with each foot: a whole number,
     # so that a stride ends where the next minute's begins.
     rate: float = 1.0
+    # Whose it is before anybody chooses: what of somebody's nature it goes with, and how
+    # much, less than nothing for what it goes against. A manner with none goes with nobody
+    # more than with anybody else.
+    leans: Mapping[str, float] = field(default_factory=dict)
+
+    def suits(self, nature: Mapping[str, float]) -> float:
+        """How well it goes with somebody's nature: nothing for one that leans no way, or
+        for somebody in the middle of everything."""
+        return sum(
+            weight * (float(nature.get(part, NATURE_MIDDLE)) - NATURE_MIDDLE) / NATURE_REACH
+            for part, weight in self.leans.items()
+        )
 
 
 @dataclass(frozen=True)
@@ -63,20 +77,32 @@ class MannerSettings:
             (kind for kind in self.kinds.values() if kind.occasion == occasion and action in kind.actions), None
         )
 
-    def default(self, resident_id: str, kind_id: str) -> MannerDefinition | None:
+    def default(
+        self, resident_id: str, kind_id: str, nature: Mapping[str, float] | None = None
+    ) -> MannerDefinition | None:
         """The manner of someone who was never given one: always the same for the same ID, so
-        that nobody moves like everybody else while they wait to be told how."""
+        that nobody moves like everybody else while they wait to be told how.
+
+        Where the manners of a kind lean towards one nature or another, and `nature` is
+        somebody's, it is whichever suits them best, and among those that suit them as well
+        as each other the same one for the same ID."""
         choices = self.of_kind(kind_id)
         if not choices:
             return None
+        if nature is not None and any(manner.leans for manner in choices):
+            best = max(manner.suits(nature) for manner in choices)
+            choices = [manner for manner in choices if manner.suits(nature) >= best - 1e-9]
         return choices[zlib.crc32(f"{resident_id}:{kind_id}".encode("utf-8")) % len(choices)]
 
-    def of(self, resident_id: str, chosen: Mapping[str, str], kind_id: str) -> MannerDefinition | None:
-        """The manner a resident has for one kind: the one chosen for them, or else their own by default."""
+    def of(
+        self, resident_id: str, chosen: Mapping[str, str], kind_id: str, nature: Mapping[str, float] | None = None
+    ) -> MannerDefinition | None:
+        """The manner a resident has for one kind: the one chosen for them, or else their own
+        by default, which goes by their `nature` where the manners of that kind do."""
         manner = self.manners.get(chosen.get(kind_id, ""))
         if manner is not None and manner.kind == kind_id:
             return manner
-        return self.default(resident_id, kind_id)
+        return self.default(resident_id, kind_id, nature)
 
     def tidy(self, chosen: Mapping[str, Any]) -> dict[str, str]:
         """What of a choice of manners can be kept: known manners, each under its own kind."""
@@ -119,5 +145,6 @@ def manner_settings_from_data(data: dict[str, Any]) -> MannerSettings:
             str(values.get("description", "")),
             str(values.get("clip", IDLE_CLIP)),
             rate,
+            {str(part): float(weight) for part, weight in values.get("leans", {}).items()},
         )
     return MannerSettings(kinds, manners)

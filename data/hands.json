@@ -32,7 +32,9 @@
     "argue": "fist", "argue_stomp": "fist", "argue_arms": "open",
     "knife_lunge": "grip", "knife_slash": "grip", "knife_overhand": "grip",
     "shoot_aim": "grip", "shoot_braced": "grip", "shoot_hip": "grip",
-    "eat": "grip", "eat_wolf": "grip", "eat_dainty": "grip", "pocket": "open"
+    "eat": "grip", "eat_wolf": "grip", "eat_dainty": "grip", "pocket": "open",
+    "talk_calm": "open", "talk_hands": "open", "talk_shy": "relaxed",
+    "listen": "relaxed", "laugh": "relaxed", "wave": "open"
   },
   "held": {"thick": [0.0, 1.4], "opens": 0.5},
   "quick": 9.0

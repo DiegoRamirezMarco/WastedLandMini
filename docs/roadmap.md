@@ -6493,14 +6493,49 @@ Done when: on the map whoever has a face of pieces blinks, moves their mouth whe
 and wears how they feel; whoever nobody has drawn has a plain face that does; and an eye
 drawn shut is the one shown when they blink.
 
-### P75 — Talking with the hands (needs P74) — planned
+### P75 — Talking with the hands (needs P74) — done
 Asked before it: whether each resident speaks in a way of their own: **"segun la personalidad
-pero luego elegibles"**. The game gives each a way of speaking by their personality, and it
-can be chosen after, where their ways of walking and eating are.
+pero luego elegibles"**. The game gives each a way of speaking by their nature, and another
+can be chosen for them where their ways of walking and eating are.
 
-- Three ways of speaking, as there are of walking and of eating; listening, laughing and
-  waving are everybody's
-- Whoever speaks is whoever has the words over them; the other listens
+- **Two who talk stood there as anybody stands**: now whoever speaks does so with their
+  hands and the other listens, nodding
+- **Three ways of speaking**, a kind of manner as walking and eating are: calm, one hand going
+  with what is said; effusive, with both hands and the whole body; and shy, hunched, hands
+  together in front, eyes on the ground
+- **Theirs by their nature until one is chosen**: a manner may lean towards parts of
+  somebody's nature (`leans` in `data/manners.json`), and whoever was given none has the one
+  that suits them best. The effusive goes with being sociable and impulsive, the shy against
+  being sociable, and the calm with nobody more than anybody: somebody in the middle of
+  everything has any of the three, always the same one. The screen of manners has a row for it
+- **They speak by turns**, as the words over them go: whoever has the turn speaks, in their
+  way, and moves their mouth; the other listens
+- **Whoever brought it up greets the other first**, a hand up, for three minutes of the game
+- **At what is told to make somebody laugh, whoever hears it laughs** (a joke, amusing somebody)
+- **Sitting, they talk with their hands on the body that sits**, as whoever eats sitting does
+- **What two do that is not talk is not shown as talk**: a hug, a kiss, a dance, cards, a
+  shove, tending somebody. They stand as they did, until each has a look of its own
+- **All of it is data**: the six clips in `data/skeleton.json`, which clip is listening,
+  laughing and greeting and what is not talk in `data/poses.json`, how the hands that are
+  made are held at each in `data/hands.json`
+- **On the screen they are drawn on a tile has the doll beside the work talk**, in their way
+
+Decided without asking:
+- **Three ways, and these three**
+- **A greeting is a wave**, whoever it is to, and only from whoever brought the talk up
+- **Whoever is insulted or told off listens** like anybody else: there is one way of listening
+- **Seen from the side**, as everything two do facing each other is
+
+Still open here:
+- **Nobody has played it with a mouse**: it was read in strips of consecutive frames of two
+  pairs talking on the map of the game
+- **On a doll with short arms and a large head the hand that waves comes near the face**
+- **The game has two natures to give** (`data/personalities.json`), so most are in the middle
+  and have their way of speaking by their name, not by how they are
+
+Done when: of two who talk on the map one moves their hands and their mouth and the other
+nods; they change over as the words over them do; and a way of speaking chosen for somebody
+on the screen of manners is the one they are seen to speak in.
 
 ### P76 — Walking seen from the front and from behind (needs P73) — planned
 - Looked at in a strip of the walk turned by rule: from the front and from behind the legs

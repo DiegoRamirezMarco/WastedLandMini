@@ -573,7 +573,7 @@ class SimulationWorld:
 
     def manner_of(self, resident: Resident, kind_id: str) -> MannerDefinition | None:
         """How a resident does one kind of thing: as was chosen for them, or else in their own way."""
-        return self.registries.manners.of(resident.resident_id, resident.manners, kind_id)
+        return self.registries.manners.of(resident.resident_id, resident.manners, kind_id, vars(resident.personality))
 
     def set_manner(self, resident_id: str, kind_id: str, manner_id: str) -> bool:
         """Give a resident a manner for its kind. Returns whether there was such a resident and such a manner."""

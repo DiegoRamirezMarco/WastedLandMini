@@ -36,7 +36,7 @@ from scenes.doll_page import BACK_PAPER, COLOR_DEED, BRUSH_TOOL, BRUSHES, ERASER
 from scenes.face_page import FacePaper
 from scenes.hand_page import FEET, HANDS, HandPaper
 from scenes.scene import canvas_position
-from simulation.residents.manner import OCCASIONS
+from simulation.residents.manner import OCCASIONS, TALK
 from skeleton.character import Character
 from skeleton.motion import Life
 from skeleton.plan import FACINGS, SkeletonPlan
@@ -81,8 +81,11 @@ SHOW_BENDING = 8.0
 SHOW_FOOT = 60
 SHOW_RATE = 1.2
 # What it can be shown at, by the icon of each, and what each is called.
-CLIPS = {"stand": "idle", "walk": "walk", "punch": "fight", "hammer": "hammer"}
-CLIP_TIPS = {"stand": "Quieto", "walk": "Andar", "punch": "Pelear", "hammer": "Trabajar"}
+CLIPS = {"stand": "idle", "walk": "walk", "punch": "fight", "talk": "talk_calm", "hammer": "hammer"}
+CLIP_TIPS = {"stand": "Quieto", "walk": "Andar", "punch": "Pelear", "talk": "Hablar", "hammer": "Trabajar"}
+# The clips among those that are somebody's own way of doing something, by what it is they do:
+# the rest are called what the occasion is called.
+OCCASION_OF = {"talk_calm": TALK}
 # Seconds it takes to turn from one side to the other and back when it turns by itself, and
 # how long something said stays on the screen.
 SPIN_SECONDS = 8.0
@@ -298,9 +301,10 @@ class Studio:
         """What the doll beside the work is at, in the manner of whoever is being drawn."""
         world = self.world
         resident = world.residents.get(self.body.resident_id or "") if world is not None else None
-        if resident is None or clip not in OCCASIONS:
+        occasion = OCCASION_OF.get(clip, clip)
+        if resident is None or occasion not in OCCASIONS:
             return clip
-        kind = world.registries.manners.kind_for(clip)
+        kind = world.registries.manners.kind_for(occasion)
         manner = world.manner_of(resident, kind.kind_id) if kind is not None else None
         return manner.clip if manner is not None else clip
 
@@ -387,7 +391,8 @@ class Studio:
         as its tiles say, and while an eye shut or a mouth open is being drawn it holds that."""
         rules = self.face.rules
         moves = rules.moves
-        lids, mouth = moves.lids_at(self.time, 0.37), moves.mouth_at(self.time, 0.0) if self.talking else 0
+        speaking = self.talking or OCCASION_OF.get(self.clip) == TALK
+        lids, mouth = moves.lids_at(self.time, 0.37), moves.mouth_at(self.time, 0.0) if speaking else 0
         held = rules.kinds.get(self.face.kind) if self.tab == FACE_TAB and not self.arranging else None
         if held is not None and held.when == SHUT:
             lids = moves.steps(SHUT)

@@ -1665,8 +1665,11 @@ class GameShellTests(unittest.TestCase):
         self.assertEqual(clip(), world.manner_of(raul, "fight").clip)
         raul.activity = Activity("argument", partner_id="tomas", using=True)
         self.assertEqual(clip(), world.manner_of(raul, "argue").clip)
+        # Talking, they speak in their own way while it is their turn and listen while it is not.
         raul.activity = Activity("chat", partner_id="tomas", using=True)
-        self.assertEqual(clip(), "idle")
+        self.assertIn(clip(), ("listen", world.manner_of(raul, "talk").clip))
+        raul.activity = Activity("hug", partner_id="tomas", using=True)
+        self.assertEqual(clip(), "idle", "what is not talk has no look of its own yet")
         raul.activity = None
         raul.trail = [(raul.x - 1, raul.y), raul.tile]
         view.tick_progress = 0.5

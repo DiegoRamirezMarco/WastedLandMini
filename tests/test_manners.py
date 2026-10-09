@@ -8,7 +8,7 @@ from simulation.residents.manner import ARGUE, EAT, FIGHT, SIT, WALK, manner_set
 from simulation.world import SimulationWorld
 from skeleton.plan import VIEWS, builtin_plan
 
-KINDS = ("walk", "eat", "fight", "shoot", "knife", "argue", "sit")
+KINDS = ("walk", "eat", "fight", "shoot", "knife", "argue", "sit", "talk")
 # How many ways there are of each: three of everything, and four of sitting.
 WAYS = {"sit": 4}
 

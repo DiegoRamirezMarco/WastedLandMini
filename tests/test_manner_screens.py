@@ -284,8 +284,8 @@ class MannerEditorTests(_Shell):
         for index, box in enumerate(boxes):
             self.assertTrue(self.game.canvas.get_rect().contains(box), box)
             self.assertEqual(box.collidelist(boxes[index + 1 :]), -1, box)
-        self.assertEqual(len(editor.picker.rows), 7)
-        self.assertEqual([len(buttons) for _, _, buttons in editor.picker.rows], [3, 3, 3, 3, 3, 3, 4])
+        self.assertEqual(len(editor.picker.rows), 8)
+        self.assertEqual([len(buttons) for _, _, buttons in editor.picker.rows], [3, 3, 3, 3, 3, 3, 4, 3])
         # Before anything is picked, what is lit is what is theirs by default.
         self.assertEqual(editor.chosen()["walk"], world.manner_of(raul, "walk").manner_id)
         for manner_id, manner in world.registries.manners.manners.items():
