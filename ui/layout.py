@@ -1,5 +1,5 @@
 """Where everything goes on the screen: a bar on top, a menu down the left, the map and a panel on the
-right. A conversation, while there is one to show, opens in a strip over the foot of the menu and the map."""
+right. Somebody asking for advice, while anybody is, is heard in a strip over the foot of the menu and the map."""
 
 from dataclasses import dataclass
 
@@ -20,7 +20,7 @@ class Layout:
     # The part of the canvas that shows the settlement.
     map: pygame.Rect
     # Over the foot of the menu and the map, and only while there is something to show in it:
-    # whoever is talking, or somebody asking for advice. The rest of the time the map is seen there.
+    # somebody asking for advice. The rest of the time the map is seen there.
     dock: pygame.Rect
     # Down the right: whoever or whatever is selected.
     panel: pygame.Rect

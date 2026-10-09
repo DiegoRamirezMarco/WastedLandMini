@@ -110,7 +110,13 @@ from simulation.commands import (
     AccuseCommand,
     AcknowledgeTutorialCommand,
     ChooseGovernmentCommand,
+    AddWordCommand,
+    AnswerAskCommand,
     CompostCommand,
+    DismissAskCommand,
+    SetNicknameCommand,
+    SetPhraseCommand,
+    TalkAboutCommand,
     DealWithMerchantCommand,
     DecorateCommand,
     GiveHouseCommand,
@@ -153,6 +159,8 @@ from simulation.ai.navigation import seat_at
 from simulation.family.family_system import SLEEP_ROUGH_ACTION
 from simulation.items.item_system import USE_ITEM_ACTION
 from simulation.residents.manner import ARGUE, EAT, FIGHT, SIT, WALK
+from simulation.social.talk import ASK_SUBJECT
+from simulation.social.talk import TAKEN_EVENT as SUBJECT_TAKEN_EVENT
 from simulation.tastes.settings import DISLIKED, HATED, LIKED, LOVED
 from simulation.tastes.taste_system import FOUND_OUT_EVENT, REACTION_EVENT
 from simulation.work.construction import BUILD_ACTION, FINISHED_EVENT
@@ -171,10 +179,31 @@ from ui.trade_board import DEAL_INTENT as TRADE_DEAL_INTENT
 from ui.trade_board import DRAW_INTENT as TRADE_DRAW_INTENT
 from ui.bubble import MARK_SIZE, MARK_TAIL, PLACARD_SIZE, PLACARD_STICK, draw_mark, draw_placard
 from ui.law_board import named_items, picked_degree, picked_params
-from ui.labels import away_residents, has_birthday, rarity_color
+from ui.labels import away_residents, has_birthday, rarity_color, talk_line
 from ui.object_marks import draw_gem, draw_object_mark, marks_of
 from ui.object_panel import speaks
 from ui.power_board import POWER_INTENT
+from ui.talk_bubble import TAIL as BUBBLE_TAIL
+from ui.talk_bubble import bubble_of, bubble_size, draw_talk_bubble, said_aloud
+from ui.words_board import (
+    ANSWER_FIELD,
+    ASKED,
+    ITEMS_TAB,
+    LISTS,
+    NICKNAME_FIELD,
+    ONE,
+    PHRASE_FIELD,
+    PICK,
+    SUBJECT_FIELD,
+    WORD_FIELD,
+    WORDS_BACK_INTENT,
+    WORDS_GIVE_INTENT,
+    WORDS_INTENT,
+    WordsEntry,
+    first_list,
+    new_list,
+    pages,
+)
 from ui.punish_board import DRINK as RATION_DRINK
 from ui.punish_board import DRINKS as RATION_DRINKS
 from ui.punish_board import FOOD as RATION_FOOD
@@ -237,9 +266,11 @@ NOBODY_TO_MAKE_IT = "Elige antes a quien deba hacerlo, o di de quién es la casa
 NEWCOMER_EVENT = "newcomer_joined"
 NO_HOUSE_YET = "{name} no tiene casa y dormirá al raso: entra en un edificio y dásela en Casa"
 NOWHERE_TO_ENTER = "No hay ningún edificio ahí en el que entrar"
-BOBBING_ICONS = ("alert", "sleep", "push")
+BOBBING_ICONS = ("alert", "sleep", "push", "ask")
 # What someone is doing is shown in a bubble over their head. These are not: they mark who it is.
 BARE_ICONS = ("selected", "heart", "friend", "birthday", "push")
+# Over whoever wants a word of the player, for as long as they wait for it (P62).
+ASK_ICON = "ask"
 # Over whoever is pushing their post, and over whoever it has just gone badly for.
 PUSH_ICON = "push"
 ACCIDENT_EVENT = "work_accident"
@@ -385,7 +416,8 @@ class GlobalView:
         voices: VoicePlayer | None = None,
     ) -> None:
         self.canvas = canvas
-        # What says out loud what is in the dock's bubble, if there are voices to say it with.
+        # What says out loud the words in the bubble over whoever is selected, if there are
+        # voices to say it with.
         self.voices = voices if voices is not None and voices.enabled else None
         self._spoken_seen: tuple[str, str] | None = None
         # Resident the player asked to give a voice to. The game shell picks it up.
@@ -461,6 +493,8 @@ class GlobalView:
         self._marks: dict[str, list[tuple[str, float, float]]] = {}
         # Where each resident was last drawn, for picking them with the mouse.
         self.hitboxes: dict[str, pygame.Rect] = {}
+        # Where the bubble of what each is talking of was last drawn (P62).
+        self.talk_bubbles: dict[str, pygame.Rect] = {}
         self.container_hitboxes: dict[str, pygame.Rect] = {}
         # Where each thing with something to say, or to hold, was last drawn, to be picked
         # there; why each thing that stands idle does; and where the mark of each was drawn.
@@ -559,6 +593,9 @@ class GlobalView:
         return (self.inside is not None and self.interior.naming is not None) or self.hud.typing
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        if self.hud.writing_words and event.type == pygame.KEYDOWN:
+            self._words_key(event)
+            return
         if self.hud.typing and event.type == pygame.KEYDOWN:
             self._fund_key(event)
             return
@@ -584,6 +621,8 @@ class GlobalView:
             self._apply(FUND_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_k:
             self._apply(POWER_INTENT)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_h:
+            self._apply(WORDS_INTENT)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
             self.centre_on_resident(self.hud.selected_id)
             self.following = self.hud.selected_id
@@ -753,6 +792,7 @@ class GlobalView:
             if picked:
                 self._sound("select")
                 self.hud.select_resident(picked[-1])
+                self._hear(picked[-1])
             else:
                 # What things are kept in is looked into from in here, as it was under the roof,
                 # and so is anything else with something to say of itself.
@@ -867,6 +907,8 @@ class GlobalView:
         self.task_bars = {}
         self.train_rings = {}
         self.placards = {}
+        self.talk_bubbles = {}
+        self.hud.spoken = None
         self.sign_boxes = {}
         self.bundle_boxes = {}
         self.interior.render(room)
@@ -888,10 +930,11 @@ class GlobalView:
             if any(pressed[key] for key in keys):
                 self.pan(dx * SCROLL_SPEED * dt, dy * SCROLL_SPEED * dt)
         self._follow(dt)
-        self._voice_the_dock()
+        self._voice_what_is_said()
 
-    def _voice_the_dock(self) -> None:
-        """Have whoever starts a line in the dock say it out loud. A line that finds another being said goes unsaid."""
+    def _voice_what_is_said(self) -> None:
+        """Have whoever is selected say out loud the words of the bubble over them, as it comes
+        up. A line that finds another being said goes unsaid."""
         spoken = self.hud.spoken
         if spoken != self._spoken_seen:
             self._spoken_seen = spoken
@@ -1004,6 +1047,9 @@ class GlobalView:
                 self._mark(str(event.data.get("resident_id")), TASTE_MARKS.get(str(event.data.get("reaction"))))
             elif event.event_type == FOUND_OUT_EVENT:
                 self._mark(str(event.data.get("resident_id")), FOUND_OUT_MARK)
+            elif event.event_type == SUBJECT_TAKEN_EVENT:
+                # How what was talked of went down is seen over whoever listened, as a meal is.
+                self._mark(str(event.data.get("resident_id")), TASTE_MARKS.get(str(event.data.get("reaction"))))
             elif event.event_type == BORN_EVENT and self.hud.drawable and self.dolls is not None:
                 # Somebody has been born: the next thing is to draw them, as the adult they will be.
                 child_id = str(event.data.get("child_id") or "")
@@ -1092,9 +1138,8 @@ class GlobalView:
         return tile in self.roof_tiles[room_id] or in_front
 
     def _seat_minimap(self) -> None:
-        """Keep the minimap at the foot of the map, or just over the dock while that is open."""
-        dock = self.hud.dock_rect()
-        self._minimap_rect.bottom = (dock.top if dock is not None else self.viewport.bottom) - MINIMAP_MARGIN
+        """Keep the minimap at the foot of the map."""
+        self._minimap_rect.bottom = self.viewport.bottom - MINIMAP_MARGIN
 
     def click(self, position: tuple[int, int]) -> None:
         """Handle a left click at a canvas position: a button, the minimap, a resident, or empty ground."""
@@ -1138,6 +1183,7 @@ class GlobalView:
             elif picked:
                 self._sound("select")
                 self.hud.select_resident(picked[-1])
+                self._hear(picked[-1])
             else:
                 # A thing with something to say of itself, or to hold: the one drawn last is in front.
                 things = [object_id for object_id, rect in self.thing_hitboxes.items() if rect.collidepoint(position)]
@@ -1145,6 +1191,18 @@ class GlobalView:
             decision = self._decision_of(self.hud.selected_id)
             if decision is not None:
                 self.requested_decision = decision
+
+    def _hear(self, resident_id: str) -> None:
+        """Somebody has just been picked: if they want a word of the player it is heard out,
+        and if they are talking of something, what it is is said (P62)."""
+        resident = self.world.residents.get(resident_id)
+        ask = next((each for each in self.world.words.asks if each.resident_id == resident_id), None)
+        if ask is not None:
+            self._words(("words_ask", ask.ask_id))
+            return
+        said = talk_line(self.world, resident) if resident is not None else None
+        if said is not None:
+            self.hud.notify(said)
 
     def _decision_of(self, resident_id: str | None) -> str | None:
         """ID of the open decision waiting on this resident, if any."""
@@ -1169,6 +1227,10 @@ class GlobalView:
             self.hud.toggle_fund()
         elif intent == POWER_INTENT:
             self.hud.toggle_power()
+        elif intent == WORDS_INTENT:
+            self.hud.toggle_words()
+        elif intent in (WORDS_GIVE_INTENT, WORDS_BACK_INTENT) or (isinstance(intent, tuple) and str(intent[0]).startswith("words_")):
+            self._words(intent)
         elif isinstance(intent, tuple) and intent[0] == "resource":
             self._open_resource(intent[1])
         elif isinstance(intent, tuple) and intent[0] == "switch":
@@ -1857,6 +1919,102 @@ class GlobalView:
         self.hud.notify(result.message)
         self._sound("click" if result.ok else "refuse")
 
+    def _words(self, intent: tuple) -> None:
+        """Something pressed on the board of words, or that opens it on something."""
+        hud, world, entry = self.hud, self.world, self.hud.words_entry
+        what = intent[0]
+        if what == "words_ask":
+            ask = world.talk.ask_of(world, intent[1])
+            if ask is None:
+                return
+            if ask.kind == ASK_SUBJECT:
+                # What to talk about is picked out of all there is, or made up.
+                hud.show_words(WordsEntry(PICK, ITEMS_TAB, ask.resident_id, ask.what, ask.ask_id))
+            else:
+                hud.show_words(WordsEntry(ASKED, ask_id=ask.ask_id, field=ANSWER_FIELD))
+        elif what == "words_dismiss":
+            self._said(world.apply_command(DismissAskCommand(intent[1])))
+            hud.show_words(WordsEntry())
+        elif what == "words_one":
+            hud.show_words(WordsEntry(ONE, resident_id=intent[1]))
+        elif what == "words_pick":
+            hud.show_words(WordsEntry(PICK, ITEMS_TAB, intent[1]))
+        elif what == "words_with":
+            hud.show_words(WordsEntry(PICK, ITEMS_TAB, entry.resident_id, intent[1]))
+        elif what == "words_tab":
+            entry.tab, entry.page = intent[1], 0
+            entry.write("")
+        elif what == "words_page":
+            entry.page = max(0, min(pages(world, entry) - 1, entry.page + intent[1]))
+        elif what == "words_field":
+            written = ""
+            if intent[1].startswith(PHRASE_FIELD):
+                written = world.talk.phrase(world, entry.resident_id, intent[1][len(PHRASE_FIELD):])
+            elif intent[1].startswith(NICKNAME_FIELD):
+                written = world.words.nicknames.get(entry.resident_id, {}).get(intent[1][len(NICKNAME_FIELD):], "")
+            entry.write(intent[1], written)
+        elif what == "words_subject":
+            self._talk_about(intent[1], "")
+        elif intent == WORDS_GIVE_INTENT:
+            self._give_words()
+        elif intent == WORDS_BACK_INTENT:
+            hud.show_words(WordsEntry())
+
+    def _said(self, result) -> bool:
+        """Say what came of something done with words, and sound it. Returns whether it was done."""
+        self.hud.notify(result.message)
+        self._sound("click" if result.ok else "refuse")
+        return bool(result.ok)
+
+    def _talk_about(self, subject: str | None, text: str) -> None:
+        """Tell whoever the board is about what to talk of with the other: a subject there
+        is, or a word made up on the spot. Asked for, it is the answer to what was asked."""
+        world, entry = self.world, self.hud.words_entry
+        wanted = new_list(world, entry) if subject is None else None
+        if entry.ask_id:
+            command = AnswerAskCommand(entry.ask_id, text, subject, wanted)
+        else:
+            command = TalkAboutCommand(entry.resident_id, entry.other_id, subject, text, wanted)
+        if self._said(world.apply_command(command)):
+            self.hud.toggle_words()
+
+    def _give_words(self) -> None:
+        """Give what has been written on the board of words to whoever, or whatever, it is for."""
+        world, entry = self.world, self.hud.words_entry
+        name, text = entry.field, entry.text
+        if name == WORD_FIELD:
+            tab = entry.tab if entry.tab in world.registries.talk.lists else first_list(world)
+            if self._said(world.apply_command(AddWordCommand(tab, text))):
+                entry.write(WORD_FIELD)
+        elif name == ANSWER_FIELD:
+            if self._said(world.apply_command(AnswerAskCommand(entry.ask_id, text))):
+                self.hud.show_words(WordsEntry())
+        elif name == SUBJECT_FIELD:
+            self._talk_about(None, text)
+        elif name.startswith(PHRASE_FIELD):
+            if self._said(world.apply_command(SetPhraseCommand(entry.resident_id, name[len(PHRASE_FIELD):], text))):
+                entry.write("")
+        elif name.startswith(NICKNAME_FIELD):
+            if self._said(world.apply_command(SetNicknameCommand(entry.resident_id, name[len(NICKNAME_FIELD):], text))):
+                entry.write("")
+
+    def _words_key(self, event: pygame.event.Event) -> None:
+        """A key while something is being written on the board of words: it goes into it,
+        gives it or drops it."""
+        entry = self.hud.words_entry
+        if event.key == pygame.K_ESCAPE:
+            if entry.mode == ASKED:
+                # What was asked is left waiting, and the board goes back to its lists.
+                self.hud.show_words(WordsEntry(LISTS))
+            else:
+                entry.write("")
+        elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            self._give_words()
+        elif event.key == pygame.K_BACKSPACE:
+            entry.erase()
+        else:
+            entry.type(getattr(event, "unicode", ""), self.world.registries.talk.longest)
+
     def _fund_key(self, event: pygame.event.Event) -> None:
         """A key while a currency is being named: it goes into the name, moves on, ends it or drops it."""
         entry = self.hud.fund_entry
@@ -2011,6 +2169,8 @@ class GlobalView:
         self.work_rings = {}
         self.train_rings = {}
         self.placards = {}
+        self.talk_bubbles = {}
+        self.hud.spoken = None
         self._overlays = []
         self._doll_draws = []
         self._held = []
@@ -3419,7 +3579,17 @@ class GlobalView:
             y -= CELL_SIZE[1]
             name = self.font.render(resident.name, PALETTE["paper"])
             self.canvas.blit(name, (self._name_left(resident, x, name.get_width()), y))
-        icons = [self._status_icon(resident, resting, unseen), self.mark_over(resident.resident_id)]
+        here_now = resident.resident_id in self.world.residents
+        # What they are talking of, or a phrase of their own: seen from near, and not through a roof.
+        shown = bubble_of(self.world, resident) if here_now and not unseen and not self.overview else None
+        status = self._status_icon(resident, resting, unseen)
+        if shown is not None and status == "chat":
+            # The bubble says it better.
+            status = None
+        icons = [status, self.mark_over(resident.resident_id)]
+        if here_now and any(ask.resident_id == resident.resident_id for ask in self.world.words.asks):
+            # They want a word of the player, and wait for it.
+            icons.append(ASK_ICON)
         if resident.resident_id in self.world.residents and has_birthday(self.world, resident):
             # A year more today: it is worn all day.
             icons.append(BIRTHDAY_ICON)
@@ -3453,3 +3623,10 @@ class GlobalView:
                 # What they are doing, in a bubble that points at them.
                 y -= MARK_SIZE[1] + MARK_TAIL + 1
                 draw_mark(self.canvas, image, (x, y - lift))
+        if shown is not None:
+            y -= bubble_size(self.font, shown)[1] + BUBBLE_TAIL + 1
+            self.talk_bubbles[resident.resident_id] = draw_talk_bubble(
+                self.canvas, self.font, self.icons, self.hud.faces, shown, (x, y), self.viewport
+            )
+            if resident.resident_id == self.hud.selected_id and said_aloud(shown):
+                self.hud.spoken = (resident.resident_id, said_aloud(shown))

@@ -29,6 +29,7 @@ from simulation.world import SimulationWorld
 
 NEED_LABELS = {"hunger": "Hambre", "thirst": "Sed", "tiredness": "Sueño", "social": "Social", "stress": "Estrés"}
 FEELING_LABELS = {"affection": "afecto", "resentment": "rencor"}
+TALKING_ABOUT = "{name} y {other} están hablando sobre {about}"
 MINUTES_PER_DAY = 24 * 60
 # What is said of a taste, by how sure it is and which way it goes. There is never a figure.
 TASTE_WORDS = {
@@ -554,15 +555,14 @@ def expression_of(world: SimulationWorld, resident: Resident) -> str:
     return "sad" if resident.health < LOW_HEALTH or max(needs) >= PRESSING_NEED or resident.mood < 25.0 else "neutral"
 
 
-def spoken_line(world: SimulationWorld, resident: Resident) -> str | None:
-    """Something a resident in an exchange might be saying right now, from the lines written for it."""
-    activity = resident.activity
-    if activity is None or not activity.using or activity.partner_id is None:
+def talk_line(world: SimulationWorld, resident: Resident) -> str | None:
+    """What a resident and whoever they are with are talking about right now, in a sentence,
+    while their talk is about something (S58)."""
+    about = world.talk.about(world, resident)
+    partner = world.residents.get(resident.activity.partner_id or "") if about is not None else None
+    if partner is None:
         return None
-    interaction = world.registries.interactions.get(activity.action)
-    lines = world.registries.dialogue.get(interaction.dialogue or "", []) if interaction is not None else []
-    # A new line every few minutes, and the same one for as long as it is on show.
-    return lines[(world.clock.total_minutes // 4) % len(lines)] if lines else None
+    return TALKING_ABOUT.format(name=resident.name, other=partner.name, about=about[1])
 
 
 def settlement_counts(world: SimulationWorld) -> list[tuple[str, str]]:

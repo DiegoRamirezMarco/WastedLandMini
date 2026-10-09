@@ -5,6 +5,8 @@
   buildings that have height and a name on each, a bubble over everyone for what they are doing,
   a bar of what the settlement has, a menu down the left, whoever is selected in full down the
   right, and the conversation docked under the map with two large faces and a speech bubble.
+  The last of these was given up on 2026-10-09, by the user's word: nobody talks line by line
+  any more, and what two people talk of is in a bubble over them (P62).
 - Art drawn from code cannot get there: it was tried, and it looks home-made. The game is moving
   to **illustrations made outside it**, shown at the resolution of the window: see Illustrations
   below. Its own pixel art stays as what is drawn where nobody has made a picture yet.
@@ -263,10 +265,18 @@ on displays of different resolutions.
 - **The dock as a scene**: two faces at 128×128 in frames with a name plate, and between them a
   comic speech bubble, `paper` with an `ink` outline and a tail towards whoever speaks. A line
   that ends in `!` is written at ×2 where it fits. Beside them, a column of text or of buttons.
-- While whoever is selected is in an exchange, the dock shows it, the two taking turns with the
-  lines written for that exchange. The rest of the time there is no dock: the map goes down to
-  the foot of the screen, and the dock opens over the foot of it, the minimap moving up out of
-  its way. Nothing is kept open down there.
+- The dock opens for somebody asking for advice, and for nothing else (P62): the rest of the
+  time the map goes down to the foot of the screen, with the minimap at the foot of it.
+  Nothing is kept open down there.
+- **What is talked of is over their heads**: a `paper` bubble with an `ink` outline and a
+  tail down towards whoever speaks, holding the picture of a thing at 16×16, a face at 16×16,
+  or up to three lines of words no wider than 92 pixels. It slides along sooner than leave the
+  map. Only whoever's turn it is has it, and nobody from as far as the map is seen.
+- **Whoever wants a word of the player** wears a red exclamation in the small bubble that
+  other marks are shown in, and it bobs as the yellow one of a crisis does.
+- **The board of words** opens over the corner of the map as the other boards do, under a band
+  of the colour of talk. What is written goes in a `shadow` box that is outlined in `lamp`
+  while it is being written in, with a mark that blinks where the next letter goes.
 - **What has been going on** is read from `Eventos` in the menu, in a panel over the corner of
   the map wide enough for whole lines, and put away the same way.
 

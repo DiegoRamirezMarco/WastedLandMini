@@ -93,6 +93,7 @@
     "no_medicine": "missing",
     "taste_reaction": "chat",
     "taste_found_out": "found_out",
+    "word_asked": "ask",
     "substance_taken": "smoke",
     "substance_tempted": "alert",
     "dependence_began": "cough",

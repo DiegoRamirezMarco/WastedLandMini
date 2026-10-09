@@ -37,6 +37,7 @@ from ui.labels import (
     has_shop,
     kin_rows,
     relationship_rows,
+    talk_line,
     taste_debug_rows,
     taste_rows,
     trait_names,
@@ -102,6 +103,10 @@ MANNERS_LABEL = "Maneras"
 AFFECT_LABEL = "Afectar"
 AFFECT_WIDTH = 48
 MANNERS_WIDTH = 46
+# The way to somebody's own words, over what they carry, and to the settlement's at the foot
+# of the roster (P62).
+WORDS_LABEL = "Palabras"
+WORDS_WIDTH = 52
 # A switch on the tastes for looking at the figures the game keeps to itself. Not for play.
 DEBUG_LABEL = "Debug"
 DEBUG_WIDTH = 34
@@ -164,7 +169,7 @@ def roster_rows(panel: pygame.Rect, world: SimulationWorld) -> list[tuple[pygame
     rows = []
     for resident_id in world.residents:
         row = pygame.Rect(panel.x + PADDING, top, panel.width - PADDING * 2, ROSTER_ROW)
-        if row.bottom > panel.bottom - PADDING:
+        if row.bottom > roster_words_hitbox(panel).top - 2:
             break
         rows.append((row, resident_id))
         top += ROSTER_ROW
@@ -181,6 +186,9 @@ def draw_roster(
     tree = roster_tree_hitbox(panel)
     draw_panel(target, tree, fill="shadow", border="lamp")
     font.draw(target, TREE_LABEL, (tree.centerx - font.width(TREE_LABEL) // 2, tree.y), PALETTE["glow"])
+    words = roster_words_hitbox(panel)
+    draw_panel(target, words, fill="shadow", border="lamp")
+    font.draw(target, WORDS_LABEL, (words.centerx - font.width(WORDS_LABEL) // 2, words.y + 1), PALETTE["glow"])
     for row, resident_id in roster_rows(panel, world):
         resident = world.residents[resident_id]
         target.blit(faces.marker(resident_id, expression_of(world, resident)), row.topleft)
@@ -206,6 +214,18 @@ def kin_hitbox(panel: pygame.Rect) -> pygame.Rect:
 def roster_tree_hitbox(panel: pygame.Rect) -> pygame.Rect:
     """Where the families of the whole settlement are asked for: at the right end of the roster's heading."""
     return pygame.Rect(panel.right - PADDING - TREE_WIDTH, panel.y + PADDING - 1, TREE_WIDTH, LINE_HEIGHT)
+
+
+def roster_words_hitbox(panel: pygame.Rect) -> pygame.Rect:
+    """Where the words of the settlement are asked for: at the foot of the roster."""
+    return pygame.Rect(panel.x + PADDING, panel.bottom - PADDING - LINE_HEIGHT - 2, WORDS_WIDTH, LINE_HEIGHT + 2)
+
+
+def words_hitbox(panel: pygame.Rect, world: SimulationWorld, resident: Resident) -> pygame.Rect:
+    """Where a resident's own words are asked for: at the right end of the heading over what they carry."""
+    top = _relationships_top(panel, world, resident)
+    top += len(relationship_rows(world, resident, MAX_RELATIONSHIPS)) * RELATIONSHIP_ROW + 4
+    return pygame.Rect(panel.right - PADDING - WORDS_WIDTH, top - 1, WORDS_WIDTH, LINE_HEIGHT)
 
 
 def _kin_top(panel: pygame.Rect) -> int:
@@ -524,13 +544,20 @@ def draw_resident_panel(
         y += RELATIONSHIP_ROW
     y += 4
 
+    words = words_hitbox(panel, world, resident)
     y = _title(target, font, INVENTORY_TITLE, x, y, inner)
+    draw_panel(target, words, fill="shadow", border="lamp")
+    font.draw(target, WORDS_LABEL, (words.centerx - font.width(WORDS_LABEL) // 2, words.y), PALETTE["glow"])
     y = _draw_item_grid(target, font, icons, (x, y), inner, world, resident)
     if has_shop(world):
         _draw_affordable(target, font, icons, (x, y), world, resident, inner)
         y += ICON_SIZE[1] + 2
 
-    if resident.injuries or resident.lost_limbs:
+    talking = talk_line(world, resident)
+    if talking is not None:
+        # While they talk of something, what it is: there is no dock to read it in any more (P62).
+        last, color = talking, "paper"
+    elif resident.injuries or resident.lost_limbs:
         # While someone is hurt, what ails them matters more than what is on their mind.
         last, color = describe_injuries(world, resident), "ember"
     else:

@@ -1,5 +1,5 @@
 """Everything round the map: the bar on top, the menu on the left and the panel on the right, and what
-opens over it: the panels of the menu, and the dock of whoever is talking."""
+opens over it: the panels of the menu, and the notices of what waits for the player."""
 
 from collections.abc import Hashable, Iterable
 from dataclasses import dataclass
@@ -21,11 +21,9 @@ from graphics.ui_skin import WindowSkin
 from settings import SPEEDS
 from simulation.events.event import DomainEvent
 from simulation.work.upgrades import UPGRADED_EVENT
-from simulation.residents.resident import Resident
 from simulation.world import SimulationWorld
 from ui.button import HEIGHT as BUTTON_HEIGHT
 from ui.button import Button
-from ui.dock import draw_scene
 from ui.event_log import EventFeed
 from ui.affect_wheel import (
     AFFECT_INTENT,
@@ -55,16 +53,12 @@ from ui.job_board import PANEL_WIDTH as BOARD_WIDTH
 from ui.job_board import board_buttons, draw_job_board, job_board_height
 from ui.labels import (
     COIN_ICON,
-    FEELING_LABELS,
     away_residents,
-    describe_action,
     describe_date,
     describe_weather,
-    expression_of,
     known_forecasts,
     rarity_name,
     settlement_stock,
-    spoken_line,
 )
 from ui.layout import Layout, layout_for
 from ui.object_panel import STORE_HEADING, ObjectView, draw_object_view, object_view
@@ -81,6 +75,8 @@ from ui.resident_panel import (
     kin_hitbox,
     kin_hitboxes,
     roster_tree_hitbox,
+    roster_words_hitbox,
+    words_hitbox,
     draw_resident_panel,
     draw_roster,
     inventory_hitboxes,
@@ -94,6 +90,19 @@ from ui.resident_panel import (
 from ui.trade_board import PANEL_WIDTH as TRADE_WIDTH
 from ui.trade_board import BUY, chosen, draw_trade_board, goods_rows, trade_board_height, trade_buttons
 from ui.tutorial_panel import PANEL_WIDTH as TUTORIAL_WIDTH
+from ui.words_board import (
+    ASKED,
+    ONE,
+    WORDS_INTENT,
+    WORDS_WIDTH,
+    WordsEntry,
+    ask_intent,
+    draw_words_board,
+    words_board_height,
+    words_buttons,
+    words_field_rects,
+    write_intent,
+)
 from ui.tutorial_panel import draw_tutorial, tutorial_button, tutorial_height
 
 MARGIN = 6
@@ -126,6 +135,8 @@ STORES_INTENT = ("stores",)
 RESEARCH_INTENT = ("research",)
 GOVERNMENT_INTENT = ("government",)
 DISCOVERY_INTENT = ("discovery",)
+# What is pressed to hear out a resident who wants a word of the player (P62).
+ASK_NOTICE = "{name} te pregunta algo"
 DISCOVERY_ONE = "{name} sabe algo nuevo: ponle nombre"
 DISCOVERY_MANY = "{count} cosas nuevas por nombrar"
 FUND_INTENT = ("fund_board",)
@@ -266,6 +277,10 @@ class Hud:
         self.government_open = False
         self.fund_open = False
         self.power_open = False
+        # The board of words (P62), and what the player is at on it: what it shows, and what
+        # is being written there.
+        self.words_open = False
+        self.words_entry = WordsEntry()
         # What the player is in the middle of on the board of the fund: a currency being named
         # to put to everyone, going back to barter, or another name for the one there is.
         self.fund_entry: FundEntry | None = None
@@ -304,7 +319,8 @@ class Hud:
         self.panel_tab = LIFE_TAB
         # Whether the tastes are shown with the figures behind them, for looking under the bonnet.
         self.taste_debug = False
-        # Who is speaking in the dock and what they say, as last drawn. None while nobody is.
+        # Whoever is selected and the words in the bubble over them, as the scene last drew
+        # it, to be said out loud. None while there are none.
         self.spoken: tuple[str, str] | None = None
         # Where the scene draws its minimap, so that clicks on it do not fall through to the map.
         self.minimap_rect: pygame.Rect | None = None
@@ -391,6 +407,9 @@ class Hud:
         waiting = self.discovery_button()
         if waiting is not None:
             fixed.append(waiting)
+        fixed += self.ask_buttons()
+        if self.words_open:
+            return fixed + words_buttons(self.font, self.words_rect(), self.world, self.words_entry)
         if self.power_open:
             return fixed + power_buttons(self.font, self.power_rect(), self.world)
         if self.research_open:
@@ -414,10 +433,11 @@ class Hud:
         """Open one of the panels that share a corner, or shut it if it is the one open, and shut the rest."""
         for name in (
             "log_open", "jobs_open", "stores_open", "research_open", "government_open", "fund_open", "trade_open",
-            "power_open",
+            "power_open", "words_open",
         ):
             setattr(self, name, name == panel and not getattr(self, name))
         self.fund_entry = None
+        self.words_entry = WordsEntry()
         self.government_armed = None
         self.sentence_armed = None
         self.trade_buy, self.trade_sell = {}, {}
@@ -449,10 +469,39 @@ class Hud:
     def toggle_power(self) -> None:
         self._open_only("power_open")
 
+    def toggle_words(self) -> None:
+        """Open the board of words, or shut it: on whoever is selected, if anybody is, and
+        otherwise on the words of the settlement."""
+        self._open_only("words_open")
+        if self.words_open and self.selected_id in self.world.residents:
+            self.words_entry = WordsEntry(ONE, resident_id=self.selected_id or "")
+
+    def _tidy_words(self) -> None:
+        """Take the board of words back to its lists where what it was showing is no more:
+        whoever asked has been let go, or whoever it was about has gone."""
+        entry, world = self.words_entry, self.world
+        gone = entry.ask_id and world.talk.ask_of(world, entry.ask_id) is None
+        gone = gone or (entry.mode == ASKED and not entry.ask_id)
+        gone = gone or (entry.resident_id and entry.resident_id not in world.residents)
+        gone = gone or (entry.other_id and entry.other_id not in world.residents)
+        if gone:
+            self.words_entry = WordsEntry()
+
+    def show_words(self, entry: WordsEntry) -> None:
+        """Have the board of words show something in particular, opening it if it is shut."""
+        if not self.words_open:
+            self._open_only("words_open")
+        self.words_entry = entry
+
     @property
     def typing(self) -> bool:
         """Whether what is typed is being written on one of the boards, and so is no shortcut."""
-        return self.fund_open and self.fund_entry is not None and self.fund_entry.written
+        return (self.fund_open and self.fund_entry is not None and self.fund_entry.written) or self.writing_words
+
+    @property
+    def writing_words(self) -> bool:
+        """Whether a word, a phrase or a name is being written on the board of words."""
+        return self.words_open and self.words_entry.written
 
     @property
     def trading(self) -> bool:
@@ -479,9 +528,8 @@ class Hud:
         return chosen(held), chosen(brought)
 
     def wheel_area(self) -> pygame.Rect:
-        """The part of the map the wheel is kept within: all of it, short of the dock while that is open."""
-        area, dock = self.layout.map, self.dock_rect()
-        return pygame.Rect(area.x, area.y, area.width, (dock.top if dock is not None else area.bottom) - area.y)
+        """The part of the map the wheel is kept within: all of it."""
+        return pygame.Rect(self.layout.map)
 
     def wheel_shown(self) -> WheelView | None:
         """What the wheel shows right now, while it is open about somebody who is there."""
@@ -602,6 +650,11 @@ class Hud:
             for field, box in fields.items():
                 if box.collidepoint(position):
                     return field_intent(field)
+        if self.words_open:
+            fields = words_field_rects(self.font, self.words_rect(), self.world, self.words_entry)
+            for name, box in fields.items():
+                if box.collidepoint(position):
+                    return write_intent(name)
         if self.selected_id in self.world.residents and affect_hitbox(self.layout.panel).collidepoint(position):
             return AFFECT_INTENT
         if self.selected_id in self.world.residents and kin_hitbox(self.layout.panel).collidepoint(position):
@@ -609,6 +662,8 @@ class Hud:
         if self.card_rect() is None and self.thing_rect() is None:
             if roster_tree_hitbox(self.layout.panel).collidepoint(position):
                 return FAMILY_INTENT
+            if roster_words_hitbox(self.layout.panel).collidepoint(position):
+                return WORDS_INTENT
         if self.selected_container in self.world.containers:
             marks = container_scrap_hitboxes(
                 self._container_corner(), self.world, self.selected_container or "", self.layout.panel.width
@@ -624,6 +679,12 @@ class Hud:
             and manners_hitbox(self.layout.panel).collidepoint(position)
         ):
             return MANNERS_INTENT
+        if (
+            self.selected_id in self.world.residents
+            and self.panel_tab == LIFE_TAB
+            and words_hitbox(self.layout.panel, self.world, self.world.residents[self.selected_id]).collidepoint(position)
+        ):
+            return WORDS_INTENT
         if (
             self.selected_id in self.world.residents
             and self.panel_tab == TASTES_TAB
@@ -661,9 +722,11 @@ class Hud:
         """True if `position` is not on the map, or something of the HUD is in front of the map there."""
         if not self.layout.map.collidepoint(position):
             return True
-        panels = [self.minimap_rect, self.outlook_rect(), self.tutorial_rect(), self.dock_rect(), self.redraw_rect()]
+        panels = [self.minimap_rect, self.outlook_rect(), self.tutorial_rect(), self.redraw_rect()]
         waiting = self.discovery_button()
         panels += [waiting.rect] if waiting is not None else []
+        panels += [button.rect for button in self.ask_buttons()]
+        panels += [self.words_rect()] if self.words_open else []
         panels += [self.log_rect()] if self.log_open else []
         panels += [self.jobs_rect()] if self.jobs_open else []
         panels += [self.stores_rect()] if self.stores_open else []
@@ -677,10 +740,9 @@ class Hud:
         return any(entry.contains(position) for entry in [*self.wheel_entries(), *self.queue_entries()])
 
     def _float(self, width: int, height: int) -> pygame.Rect:
-        """A panel that opens over the top right corner of the map, and stops short of the dock while that is open."""
-        area, dock = self.layout.map, self.dock_rect()
-        room = (dock.top if dock is not None else area.bottom) - area.y
-        return pygame.Rect(area.right - MARGIN - width, area.y + MARGIN, width, min(height, room - MARGIN * 2))
+        """A panel that opens over the top right corner of the map, no taller than the map is."""
+        area = self.layout.map
+        return pygame.Rect(area.right - MARGIN - width, area.y + MARGIN, width, min(height, area.height - MARGIN * 2))
 
     def log_rect(self) -> pygame.Rect:
         return self._float(*LOG_SIZE)
@@ -699,6 +761,9 @@ class Hud:
 
     def power_rect(self) -> pygame.Rect:
         return self._float(POWER_WIDTH, power_board_height(self.world))
+
+    def words_rect(self) -> pygame.Rect:
+        return self._float(WORDS_WIDTH, words_board_height(self.font, self.world, self.words_entry))
 
     def trade_rect(self) -> pygame.Rect:
         return self._float(TRADE_WIDTH, trade_board_height(self.world))
@@ -740,6 +805,26 @@ class Hud:
         above = self.tutorial_rect() or self.outlook_rect()
         top = above.bottom + MARGIN if above is not None else area.y + MARGIN
         return Button.at(self.font, area.x + MARGIN, top, label, DISCOVERY_INTENT)
+
+    def ask_buttons(self) -> list[Button]:
+        """The notices that somebody wants a word of the player, one for each who does (P62):
+        under whatever else is in that corner of the map, to be pressed."""
+        waiting = [ask for ask in self.world.words.asks if ask.resident_id in self.world.residents]
+        if not waiting:
+            return []
+        area = self.layout.map
+        found = self.discovery_button()
+        corner = [
+            self.outlook_rect(), self.tutorial_rect(), self.away_rect(), self.redraw_rect(),
+            found.rect if found is not None else None,
+        ]
+        top = max((rect.bottom for rect in corner if rect is not None), default=area.y) + MARGIN
+        buttons = []
+        for ask in waiting:
+            label = ASK_NOTICE.format(name=self.world.residents[ask.resident_id].name)
+            buttons.append(Button.at(self.font, area.x + MARGIN, top, label, ask_intent(ask.ask_id)))
+            top += BUTTON_HEIGHT + 2
+        return buttons
 
     def away_rect(self) -> pygame.Rect | None:
         """Where the faces of whoever is outside the settlement go, while anybody is: in
@@ -794,7 +879,6 @@ class Hud:
         self._render_top()
         self._render_menu()
         self._render_panel()
-        self._render_dock()
 
         outlook = self.outlook_rect()
         if outlook is not None:
@@ -810,6 +894,9 @@ class Hud:
         if waiting is not None:
             # It asks to be seen: lit, and unlit, as what the opening points at is.
             waiting.draw(self.canvas, self.font, active=self.lit)
+        for button in self.ask_buttons():
+            # So does whoever wants a word, until they are given one or told not now.
+            button.draw(self.canvas, self.font, active=self.lit)
         asked = self.redraw_rect()
         if asked is not None and self.redraw is not None:
             draw_panel(self.canvas, asked, fill="shadow", border="copper")
@@ -826,6 +913,11 @@ class Hud:
             draw_research_board(self.canvas, self.font, self.research_rect(), self.world)
         if self.power_open:
             draw_power_board(self.canvas, self.font, self.power_rect(), self.world)
+        if self.words_open:
+            self._tidy_words()
+            draw_words_board(
+                self.canvas, self.font, self.icons, self.faces, self.words_rect(), self.world, self.words_entry, self.lit
+            )
         if self.government_open:
             draw_government_board(
                 self.canvas, self.font, self.government_rect(), self.world, self.government_armed, band_hue("government"),
@@ -1009,58 +1101,6 @@ class Hud:
                 )
         else:
             draw_roster(self.canvas, self.font, self.faces, panel, self.world)
-
-    def _exchange(self) -> tuple[Resident, Resident] | None:
-        """Whoever is selected and whoever they are in an exchange with, while they are in one."""
-        resident = self.world.residents.get(self.selected_id or "")
-        activity = resident.activity if resident is not None else None
-        partner = self.world.residents.get(activity.partner_id or "") if activity is not None and activity.using else None
-        if resident is None or partner is None or resident.away:
-            return None
-        return resident, partner
-
-    def dock_rect(self) -> pygame.Rect | None:
-        """Where the exchange of whoever is selected is shown, while they are in one. The rest of the
-        time nothing is there but the map."""
-        return self.layout.dock if self._exchange() is not None else None
-
-    def _render_dock(self) -> None:
-        """Over the foot of the map: the exchange the selected resident is in, while they are in one."""
-        dock, exchange = self.layout.dock, self._exchange()
-        if exchange is None:
-            self.spoken = None
-            return
-        resident, partner = exchange
-        # They take turns to speak, a few minutes each.
-        turn = (self.world.clock.total_minutes // 4) % 2
-        speaker = resident if turn == 0 else partner
-        line = spoken_line(self.world, speaker)
-        self.spoken = (speaker.resident_id, line) if line else None
-        areas = draw_scene(
-            self.canvas,
-            self.font,
-            self.faces,
-            dock,
-            (resident.resident_id, expression_of(self.world, resident), resident.name),
-            (partner.resident_id, expression_of(self.world, partner), partner.name),
-            line or "...",
-            speaker=-1 if turn == 0 else 1,
-            layers=self.layers,
-        )
-        x, y = areas.side.x, areas.side.y
-        lines = [(f"{resident.name} {describe_action(self.world, resident)}", "paper")]
-        for one, other in ((resident, partner), (partner, resident)):
-            feelings = self.world.relationships.get((one.resident_id, other.resident_id))
-            felt = ", ".join(
-                f"{label} {round(getattr(feelings, feeling)) if feelings is not None else 0}"
-                for feeling, label in FEELING_LABELS.items()
-            )
-            lines.append((f"{one.name} por {other.name}: {felt}", "bone"))
-        for text, color in lines:
-            for line in self.font.wrap(text, areas.side.width):
-                self.font.draw(self.canvas, line, (x, y), PALETTE[color])
-                y += LINE_HEIGHT
-            y += 2
 
     def _render_stores(self, rect: pygame.Rect) -> None:
         draw_panel(self.canvas, rect, band=STORES_BAND, band_color=band_hue("stores"))

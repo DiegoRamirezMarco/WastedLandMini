@@ -105,8 +105,8 @@ python -m simulation.headless --days 7 --seed 7
 - `C`: centre the view on the selected resident, and follow them again
 - `G`: go to whoever needs attention: someone waiting for advice, in the middle of something
   serious, or hurt. Press it again for the next one
-- The screen is the map with a bar on top, a menu on the left, a panel on the right and a dock
-  underneath. The menu opens the job board, the stores (what is everyone's, added up) and the
+- The screen is the map with a bar on top, a menu on the left and a panel on the right. The
+  menu opens the job board, the stores (what is everyone's, added up) and the
   log, puts the minimap away, and goes back to the list of residents
 - The bar on top counts what the settlement lives on: food, water, fuel, medicine and scrap,
   whatever is nobody's own, in a store or on its way to one. Beside each, an arrow and a
@@ -215,7 +215,14 @@ python -m simulation.headless --days 7 --seed 7
   looks now: the drawing is of every one of its kind that good or better
 - With nobody selected the panel on the right lists everybody: click a name to go to them. So
   does a click on anyone listed under a resident's relationships
-- While whoever is selected is talking with someone, the dock under the map shows the two of them
+- Whoever is talking has a bubble over them with what the talk is about: the picture of a
+  thing, the face of whoever it is about, or the words. Click either of the two to read it
+  under the bar, and at the foot of their panel
+- A red `!` over somebody, and a notice in the corner of the map, is a resident who wants a
+  word of you: click either, write it and press `Intro`, or `Ahora no`
+- `Palabras`, at the foot of the list of residents and over what a resident carries, or `H`:
+  the lists of words of the settlement, each resident's own phrases and what they call the
+  others, and `Que hable de algo` to tell somebody what to talk about and with whom
 - Click a resident to see their needs, their credits, what they carry, what they are doing and
   how they feel about the others. Click a pantry or a crate to see what is inside and whose it is, or the shop's
   counter to see what is on sale and at what price

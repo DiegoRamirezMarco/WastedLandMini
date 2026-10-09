@@ -4187,7 +4187,7 @@ The user, on 2026-10-08: "intentemos plantear como darle ese toque tomodatchi li
 modulares con variables puestas por el jugador y los objetos)-> sims (todo el tema de
 interacciones) -> fallout shelter (gestion de recursos hipervitaminado)". It comes in three
 layers, each laid over what there is: what the settlement lives on (S51 to S57, S64, S65, P58 to P61
-and P27), words and things (S58, S59 and P62), and what is done with things and with each other
+and P27), words and things (S58, S59, P62 and P65), and what is done with things and with each other
 (S60 to S63 and P63).
 
 Asked first, in two batches, and answered, for the three of them:
@@ -5143,7 +5143,6 @@ Decided without asking:
   clinic with it and none without, with 4.1 fights against 5.3. They look at seeds 18 and 9
 
 Still open here:
-- Nothing of it is on screen: the bubbles, the notices and the way to give words are P62
 - A word cannot be taken out of a list or put right once it is given
 - An argument is about nothing
 - Nothing keeps the same two from the same subject twice running, but what they have seen
@@ -5168,8 +5167,66 @@ Asked on 2026-10-09, and answered:
   game's to settle when it is found. Not the recommendation, which had the player say what
   kind of thing it is as well
 
-### P62 — Words on screen (needs S58 and S59) — planned
-- Lines in the dock and over heads, the way to give words, and a thing handed over
+### P62 — Words on screen (needs S58) — done
+What S58 brought, on screen. What S59 brings is P65.
+
+What there is:
+- **No dock for whoever talks.** The strip that opened over the foot of the map with two
+  large faces and a line said in turn is gone, as was answered. It still opens for somebody
+  asking for advice. The map goes down to the foot of the screen at all times
+- **A bubble over whoever speaks**, of the two of a talk that is about something: the
+  picture of the thing, the face of whoever it is about, or the words where it is neither,
+  up to three lines of them. They take turns, four minutes each, whoever brought it up
+  first. Inside a building as on the map; not from as far as the map is seen, nor through
+  a roof
+- **A phrase of their own is a bubble of words**: the greeting as a talk begins, the rest
+  now and then, alone as well
+- **How it was taken is seen over whoever listened**, with the mark a meal is taken with:
+  relish or disgust
+- **Pressing on whoever talks says what about**, under the bar, `Marta y Raúl están hablando
+  sobre lo que daría ahora por un guiso caliente`, and it is at the foot of their panel for
+  as long as they talk
+- **Whoever is selected says the words of their bubble out loud**, where there are voices
+- **Whoever wants a word of the player has a mark over them**, an exclamation in red, and a
+  notice in the corner of the map, `Tomás te pregunta algo`. Pressing either hears them out
+- **The board of words**, from `Palabras` at the foot of the roster, from `Palabras` over
+  what a resident carries, or with `H`:
+  - *of the settlement*: who is asking, with `Responder` and `Ahora no`; the eight lists,
+    the words of the one on show, and a box to write another in
+  - *of one resident*: their five phrases and what they call each of the others, each with
+    `Cambiar`, and `Que hable de algo`
+  - *an ask being answered*: what they ask, the box to write in, `Dar` and `Ahora no`
+  - *a subject being picked*, for somebody who asked what to talk about or for anybody
+    unasked: with whom, then `Cosas`, `Gente` and the eight lists to pick from, the things
+    with their pictures and the people with their faces, and a box for a subject made up
+    on the spot, which joins the list on show
+- **Writing**: a press on a box, the letters, `Intro` to give it and `Esc` to drop it. While
+  something is being written keys are letters and no shortcuts
+- **A sound** when somebody asks
+
+Decided without asking:
+- **There is no entry of the menu for words**: the menu has no room for one more above where
+  advice is asked for. The roster, a resident's panel and a key open the board
+- **The mark over whoever asks is a red exclamation in a bubble**, since the answer was
+  written `(!)`: the yellow one is somebody asking for advice
+- **Only whoever's turn it is has the bubble**, so that two side by side do not show the
+  same thing twice
+- **What the two feel for each other, which the dock listed, is read in their panels**
+- **The lines the dock said out loud are not said**: a voice says the words of a bubble,
+  and a picture says nothing
+- **A word is quoted with plain quotes**: the game's letters have no others
+- **Answering what to talk about puts the board away**; anything else leaves it open
+- **A click on whoever asks hears them out**, before it selects them for anything else
+
+Still open here:
+- A word cannot be taken out of a list or put right from the board
+- The bubbles are the game's own drawing: there is no illustrated one
+- Nothing shows that a subject was the player's and not theirs
+- The notice of who asks does not say what, until it is pressed
+
+### P65 — A thing handed over, and one found, on screen (needs S59) — planned
+- Giving a thing out of the `Almacén` or a crate to somebody, and drawing and naming what
+  nobody knows
 
 ### S60 — More than one thing to do with a thing (needs S30 and P27) — planned
 The third layer: what is done with things and with each other.

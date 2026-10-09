@@ -622,31 +622,37 @@ class VoiceEditorTests(_SoundTestCase):
         self._click(self._button(editor, ("close",)).rect.center)
         self.game.sync_scenes()
         self.assertEqual(self.game.scene_name, "global")
-        # In the settlement, what he says in the dock is said in that voice.
+        # In the settlement, the words of the bubble over him are said in that voice (P62).
         world, view = self.game.world, self.game.global_view
         raul, tomas = world.residents["raul"], world.residents["tomas"]
-        tomas.x, tomas.y = raul.x + 1, raul.y
-        raul.activity = Activity("chat", partner_id="tomas", using=True)
-        tomas.activity = Activity("chat", partner_id="raul", using=True)
+        for resident in (raul, tomas):
+            resident.x, resident.y = 20, 18
+        tomas.x += 1
+        world.set_phrase("raul", "greeting", "Buenas.")
+        world.add_word("subjects", "las nubes")
+        now = world.clock.total_minutes
+        about = {"about": "word:subjects.las_nubes", "about_text": "lo que opina de las nubes", "began_at": now}
+        raul.activity = Activity("chat", partner_id="tomas", using=True, brought=True, **about)
+        tomas.activity = Activity("chat", partner_id="raul", using=True, **about)
         view.hud.select_resident("raul")
+        view.centre_on_resident("raul")
         self.voices.stop()
         view.render()
-        speaker, line = view.hud.spoken
-        self.assertIn(line, world.registries.dialogue["chat"])
+        self.assertEqual(view.hud.spoken, ("raul", "Buenas."), "he greets as the talk begins")
         view.update(0.02)
-        self.assertEqual(self.voices.last, (self.voices.store.get(speaker), line))
-        # The same line is not said again every frame, and a new one is when the other takes their turn.
+        self.assertEqual(self.voices.last, (self.voices.store.get("raul"), "Buenas."))
+        # The same line is not said again every frame, and what he goes on to say is.
         self.voices.stop()
         self.voices.last = None
         view.render()
         view.update(0.02)
         self.assertIsNone(self.voices.last)
-        world.clock.minute += 4 if world.clock.minute < 56 else -4
+        for activity in (raul.activity, tomas.activity):
+            activity.began_at = world.clock.total_minutes - world.registries.talk.greet_minutes - 8
         view.render()
-        other, reply = view.hud.spoken
-        self.assertNotEqual(other, speaker)
+        self.assertEqual(view.hud.spoken, ("raul", "lo que opina de las nubes"))
         view.update(0.02)
-        self.assertEqual(self.voices.last, (self.voices.store.get(other), reply))
+        self.assertEqual(self.voices.last, (self.voices.store.get("raul"), "lo que opina de las nubes"))
         # Nobody talking, nothing said.
         raul.activity = tomas.activity = None
         view.render()

@@ -227,7 +227,7 @@ class IllustratedGameTests(unittest.TestCase):
         centre = layout.map.center
         self.assertEqual(game.canvas.get_at(centre)[3], 0)
         self.assertFalse(_is(tuple(window.get_at((centre[0] * SCALE, centre[1] * SCALE))), SKIN))
-        # Nor has the foot of it, until the dock opens there for whoever is talking.
+        # Nor has the foot of it, with anybody talking or without: no dock opens there for them (P62).
         corner = (layout.dock.right - 3, layout.dock.bottom - 3)
         self.assertFalse(_is(tuple(window.get_at((corner[0] * SCALE, corner[1] * SCALE))), SKIN))
         world = game.world
@@ -236,7 +236,7 @@ class IllustratedGameTests(unittest.TestCase):
         world.residents["tomas"].activity = Activity("chat", partner_id="raul", using=True)
         window = self._shown(game)
         self.assertEqual(game.canvas.get_at(corner)[3], 0)
-        self.assertTrue(_is(tuple(window.get_at((corner[0] * SCALE, corner[1] * SCALE))), SKIN))
+        self.assertFalse(_is(tuple(window.get_at((corner[0] * SCALE, corner[1] * SCALE))), SKIN))
 
     def test_illustrated_faces_are_shown_large_in_the_panel_and_in_the_dock(self) -> None:
         _picture(self.root, "faces/raul/angry.png", FACE, (1024, 1024))

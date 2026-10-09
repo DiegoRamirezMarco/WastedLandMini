@@ -374,6 +374,17 @@ ICONS = {
         ".o....o.",
         "........",
     ],
+    # Over whoever wants a word of the player (P62).
+    "ask": [
+        "...ee...",
+        "..eeee..",
+        "..eeee..",
+        "...ee...",
+        "...ee...",
+        "........",
+        "...ee...",
+        "...ee...",
+    ],
     "mood": [
         "..oooo..",
         ".oyyyyo.",

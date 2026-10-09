@@ -37,7 +37,6 @@ from ui.labels import (
     relationship_rows,
     settlement_counts,
     settlement_stock,
-    spoken_line,
     trait_names,
     affordable_goods,
     away_residents,
@@ -1502,7 +1501,6 @@ class GameShellTests(unittest.TestCase):
         self.assertIsNotNone(hud.feed.latest(), "things have gone on")
         view.render()
         # With things going on and nobody talking, there is only map down there.
-        self.assertIsNone(hud.dock_rect())
         self.assertIsNone(hud.spoken)
         self.assertFalse(hud.covers(foot))
         self.assertTrue(view._on_map(foot))
@@ -1518,51 +1516,38 @@ class GameShellTests(unittest.TestCase):
         self.assertFalse(hud.covers(foot), "it is not down there that it opens")
         self._click(hud.log_button.rect.center)
         self.assertFalse(hud.log_open)
-        # Somebody selected who is talking to somebody opens the dock, and the minimap makes way.
+        # Somebody selected who is talking to somebody opens nothing down there: what they
+        # talk of is over their heads, and no dock comes up for it any more (P62).
         self._stand_together("raul", "tomas")
         raul, tomas = world.residents["raul"], world.residents["tomas"]
         hud.select_resident("raul")
         raul.activity = Activity("chat", partner_id="tomas", using=True)
         tomas.activity = Activity("chat", partner_id="raul", using=True)
         view.render()
-        self.assertEqual(hud.dock_rect(), dock)
-        self.assertTrue(hud.covers(foot))
-        self.assertFalse(view._on_map(foot))
-        self.assertLessEqual(hud.minimap_rect.bottom, dock.top)
-        # A panel of the menu opened meanwhile stops short of it.
-        hud.toggle_jobs()
-        self.assertLessEqual(hud.jobs_rect().bottom, dock.top)
-        hud.toggle_jobs()
-        # A click on the dock is not a click on the map under it: whoever is selected stays selected.
-        self._click(foot)
-        self.assertEqual(hud.selected_id, "raul")
-        # When they stop talking it goes, and the map and the minimap are back.
-        raul.activity = tomas.activity = None
-        view.render()
-        self.assertIsNone(hud.dock_rect())
+        self.assertFalse(hud.covers(foot))
+        self.assertTrue(view._on_map(foot))
         self.assertGreater(hud.minimap_rect.bottom, dock.top)
+        # A panel of the menu opened meanwhile has the whole height of the map to open in.
+        hud.toggle_jobs()
+        self.assertTrue(view.viewport.contains(hud.jobs_rect()))
+        hud.toggle_jobs()
+        # A click down there is a click on the map.
+        self._click(foot)
+        self.assertNotEqual(hud.selected_id, "raul")
 
-    def test_the_dock_shows_the_exchange_of_whoever_is_selected(self) -> None:
+    def test_whoever_is_in_an_exchange_wears_it_on_their_face(self) -> None:
         view, world = self.game.global_view, self.game.world
         self._stand_together("raul", "tomas")
         raul, tomas = world.residents["raul"], world.residents["tomas"]
-        dock = view.hud.layout.dock
         view.hud.select_resident("raul")
-        view.render()
-        self.assertIsNone(view.hud.dock_rect(), "talking to nobody, there is nothing to show")
-        quiet = pygame.image.tobytes(self.game.canvas.subsurface(dock), "RGB")
         raul.activity = Activity("chat", partner_id="tomas", using=True)
         tomas.activity = Activity("chat", partner_id="raul", using=True)
-        self.assertEqual(view.hud.dock_rect(), dock)
-        self.assertIn(spoken_line(world, raul), world.registries.dialogue["chat"])
         self.assertEqual(expression_of(world, raul), "happy")
         with self.assertNoLogs("graphics.assets", level="WARNING"):
             view.render()
-        self.assertNotEqual(pygame.image.tobytes(self.game.canvas.subsurface(dock), "RGB"), quiet)
         raul.activity = Activity("argument", partner_id="tomas", using=True)
         self.assertEqual(expression_of(world, raul), "angry")
         raul.activity = None
-        self.assertIsNone(spoken_line(world, raul))
         self.assertEqual(expression_of(world, raul), "neutral")
         raul.injuries = [Injury("cut", 40)]
         self.assertEqual(expression_of(world, raul), "sad")
