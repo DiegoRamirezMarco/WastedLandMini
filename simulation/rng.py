@@ -21,6 +21,15 @@ class SimulationRNG:
     def choice(self, values: Sequence[T]) -> T:
         return self._rng.choice(values)
 
+    def uniform(self, low: float, high: float) -> float:
+        """A number anywhere between two, as likely one as another."""
+        return self._rng.uniform(low, high)
+
+    def choices(self, values: Sequence[T], weights: Sequence[float]) -> list[T]:
+        """One of some things, each as likely as it weighs against the rest: in a list, as
+        `random.choices` gives it."""
+        return self._rng.choices(values, weights)
+
     def get_state(self) -> dict[str, Any]:
         return {"seed": self.seed, "state": self._rng.getstate()}
 

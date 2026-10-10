@@ -296,12 +296,82 @@ class HealthSystem:
         """Take a limb off a resident if the injury they just got was of a kind and a severity to do it."""
         if definition is None or definition.severs_from is None or amount < definition.severs_from:
             return None
-        left = [limb for limb_id, limb in world.registries.limbs.items() if limb_id not in resident.lost_limbs]
+        left = [limb for limb in world.registries.limbs.values() if self.has_limb(world, resident, limb.limb_id)]
         if not left or world.rng.random() >= definition.severs_chance:
             return None
-        limb = world.rng.choice(left)
-        resident.lost_limbs.append(limb.limb_id)
+        # The smaller the part, the likelier it is the one: a hand sooner than a whole arm.
+        limb = world.rng.choices(left, [each.odds for each in left])[0]
+        self.lose_limb(world, resident, limb.limb_id)
         return limb
+
+    def has_limb(self, world: "SimulationWorld", resident: Resident, limb_id: str) -> bool:
+        """Whether somebody still has a limb: it is not lost, and nothing it is the far end of is."""
+        limbs = world.registries.limbs
+        seen = set()
+        while limb_id is not None and limb_id not in seen:
+            if limb_id in resident.lost_limbs:
+                return False
+            seen.add(limb_id)
+            limb_id = limbs[limb_id].within if limb_id in limbs else None
+        return True
+
+    def lose_limb(self, world: "SimulationWorld", resident: Resident, limb_id: str) -> bool:
+        """Take a limb off somebody for good. What they had already lost of it further out went
+        with it, and is no longer told apart. Says whether they had it to lose."""
+        if limb_id not in world.registries.limbs or not self.has_limb(world, resident, limb_id):
+            return False
+        resident.lost_limbs.append(limb_id)
+        resident.lost_limbs[:] = [
+            lost for lost in resident.lost_limbs if lost == limb_id or not self._is_within(world, lost, limb_id)
+        ]
+        return True
+
+    def _is_within(self, world: "SimulationWorld", limb_id: str, other_id: str) -> bool:
+        """Whether a limb is somewhere along the far end of another."""
+        limbs = world.registries.limbs
+        seen = set()
+        at = limbs[limb_id].within if limb_id in limbs else None
+        while at is not None and at not in seen:
+            if at == other_id:
+                return True
+            seen.add(at)
+            at = limbs[at].within if at in limbs else None
+        return False
+
+    def fought(
+        self, world: "SimulationWorld", resident: Resident, amount: float, kind: str, cause: str, limbs: list[str]
+    ) -> None:
+        """Leave on somebody what a fight out there (S70) cost them: so much health, as the
+        fight had it and with nothing added or taken away, and the parts it took off them.
+        It kills nobody: whoever it was the end of is seen to by whoever says so."""
+        if kind not in world.registries.injuries:
+            kind = DEFAULT_INJURY
+        # Never all they have left: they came out of it alive.
+        amount = min(amount, max(0.0, resident.health - 1.0))
+        if amount > 0.0:
+            resident.injuries.append(Injury(kind, amount))
+            world.attributes.practise(world, resident, CONSTITUTION, "hurt")
+        details = {"amount": amount, "kind": kind, "by": None}
+        taken = [world.registries.limbs[limb_id] for limb_id in limbs if self.lose_limb(world, resident, limb_id)]
+        for limb in taken:
+            world.emit_event(
+                DomainEvent(
+                    "limb_lost", LIMB_LOSS_IMPORTANCE, f"{resident.name} pierde {limb.name} al {cause}",
+                    [resident.resident_id], data={**details, "limb": limb.limb_id},
+                ),
+                at=resident.tile,
+                fact_text=f"{resident.name} perdió {limb.name} al {cause}",
+            )
+        if amount > 0.0 and not taken:
+            definition = world.registries.injuries.get(kind)
+            world.emit_event(
+                DomainEvent(
+                    "injured", INJURY_IMPORTANCE,
+                    f"{resident.name} sale con {definition.name if definition else 'heridas'} de {cause}",
+                    [resident.resident_id], data=details,
+                ),
+                at=resident.tile,
+            )
 
     def leave_behind(self, world: "SimulationWorld", resident: Resident, takes_own: bool = False) -> None:
         """Take a resident out of the settlement for good, and deal with everything they leave

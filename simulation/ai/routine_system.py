@@ -19,7 +19,7 @@ from simulation.residents.activity import (
 )
 from simulation.residents.manner import SIT
 from simulation.ai.leisure import Pastime
-from simulation.residents.needs import BOREDOM, NEED_NAMES
+from simulation.residents.needs import BOREDOM, MENDING_NEED, NEED_NAMES
 from simulation.residents.wishes import DO
 from simulation.residents.resident import Resident
 from simulation.tastes.taste import TAG
@@ -311,6 +311,10 @@ class RoutineSystem:
             )
             return want - distance_cost if want is not None else None
         if use.heals:
+            if world.activities.urgent_needs(world, resident, MENDING_NEED, ignoring=use.per_minute):
+                # Parched, starving or worn out, a bed to mend in waits: they would be out of
+                # it at once for that, and back into it, and die of it between the two.
+                return None
             care = max(world.health.care_score(resident), world.substances.care_wish(world, resident, use))
             return care - DISTANCE_COST * manhattan(resident.tile, (placed.x, placed.y)) if care > 0 else None
         relief = dict(use.per_minute)

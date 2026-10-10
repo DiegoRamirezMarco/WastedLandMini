@@ -357,5 +357,112 @@
     "tags": [
       "compost"
     ]
+  },
+  {
+    "id": "sledge",
+    "name": "maza",
+    "article": "una",
+    "category": "tool",
+    "base_value": 30,
+    "tags": [
+      "weapon",
+      "blunt"
+    ],
+    "preference_tags": [
+      "violent"
+    ],
+    "properties": {
+      "damage": 2.2,
+      "wear": 6,
+      "scrap": 2
+    }
+  },
+  {
+    "id": "pipe_pistol",
+    "name": "pistola de tubo",
+    "article": "una",
+    "category": "tool",
+    "base_value": 45,
+    "tags": [
+      "weapon",
+      "gun"
+    ],
+    "preference_tags": [
+      "violent"
+    ],
+    "properties": {
+      "damage": 1.6,
+      "wear": 12,
+      "scrap": 2
+    }
+  },
+  {
+    "id": "rifle",
+    "name": "rifle de caza",
+    "article": "un",
+    "category": "tool",
+    "base_value": 80,
+    "tags": [
+      "weapon",
+      "gun"
+    ],
+    "preference_tags": [
+      "violent"
+    ],
+    "properties": {
+      "damage": 2.0,
+      "wear": 8,
+      "scrap": 3
+    }
+  },
+  {
+    "id": "arc_thrower",
+    "name": "lanzachispas",
+    "article": "un",
+    "category": "tool",
+    "base_value": 110,
+    "tags": [
+      "weapon",
+      "gun",
+      "energy"
+    ],
+    "preference_tags": [
+      "violent"
+    ],
+    "properties": {
+      "damage": 1.8,
+      "wear": 10,
+      "scrap": 3
+    }
+  },
+  {
+    "id": "laser",
+    "name": "láser de la central",
+    "article": "un",
+    "category": "tool",
+    "base_value": 180,
+    "tags": [
+      "weapon",
+      "gun",
+      "energy"
+    ],
+    "preference_tags": [
+      "violent"
+    ],
+    "properties": {
+      "damage": 2.4,
+      "wear": 8,
+      "scrap": 4
+    }
+  },
+  {
+    "id": "beast_claw",
+    "name": "garra de engendro",
+    "article": "una",
+    "category": "material",
+    "base_value": 40,
+    "tags": [
+      "trophy"
+    ]
   }
 ]

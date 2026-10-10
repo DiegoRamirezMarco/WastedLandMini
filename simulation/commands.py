@@ -16,7 +16,7 @@ from simulation.work.expedition import TripResult
 from simulation.work.research import ResearchResult
 from world.map import Tile
 from world.urbanism import UrbanismResult
-from typing import Protocol
+from typing import Any, Protocol
 
 
 class CommandTarget(Protocol):
@@ -215,6 +215,18 @@ class CommandTarget(Protocol):
         ...
 
     def rename_zone(self, zone_id: str, name: str) -> TripResult:
+        ...
+
+    def watch_fight(self, resident_id: str) -> Any:
+        ...
+
+    def fight_on(self, resident_id: str, seconds: float) -> list:
+        ...
+
+    def fight_act(self, resident_id: str, act: str, value: float | str | None = None) -> bool:
+        ...
+
+    def leave_fight(self, resident_id: str) -> None:
         ...
 
     def give(self, resident_id: str, definition_id: str) -> GiveResult:
@@ -975,6 +987,54 @@ class CancelTripCommand:
 
     def apply(self, world: CommandTarget) -> TripResult:
         return world.cancel_trip(self.resident_id)
+
+
+@dataclass(frozen=True)
+class WatchFightCommand:
+    """The player goes to watch the fight somebody out there has on their hands (S70), to have
+    a hand in it. The result is the fight, or nothing if they have none that has come to blows."""
+
+    resident_id: str
+
+    def apply(self, world: CommandTarget) -> Any:
+        return world.watch_fight(self.resident_id)
+
+
+@dataclass(frozen=True)
+class FightOnCommand:
+    """A fight that is being watched goes on for so many seconds of its own: it has its own
+    time, which is not the settlement's. The result is what happened in it."""
+
+    resident_id: str
+    seconds: float
+
+    def apply(self, world: CommandTarget) -> list:
+        return world.fight_on(self.resident_id, self.seconds)
+
+
+@dataclass(frozen=True)
+class FightActCommand:
+    """The player has a hand in a fight they are watching: `crit` lands a telling blow that
+    far off the middle of its mark, `target` says who is hit, by where they stand among
+    them, `heal` uses something to mend with, `shove` shoves, `flee` runs for it, `stance`
+    says what they fight with of what they carry, and `hands_off` leaves them to it or not."""
+
+    resident_id: str
+    act: str
+    value: float | str | None = None
+
+    def apply(self, world: CommandTarget) -> bool:
+        return world.fight_act(self.resident_id, self.act, self.value)
+
+
+@dataclass(frozen=True)
+class LeaveFightCommand:
+    """The player stops watching a fight: it is fought out by itself from where it stands."""
+
+    resident_id: str
+
+    def apply(self, world: CommandTarget) -> None:
+        world.leave_fight(self.resident_id)
 
 
 @dataclass(frozen=True)

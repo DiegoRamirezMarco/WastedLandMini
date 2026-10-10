@@ -20,7 +20,7 @@ from simulation.residents.activity import (
     WANDER_ACTION,
     Activity,
 )
-from simulation.residents.needs import BODILY_NEEDS, URGENT_NEED
+from simulation.residents.needs import BODILY_NEEDS, MENDING_NEED, URGENT_NEED
 from simulation.residents.resident import Resident
 from simulation.social.social_system import SocialSystem
 from simulation.work.construction import AWAIT_ACTION, BUILD_ACTION, CARRY_ACTION
@@ -444,7 +444,8 @@ class ActivitySystem:
                     resident.needs.apply({"tiredness": rest * extra})
             lowered = [use.until] if use.until else [need for need, delta in use.per_minute.items() if delta < 0]
             relieved = bool(lowered) and all(getattr(resident.needs, need, 0.0) <= 0.0 for need in lowered)
-            if (use.per_minute or use.heals) and self.urgent_needs(world, resident, ignoring=use.per_minute):
+            level = MENDING_NEED if use.heals else URGENT_NEED
+            if (use.per_minute or use.heals) and self.urgent_needs(world, resident, level, ignoring=use.per_minute):
                 relieved = True
             if trained_out:
                 relieved = True

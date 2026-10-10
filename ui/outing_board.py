@@ -88,7 +88,11 @@ def filled(world: SimulationWorld, entry: OutingEntry, zone_id: str) -> dict[str
     there = dict(provisions(world, entry))
     supplies: dict[str, int] = {}
     while world.expeditions.worth_of(world, supplies) < needed:
-        left = [item_id for item_id, units in there.items() if supplies.get(item_id, 0) < units]
+        # Only of what gets anybody any further: what is taken along to mend with is for the player to hand over.
+        left = [
+            item_id for item_id, units in there.items()
+            if supplies.get(item_id, 0) < units and world.expeditions.worth(world, item_id) > 0
+        ]
         if not left:
             break
         item_id = min(left, key=lambda each: (supplies.get(each, 0), -there[each], each))

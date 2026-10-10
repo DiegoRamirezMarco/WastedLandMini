@@ -1317,5 +1317,78 @@
         }
       }
     ]
+  },
+  "raiders_met": {
+    "event_type": "raiders_met",
+    "window_minutes": 45,
+    "cooldown_minutes": 0,
+    "anger_threshold": 0,
+    "importance": 75,
+    "text": "¡{name} se ha topado con saqueadores!",
+    "prompt": "Me cierran el paso. ¿Qué hago?",
+    "outcomes": {
+      "fight": {
+        "score": {
+          "bias": -0.15,
+          "courage": 0.7,
+          "aggression": 0.4,
+          "impulsiveness": 0.2,
+          "health": 0.5
+        },
+        "expedition": "fight",
+        "text": "{name} les planta cara"
+      },
+      "run": {
+        "score": {
+          "bias": 0.35,
+          "stress": 0.2,
+          "impulsiveness": 0.1
+        },
+        "expedition": "run",
+        "text": "{name} echa a correr"
+      },
+      "pay": {
+        "score": {
+          "bias": 0.2,
+          "empathy": 0.2,
+          "courage": -0.3,
+          "greed": -0.4
+        },
+        "expedition": "pay",
+        "text": "{name} les ofrece lo que lleva encima"
+      }
+    },
+    "options": [
+      {
+        "id": "fight",
+        "text": "Pelea",
+        "influence": {
+          "fight": 0.6,
+          "run": -0.3,
+          "pay": -0.2
+        }
+      },
+      {
+        "id": "run",
+        "text": "Corre",
+        "influence": {
+          "run": 0.6,
+          "fight": -0.3
+        }
+      },
+      {
+        "id": "pay",
+        "text": "Dales lo que piden",
+        "influence": {
+          "pay": 0.6,
+          "fight": -0.3
+        }
+      },
+      {
+        "id": "neutral",
+        "text": "Tú sabrás",
+        "influence": {}
+      }
+    ]
   }
 }

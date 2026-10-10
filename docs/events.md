@@ -181,6 +181,9 @@ Event types emitted so far:
 | `zone_found` | Somebody comes to a level of a job done out there and with it on the next zone of the line, with `zone` and `level` in `data` | 60 |
 | `zone_named` | The player says what a zone is called | 30 |
 | `risky_find` | A resident out there comes on something that looks dangerous, and waits for advice | 50 |
+| `raiders_met` | A resident out there comes on raiders, and waits for advice on whether to fight, run or pay (S70) | 75 |
+| `raid_fight` | It has come to blows: the fight waits a while to be watched. `resident_id`, `zone` and `foes` (the sort and level of each) in `data` | 70 |
+| `raid_over` | Raiders are no longer in somebody's way. `outcome` in `data` is `won`, `fled`, `lost` or `pay`, with `loot`, `lost` (parts), `paid`, `robbed` or `died` as it went | 70 |
 | `expedition_returned` | A resident comes back with what they found, with `found` and `kept` (what they keep for themselves under barter, or null) in `data` | 30 |
 | `stranger_at_gate` | Someone asks to be let in, and the guard waits for advice | 55 |
 | `newcomer_joined` | A stranger is let in and stays | 60 |

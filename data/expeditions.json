@@ -98,6 +98,14 @@
         {
           "item": "baton",
           "weight": 0.4
+        },
+        {
+          "item": "sledge",
+          "weight": 0.3
+        },
+        {
+          "item": "pipe_pistol",
+          "weight": 0.3
         }
       ]
     },
@@ -137,6 +145,14 @@
         {
           "item": "baton",
           "weight": 0.5
+        },
+        {
+          "item": "rifle",
+          "weight": 0.3
+        },
+        {
+          "item": "arc_thrower",
+          "weight": 0.25
         }
       ]
     },
@@ -180,6 +196,14 @@
         {
           "item": "syringe",
           "weight": 0.5
+        },
+        {
+          "item": "laser",
+          "weight": 0.3
+        },
+        {
+          "item": "rifle",
+          "weight": 0.3
         }
       ]
     }
@@ -274,5 +298,13 @@
   "push_on_finds": 4,
   "push_on_danger": 0.35,
   "push_on_minutes": 60,
-  "turn_back_minutes": 30
+  "turn_back_minutes": 30,
+  "kits": [
+    "medicine"
+  ],
+  "raid_wait": 30,
+  "raid_stretch": [
+    0.15,
+    0.9
+  ]
 }

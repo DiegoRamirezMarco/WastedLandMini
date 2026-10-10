@@ -40,6 +40,7 @@ from simulation.tutorial.tutorial import BUILDING, JOB, OBJECT, TutorialDefiniti
 from simulation.work.craft import CraftSettings, craft_settings_from_data
 from simulation.work.finds import FindSettings, find_settings_from_data
 from simulation.work.construction import ConstructionSettings, construction_settings_from_data
+from simulation.combat.model import CombatData, combat_from_data
 from simulation.work.expedition import ExpeditionSettings, expedition_settings_from_data
 from simulation.work.job import INTO_STATION, JobDefinition, job_definition_from_data
 from simulation.work.research import EFFECTS, JOB_PACE, ResearchSettings, research_settings_from_data
@@ -191,6 +192,7 @@ class BuiltInRegistries:
     spoilage: SpoilSettings = field(default_factory=SpoilSettings)
     bonds: BondSettings = field(default_factory=BondSettings)
     expeditions: ExpeditionSettings = field(default_factory=ExpeditionSettings)
+    combat: CombatData = field(default_factory=lambda: combat_from_data({}))
     # How building is gone about. What each thing takes is in its own definition.
     construction: ConstructionSettings = field(default_factory=ConstructionSettings)
     # What there is to work out, and what each subject opens up.
@@ -293,6 +295,9 @@ class BuiltInRegistries:
         expeditions_path = root / "expeditions.json"
         if expeditions_path.is_file():
             registries.expeditions = expedition_settings_from_data(_read_object(expeditions_path))
+        combat_path = root / "combat.json"
+        if combat_path.is_file():
+            registries.combat = combat_from_data(_read_object(combat_path))
         construction_path = root / "construction.json"
         if construction_path.is_file():
             registries.construction = construction_settings_from_data(_read_object(construction_path))
@@ -589,6 +594,10 @@ class BuiltInRegistries:
             holder = self.interactables.find(event.container) if event.container is not None else None
             if event.container is not None and (holder is None or not holder.container):
                 raise ValueError(f"World event {event_id} names {event.container}, which is not a container kind")
+        # Whatever a fight out there can take off somebody is something they can be without.
+        parts = {part for limb in (*self.combat.tuning.arms, *self.combat.tuning.legs) for part in limb}
+        if self.limbs and self.combat.raiders and parts - set(self.limbs):
+            raise ValueError(f"A fight takes off parts nobody can be without: {sorted(parts - set(self.limbs))}")
         if self.expeditions.injury_kind not in self.injuries and self.injuries:
             raise ValueError(f"Expeditions leave an unknown kind of injury: {self.expeditions.injury_kind}")
         if self.tutorial.steps and self.tutorial.map_id not in self.maps:

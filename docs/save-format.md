@@ -70,7 +70,14 @@ is bound for, or `null`) (S67). Without them a trip is on its way home, through 
 zone the data names: the format has no new version for it. A trip past the first zone also
 has `route` (the zones it goes through, the furthest last), `stages` (how far along the way
 each ends, from 0 to 1), `out_minutes` (what the way out was to take) and `supplies` (what
-was handed over for it, in units by item ID) (S68).
+was handed over for it, in units by item ID) (S68). `raids_at` is the game minutes at which
+it still comes on raiders, and `raid` is `null` or those in its way now: `zone`, `met_at`,
+`foes` (pairs of a sort and a level) and `due`, the minute at which a fight that has come to
+blows is fought out unwatched, or `null` before it has (S70). Without them a trip meets
+nobody. A fight being watched is not saved: it starts again from `raid`.
+
+A resident's `lost_limbs` may name any limb of `data/body.json`: of one limb only the part
+lost nearest the trunk is kept.
 
 A resident's `outing` is `null` or the trip made ready for them: `zone` and `supplies`.
 `zones` at the top is the zones the settlement has found past the first, by ID, each with

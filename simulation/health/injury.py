@@ -30,6 +30,11 @@ class LimbDefinition:
     # What is left of the pace of their work, and of their walk, from 0 to 1.
     work_pace: float = 1.0
     walk_pace: float = 1.0
+    # The limb this one is the far end of, by ID: a hand is within a forearm, and that within
+    # an arm. Whoever is without a limb is without everything within it. None for a whole one.
+    within: str | None = None
+    # How likely it is to be the one that is lost, against the others: the smaller, the likelier.
+    odds: float = 1.0
 
 
 @dataclass
@@ -77,4 +82,7 @@ def limb_definition_from_data(limb_id: str, data: dict[str, Any]) -> LimbDefinit
     work_pace, walk_pace = float(data.get("work_pace", 1.0)), float(data.get("walk_pace", 1.0))
     if not (0.0 < work_pace <= 1.0 and 0.0 < walk_pace <= 1.0):
         raise ValueError(f"Limb {limb_id} must leave a pace above 0 and no more than 1")
-    return LimbDefinition(limb_id, str(data["name"]), work_pace, walk_pace)
+    odds = float(data.get("odds", 1.0))
+    if odds <= 0.0:
+        raise ValueError(f"Limb {limb_id} is lost with some likelihood, however little")
+    return LimbDefinition(limb_id, str(data["name"]), work_pace, walk_pace, str(data["within"]) if "within" in data else None, odds)

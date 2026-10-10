@@ -6099,7 +6099,7 @@ Still to settle, to be asked before it is built:
   one taken from those there are
 - Whether a zone off the line asks for provisions, and how many
 
-### S70 — Coming on raiders (needs S68) — tried apart from the game, to be judged
+### S70 — Coming on raiders (needs S68) — done
 Asked for on 2026-10-09: "vamos a integrar al primer enemigo, saqueador. ¡ x Se ha topado con
 Saqueadores ! y combate sencillo divertido pero muy sencillo prompon varios que encajen. los
 enemigos tendran niveles y estadisticas propias, armas CC escalan con Fuerza y destreza
@@ -6241,11 +6241,88 @@ Decided without asking, in the trial:
 - **Energy weapons are what raiders of the fourth level up carry**: there are none in the
   settlement yet
 
-Still to settle, to be asked before it is brought in:
-- How often raiders are come on in a trip, and where along it
-- Where medkits and rounds come from, and what is handed over to be let by
-- Whether what is worn (P66, S66) stops anything
-- The new enemies of each zone, which the user asked for with S68
+Judged on 2026-10-10: "perfecto implementa esta mecanica de combate en las expediciones
+guapo". Asked before bringing it in, a batch of four:
+- **How often**: "cada zona aumenta la probabilidad y siempre conserva la vida, no se recupera
+  mas que con botiquines". Each zone a trip goes through may have its own band, the likelier
+  the further, so that a long trip may be several fights; and the health lost in one is
+  what the next is gone into without
+- **Not watching**: it is put to them as a find is, with the player to advise; whoever
+  opens the trip plays the fight, and otherwise it is fought out by itself and told
+- **Medkits and rounds**: medkits are the medicine there already is, handed over when a
+  trip is made ready or carried; a weapon that is fired holds its rounds anew each fight
+- **Weapons**: all of the trial's are things of the game now, taken from whoever carried
+  them and found in the far zones
+
+Built in the simulation:
+- **`simulation/combat/`** is the trial's rules as they were, going by the game's own luck.
+  `data/combat.json` is its figures, and says how likely each zone is to have a band
+- **A trip stands still while raiders are in its way**: what to do is a decision like any
+  other (`raiders_met`), and a fight that has come to blows waits `raid_wait` game minutes
+  to be watched before it is fought out
+- **Whoever fights is as they are**: their attributes, the best they carry for the hand
+  and to fire, the level of their trade, the health they have and what they are without
+- **What it leaves**: the health lost is an injury of just that much; parts taken off are
+  lost for good; the fallen are robbed of what they had found and been handed, and crawl
+  home or do not come back; what is taken from raiders is carried home as finds are
+- **A limb can be lost at any joint in the settlement too** (`data/body.json`): a hand, a
+  forearm or an arm, a foot, half a leg or a leg, each within the next. The less that is
+  lost the less it costs, and a cut on the map takes the smaller parts sooner as well
+
+Put right on the way, in the settlement itself: nobody had come home as badly hurt as a fight
+leaves somebody, and those who did wore themselves out or died of thirst between a bed and a
+well. Run for ten weeks over several seeds until nobody did.
+- **Parched, starving or worn out, a bed to mend in comes second**, and they get up for
+  it sooner than anybody would leave anything else (`MENDING_NEED`): they were out of it
+  for a need and straight back into it, and the need was never seen to
+- **Nobody stands before raiders for ever**: if the question of what to do is dropped, they
+  do as they are
+- **Beaten raiders now and then had medicine on them** (`kit_drop`): fights use it up
+- **Nobody lies in wait in the forest by the fence**: with even one trip in twelve meeting
+  somebody there, the one scavenger of a settlement left to itself was hurt often enough
+  that it ran out of fuel, food and medicine in ten weeks. They are met from the ruins on,
+  one trip in four, to the crater, three in five: where the player sends them. It is
+  `chance` in the `zones` of `data/combat.json`
+
+Decided without asking:
+- What is handed over to be let by is what was found so far, and then what was handed over
+  for the way: the settlement has no coins in pockets
+- Running that works turns them for home; so does falling, and getting away mid-fight
+- What they fight with is the best in harm for the time it takes, which is the knife before
+  the maul
+- Armour stops nothing yet: it is a first look still to be judged (P66)
+- A fight being watched is not kept in a save: it starts again when come back to
+- The beast's claw is a thing to bring home, and coins are not, there being none
+
+Still to settle:
+- The new enemies of each zone, which the user asked for with S68: there are raiders and
+  the one beast
+- Rounds as a thing made or found, if that is ever wanted
+
+### P80 — The fight, where the walk was (needs S70 and P68) — done
+The trial's screen, brought into the trip seen from the side.
+- **Whoever is watched and has a fight on their hands is seen fighting it** where they
+  walked, on the country of the zone standing still where the walk had got to, drawn as
+  they are on the walk. Raiders are the game's plain figure, a colour to a sort
+- **The settlement's time waits while it is played**, and its keys are the fight's: the
+  space bar lands a telling blow and pauses nothing. Going back to the map, or to somebody
+  else's trip, leaves it to be fought out from where it stands
+- **With more than one thing to fight with it is asked which** before a blow is struck
+- **Everything the trial showed**: blows that reach, bodies thrown about, kneeling on
+  whoever is down (a clip of the game's own now, `pound`), parts off at any joint, jets of
+  blood, stars, a telling blow seen slowly and a part coming off more slowly and from
+  nearer, KO said large, and nothing written over it but numbers, in the game's letters
+- **The face of whoever has raiders in their way is ringed** in the corner of those who are
+  out, and winks once it has come to blows
+- **The new weapons have pictures and icons**; medicine is a row of the trip board like
+  any other, which filling the way as far as a zone leaves alone
+
+Decided without asking:
+- The fight is not opened by itself over the map: the notice says so and the face winks,
+  and it is the player's to go and see within the time it waits
+- A hand, a foot and the waist are places the game's body comes apart at now too
+
+Not tried with a window: scripted presses and pictures only.
 
 ### P71 — Dolls that turn: what turns them (needs P42 to P45) — done
 Asked for on 2026-10-09 and the days about it, tried apart from the game first, in a project of

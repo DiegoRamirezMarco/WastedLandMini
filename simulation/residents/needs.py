@@ -12,6 +12,9 @@ BOREDOM_START = 15.0
 BODILY_NEEDS = ("hunger", "thirst", "tiredness")
 # A bodily need this high cuts short whatever long thing a resident is doing: hunger wakes you up.
 URGENT_NEED = 85.0
+# Whoever keeps to a bed to mend gets up for less: they may be there for days, and are in no
+# state to wait until it hurts.
+MENDING_NEED = 75.0
 
 
 def _clamp(value: float) -> float:

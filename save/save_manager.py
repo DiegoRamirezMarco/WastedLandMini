@@ -54,7 +54,7 @@ from simulation.social.talk import ASK_KINDS, Ask, VocabularyState, Word
 from simulation.substances.substance import Habit, Intake
 from simulation.tastes.settings import REACTIONS
 from simulation.tastes.taste import KINDS, Taste, TasteProfile
-from simulation.work.expedition import Expedition, Outing, ZoneFound
+from simulation.work.expedition import Expedition, Outing, Raid, ZoneFound
 from simulation.work.expedition_system import EXPEDITION_ACTION
 from simulation.tutorial.tutorial import TutorialState
 from simulation.work.research import ResearchState
@@ -375,7 +375,7 @@ class SaveManager:
                     "due_day": resident.due_day,
                     "roles": list(resident.roles),
                     "couple_with": resident.couple_with,
-                    "expedition": vars(resident.expedition) if resident.expedition is not None else None,
+                    "expedition": _trip(resident.expedition) if resident.expedition is not None else None,
                     "last_expedition_day": resident.last_expedition_day,
                     "outing": vars(resident.outing) if resident.outing is not None else None,
                     "seeks_work": resident.seeks_work,
@@ -614,6 +614,8 @@ class SaveManager:
                     stages=[float(end) for end in _list_or_empty(trip.get("stages"))],
                     out_minutes=max(0, int(trip.get("out_minutes", 0))),
                     supplies=_units(trip.get("supplies")),
+                    raids_at=[int(at) for at in _list_or_empty(trip.get("raids_at"))],
+                    raid=_raid(trip.get("raid")),
                 )
                 if trip is not None
                 else None,
@@ -1966,6 +1968,20 @@ def _level_of(saved: dict[str, Any]) -> int:
     """How good a thing that was saved is. Common in a save from before things had levels."""
     level = saved.get("level", 1)
     return level if isinstance(level, int) and not isinstance(level, bool) else 1
+
+
+def _trip(trip: Expedition) -> dict[str, Any]:
+    """A trip as it is written down: the raiders in its way, if any, as a record of their own."""
+    return {**vars(trip), "raid": vars(trip.raid) if trip.raid is not None else None}
+
+
+def _raid(data: Any) -> Raid | None:
+    """Raiders in the way of a trip, as they were written down. None from before there were any."""
+    if not isinstance(data, dict) or not data.get("foes"):
+        return None
+    foes = [[str(foe[0]), int(foe[1])] for foe in data["foes"] if isinstance(foe, (list, tuple)) and len(foe) == 2]
+    due = data.get("due")
+    return Raid(str(data.get("zone", "")), int(data.get("met_at", 0)), foes, int(due) if due is not None else None)
 
 
 def _units(value: Any) -> dict[str, int]:

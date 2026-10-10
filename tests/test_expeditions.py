@@ -356,7 +356,8 @@ class ThereAndBackTests(unittest.TestCase):
         self.assertTrue(trip.heading_back(now))
         self.assertTrue(0.0 <= trip.distance(now) <= 1.0)
         self.assertEqual(loaded.expeditions.zone_of(loaded, trip).zone_id, "forest")
-        loaded.step(MINUTES_PER_DAY)
+        # Until that trip is over, and not a day on the dot: by then they may be out again.
+        loaded.step(max(1, trip.returns_at - now) + 2)
         self.assertFalse(loaded.residents["sergio"].away)
 
 

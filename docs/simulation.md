@@ -214,6 +214,14 @@ room. An argument's importance rises with the resentment between the two.
   way, is longer and riskier by what each adds, and brings what there is where it got to.
   Getting there uses up what was handed over; turning round sooner brings home, of each
   thing, as much as there was of the way left to go.
+- **Raiders (S70).** `RaidSystem` (`world.raids`) draws, apart from everything else, where
+  along the way out each zone's band lies in wait. Come on, they are a `Raid` on the trip,
+  which stands still (`Expedition.wait`) until that is over. The decision is the
+  resident's (`raiders_met`). A fight is a `combat.rules.Fight`, built the same every time
+  from the raid and the resident, with luck keyed to them: fought out by `resolve` when
+  nobody watches, or stepped by `FightOnCommand` in seconds of its own while somebody does,
+  and acted on by `FightActCommand`. `_settle` takes back what it made of them. Nothing in
+  `simulation/combat/` knows of the settlement but `raid_system.py`.
 - **There and back.** A trip is bound for one of the `zones` of `data/expeditions.json`: the
   first, unless one was made ready. Half of it is the way out and the rest the way home:
   `Expedition.distance` is how far from the fence they are at a minute, from 0 to 1, and

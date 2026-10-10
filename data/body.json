@@ -2,19 +2,71 @@
   "limbs": {
     "arm_left": {
       "name": "el brazo izquierdo",
-      "work_pace": 0.6
+      "work_pace": 0.6,
+      "odds": 1
     },
-    "arm_right": {
-      "name": "el brazo derecho",
-      "work_pace": 0.6
+    "forearm_left": {
+      "name": "el antebrazo izquierdo",
+      "work_pace": 0.65,
+      "within": "arm_left",
+      "odds": 2
+    },
+    "hand_left": {
+      "name": "la mano izquierda",
+      "work_pace": 0.75,
+      "within": "forearm_left",
+      "odds": 4
     },
     "leg_left": {
       "name": "la pierna izquierda",
-      "walk_pace": 0.5
+      "walk_pace": 0.5,
+      "odds": 1
+    },
+    "shin_left": {
+      "name": "media pierna izquierda",
+      "walk_pace": 0.6,
+      "within": "leg_left",
+      "odds": 2
+    },
+    "foot_left": {
+      "name": "el pie izquierdo",
+      "walk_pace": 0.75,
+      "within": "shin_left",
+      "odds": 4
+    },
+    "arm_right": {
+      "name": "el brazo derecho",
+      "work_pace": 0.6,
+      "odds": 1
+    },
+    "forearm_right": {
+      "name": "el antebrazo derecho",
+      "work_pace": 0.65,
+      "within": "arm_right",
+      "odds": 2
+    },
+    "hand_right": {
+      "name": "la mano derecha",
+      "work_pace": 0.75,
+      "within": "forearm_right",
+      "odds": 4
     },
     "leg_right": {
       "name": "la pierna derecha",
-      "walk_pace": 0.5
+      "walk_pace": 0.5,
+      "odds": 1
+    },
+    "shin_right": {
+      "name": "media pierna derecha",
+      "walk_pace": 0.6,
+      "within": "leg_right",
+      "odds": 2
+    },
+    "foot_right": {
+      "name": "el pie derecho",
+      "walk_pace": 0.75,
+      "within": "shin_right",
+      "odds": 4
     }
   }
 }

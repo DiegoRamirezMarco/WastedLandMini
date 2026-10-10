@@ -70,6 +70,9 @@ from simulation.work.construction import ConstructionSystem
 from simulation.work.upgrades import NOBODY_KEEPS, UpgradeSystem
 from simulation.work.wear import WearSystem
 from simulation.work.expedition import TripResult, ZoneFound
+from simulation.combat.raid_system import RaidSystem
+from simulation.combat.rules import Event as FightEvent
+from simulation.combat.rules import Fight
 from simulation.work.expedition_system import ExpeditionSystem
 from simulation.work.research import ResearchResult, ResearchState, ResearchSystem
 from simulation.work.rush import RushSystem
@@ -179,6 +182,7 @@ class SimulationWorld:
     at_gate: dict[str, int] = field(default_factory=dict)
     bonds: BondSystem = field(default_factory=BondSystem)
     expeditions: ExpeditionSystem = field(default_factory=ExpeditionSystem)
+    raids: RaidSystem = field(default_factory=RaidSystem)
     happenings: WorldEventSystem = field(default_factory=WorldEventSystem)
     # Randomness of what happens to the settlement from outside, kept apart from everything else's.
     event_rng: SimulationRNG = field(default_factory=lambda: SimulationRNG(7007))
@@ -521,6 +525,24 @@ class SimulationWorld:
     def rename_zone(self, zone_id: str, name: str) -> TripResult:
         """Say what a zone the settlement knows of is called."""
         return self.expeditions.rename(self, zone_id, name)
+
+    def watch_fight(self, resident_id: str) -> Fight | None:
+        """Start watching the fight somebody out there has on their hands (S70), to have a
+        hand in it. None if they have none that has come to blows."""
+        return self.raids.open(self, resident_id)
+
+    def fight_on(self, resident_id: str, seconds: float) -> list[FightEvent]:
+        """Let a fight that is being watched go on for so many seconds of its own. Says what
+        happened in it."""
+        return self.raids.step(self, resident_id, seconds)
+
+    def fight_act(self, resident_id: str, act: str, value: float | str | None = None) -> bool:
+        """Have a hand in a fight that is being watched. Says whether it came to anything."""
+        return self.raids.act(self, resident_id, act, value)
+
+    def leave_fight(self, resident_id: str) -> None:
+        """Stop watching a fight: it is fought out by itself from where it stands."""
+        self.raids.leave(self, resident_id)
 
     def name_discovery(self, discovery_id: str, name: str, choices: Mapping[str, str] | None = None) -> CraftResult:
         """Say what something a resident has come to at their job is called, and what is picked of it."""

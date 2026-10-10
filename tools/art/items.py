@@ -227,6 +227,126 @@ RUSTY_KNIFE = [
 ]
 RUSTY_KNIFE_LEGEND = {"o": "ink", "d": "dust", "s": "stone", "k": "rust"}
 
+SLEDGE = [
+    "................",
+    ".........oooo...",
+    "........osssso..",
+    ".......osddsso..",
+    ".......ossssso..",
+    "........ossso...",
+    ".......otoo.....",
+    "......otto......",
+    ".....otto.......",
+    "....otto........",
+    "...otto.........",
+    "..otto..........",
+    "..oko...........",
+    "...o............",
+    "................",
+    "................",
+]
+SLEDGE_LEGEND = {"o": "ink", "s": "stone", "d": "dust", "t": "rust", "k": "shadow"}
+
+PIPE_PISTOL = [
+    "................",
+    "................",
+    "................",
+    "..oooooooooooo..",
+    ".osssssssssssso.",
+    ".osddddddddddko.",
+    "..oooooooooooo..",
+    "..ottto.o.......",
+    "..ottto.o.......",
+    "..otttooo.......",
+    "..ottto.........",
+    "..okkko.........",
+    "..okkko.........",
+    "...ooo..........",
+    "................",
+    "................",
+]
+PIPE_PISTOL_LEGEND = {"o": "ink", "s": "stone", "d": "dust", "t": "rust", "k": "shadow"}
+
+RIFLE = [
+    "................",
+    "..............o.",
+    ".............oso",
+    "............oso.",
+    "...........oso..",
+    "..........oso...",
+    ".........osso...",
+    "........ottso...",
+    ".......ottto....",
+    "......ottto.o...",
+    ".....ottooo.....",
+    "....ottto.......",
+    "...okkto........",
+    "..okkko.........",
+    "..oooo..........",
+    "................",
+]
+RIFLE_LEGEND = {"o": "ink", "s": "stone", "t": "rust", "k": "shadow"}
+
+ARC_THROWER = [
+    "................",
+    "................",
+    "..........oo.g..",
+    "..oooooooosso.g.",
+    ".ottttttosddog..",
+    ".otggtttooooo.g.",
+    ".ottttttosddog..",
+    "..oooooooosso.g.",
+    "..okko....oo.g..",
+    "..okko..........",
+    "..okko..........",
+    "..okko..........",
+    "...oo...........",
+    "................",
+    "................",
+    "................",
+]
+ARC_THROWER_LEGEND = {"o": "ink", "t": "teal", "g": "glow", "s": "stone", "d": "dust", "k": "shadow"}
+
+LASER = [
+    "................",
+    "..............g.",
+    ".............ogo",
+    "............oso.",
+    "...........osgo.",
+    "..........osgo..",
+    ".........osgo...",
+    "........osgo....",
+    ".......osgo.....",
+    "......osso.o....",
+    ".....ossooo.....",
+    "....osso........",
+    "...okso.........",
+    "..okko..........",
+    "..ooo...........",
+    "................",
+]
+LASER_LEGEND = {"o": "ink", "s": "steel", "g": "glow", "k": "shadow"}
+
+BEAST_CLAW = [
+    "................",
+    "...........ooo..",
+    ".........oobbo..",
+    "........obbbo...",
+    ".......obbbo....",
+    "......obbpo.....",
+    ".....obbpo......",
+    ".....obpo.......",
+    "....obbpo.......",
+    "....obpo........",
+    "...orbpo........",
+    "...orrpo........",
+    "..orrro.........",
+    "...ooo..........",
+    "................",
+    "................",
+]
+BEAST_CLAW_LEGEND = {"o": "ink", "b": "bone", "p": "paper", "r": "blood"}
+
 HOE = [
     "................",
     "........oooooo..",
@@ -429,6 +549,12 @@ def build() -> dict[str, pygame.Surface]:
         builtin_icon_path("medicine"): _checked(paint(MEDICINE, MEDICINE_LEGEND), "medicine"),
         builtin_icon_path("baton"): _checked(paint(BATON, BATON_LEGEND), "baton"),
         builtin_icon_path("rusty_knife"): _checked(paint(RUSTY_KNIFE, RUSTY_KNIFE_LEGEND), "rusty_knife"),
+        builtin_icon_path("sledge"): _checked(paint(SLEDGE, SLEDGE_LEGEND), "sledge"),
+        builtin_icon_path("pipe_pistol"): _checked(paint(PIPE_PISTOL, PIPE_PISTOL_LEGEND), "pipe_pistol"),
+        builtin_icon_path("rifle"): _checked(paint(RIFLE, RIFLE_LEGEND), "rifle"),
+        builtin_icon_path("arc_thrower"): _checked(paint(ARC_THROWER, ARC_THROWER_LEGEND), "arc_thrower"),
+        builtin_icon_path("laser"): _checked(paint(LASER, LASER_LEGEND), "laser"),
+        builtin_icon_path("beast_claw"): _checked(paint(BEAST_CLAW, BEAST_CLAW_LEGEND), "beast_claw"),
         builtin_icon_path("hoe"): _checked(paint(HOE, HOE_LEGEND), "hoe"),
         builtin_icon_path("hammer"): _checked(paint(HAMMER, HAMMER_LEGEND), "hammer"),
         builtin_icon_path("scrap"): _checked(paint(SCRAP, SCRAP_LEGEND), "scrap"),

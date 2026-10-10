@@ -12,7 +12,7 @@ from simulation.events.world_event import WEATHER
 from simulation.items.item import ItemInstance
 from simulation.residents.activity import Activity
 from simulation.residents.resident import Resident
-from simulation.work.expedition import PUSH_ON, TURN_BACK, Expedition, Outing, TripResult, Zone, ZoneFound
+from simulation.work.expedition import PUSH_ON, RAID_CHOICES, TURN_BACK, Expedition, Outing, TripResult, Zone, ZoneFound
 from simulation.work.hauling import containers_of_kind
 from simulation.work.job import JobDefinition
 from simulation.work.research import EXPEDITION_DANGER, EXPEDITION_FINDS
@@ -146,16 +146,21 @@ class ExpeditionSystem:
                 return provision.worth
         return 0.0
 
+    def is_kit(self, world: "SimulationWorld", item_id: str) -> bool:
+        """Whether a thing is taken along to mend oneself with out there (S70)."""
+        definition = world.registries.items.find(item_id)
+        return definition is not None and definition.category in world.registries.expeditions.kits
+
     def worth_of(self, world: "SimulationWorld", supplies: Mapping[str, int]) -> float:
         return sum(self.worth(world, item_id) * max(0, units) for item_id, units in supplies.items())
 
     def on_hand(self, world: "SimulationWorld") -> dict[str, int]:
-        """What there is to hand over as provisions: units of each thing that is everybody's,
-        kept somewhere, and worth anything on the way."""
+        """What there is to hand over for a trip: units of each thing that is everybody's,
+        kept somewhere, and worth anything on the way or to mend oneself with out there."""
         return {
             item_id: units
             for item_id, units in world.giving.givable(world).items()
-            if self.worth(world, item_id) > 0
+            if self.worth(world, item_id) > 0 or self.is_kit(world, item_id)
         }
 
     def gets_to(self, world: "SimulationWorld", resident: Resident, supplies: Mapping[str, int]) -> Zone | None:
@@ -359,6 +364,8 @@ class ExpeditionSystem:
             resident.expedition.place = place.discovery_id
             resident.expedition.finds = max(1, resident.expedition.finds + brings.finds)
             said = f"sale del asentamiento hacia {place.name}"
+        # Who lies in wait along the way, zone by zone (S70).
+        trip.raids_at = world.raids.ahead(world, resident, trip)
         resident.last_expedition_day = world.clock.day
         resident.activity = Activity(EXPEDITION_ACTION, resident.post_id, minutes_left=minutes, using=True)
         resident.current_action = EXPEDITION_ACTION
@@ -385,7 +392,20 @@ class ExpeditionSystem:
             world.trade.pay_wage(world, resident, job)
             world.crafts.worked(world, resident, job)
         now = world.clock.total_minutes
+        if trip.raid is not None:
+            # Raiders in the way: nobody gets any further until that is over.
+            trip.wait()
+            activity.minutes_left = max(1, trip.returns_at - now)
+            world.raids.tick(world, resident, trip)
+            return
         activity.minutes_left = max(1, trip.returns_at - now)
+        if trip.raids_at and now >= trip.turns_at:
+            # Whoever has turned for home meets nobody they did not meet on the way out.
+            trip.raids_at = []
+        if trip.raids_at and now >= trip.raids_at[0] and world.interventions.pending_for(world, resident.resident_id) is None:
+            trip.raids_at.pop(0)
+            world.raids.meet(world, resident, trip)
+            return
         if trip.find_at is not None and now >= trip.find_at:
             trip.find_at = None
             # Whether to risk it is theirs to decide, and the player's to advise on.
@@ -394,9 +414,12 @@ class ExpeditionSystem:
             self._come_back(world, resident, trip)
 
     def choose(self, world: "SimulationWorld", resident: Resident, choice: str) -> None:
-        """Carry out what a resident decided about a risky find."""
+        """Carry out what a resident decided about a risky find, or about raiders in their way."""
         trip, settings = resident.expedition, world.registries.expeditions
         if trip is None:
+            return
+        if choice in RAID_CHOICES:
+            world.raids.choose(world, resident, choice)
             return
         if choice == PUSH_ON:
             trip.finds += settings.push_on_finds
@@ -456,7 +479,8 @@ class ExpeditionSystem:
         # what was handed to them: of each thing, as much as there was of the way left to go.
         unused = 1.0 - trip.got_to()
         for item_id, units in trip.supplies.items():
-            left = int(units * unused)
+            # What was taken along to mend oneself with comes back whole, what there is left of it.
+            left = units if self.is_kit(world, item_id) else int(units * unused)
             if left > 0 and world.registries.items.find(item_id) is not None:
                 world.stock(resident.inventory, item_id, left, None)
                 world.ledger.record(world, item_id, left, UNPACKED, by=resident.resident_id)

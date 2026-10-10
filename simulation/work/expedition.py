@@ -6,7 +6,10 @@ from typing import Any
 # What a resident who has come on something risky out there can do about it.
 PUSH_ON = "push_on"
 TURN_BACK = "turn_back"
-EXPEDITION_CHOICES = (PUSH_ON, TURN_BACK)
+# What can be done on coming on raiders (S70).
+FIGHT, RUN, PAY = "fight", "run", "pay"
+RAID_CHOICES = (FIGHT, RUN, PAY)
+EXPEDITION_CHOICES = (PUSH_ON, TURN_BACK, *RAID_CHOICES)
 
 
 @dataclass(frozen=True)
@@ -109,6 +112,14 @@ class ExpeditionSettings:
     zones: tuple[Zone, ...] = ()
     # What can be taken along to go further than that, the first that fits a thing saying its worth.
     provisions: tuple[Provision, ...] = ()
+    # The categories of thing that are taken along to mend oneself with out there (S70): they
+    # get nobody any further, and what is not used of them comes back whole.
+    kits: tuple[str, ...] = ()
+    # How many game minutes a fight out there waits for the player to watch it before it is
+    # fought out by itself, and between what shares of a zone's stretch of the way raiders
+    # are come on.
+    raid_wait: int = 30
+    raid_stretch: tuple[float, float] = (0.15, 0.9)
 
     @property
     def line(self) -> tuple[Zone, ...]:
@@ -130,6 +141,19 @@ class ExpeditionSettings:
     push_on_minutes: int = 60
     # How long it takes to get back in after turning round.
     turn_back_minutes: int = 30
+
+
+@dataclass
+class Raid:
+    """Raiders somebody out there has come on (S70), until it is over one way or another."""
+
+    # The zone it happened in, by ID, and the game minute at which they were come on.
+    zone: str
+    met_at: int
+    # Who they are: the sort and the level of each.
+    foes: list[list] = field(default_factory=list)
+    # Once it has come to blows, the game minute at which it is fought out with nobody watching.
+    due: int | None = None
 
 
 @dataclass
@@ -164,6 +188,18 @@ class Expedition:
     out_minutes: int = 0
     # What was handed to them to get there, in units by item ID.
     supplies: dict[str, int] = field(default_factory=dict)
+    # The game minutes at which they come on raiders, those still ahead, and the raiders they
+    # have in their way right now (S70). While there are any the trip stands still.
+    raids_at: list[int] = field(default_factory=list)
+    raid: Raid | None = None
+
+    def wait(self, minutes: int = 1) -> None:
+        """Stand still for so long: everything there is still to come is that much later."""
+        self.left_at += minutes
+        self.turns_at += minutes
+        self.returns_at += minutes
+        self.find_at = self.find_at + minutes if self.find_at is not None else None
+        self.raids_at = [at + minutes for at in self.raids_at]
 
     def heading_back(self, now: int) -> bool:
         """Whether they are on their way home by a game minute."""
@@ -272,4 +308,14 @@ def expedition_settings_from_data(data: dict[str, Any]) -> ExpeditionSettings:
         push_on_danger=float(data.get("push_on_danger", defaults.push_on_danger)),
         push_on_minutes=int(data.get("push_on_minutes", defaults.push_on_minutes)),
         turn_back_minutes=int(data.get("turn_back_minutes", defaults.turn_back_minutes)),
+        kits=tuple(str(category) for category in data.get("kits", ())),
+        raid_wait=max(0, int(data.get("raid_wait", defaults.raid_wait))),
+        raid_stretch=_stretch(data.get("raid_stretch", defaults.raid_stretch)),
     )
+
+
+def _stretch(value: Any) -> tuple[float, float]:
+    low, high = (float(each) for each in value)
+    if not 0.0 <= low <= high <= 1.0:
+        raise ValueError("Raiders are come on between two shares of a zone's stretch of the way, from 0 to 1, the lower first")
+    return (low, high)

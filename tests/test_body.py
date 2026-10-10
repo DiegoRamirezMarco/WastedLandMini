@@ -40,7 +40,9 @@ class LimbLossTests(unittest.TestCase):
         self.assertIsNotNone(cut.severs_from)
         self.assertTrue(0.0 < cut.severs_chance < 1.0)
         self.assertIsNone(registries.injuries["bruise"].severs_from)
-        self.assertEqual(len(registries.limbs), 4)
+        # An arm and a leg on each side, each of which can be lost at any joint (S70).
+        self.assertEqual(len(registries.limbs), 12)
+        self.assertEqual(len([limb for limb in registries.limbs.values() if limb.within is None]), 4)
         for limb in registries.limbs.values():
             self.assertLess(min(limb.work_pace, limb.walk_pace), 1.0, limb.limb_id)
 
@@ -86,13 +88,19 @@ class LimbLossTests(unittest.TestCase):
         self.assertEqual(losses(3), losses(3))
         self.assertTrue(0 < len(losses(3)) < len(SimulationWorld.demo_world().residents))
 
-    def test_no_limb_is_lost_twice_and_none_is_left_to_lose_after_four(self) -> None:
+    def test_no_limb_is_lost_twice_and_none_is_left_to_lose_after_all_four_are_gone(self) -> None:
         world = _world()
         raul = world.residents["raul"]
-        for _ in range(6):
+        seen = []
+        # A limb may go a joint at a time, the far end first: at most as many cuts as there are joints.
+        for _ in range(len(world.registries.limbs) + 2):
             raul.injuries.clear()
             world.health.hurt(world, raul, BAD_CUT, "cut", "una prueba")
-        self.assertEqual(sorted(raul.lost_limbs), sorted(world.registries.limbs))
+            self.assertEqual(len(raul.lost_limbs), len(set(raul.lost_limbs)))
+            seen.append(list(raul.lost_limbs))
+        whole = sorted(limb.limb_id for limb in world.registries.limbs.values() if limb.within is None)
+        self.assertEqual(sorted(raul.lost_limbs), whole, "of each, only where it was lost nearest the trunk is kept")
+        self.assertTrue(all(len(now) <= 4 for now in seen))
         self.assertEqual(world.history[-1].event_type, "injured")
 
     def test_those_who_saw_it_know_and_the_others_do_not(self) -> None:

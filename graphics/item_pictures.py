@@ -120,6 +120,61 @@ def _rusty_knife(s: Sheet) -> None:
     s.stroke([(16, 86), (44, 58)], WOOD, 12)
 
 
+def _sledge(s: Sheet) -> None:
+    s.stroke([(16, 88), (66, 30)], LINE, 15)
+    s.stroke([(16, 88), (66, 30)], WOOD, 9)
+    s.poly([(48, 22), (72, 6), (92, 30), (68, 46)], METAL)
+    s.stroke([(58, 20), (72, 12)], lighter(METAL, 0.4), 3)
+
+
+def _pipe_pistol(s: Sheet) -> None:
+    # A length of pipe on a block of wood: what somebody made to fire once and again.
+    s.stroke([(18, 40), (84, 40)], LINE, 17)
+    s.stroke([(18, 40), (84, 40)], METAL, 10)
+    s.stroke([(24, 37), (78, 37)], lighter(METAL, 0.4), 2.4)
+    s.poly([(20, 46), (46, 46), (40, 86), (18, 82)], WOOD)
+    s.stroke([(46, 50), (56, 60), (46, 62)], LINE, 4)
+    s.oval(84, 40, 4, 4, LINE)
+
+
+def _rifle(s: Sheet) -> None:
+    s.poly([(6, 70), (34, 52), (44, 62), (16, 90)], WOOD)
+    s.stroke([(34, 56), (94, 12)], LINE, 12)
+    s.stroke([(34, 56), (94, 12)], METAL, 6)
+    s.stroke([(40, 60), (62, 44)], LINE, 15)
+    s.stroke([(40, 60), (62, 44)], darker(WOOD, 0.2), 9)
+    s.stroke([(44, 64), (52, 72), (58, 62)], LINE, 4)
+
+
+def _arc_thrower(s: Sheet) -> None:
+    spark = (120, 230, 255)
+    s.poly([(14, 52), (58, 36), (64, 56), (22, 74)], (70, 96, 116))
+    s.poly([(20, 70), (40, 62), (38, 92), (22, 92)], darker(WOOD, 0.3))
+    s.stroke([(58, 44), (84, 30)], LINE, 9)
+    s.stroke([(58, 44), (84, 30)], METAL, 4)
+    s.stroke([(60, 52), (88, 46)], LINE, 9)
+    s.stroke([(60, 52), (88, 46)], METAL, 4)
+    s.stroke([(84, 30), (92, 34), (86, 40), (94, 42), (88, 46)], spark, 3.4)
+    s.oval(34, 54, 6, 5, spark)
+
+
+def _laser(s: Sheet) -> None:
+    beam = (120, 230, 255)
+    s.poly([(8, 66), (30, 52), (38, 64), (14, 84)], (84, 88, 100))
+    s.stroke([(30, 56), (88, 16)], LINE, 16)
+    s.stroke([(30, 56), (88, 16)], (84, 88, 100), 10)
+    s.stroke([(40, 46), (78, 20)], beam, 3)
+    s.oval(90, 14, 6, 6, beam)
+    s.stroke([(46, 58), (52, 70), (60, 60)], LINE, 4)
+
+
+def _beast_claw(s: Sheet) -> None:
+    bone = (226, 218, 196)
+    s.poly([(20, 84), (36, 40), (62, 14), (86, 10), (66, 32), (52, 62), (40, 90)], bone)
+    s.stroke([(40, 50), (66, 22)], lighter(bone, 0.5), 3)
+    s.oval(30, 84, 13, 9, (150, 16, 20))
+
+
 def _hoe(s: Sheet) -> None:
     s.stroke([(16, 88), (72, 20)], LINE, 13)
     s.stroke([(16, 88), (72, 20)], PALE_WOOD, 7)
@@ -213,6 +268,12 @@ PAINTERS: dict[str, Painter] = {
     "medicine": _medicine,
     "baton": _baton,
     "rusty_knife": _rusty_knife,
+    "sledge": _sledge,
+    "pipe_pistol": _pipe_pistol,
+    "rifle": _rifle,
+    "arc_thrower": _arc_thrower,
+    "laser": _laser,
+    "beast_claw": _beast_claw,
     "hoe": _hoe,
     # No item of anybody's: what is seen in the hand of whoever builds.
     "hammer": _hammer,

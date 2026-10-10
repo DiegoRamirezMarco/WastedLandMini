@@ -709,7 +709,22 @@ A job that is never to be pushed says `"rush": false`.
 - `provisions` is what can be handed over to go further: `{"category": "food", "worth": 1}`
   or `{"tag": "water", "worth": 1}`, the first that fits a thing saying how far a unit goes.
 - In `data/decisions.json` the game opens `risky_find` by ID, and an outcome's `"expedition"`
-  (`push_on` or `turn_back`) is what it does to the trip.
+  (`push_on` or `turn_back`) is what it does to the trip. It opens `raiders_met` the same
+  way, whose outcomes say `fight`, `run` or `pay`.
+- `kits` is the categories of thing taken along to mend oneself with: they get nobody any
+  further and come back whole if not used. `raid_wait` is how many game minutes a fight
+  waits to be watched, and `raid_stretch` between what shares of a zone's stretch of the way
+  raiders are come on.
+- `data/combat.json` is the fight (S70). `weapons` are by item ID: a weapon somebody of the
+  settlement can carry is an item of that ID. Each has a `kind` (`melee`, `ranged`,
+  `energy`), `damage`, `seconds` between blows, `scales` (how much of which attributes of
+  its kind it goes by, adding to 1), `severs` and, if it is fired, `ammo`. `raiders` are the
+  sorts there are, from what level, with what weapons. `zones` says for each zone of
+  `data/expeditions.json` the levels and the most of them at once, and the `chance` of
+  coming on them there. `tuning` is every other figure; `arms` and `legs` list each limb's
+  parts from the trunk outwards, and each has to be a limb of `data/body.json`.
+- `data/body.json` limbs may say `within` (the limb they are the far end of) and `odds`
+  (how likely to be the one lost, against the others).
 
 ## Backdrops
 
