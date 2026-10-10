@@ -495,7 +495,13 @@ class SkeletonPlan:
 
     def place(self, facing: str, frame: Keyframe) -> dict[str, Point]:
         """Where every joint of a body facing one way is, from the spot between the feet, with
-        its bones turned as a pose has them."""
+        its bones turned as a pose has them.
+
+        A bone is turned from how it is at rest, and more is the same way round for every
+        bone. So more is forwards for what hangs down at rest, as an arm does and a leg, and
+        backwards for what points up, as the trunk does, the neck and the head: whoever bows
+        has a trunk turned less than nothing.
+        """
         view, _, mirrored, swapped = FACINGS[facing]
         turned = frame.bones
         rest = self.rests[view]

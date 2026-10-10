@@ -31,6 +31,7 @@ from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from graphics.sides import DARKER, OWN
 from graphics.studio_icons import studio_tile
+from graphics.poses import builtin_poses
 from graphics.turn import body_yaw, limbs_moved, turned_pose
 from scenes.doll_page import BACK_PAPER, COLOR_DEED, BRUSH_TOOL, BRUSHES, ERASER_TOOL, FILL_TOOL, GUIDE_OVER, GUIDE_UNDER, MEASURE_TOOL, DollPaper
 from scenes.face_page import FacePaper
@@ -86,6 +87,8 @@ CLIP_TIPS = {"stand": "Quieto", "walk": "Andar", "punch": "Pelear", "talk": "Hab
 # The clips among those that are somebody's own way of doing something, by what it is they do:
 # the rest are called what the occasion is called.
 OCCASION_OF = {"talk_calm": TALK}
+# The clip that stands for work where nobody is anybody with a job of their own.
+WORK_CLIP = "hammer"
 # The picture of each view things are put in place in, from the front to the side.
 VIEW_ICONS = ("view_front", "view_quarter", "view_side")
 # Seconds it takes to turn from one side to the other and back when it turns by itself, and
@@ -207,6 +210,7 @@ class Studio:
         # the doll was before it was turned to be seen from behind for that.
         self.back_paper, self._yaw_before = False, 45.0
         self.time = 0.0
+        self._poses = builtin_poses()
         # How the doll beside the work feels, and whether it is speaking: to see its face at it.
         self.mood = ""
         self.talking = False
@@ -304,6 +308,9 @@ class Studio:
         world = self.world
         resident = world.residents.get(self.body.resident_id or "") if world is not None else None
         occasion = OCCASION_OF.get(clip, clip)
+        if resident is not None and clip == WORK_CLIP and resident.job_id in self._poses.jobs:
+            # At work, it is the work they have: stirring a pot, keeping a watch.
+            return self._poses.working(resident.job_id, False).clip
         if resident is None or occasion not in OCCASIONS:
             return clip
         kind = world.registries.manners.kind_for(occasion)

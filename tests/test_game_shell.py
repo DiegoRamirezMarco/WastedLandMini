@@ -1705,10 +1705,12 @@ class GameShellTests(unittest.TestCase):
         hoe.condition = 100.0
         raul.inventory.remove(hoe.instance_id)
         self.assertEqual(view._clip_of(raul)[0], poses.jobs["farmer"].bare.clip)
-        # A post with no look of its own is plain work, and on the way to it there is no work yet.
+        # Every post has a look of its own (P79); a job there is none of is plain work, and on
+        # the way to a post there is no work yet.
         tomas.job_id = "cook"
         tomas.activity = Activity("work", using=True)
-        self.assertEqual(view._work_of(tomas), (poses.work, None))
+        self.assertEqual(view._work_of(tomas), (poses.jobs["cook"].bare, None))
+        self.assertEqual(poses.working("juggler", False), poses.work)
         tomas.activity = Activity("work", path=[(21, 14)], minutes_left=3)
         self.assertIsNone(view._work_of(tomas))
         # Whoever builds is seen with a hammer, which is nobody's: there is no such item.

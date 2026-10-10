@@ -37,7 +37,9 @@
     "listen": "relaxed", "laugh": "relaxed", "wave": "open",
     "hug": "open", "kiss": "relaxed", "flirt": "relaxed", "point": "fist", "cower": "open",
     "shove": "open", "stagger": "open", "comfort": "open", "cry": "relaxed", "bow": "relaxed",
-    "dance": "open", "sing": "open", "cards": "grip", "chess": "relaxed"
+    "dance": "open", "sing": "open", "cards": "grip", "chess": "relaxed",
+    "stir": "grip", "wipe": "grip", "watch": "open", "bandage": "grip", "wrench": "grip",
+    "counter": "open", "rummage": "open", "pump": "grip", "write": "grip", "mix": "grip"
   },
   "held": {"thick": [0.0, 1.4], "opens": 0.5},
   "quick": 9.0

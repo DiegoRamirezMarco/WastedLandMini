@@ -6657,6 +6657,47 @@ Still open here:
 Done when: two who hug on the map are seen with their arms round each other, nearer than
 they stand; whoever is shoved reels; whoever is cowed cowers; and two who dance, dance.
 
+### P79 — A way of working for each job (needs P75) — done
+The next of the list of animations after what two do together: "y luego oficios".
+
+- **Of eleven jobs only the farmer had a way of working of its own**: the rest worked as
+  anybody does with bare hands. Now each has its own
+- **The cook stirs**, an arm down in the pot and the other hand on a hip; **the bartender
+  wipes** the bar and holds a glass up; **the guard keeps a watch**, hands on hips, looking
+  one way and the other and rocking on their heels; **the medic** works with both hands at
+  what is in front of them; **the mechanic** is bent over the bench, turning something;
+  **the shopkeeper** has both hands on the counter and holds one out; **the scavenger** is
+  bent well over, digging with both arms, and comes up to look at what they found; **the
+  water carrier** pumps, up and down with the whole body; **the researcher** writes, and
+  stops with a hand at their chin; **the chemist** holds a flask up, swirls it and pours
+- **It is data**: ten clips in `data/skeleton.json`, and which job is shown by which in
+  `data/poses.json`. A job there is none for is the work of bare hands still
+- **On the screen they are drawn on, the tile of work shows them at their own**
+
+Put right with it:
+- **The trunk, the neck and the head of every clip written for P75 and P78 leaned the wrong
+  way**: they were turned as an arm is, forwards for more, but they point up where an arm
+  hangs down, and more is backwards for them. Whoever bowed bowed backwards, whoever was
+  shoved fell towards whoever shoved them, and two who kissed leaned apart. Found when a
+  test of this milestone asked whether whoever rummages is bent over. All thirty clips are
+  the right way about now, and were looked at again in strips and on the map
+
+Decided without asking:
+- **Bare hands**: nothing is in them but what the game already puts there, the tool of a job
+  that has one. A ladle, a rag, a spanner, a pen and a flask would each be a thing to draw
+- **One way of each job, for everybody**: they are not manners
+- **A guard does not shade their eyes**: on a doll with a large head a hand at the brow is a
+  hand over the face
+
+Still open here:
+- **Nobody has played it with a mouse**: it was read in strips of each clip on a doll of the
+  game, and of ten residents at the ten jobs on the map
+- **They work standing, and from the side**, wherever their post is and whatever it is
+- **At the size of the map some of them are hard to tell apart**: the medic from the
+  shopkeeper, the cook from the bartender
+
+Done when: each of the eleven jobs is seen to be worked at in a way of its own on the map.
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

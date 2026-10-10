@@ -5,7 +5,17 @@
   },
   "work": {"clip": "work", "rate": 1.0},
   "jobs": {
-    "farmer": {"clip": "weed", "rate": 0.55, "tool": {"clip": "hoe", "rate": 0.5}}
+    "farmer": {"clip": "weed", "rate": 0.55, "tool": {"clip": "hoe", "rate": 0.5}},
+    "cook": {"clip": "stir", "rate": 0.8},
+    "bartender": {"clip": "wipe", "rate": 0.6},
+    "guard": {"clip": "watch", "rate": 0.2},
+    "medic": {"clip": "bandage", "rate": 0.9},
+    "mechanic": {"clip": "wrench", "rate": 0.7},
+    "shopkeeper": {"clip": "counter", "rate": 0.3},
+    "scavenger": {"clip": "rummage", "rate": 0.7},
+    "water_carrier": {"clip": "pump", "rate": 0.8},
+    "researcher": {"clip": "write", "rate": 0.35},
+    "chemist": {"clip": "mix", "rate": 0.4}
   },
   "build": {"clip": "hammer", "rate": 0.9, "prop": "hammer"},
   "pocket": {"clip": "pocket", "rate": 1.3},

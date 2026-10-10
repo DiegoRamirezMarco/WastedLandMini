@@ -119,8 +119,11 @@ class PosesDataTests(unittest.TestCase):
         self.assertNotEqual(farming.tool.clip, farming.bare.clip)
         self.assertIn(farming.tool.clip, self.plan.grips, "the tool is held by its handle in the clip of working with it")
         self.assertNotIn(farming.bare.clip, self.plan.grips)
-        # A job with no look of its own is plain work, tool or no tool.
-        for job_id in ("cook", None, "no such job"):
+        # A job with a look of its own and no tool is that, tool or no tool (P79).
+        self.assertIs(poses.working("cook", True), poses.jobs["cook"].bare)
+        self.assertIs(poses.working("cook", False), poses.jobs["cook"].bare)
+        # No job, or one there is none of, is plain work.
+        for job_id in (None, "no such job"):
             self.assertIs(poses.working(job_id, True), poses.work)
             self.assertIs(poses.working(job_id, False), poses.work)
         # What builders are seen with is nobody's: it is no item.
