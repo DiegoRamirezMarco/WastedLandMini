@@ -97,7 +97,7 @@ from scenes.hud import (
     URBANISM_INTENT,
     Hud,
 )
-from scenes.expedition_view import DRAW_BACKDROP_INTENT, LEAVE_TRIP_INTENT, ExpeditionView
+from scenes.expedition_view import DRAW_BACKDROP_INTENT, FIGHT_INTENT, LEAVE_TRIP_INTENT, ExpeditionView
 from scenes.interior_view import DECOR_INTENT, HOUSE_INTENT, LEAVE_INTENT, InteriorView
 from ui.decor_board import DONE_INTENT as DECOR_DONE_INTENT
 from ui.decor_board import FLOORS as DECOR_FLOORS
@@ -808,6 +808,8 @@ class GlobalView:
         """Go back to the map from watching somebody who is out."""
         if self.outside is None:
             return
+        # A fight left to itself is fought out from where it stands.
+        self.expedition.close_fight()
         self.outside = None
         self.hud.minimap_rect = self._minimap_rect if self._minimap_kept else None
 
@@ -829,6 +831,8 @@ class GlobalView:
         """A press while somebody is watched out of the settlement: the way back, somebody
         else who is out, or whoever is walking there."""
         intent = self.expedition.click(position)
+        if intent == FIGHT_INTENT:
+            return
         if intent == LEAVE_TRIP_INTENT:
             self._sound("click")
             self.come_back()
@@ -2596,6 +2600,12 @@ class GlobalView:
             self.hitboxes.setdefault(resident.resident_id, spot)
             if resident.resident_id == self.hud.selected_id:
                 pygame.draw.rect(self.canvas, PALETTE["glow"], spot, 1)
+            trip = resident.expedition
+            if trip is not None and trip.raid is not None:
+                # Raiders in their way: their face says so, and winks once it has come to
+                # blows, which is when there is a fight to go and see (P80).
+                if trip.raid.due is None or int(self.time * 4) % 2 == 0:
+                    pygame.draw.rect(self.canvas, PALETTE["ember"], spot.inflate(2, 2), 1)
             x += marker.get_width() + 2
 
     def _ground(self) -> pygame.Surface | None:

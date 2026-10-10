@@ -28,7 +28,10 @@ from graphics.lighting import ambient, daylight
 from graphics.palette import PALETTE, Color
 from graphics.screen_layers import TRANSPARENT
 from scenes.body_stage import HEAD_OF_HEIGHT, TILES_PER_STRIDE, grown_share
+from scenes.fight_arena import FightArena
+from scenes.fight_look import Look
 from settings import SCALE, TILE_SIZE
+from simulation.commands import LeaveFightCommand
 from simulation.residents.manner import IDLE_CLIP, WALK
 from simulation.residents.resident import Resident
 from ui.button import Button
@@ -38,6 +41,8 @@ from ui.trip_bar import draw_trip_bar, trip_bar_height
 if TYPE_CHECKING:
     from scenes.global_view import GlobalView
 
+# A press that was the fight's, and asks nothing of whoever shows it.
+FIGHT_INTENT = "fight"
 LEAVE_TRIP_INTENT = ("leave_trip",)
 LEAVE_LABEL = "Volver"
 # Opens the screen where the country they go through is drawn (P69).
@@ -70,7 +75,8 @@ BAR_WIDTH = 236
 
 
 class ExpeditionView:
-    """Draws whoever the global view is watching out of the settlement, in its part of the screen."""
+    """Draws whoever the global view is watching out of the settlement, in its part of the
+    screen: walking, or in the fight they have on their hands (P80)."""
 
     def __init__(self, view: "GlobalView") -> None:
         self.view = view
@@ -88,6 +94,8 @@ class ExpeditionView:
         self.lead = AHEAD
         self._watched: str | None = None
         self._pictures: dict[tuple, pygame.Surface] = {}
+        # The fight of whoever is watched, while they have one that has come to blows.
+        self.arena: FightArena | None = None
 
     def stage(self) -> pygame.Rect:
         """The part of the screen the trip is shown in, in pixels of the window, from its own corner."""
@@ -100,7 +108,43 @@ class ExpeditionView:
 
     def click(self, position: tuple[int, int]) -> Hashable | None:
         """What a press at a place on the canvas asks for, if it is on anything of this view's."""
-        return next((button.intent for button in self.buttons() if button.contains(position)), None)
+        intent = next((button.intent for button in self.buttons() if button.contains(position)), None)
+        viewport = self.view.viewport
+        if intent is None and self.arena is not None and viewport.collidepoint(position):
+            # A press on the fight is the fight's, in pixels of its own picture.
+            self.arena.click(((position[0] - viewport.x) * SCALE, (position[1] - viewport.y) * SCALE))
+            return FIGHT_INTENT
+        return intent
+
+    def key(self, key: int) -> bool:
+        """Take a key while a fight is on. Says whether it was one of the fight's."""
+        return self.arena is not None and self.arena.key(key)
+
+    def close_fight(self) -> None:
+        """Stop watching the fight there is: it is fought out by itself from where it stands."""
+        if self.arena is not None:
+            self.view.world.apply_command(LeaveFightCommand(self.arena.resident_id))
+            self.arena = None
+
+    def _fight(self, seconds: float, resident: Resident | None) -> bool:
+        """See to the fight of whoever is watched, if they have one. Says whether they do."""
+        world = self.view.world
+        if self.arena is not None and (resident is None or resident.resident_id != self.arena.resident_id):
+            # Somebody else is being looked at now, or nobody.
+            self.close_fight()
+        if self.arena is None and resident is not None and world.raids.waiting(world, resident.resident_id):
+            # They are drawn as on the walk there: their own doll, with their face on.
+            doll = self.view._doll_for(resident)
+            shown = self.view._shown(resident.resident_id, doll, None, IDLE_CLIP, look=self.view._look_of(resident)) if doll is not None else None
+            look = Look(self.view.dolls, self.backdrops, shown.doll if shown is not None else doll)
+            gone_by = self.travelled * self.detail()
+            self.arena = FightArena(world, look, self.view.font, self.stage().size, resident.resident_id, self.zone_id(resident), gone_by)
+        if self.arena is None:
+            return False
+        self.arena.update(min(seconds, LONGEST_FRAME))
+        if self.arena.done:
+            self.arena = None
+        return True
 
     def zone_id(self, resident: Resident) -> str:
         """The zone whoever is out is in right now, by ID: each of those on their way, in its turn."""
@@ -109,8 +153,10 @@ class ExpeditionView:
         return zone.zone_id if zone is not None else NOWHERE
 
     def stopped(self, resident: Resident) -> bool:
-        """Whether they stand where they are, waiting to be told what to do about what they have come on."""
-        return self.view._decision_of(resident.resident_id) is not None
+        """Whether they stand where they are, waiting to be told what to do about what they
+        have come on, or with raiders in their way."""
+        trip = resident.expedition
+        return self.view._decision_of(resident.resident_id) is not None or (trip is not None and trip.raid is not None)
 
     def heading_back(self, resident: Resident) -> bool:
         trip = resident.expedition
@@ -123,6 +169,8 @@ class ExpeditionView:
     def update(self, seconds: float, resident: Resident | None) -> None:
         """Let real time pass for whoever is watched: they walk on, unless time stands still or they do."""
         clock = self.view.world.clock
+        if self._fight(seconds, resident if resident is not None and resident.away else None):
+            return
         if resident is None or not resident.away:
             return
         if resident.resident_id != self._watched:
@@ -259,10 +307,17 @@ class ExpeditionView:
         gone_by = self.travelled * detail
         shade_size = (max(8, round(box.width * 0.9)), max(4, round(detail * 2.2)))
 
+        fought = self.arena.draw() if self.arena is not None else None
+
         def paint(target: pygame.Surface, corner: tuple[int, int]) -> None:
             area = pygame.Rect(corner, stage.size)
             before = target.get_clip()
             target.set_clip(area)
+            if fought is not None:
+                # The fight takes the place of the walk for as long as it lasts.
+                target.blit(fought, corner)
+                target.set_clip(before)
+                return
             target.fill(BACKDROP, area)
             draw_strips(target, strips, area, gone_by, front=False)
             shade = pygame.Surface(shade_size, pygame.SRCALPHA)
@@ -284,11 +339,12 @@ class ExpeditionView:
             paint(picture, (0, 0))
             canvas.blit(pygame.transform.smoothscale(picture, viewport.size), viewport)
 
-        hitbox = pygame.Rect(self._to_canvas(box.topleft), (max(4, box.width // SCALE), max(4, box.height // SCALE)))
-        view.hitboxes[resident.resident_id] = hitbox
-        canvas.set_clip(viewport)
-        view._draw_overhead(resident, (hitbox.centerx, hitbox.top), with_name=True)
-        canvas.set_clip(None)
+        if fought is None:
+            hitbox = pygame.Rect(self._to_canvas(box.topleft), (max(4, box.width // SCALE), max(4, box.height // SCALE)))
+            view.hitboxes[resident.resident_id] = hitbox
+            canvas.set_clip(viewport)
+            view._draw_overhead(resident, (hitbox.centerx, hitbox.top), with_name=True)
+            canvas.set_clip(None)
         for button in self.buttons():
             button.draw(canvas, view.font)
         trip = resident.expedition

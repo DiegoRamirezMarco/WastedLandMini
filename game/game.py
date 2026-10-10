@@ -467,6 +467,9 @@ class Game:
         if self.scene_name == "global" and self.global_view.typing:
             # Nor while a building is being given its name.
             return
+        if self.scene_name == "global" and self.global_view.expedition.key(key):
+            # A fight out there is being played: its keys are its own.
+            return
         if self.scene_name == "global" and self.global_view.carry is not None:
             # Nor while somebody is in the player's hand: the map sees to what the keys do then.
             return
@@ -725,6 +728,9 @@ class Game:
     def advance_simulation(self, dt: float) -> None:
         """Play the game minutes that `dt` real seconds are worth. Time stops outside the global view."""
         if self.scene_name != "global" or self.world.clock.paused:
+            return
+        if self.global_view.expedition.arena is not None:
+            # A fight that is being played has its own time: the settlement's waits for it.
             return
         self.minutes_owed += dt * GAME_MINUTES_PER_REAL_SECOND * self.world.clock.speed
         minutes = min(int(self.minutes_owed), MAX_MINUTES_PER_FRAME)
