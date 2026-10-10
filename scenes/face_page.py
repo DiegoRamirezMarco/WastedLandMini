@@ -47,6 +47,11 @@ NOTES_TEXT = (
     "Rueda: ancho. Clic derecho: se ve o no. B: delante o detrás.",
 )
 
+# How far the keys move the piece in hand, in pixels of the head's paper, and how many times
+# as far with Shift held.
+NUDGE, NUDGE_FAR = 0.5, 4
+ARROWS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1)}
+
 
 class FacePaper(DollPaper):
     """Draw the pieces of a face and put them on a head. It is opened for a doll as it stands in
@@ -67,7 +72,9 @@ class FacePaper(DollPaper):
         self.rules = faces.rules
         self.kind = next(iter(self.rules.kinds))
         self.view = FRONT
-        self.symmetric = True
+        # Each piece goes where it is put, and no other with it, until whoever places them asks
+        # for the two of a pair to go together.
+        self.symmetric = False
         self.sweeping = False
         # The body comes round with the head, as far as a body can.
         self.body_turns = True
@@ -318,6 +325,16 @@ class FacePaper(DollPaper):
             return
         if event.type == pygame.KEYDOWN and event.key == pygame.K_b and self.chosen is not None:
             self.toggle_behind(self.chosen)
+            return
+        if event.type == pygame.KEYDOWN and event.key in ARROWS and self.chosen is not None and self.stage.width > 4:
+            # A little at a time, the piece last taken hold of: and further with Shift held.
+            far = NUDGE_FAR if getattr(event, "mod", 0) & pygame.KMOD_SHIFT else 1
+            across, down = ARROWS[event.key]
+            key = self._key(self.chosen)
+            width, height = self.head.get_size()
+            x = min(float(width), max(0.0, key.x + across * NUDGE * far))
+            y = min(float(height), max(0.0, key.y + down * NUDGE * far))
+            self._put(self.chosen, replace(key, x=x, y=y))
             return
         super().handle_event(event)
 

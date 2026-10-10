@@ -179,10 +179,11 @@ class ExpeditionView:
             # Stopped, they have nothing to do but wait, and may fidget.
             character.at_ease = stopped
             character.stand(0.0, 0.0, facing, clip, turn % 1.0)
-            skeleton = view._posed_skeleton(resident.resident_id, character)
             # Out there they are seen from their side all the way, with their face on and
-            # whatever hands and feet they have that are made.
+            # whatever hands and feet they have that are made, each limb where it was put.
             shown = view._shown(resident.resident_id, doll, None, clip, look=view._look_of(resident))
+            pose = view.figures.posed(shown, character.local_pose(), facing) if shown is not None else None
+            skeleton = view._posed_skeleton(resident.resident_id, character, pose)
             seen, made = (shown.doll, shown.made) if shown is not None else (doll, None)
             reach = doll.standing(plan)
             sole = (0.0, reach[3])

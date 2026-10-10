@@ -21,7 +21,7 @@ they have been turned (`Turned`).
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +38,7 @@ from graphics.hand import load_rules as load_hand_rules
 from graphics.hose import Allowance
 from graphics.joined import colour_at, half_width_at
 from graphics.sides import DARKER, OWN, SHADE, WAYS, far_darker
-from graphics.turn import Turned, limbs_apart, turned_pose
+from graphics.turn import LimbKeys, Turned, limb_keys_from_data, limbs_apart, limbs_moved, turned_pose
 from graphics.volume import fronted, main_colour, plain_back, turned_body
 from skeleton.plan import FACINGS, SkeletonPlan
 from skeleton.rig import Skeleton
@@ -48,6 +48,8 @@ Point = tuple[float, float]
 # What is kept with a body's measures besides them: how its trunk was drawn, how deep it is
 # from chest to back as a share of its width, and how its far side comes by its limbs.
 TRUNK_KEY, DEPTH_KEY, FAR_KEY = "trunk", "depth", "far_side"
+# And where each of its limbs was put by hand, in each view (`graphics/turn.py`).
+LIMBS_KEY = "limbs"
 SIDE_DRAWN, FRONT_DRAWN = "side", "front"
 # The drawing of the back of a trunk, kept beside those of a body's canvases.
 BACK_DRAWING = "back"
@@ -89,6 +91,8 @@ class Said:
     depth: float = 0.6
     far_side: str = OWN
     back: pygame.Surface | None = None
+    # Where each of its limbs was put by hand, by view.
+    limbs: LimbKeys = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -101,6 +105,8 @@ class Shown:
     made: Made | None
     apart: dict[str, float]
     yaw: float
+    # How far each of its limbs is from where it goes by rule, turned as it is.
+    moved: dict[str, Point] = field(default_factory=dict)
 
 
 class Figures:
@@ -174,6 +180,7 @@ class Figures:
                 max(turn.depths[0], min(turn.depths[1], float(depth))) if isinstance(depth, (int, float)) else turn.depth,
                 kept.get(FAR_KEY) if kept.get(FAR_KEY) in WAYS else OWN,
                 self.dolls.extra_drawing(body_id, BACK_DRAWING) if front else None,
+                limb_keys_from_data(kept.get(LIMBS_KEY), turn, self.rules.views),
             )
         return self._said[body_id]
 
@@ -351,15 +358,16 @@ class Figures:
             if len(self._apart) > 256:
                 self._apart.clear()
             self._apart[base._token] = (base, limbs_apart(rules.body, base))
-        return Shown(turned, made, self._apart[base._token][1], yaw)
+        moved = limbs_moved(said.limbs, rules.views, yaw, rules.side) if said.limbs else {}
+        return Shown(turned, made, self._apart[base._token][1], yaw, moved)
 
     def posed(self, shown: Shown, pose: dict[str, Point], facing: str) -> dict[str, Point]:
         """A pose as it is shown on a body turned as that one is: where its joints go across
         the screen. `facing` is the facing of the skeleton it is for."""
-        if abs(shown.yaw - self.rules.side) < 1e-6:
+        if abs(shown.yaw - self.rules.side) < 1e-6 and not shown.moved:
             return pose
         _, _, mirrored, swapped = FACINGS[facing]
-        return turned_pose(self.rules.body, shown.apart, pose, shown.yaw, self.rules.side, mirrored, swapped)
+        return turned_pose(self.rules.body, shown.apart, pose, shown.yaw, self.rules.side, mirrored, swapped, shown.moved)
 
     def settle(self, body_id: str | None, clip: str | None, seconds: float | None = None) -> None:
         """Have the made hands of a body go towards the way they are held at a clip, by as

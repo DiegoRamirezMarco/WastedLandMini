@@ -31,7 +31,7 @@ from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from graphics.sides import DARKER, OWN
 from graphics.studio_icons import studio_tile
-from graphics.turn import body_yaw, turned_pose
+from graphics.turn import body_yaw, limbs_moved, turned_pose
 from scenes.doll_page import BACK_PAPER, COLOR_DEED, BRUSH_TOOL, BRUSHES, ERASER_TOOL, FILL_TOOL, GUIDE_OVER, GUIDE_UNDER, MEASURE_TOOL, DollPaper
 from scenes.face_page import FacePaper
 from scenes.hand_page import FEET, HANDS, HandPaper
@@ -86,6 +86,8 @@ CLIP_TIPS = {"stand": "Quieto", "walk": "Andar", "punch": "Pelear", "talk": "Hab
 # The clips among those that are somebody's own way of doing something, by what it is they do:
 # the rest are called what the occasion is called.
 OCCASION_OF = {"talk_calm": TALK}
+# The picture of each view things are put in place in, from the front to the side.
+VIEW_ICONS = ("view_front", "view_quarter", "view_side")
 # Seconds it takes to turn from one side to the other and back when it turns by itself, and
 # how long something said stays on the screen.
 SPIN_SECONDS = 8.0
@@ -563,9 +565,23 @@ class Studio:
             ]
             found += strip + more + ends
 
-        clips = self._row(SHOW.x, CLIPS_Y, TOOL_SIZE, [(icon, ("clip", icon), CLIP_TIPS[icon]) for icon in CLIPS], STEP)
-        for button in clips:
-            button.lit = button.intent == ("clip", self.clip_icon)
+        if self.placing:
+            # Whatever is put in place is put in place in one view: a tile for each, and one
+            # that puts back what was moved in the view in hand.
+            rules, seen = self.faces.rules, self._view()
+            entries = [
+                (VIEW_ICONS[min(index, len(VIEW_ICONS) - 1)], ("view", view), rules.view_names[view], "Lo que coloques aquí vale para esta vista.")
+                for index, view in enumerate(rules.views)
+            ]
+            if tab != FACE_TAB:
+                entries.append(("reset", ("limbs_auto",), "Recolocar sola", "En esta vista, la extremidad elegida vuelve a su sitio. Sin elegir: todas."))
+            clips = self._row(SHOW.x, CLIPS_Y, TOOL_SIZE, entries, STEP)
+            for button in clips:
+                button.lit = button.intent == ("view", seen)
+        else:
+            clips = self._row(SHOW.x, CLIPS_Y, TOOL_SIZE, [(icon, ("clip", icon), CLIP_TIPS[icon]) for icon in CLIPS], STEP)
+            for button in clips:
+                button.lit = button.intent == ("clip", self.clip_icon)
         spin = IconButton(pygame.Rect(SHOW.right - TOOL_SIZE, CLIPS_Y, TOOL_SIZE, TOOL_SIZE), "turn", ("spin",), "Girar solo", lit=self.spinning)
         return found + clips + [spin]
 
@@ -605,6 +621,13 @@ class Studio:
             self._enter(intent[1])
         elif kind == "tool" and intent[1] == MEASURE_TOOL:
             self.tool = BRUSH_TOOL if self.tool == MEASURE_TOOL else MEASURE_TOOL
+            if self.tool == MEASURE_TOOL:
+                # Measured, it is seen from its side to begin with, as its papers are drawn.
+                self.yaw, self.spinning = self.faces.rules.side, False
+        elif kind == "view":
+            self.yaw, self.spinning = self.faces.rules.views[intent[1]], False
+        elif kind == "limbs_auto":
+            self.body.limbs_by_rule()
         elif kind == "tool":
             self.tool = intent[1]
             self.page._draft = None
@@ -684,6 +707,13 @@ class Studio:
         elif self.tab == HANDS_TAB:
             self.hand.shown_clip = self.clip
             self.hand._take_color()
+
+    @property
+    def placing(self) -> bool:
+        """Whether things are being put in place by hand, in one view or another: the limbs
+        of the doll beside the work, or the pieces of a face."""
+        measuring = self.tool == MEASURE_TOOL and self.tab in (BODY_TAB, HEAD_TAB)
+        return measuring or (self.tab == FACE_TAB and self.arranging)
 
     def _view(self) -> str:
         """The view of a face that pieces are put in place in: the one nearest how far round the doll is."""
@@ -780,6 +810,8 @@ class Studio:
     def update(self, dt: float) -> None:
         self.time += dt
         self._rested += dt
+        # Measured, the doll stands in the view nearest how far round the bar has it.
+        self.body.measure_view = self._view()
         for page in (self.body, self.face, self.hand):
             page.update(dt)
         self._character.update(dt)
@@ -960,7 +992,8 @@ class Studio:
         character.plan, character.lively = plan, True
         character.stand(0.0, 0.0, facing, self._own_clip(self.clip), self.time * SHOW_RATE)
         _, _, mirrored, swapped = FACINGS[facing]
-        pose = turned_pose(rules.body, body._apart, character.local_pose(), round_by, rules.side, mirrored, swapped)
+        moved = limbs_moved(body.limb_keys, rules.views, round_by, rules.side) if body.limb_keys else None
+        pose = turned_pose(rules.body, body._apart, character.local_pose(), round_by, rules.side, mirrored, swapped, moved)
         skeleton = Skeleton(plan, facing)
         skeleton.set_pose(pose)
         made = body.made_hands() if not body._showing_example else None

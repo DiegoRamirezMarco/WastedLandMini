@@ -6575,6 +6575,47 @@ Done when: somebody walking down the map is seen to step, one foot coming down t
 the other goes up it, with no spike and no limb out to one side; and from the side they walk
 as they did.
 
+### P77 — Limbs put in place one at a time, in each view (needs P73) — done
+Asked for on seeing P74 to P76: "se deberia poder colocar las extremidades de perfil 1 a una
+no dos brazos piernas a la vez de frente tambien y 3/4 para ajustar con mas precision, lo
+mismo con las partes de la cara".
+
+- **Each limb is taken hold of by itself**: with the measures in hand, the doll beside the
+  work had one place to take hold of for both arms and one for both legs, and only from its
+  side. Now each arm and each leg has its own, named: the near one, and the one behind
+- **In each view**: a tile each for the front, three quarters on and the side, where the
+  tiles of what the doll is at were, since measured it stands still. The bar turns it to the
+  nearest of the three, as it does a face. What is put in place in one view is of that view
+- **Between two views a limb is between where it was put in each**, as the pieces of a face
+  are; from behind it is as it is as far round from the front, the other way across
+- **The keys move the one last taken hold of a little at a time**, and five times as far with
+  Shift held: a twentieth of the skeleton's measure
+- **A tile puts back** the one in hand in the view in hand, or every one with none in hand
+- **It is kept with their measures** (`limbs` in `build.json`), and is what the settlement
+  shows of them: on the map, indoors and out on a trip, and what they hold is in their hands
+- **The pieces of a face each go by themselves from the first**: from the front the two of a
+  pair went together unless a tile behind the cog was put out. Now they go together only
+  when it is lit
+- **The same three tiles for the views** where the pieces of a face are put in place, and the
+  keys move the piece last taken hold of half a pixel of the head, or two with Shift held
+
+Decided without asking:
+- **Where a limb is put is no measure of the body**: the papers they are drawn on are as
+  they were, and so is where both arms join the trunk by the measures kept before
+- **The place both arms were moved from is gone from the figure**: what was kept by it is
+  still read
+- **A head is moved from the side alone**: it is one picture
+- **Knocked about, a body has its limbs where the rule has them**
+
+Still open here:
+- **Nobody has done it with a mouse**: it was driven by scripted presses and drags, and
+  looked at in pictures of the screen in each view
+- **Two that are in the same place** are told apart by taking hold of the one over the other
+  first
+
+Done when: from the side one arm is moved and the other stays; from the front and three
+quarters on the same; it is kept, and the map shows them so.
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

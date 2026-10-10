@@ -176,6 +176,12 @@ class StudioTests(unittest.TestCase):
         moved, other = face._key("eye_near"), face._key("eye_far")
         self.assertAlmostEqual(moved.x, key.x - 5, delta=1.5)
         self.assertAlmostEqual(moved.y, key.y + 8, delta=1.5)
+        # Each piece goes by itself: the other eye is where it was, until the two are asked
+        # to go together (P77).
+        self.assertAlmostEqual(other.y, key.y, delta=0.01)
+        face.symmetric = True
+        self.stroke((start[0] - 10, start[1] + 16), (start[0] - 10, start[1] + 20))
+        moved, other = face._key("eye_near"), face._key("eye_far")
         self.assertAlmostEqual(other.y, moved.y, delta=0.01)
         # Its paper comes up to be drawn on when its icon is pressed, and goes when pieces are placed again.
         self.press(("kind", "mouth"))

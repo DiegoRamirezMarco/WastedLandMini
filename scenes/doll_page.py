@@ -25,7 +25,7 @@ from graphics.doll import (
 )
 from graphics.doll_guide import NOTE_INK, build_guide, label_spots, name_ink, piece_spots, piece_zone, piece_zones, reference
 from graphics.face import BEHIND_FROM, FaceLook, FaceStore, faced, with_head
-from graphics.figure import FRONT_DRAWN, SIDE_DRAWN, TRUNK_KEY
+from graphics.figure import FRONT_DRAWN, LIMBS_KEY, SIDE_DRAWN, TRUNK_KEY
 from graphics.face_examples import plain_head
 from graphics.foot import Feet, FootStore, Made
 from graphics.joined import colour_at, half_width_at
@@ -35,12 +35,12 @@ from graphics.mannequin import figures, tones_of
 from graphics.palette import PALETTE
 from graphics.screen_layers import TRANSPARENT, ScreenLayers
 from graphics.sides import DARKER, OWN, SHADE, WAYS, far_darker, limbs, match_far_side
-from graphics.turn import body_yaw, limbs_apart, turned_pose
+from graphics.turn import NEAR_SIDE, LimbKeys, body_yaw, limb_keys_from_data, limb_keys_to_data, limbs_apart, limbs_moved, turned_pose
 from graphics.volume import back_of, fronted, turned_body
 from scenes.scene import canvas_position
 from skeleton.character import Character
 from skeleton.motion import Life
-from skeleton.plan import FACINGS, SkeletonPlan
+from skeleton.plan import FACINGS, SIDES, SkeletonPlan
 from skeleton.rig import Skeleton
 from ui.button import Button
 from ui.paintbox import FILLED_LABEL, HOLLOW_LABEL, POLYGON_NOTICE, POLYGON_TOOL, SHAPE_LABELS, ColorField, ShapeDraft
@@ -64,6 +64,13 @@ GRIP = 8
 HANDLE_RADIUS = 4
 # What the places where a limb is joined on are called beside the figure, by the bone that joins it.
 ATTACH_NAMES = {"clavicle": "hombros", "pelvis": "piernas"}
+# What each kind of limb is called where it is taken hold of by itself, and what is said after
+# it of the one on the far side. How far the keys move the one in hand, in the skeleton's own
+# measure, and how many times as far with Shift held.
+LIMB_NAMES = {"arm": "brazo", "leg": "pierna"}
+FAR_LIMB = " de detrás"
+NUDGE, NUDGE_FAR = 0.05, 5
+ARROWS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1)}
 HEAD_NAME = "cabeza"
 # Where the guide is shown: under the drawing, over it, or not at all.
 GUIDE_UNDER, GUIDE_OVER, GUIDE_OFF = "under", "over", "off"
@@ -194,6 +201,11 @@ class DollPaper:
         # What of the measures the mouse has hold of, and how they stood when it took hold.
         self._grab: tuple | None = None
         self._grab_zoom = 1
+        # Where each limb has been put by hand, by view; the view the doll stands in while it
+        # is measured, which is one of those a face has; and the limb last taken hold of.
+        self.limb_keys: LimbKeys = {}
+        self.measure_view: str | None = None
+        self.chosen_limb: str | None = None
         self.closed = False
         self.resident_id: str | None = None
         self.drawings: dict[str, pygame.Surface] = {}
@@ -335,6 +347,11 @@ class DollPaper:
         if self.trunk_drawn == SIDE_DRAWN:
             self.notice = SIDE_NOTICE
         self._grab = None
+        self.chosen_limb = None
+        self.limb_keys = {}
+        if self.faces is not None and self.resident_id is not None:
+            rules = self.faces.rules
+            self.limb_keys = limb_keys_from_data(self.dolls.extras(self.resident_id).get(LIMBS_KEY), rules.body, rules.views)
         self.far_side = self._kept_far_side()
         self.far_button.label = FAR_LABELS[self.far_side]
         self.depth = self._kept_depth()
@@ -416,13 +433,72 @@ class DollPaper:
         """Canvas pixels to one of the skeleton's in the preview, as it is shown while measuring."""
         return self.measure_detail / self.layers.scale
 
-    def figure_handles(self) -> list[tuple[str, str, tuple[float, float]]]:
-        """Where on the figure a limb or the head can be taken hold of to be joined on elsewhere.
+    def _measured_from(self) -> tuple[str | None, float, float | None]:
+        """The view the doll stands in while it is measured, how far round its head is in it
+        and how far round its body: from its side, where nothing says otherwise."""
+        if self.faces is None:
+            return None, PREVIEW_YAW, None
+        rules = self.faces.rules
+        view = self.measure_view if self.measure_view in rules.views else max(rules.views, key=rules.views.get)
+        return view, rules.views[view], body_yaw(rules.body, rules.views[view], standing=True)
 
-        Each is a kind, `attach` for the bone that joins a limb to the trunk or `point` for a head
-        on its neck, what the measures call it, and where it is on the game's canvas.
-        """
+    def _moved(self, round_by: float | None) -> dict[str, tuple[float, float]]:
+        """How far each limb is from where it goes by rule on a body so far round."""
+        if self.faces is None or round_by is None or not self.limb_keys:
+            return {}
+        return limbs_moved(self.limb_keys, self.faces.rules.views, round_by, self.faces.rules.side)
+
+    def _measured_pose(self) -> dict[str, tuple[float, float]]:
+        """The doll standing as it is measured, in the view in hand, each limb where it was put."""
         pose = self.doll_plan.pose(DOLL_FACINGS["right"])
+        _, _, round_by = self._measured_from()
+        if round_by is None:
+            return pose
+        rules = self.faces.rules
+        return turned_pose(rules.body, self._apart, pose, round_by, rules.side, moved=self._moved(round_by))
+
+    def limb_name(self, limb: str) -> str:
+        """What a limb is called to whoever takes hold of it."""
+        kind = next((kind for kind in LIMB_NAMES if limb.startswith(kind)), None)
+        return LIMB_NAMES.get(kind, limb) + ("" if limb.endswith(NEAR_SIDE) else FAR_LIMB)
+
+    def put_limb(self, limb: str, moved: tuple[float, float]) -> None:
+        """Say how far from where it goes by rule a limb is, in the view in hand."""
+        view, _, _ = self._measured_from()
+        if view is None:
+            return
+        self.limb_keys.setdefault(view, {})[limb] = (round(moved[0], 2), round(moved[1], 2))
+
+    def nudge_limb(self, across: float, down: float) -> bool:
+        """Move the limb last taken hold of a little. Returns whether there was one."""
+        view, _, _ = self._measured_from()
+        if view is None or self.chosen_limb is None:
+            return False
+        before = self.limb_keys.get(view, {}).get(self.chosen_limb, (0.0, 0.0))
+        self.put_limb(self.chosen_limb, (before[0] + across, before[1] + down))
+        return True
+
+    def limbs_by_rule(self) -> None:
+        """Have the limb last taken hold of go back to where it goes by rule in the view in
+        hand: or every limb, with none taken hold of."""
+        view, _, _ = self._measured_from()
+        if view is None:
+            return
+        if self.chosen_limb is not None:
+            self.limb_keys.get(view, {}).pop(self.chosen_limb, None)
+        if self.chosen_limb is None or not self.limb_keys.get(view):
+            self.limb_keys.pop(view, None)
+
+    def figure_handles(self) -> list[tuple[str, str, tuple[float, float]]]:
+        """Where on the figure a limb or the head can be taken hold of to be put elsewhere.
+
+        Each is a kind, `limb` for a limb where it joins the trunk or `point` for a head on its
+        neck, what it is called, and where it is on the game's canvas. Each limb is one by
+        itself, in whichever view the doll stands in: the far one of a pair first, since the
+        near one is over it. A head is moved from the side alone: it is one picture.
+        """
+        pose = self._measured_pose()
+        view, _, round_by = self._measured_from()
         per_unit = self._per_unit
 
         def spot(joints: list[str]) -> tuple[float, float]:
@@ -431,13 +507,22 @@ class DollPaper:
             return (self.preview_rect.centerx + (x + 0.5) * per_unit, self.preview_rect.bottom - self.preview_foot / self.layers.scale + (y + 0.5) * per_unit)
 
         found: dict[tuple[str, str], list[str]] = {}
-        for bone in self.plan.bones.values():
-            spec = self.base_template.parts.get(bone.name)
-            if spec is None:
-                # A bone nobody draws: it is what holds a limb to the trunk, one each side.
-                found.setdefault(("attach", unsided(bone.name)), []).append(bone.end)
-            elif spec.whole:
-                found.setdefault(("point", f"{unsided(bone.name)}.start"), []).append(bone.end)
+        if self.faces is None:
+            for bone in self.plan.bones.values():
+                if self.base_template.parts.get(bone.name) is None:
+                    # A bone nobody draws: it is what holds a limb to the trunk, one each side.
+                    found.setdefault(("attach", unsided(bone.name)), []).append(bone.end)
+        else:
+            turn = self.faces.rules.body
+            for which in sorted(SIDES, key=lambda side: side == NEAR_SIDE):
+                for name, limb in turn.limbs.items():
+                    if f"{limb.joints[0]}{which}" in pose:
+                        found[("limb", f"{name}{which}")] = [f"{limb.joints[0]}{which}"]
+        if round_by is None or abs(round_by - self.faces.rules.side) < 1e-6:
+            for bone in self.plan.bones.values():
+                spec = self.base_template.parts.get(bone.name)
+                if spec is not None and spec.whole:
+                    found.setdefault(("point", f"{unsided(bone.name)}.start"), []).append(bone.end)
         return [(kind, name, spot(joints)) for (kind, name), joints in found.items()]
 
     def _take_hold(self, position: tuple[int, int]) -> bool:
@@ -457,9 +542,17 @@ class DollPaper:
         if self.preview_rect.collidepoint(position):
             near = [entry for entry in self.figure_handles() if math.dist(entry[2], position) <= GRIP + 2]
             if not near:
+                # A press on nothing lets go of whichever limb was last taken hold of.
+                self.chosen_limb = None
                 return False
-            kind, name, _ = min(near, key=lambda entry: math.dist(entry[2], position))
-            before = (self.build.attach if kind == "attach" else self.build.points).get(name, (0.0, 0.0))
+            # Of two that are in the same place, the one that is over the other: the last.
+            kind, name, _ = min(reversed(near), key=lambda entry: math.dist(entry[2], position))
+            if kind == "limb":
+                view, _, _ = self._measured_from()
+                before = self.limb_keys.get(view, {}).get(name, (0.0, 0.0))
+                self.chosen_limb = name
+            else:
+                before = (self.build.attach if kind == "attach" else self.build.points).get(name, (0.0, 0.0))
             self._grab = (kind, name, None, before, position)
             return True
         return False
@@ -470,6 +563,10 @@ class DollPaper:
         dx, dy = position[0] - pressed[0], position[1] - pressed[1]
         if kind == "joint":
             dx, dy = dx / self._grab_zoom, dy / self._grab_zoom
+        if kind == "limb":
+            # A limb by itself, in the view in hand: no measure of the body is another for it.
+            self.put_limb(name, (before[0] + dx / self._per_unit, before[1] + dy / self._per_unit))
+            return
         build = self.build.copy()
         if kind == "joint" and axis is not None:
             build.joints[name] = round(before + (dx * axis[0] + dy * axis[1]) / self.template.unit, 2)
@@ -802,6 +899,8 @@ class DollPaper:
             # Their measures go with their drawings: one is cut by the other.
             measures = self.root / build_path(self.resident_id)
             kept = {**self.build.to_data(), FAR_KEY: self.far_side, DEPTH_KEY: round(self.depth, 3), TRUNK_KEY: self.trunk_drawn}
+            if self.limb_keys:
+                kept[LIMBS_KEY] = limb_keys_to_data(self.limb_keys)
             measures.write_text(json.dumps(kept, indent=2) + "\n", encoding="utf-8")
         except (OSError, pygame.error):
             self.notice = "No se pudo guardar"
@@ -996,9 +1095,11 @@ class DollPaper:
 
     def release(self) -> None:
         if self._grab is not None:
+            placed = self._grab[0] == "limb"
             self._grab = None
-            # Let go: now the drawing is cut again by the measures it was left with.
-            self.set_build(self.build)
+            if not placed:
+                # Let go: now the drawing is cut again by the measures it was left with.
+                self.set_build(self.build)
             self._did(MEASURE_DEED)
         self._picking = False
         if self._draft is not None and self._draft.tool != POLYGON_TOOL:
@@ -1030,6 +1131,11 @@ class DollPaper:
             self._lay_down()
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_z and event.mod & pygame.KMOD_CTRL:
             self.undo()
+        elif event.type == pygame.KEYDOWN and event.key in ARROWS and self.tool == MEASURE_TOOL:
+            # A little at a time, the limb last taken hold of: and further with Shift held.
+            far = NUDGE_FAR if getattr(event, "mod", 0) & pygame.KMOD_SHIFT else 1
+            across, down = ARROWS[event.key]
+            self.nudge_limb(across * NUDGE * far, down * NUDGE * far)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE and self._draft is not None:
             # Out of the shape, not out of the drawing.
             self._draft, self.notice = None, ""
@@ -1066,10 +1172,21 @@ class DollPaper:
             zoom = self.zooms.get(name, 1)
             for handle in self.joint_handles(name):
                 mark((area.x + handle.point[0] * zoom, area.y + handle.point[1] * zoom), handle.key == held)
-        for kind, name, spot in self.figure_handles():
-            mark(spot, name == held, HANDLE_RADIUS - 1)
-            label = HEAD_NAME if kind == "point" else ATTACH_NAMES.get(name, name)
-            self.font.draw(self.canvas, label, (round(spot[0]) + HANDLE_RADIUS + 5, round(spot[1]) - 5), PALETTE["paper"])
+        handles = self.figure_handles()
+        for kind, name, spot in handles:
+            lit = name == held or (kind == "limb" and name == self.chosen_limb)
+            mark(spot, lit, HANDLE_RADIUS - 1)
+            label = HEAD_NAME if kind == "point" else self.limb_name(name) if kind == "limb" else ATTACH_NAMES.get(name, name)
+            # Two in the same place are each said: the one under the other a line lower.
+            under = sum(1 for other in handles if other[1] > name and math.dist(other[2], spot) < 6)
+            at = (round(spot[0]) + HANDLE_RADIUS + 5, round(spot[1]) - 5 + under * 9)
+            if at[0] + self.font.width(label) > self.preview_rect.right - 2:
+                # No room for it on that side of what it names: it is said on the other.
+                at = (round(spot[0]) - HANDLE_RADIUS - 5 - self.font.width(label), at[1])
+            self.font.draw(self.canvas, label, at, PALETTE["glow" if lit else "paper"])
+        view, _, _ = self._measured_from()
+        if view is not None:
+            self.font.draw(self.canvas, self.faces.rules.view_names[view], (self.preview_rect.x + 6, self.preview_rect.y + 5), PALETTE["dust"])
 
     def _show_drawing(self, name: str, area: pygame.Rect) -> Callable[[pygame.Surface], None]:
         place = self.layers.on_screen(area)
@@ -1120,6 +1237,9 @@ class DollPaper:
         # While it is being measured it is posed exactly, so that its joints are where they are taken hold of.
         body.plan, body.lively = plan, not measuring
         yaw, round_by = PREVIEW_YAW, None
+        if measuring:
+            # In the view in hand, each limb where it was put: as it is shown everywhere.
+            _, yaw, round_by = self._measured_from()
         if self.faces is not None and not measuring:
             # From its side, three quarters on and from the front by turns. Measured, it is as it was drawn.
             rules, view = self.faces.rules, self._view()
@@ -1134,7 +1254,9 @@ class DollPaper:
         pose = body.local_pose()
         if round_by is not None:
             _, _, mirrored, swapped = FACINGS[facing]
-            pose = turned_pose(self.faces.rules.body, self._apart, pose, round_by, self.faces.rules.side, mirrored, swapped)
+            pose = turned_pose(
+                self.faces.rules.body, self._apart, pose, round_by, self.faces.rules.side, mirrored, swapped, self._moved(round_by)
+            )
         skeleton.set_pose(pose)
         doll = self._seen(yaw, round_by)
         # The figure of the guide has the hands it was drawn with; a doll may have ones that are made.

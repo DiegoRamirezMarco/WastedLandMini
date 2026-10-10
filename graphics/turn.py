@@ -27,7 +27,8 @@ How far out on the trunk the limbs are is data (`body` in `data/face.json`).
 """
 
 import math
-from collections.abc import Callable, Hashable
+from collections.abc import Callable, Hashable, Mapping
+from typing import Any
 
 from graphics.doll import Doll
 from graphics.face import BodyTurn
@@ -43,6 +44,68 @@ AXIS = "pelvis"
 # What how much further out a limb stands, seen from the front, is kept under: the name of its
 # first joint and this.
 CLEAR = "~clear"
+
+
+# Where each limb has been put by hand, by view and by limb: how far across the screen and
+# down it from where it goes by rule, in the skeleton's own measure, on a body that faces right.
+LimbKeys = dict[str, dict[str, Point]]
+
+
+def limb_names(turn: BodyTurn) -> list[str]:
+    """What each limb of a body is called where it is put in place: its kind and its side."""
+    return [f"{name}{which}" for name in turn.limbs for which in SIDES]
+
+
+def limb_keys_from_data(data: Any, turn: BodyTurn, views: Mapping[str, float]) -> LimbKeys:
+    """Where limbs were put by hand, as it was kept: whatever of it cannot be read, or is of
+    a view or a limb there is not, is left out."""
+    keys: LimbKeys = {}
+    if not isinstance(data, dict):
+        return keys
+    names = set(limb_names(turn))
+    for view, limbs in data.items():
+        if view not in views or not isinstance(limbs, dict):
+            continue
+        for name, moved in limbs.items():
+            try:
+                across, down = float(moved[0]), float(moved[1])
+            except (TypeError, ValueError, IndexError, KeyError):
+                continue
+            if name in names and (across or down):
+                keys.setdefault(str(view), {})[str(name)] = (across, down)
+    return keys
+
+
+def limb_keys_to_data(keys: LimbKeys) -> dict[str, dict[str, list[float]]]:
+    return {
+        view: {name: [round(moved[0], 3), round(moved[1], 3)] for name, moved in limbs.items() if moved[0] or moved[1]}
+        for view, limbs in keys.items() if any(moved[0] or moved[1] for moved in limbs.values())
+    }
+
+
+def limbs_moved(keys: LimbKeys, views: Mapping[str, float], yaw: float, side: float) -> dict[str, Point]:
+    """How far each limb is from where it goes by rule on a body `yaw` degrees round from
+    facing the screen: between where it was put in the two views nearest to that, as the
+    pieces of a face are. Seen from behind it is as it is as far round from the front, the
+    other way across: nobody puts anything in place from behind."""
+    if not keys:
+        return {}
+    behind = abs(yaw) > side
+    seen = max(0.0, min(side, abs(yaw) if not behind else 2.0 * side - abs(yaw)))
+    ordered = sorted(views.items(), key=lambda entry: entry[1])
+    (before, low), (after, high) = ordered[0], ordered[0]
+    for (before, low), (after, high) in zip(ordered, ordered[1:]):
+        if seen <= high:
+            break
+    share = (seen - low) / (high - low) if high > low else 0.0
+    first, second = keys.get(before, {}), keys.get(after, {})
+    moved = {}
+    for name in {*first, *second}:
+        (x1, y1), (x2, y2) = first.get(name, (0.0, 0.0)), second.get(name, (0.0, 0.0))
+        across, down = x1 + (x2 - x1) * share, y1 + (y2 - y1) * share
+        if across or down:
+            moved[name] = (-across if behind else across, down)
+    return moved
 
 
 def body_yaw(turn: BodyTurn, yaw: float, standing: bool = False) -> float:
@@ -100,12 +163,16 @@ def turned_pose(
     side: float,
     mirrored: bool = False,
     swapped: bool = False,
+    moved: Mapping[str, Point] | None = None,
 ) -> dict[str, Point]:
     """A pose as it is shown with the body `yaw` degrees round from facing the screen, where
     `side` degrees is seen from its side. `apart` is how far to its side each limb is from the front.
 
     `mirrored` and `swapped` are how the body faces, as the skeleton has them: one that faces
     left is the other in a mirror, and may call its sides by each other's names.
+
+    `moved` is how far each limb has been put from where it goes by rule, turned that way
+    (`limbs_moved`), on a body that faces right: the whole limb goes that far.
     """
     # As far round as right behind: there its limbs have changed sides, as limbs seen from
     # behind have, and what it does is towards whoever looks again, the other way.
@@ -133,7 +200,7 @@ def turned_pose(
         for by, joint in turn.stiff:
             if by in pose and joint in pose:
                 shown[joint] = (shown[by][0] + pose[joint][0] - pose[by][0], pose[joint][1])
-    for limb in turn.limbs.values():
+    for limb_name, limb in turn.limbs.items():
         for which in SIDES:
             first = f"{limb.joints[0]}{which}"
             if first not in pose:
@@ -174,6 +241,16 @@ def turned_pose(
                 reached = (reached[0] + step[0], reached[1] + step[1])
                 shown[f"{joint}{which}"] = reached
                 before, last = (x, y), step
+            # Wherever it was put by hand: on a body in a mirror, the limb that is called by
+            # the other side's name, the other way across.
+            kept = f"{limb_name}{SIDES[1 - SIDES.index(which)] if swapped else which}"
+            across, down = (moved or {}).get(kept, (0.0, 0.0))
+            if across or down:
+                across = -across if mirrored else across
+                for joint in limb.joints:
+                    if f"{joint}{which}" in shown:
+                        x, y = shown[f"{joint}{which}"]
+                        shown[f"{joint}{which}"] = (x + across, y + down)
     return shown
 
 

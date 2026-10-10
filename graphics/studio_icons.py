@@ -201,6 +201,28 @@ def _stand(p: Pen) -> None:
     p.box(25.2, 30, 5.2, 14, 2.4)
 
 
+def _view_front(p: Pen) -> None:
+    # A head that looks at whoever looks: two eyes, one either side of its middle.
+    p.circle(24, 24, 19)
+    p.circle(16.5, 22, 4, p.cut)
+    p.circle(31.5, 22, 4, p.cut)
+
+
+def _view_quarter(p: Pen) -> None:
+    # Part of the way round: both eyes still, nearer one edge.
+    p.circle(24, 24, 19)
+    p.circle(23, 22, 4, p.cut)
+    p.circle(35, 22, 3.2, p.cut)
+    p.poly([(41, 24), (47, 28), (41, 31)])
+
+
+def _view_side(p: Pen) -> None:
+    # From its side: one eye, and a nose out in front.
+    p.circle(22, 24, 19)
+    p.circle(30, 21, 4, p.cut)
+    p.poly([(38, 22), (47.5, 28), (38.5, 33)])
+
+
 def _walk(p: Pen) -> None:
     p.circle(27.5, 8.5, 6)
     p.line([(26, 16), (22.5, 29)], 7)
@@ -454,6 +476,9 @@ ICONS: dict[str, tuple] = {
     "eye_shut": (_eye_shut, FACE),
     "mouth_open": (_mouth_open, FACE),
     "mood": (_mood, MOVING),
+    "view_front": (_view_front, MOVING),
+    "view_quarter": (_view_quarter, MOVING),
+    "view_side": (_view_side, MOVING),
     "talk": (_talk, MOVING),
     "nose": (_nose, FACE),
     "ear": (_ear, FACE),

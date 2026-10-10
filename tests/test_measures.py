@@ -340,16 +340,23 @@ class MeasuringInTheEditorTests(unittest.TestCase):
         self._drag(ankle, (ankle[0] + 40, ankle[1]))
         self.assertEqual(self.editor.build.joints, {"shin.end": -1.5})
 
-    def test_shoulders_legs_and_head_are_moved_on_the_figure(self) -> None:
+    def test_each_limb_and_the_head_are_moved_on_the_figure(self) -> None:
         self._click(self._button(("tool", "measure")))
         self._frame()
         spots = {name: spot for _, name, spot in self.editor.figure_handles()}
-        self.assertEqual(set(spots), {"clavicle", "pelvis", "skull.start"})
+        self.assertEqual(set(spots), {"arm_left", "arm_right", "leg_left", "leg_right", "skull.start"})
+        # Each limb is taken hold of by itself, and goes by itself (P77).
         per_unit = self.editor._per_unit
-        self._drag(spots["clavicle"], (spots["clavicle"][0] + per_unit, spots["clavicle"][1] + 2 * per_unit))
-        self.assertEqual(self.editor.build.attach, {"clavicle": (1.0, 2.0)})
+        self._drag(spots["arm_right"], (spots["arm_right"][0] + per_unit, spots["arm_right"][1] + 2 * per_unit))
+        self.assertEqual(set(self.editor.limb_keys), {"profile"})
+        self.assertEqual(set(self.editor.limb_keys["profile"]), {"arm_right"})
+        # To the pixel of the screen it was let go on, which is not a whole one of the figure.
+        self.assertAlmostEqual(self.editor.limb_keys["profile"]["arm_right"][0], 1.0, delta=0.15)
+        self.assertAlmostEqual(self.editor.limb_keys["profile"]["arm_right"][1], 2.0, delta=0.15)
+        self.assertEqual(self.editor.build.attach, {}, "no measure of the body is another for it")
         moved = {name: spot for _, name, spot in self.editor.figure_handles()}
-        self.assertAlmostEqual(moved["clavicle"][1], spots["clavicle"][1] + 2 * per_unit, delta=0.01)
+        self.assertAlmostEqual(moved["arm_right"][1], spots["arm_right"][1] + 2 * per_unit, delta=0.01)
+        self.assertEqual(moved["arm_left"], spots["arm_left"])
         # A head moved up on the figure is its neck moved down on the head's own paper.
         neck = self._joint("skull.start", "head")
         self._drag(moved["skull.start"], (moved["skull.start"][0], moved["skull.start"][1] - per_unit))
