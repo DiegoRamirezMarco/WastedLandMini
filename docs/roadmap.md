@@ -6616,6 +6616,47 @@ Still open here:
 Done when: from the side one arm is moved and the other stays; from the front and three
 quarters on the same; it is kept, and the map shows them so.
 
+### P78 — What two do together that is not talk (needs P75) — done
+The next of the list of animations, asked for as "ponte con las animaciones de abrazo beso
+etc y luego oficios".
+
+- **A hug, a kiss, flirting**: both put their arms round each other; both lean in, eyes
+  shut; whoever flirts has a hand at their chin and sways, and the other listens
+- **A shove, and reeling from one**; **cowering** before whoever cows them, who points; and
+  whoever is told off or made little of cowers too, while the other has words in their own way
+- **Comforting and crying**: whoever hears somebody out has a hand on them, and they have
+  theirs at their face, eyes shut; tending and heartening are the hand without the crying
+- **A bow** from whoever is called to account, and from whoever comes to make peace
+- **Dancing**, two together or one alone; **singing**, with the mouth going; **cards** in
+  both hands, and one laid now and then; **chess**, chin on a hand until a piece is moved
+- **Who does what goes by who came for it**: whoever came for the exchange does it, and the
+  other has it done to them. A part with no look of its own is spoken or listened through
+- **They are shown nearer each other than they stand** for what is done with the arms round
+  somebody, or with a hand on them: each a third of a tile, less for a shove
+- **Sat down to, it is done on the body that sits**: cards, chess, singing by the fire
+- **All of it is data**: fourteen clips in `data/skeleton.json`; who is shown at which, how
+  near, and what their face does meanwhile in `data/poses.json` (`together`, `alone`)
+
+Decided without asking:
+- **Fourteen clips, and these**: one way of each, for everybody. They are not manners
+- **Having words with somebody is still done in their own way of it**: an insult is that
+- **A greeting comes from whoever came for the talk**, whether or not it is about anything
+- **Seen from the side**, as everything two do facing each other is
+
+Still open here:
+- **Nobody has played it with a mouse**: it was read in strips of each clip on a doll of the
+  game, and of six pairs at it on the map
+- **One above the other on the map they are not drawn nearer**, and both are seen from the
+  side they were last on
+- **Their names are one over the other** while they are that near
+- **A tryst, treating somebody, mending something for them and pampering them** have no look
+  of their own yet
+- **Darts, washing, drinking, training, the radio** are the things that are used, next in
+  the list after jobs
+
+Done when: two who hug on the map are seen with their arms round each other, nearer than
+they stand; whoever is shoved reels; whoever is cowed cowers; and two who dance, dance.
+
 ### P36 — Letters as fine as the rest (needs P35) — planned
 Answered with P35: all the text of the game goes to a smooth letter at the resolution of the
 window, as a milestone of its own, because it touches every screen.

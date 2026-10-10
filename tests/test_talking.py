@@ -34,7 +34,7 @@ class TalkingClipsTests(unittest.TestCase):
         talk = builtin_poses().talk
         self.assertEqual((talk.listen.clip, talk.laugh.clip, talk.greet.clip), ("listen", "laugh", "wave"))
         self.assertIn("joke", talk.laugh_at)
-        self.assertIn("hug", talk.silent)
+        self.assertIn("pamper", talk.silent)
         self.assertGreater(talk.greet_minutes, 0)
 
 
@@ -122,7 +122,7 @@ class TalkingTests(unittest.TestCase):
         self.assertNotIn(self.view._bearing(self.raul)[0], ("laugh", "listen", IDLE_CLIP))
 
     def test_what_two_do_that_is_not_talk_is_not_shown_as_talk(self) -> None:
-        self.meet("hug", minutes_ago=TURN_MINUTES * 2 + 1)
+        self.meet("pamper", minutes_ago=TURN_MINUTES * 2 + 1)
         self.assertEqual(self.view._bearing(self.raul), (IDLE_CLIP, 0.0, None))
         self.raul.activity = None
         self.assertEqual(self.view._bearing(self.raul), (IDLE_CLIP, 0.0, None))

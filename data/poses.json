@@ -17,7 +17,28 @@
     "laugh_at": ["joke", "amuse"],
     "greet": {"clip": "wave", "rate": 1.6},
     "greet_minutes": 3,
-    "silent": ["fight", "hug", "kiss", "dance", "cards", "tryst", "shove", "tend", "treat", "fix_for", "pamper"]
+    "silent": ["fight", "tryst", "treat", "fix_for", "pamper"]
+  },
+  "together": {
+    "hug": {"doer": {"clip": "hug", "rate": 0.35}, "other": {"clip": "hug", "rate": 0.35}, "near": 0.3},
+    "kiss": {"doer": {"clip": "kiss", "rate": 0.3, "eyes": "shut"}, "other": {"clip": "kiss", "rate": 0.3, "eyes": "shut"}, "near": 0.3},
+    "flirt": {"doer": {"clip": "flirt", "rate": 0.5}},
+    "belittle": {"other": {"clip": "cower", "rate": 0.5}},
+    "tell_off": {"doer": {"clip": "point", "rate": 1.0, "mouth": "goes"}, "other": {"clip": "cower", "rate": 0.5}},
+    "cow": {"doer": {"clip": "point", "rate": 0.6}, "other": {"clip": "cower", "rate": 1.4}},
+    "shove": {"doer": {"clip": "shove", "rate": 0.8}, "other": {"clip": "stagger", "rate": 0.8}, "near": 0.18},
+    "tend": {"doer": {"clip": "comfort", "rate": 0.4}, "near": 0.2},
+    "hear_out": {"doer": {"clip": "comfort", "rate": 0.3}, "other": {"clip": "cry", "rate": 1.2, "eyes": "shut"}, "near": 0.2},
+    "hearten": {"doer": {"clip": "comfort", "rate": 0.5}, "near": 0.2},
+    "make_amends": {"other": {"clip": "bow", "rate": 0.3}},
+    "reconcile": {"doer": {"clip": "bow", "rate": 0.3}},
+    "dance": {"doer": {"clip": "dance", "rate": 1.0}, "other": {"clip": "dance", "rate": 1.0}},
+    "cards": {"doer": {"clip": "cards", "rate": 0.3}, "other": {"clip": "cards", "rate": 0.3}}
+  },
+  "alone": {
+    "dance_alone": {"clip": "dance", "rate": 1.0},
+    "sing": {"clip": "sing", "rate": 0.5, "mouth": "goes"},
+    "play_chess": {"clip": "chess", "rate": 0.25}
   },
   "sleep_rough": {
     "down": {"clip": "lie_down", "rate": 0.8},

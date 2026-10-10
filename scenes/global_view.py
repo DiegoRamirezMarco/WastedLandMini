@@ -3047,11 +3047,51 @@ class GlobalView:
         they reel as they go. Nothing for somebody steady on their feet."""
         sign = self.under_sign(resident)
         if sign is None or sign in STEADY_SIGNS:
-            return 0.0
+            return self._nearer(resident)
         reach, rate = SWAYS.get(sign, OTHER_SWAY)
         # Nobody reels in step with anybody else.
         offset = sum(map(ord, resident.resident_id)) % 7
-        return reach * math.sin((self.time * rate + offset / 7.0) * math.tau)
+        return reach * math.sin((self.time * rate + offset / 7.0) * math.tau) + self._nearer(resident)
+
+    def _began_it(self, resident: Resident) -> bool:
+        """Whether what a resident is at with another was theirs to begin: they came for it,
+        or brought up what is talked about."""
+        activity = resident.activity
+        return activity is not None and (activity.brought or activity.intent == activity.action)
+
+    def _shared(self, resident: Resident):
+        """How what a resident does with another right now is shown, if it is something that
+        is not talk and has a look of its own."""
+        activity = resident.activity
+        if activity is None or not activity.using or activity.partner_id is None:
+            return None
+        return self.poses.together.get(activity.action)
+
+    def _showing(self, resident: Resident):
+        """The look of its own of what a resident is at, with another or alone: the clip, its
+        rate and what their face does meanwhile. None for what has none."""
+        activity = resident.activity
+        if activity is None or not activity.using:
+            return None
+        if activity.partner_id is None:
+            return self.poses.alone.get(activity.action)
+        shared = self._shared(resident)
+        if shared is None:
+            return None
+        return shared.doer if self._began_it(resident) else shared.other
+
+    def _nearer(self, resident: Resident) -> float:
+        """How far towards whoever they are with a resident is shown from where they stand, in
+        tiles across: what is done with the arms round somebody is done from nearer than two
+        stand to talk."""
+        shared = self._shared(resident)
+        if shared is None or not shared.near:
+            return 0.0
+        partner = self.world.residents.get(resident.activity.partner_id or "")
+        if partner is None or partner.trail and len(partner.trail) > 1 or resident.trail and len(resident.trail) > 1:
+            return 0.0
+        across = partner.x - resident.x
+        return math.copysign(shared.near, across) if abs(across) >= 0.5 else 0.0
 
     def _resident_draw(self, resident: Resident) -> Draw:
         # In the player's hand they are doing nothing of what they were at: they hang from it.
@@ -3355,12 +3395,17 @@ class GlobalView:
         own = sum(map(ord, resident.resident_id)) % 97 / 97
         mouth = 0
         activity = resident.activity
-        if self._speaking(resident):
+        # What they are at may have their mouth going, or their eyes shut, whoever has the turn.
+        at = self._showing(resident)
+        if at is not None and (at.mouth_goes or at.eyes_shut):
+            mouth = moves.mouth_at(self.time, own) if at.mouth_goes else 0
+        elif at is None and self._speaking(resident):
             mouth = moves.mouth_at(self.time, own)
         elif activity is not None and activity.using and activity.action == EAT_ACTION:
             mouth = moves.mouth_at(self.time, own, chewing=True)
         mood = expression_of(self.world, resident)
-        return FaceLook(moves.lids_at(self.time, own), mouth, mood if mood in moves.moods else "")
+        lids = moves.steps(SHUT) if at is not None and at.eyes_shut else moves.lids_at(self.time, own)
+        return FaceLook(lids, mouth, mood if mood in moves.moods else "")
 
     def bundle_spot(self, bundle: Bundle) -> tuple[float, float, float]:
         """Where a child in its blanket is shown: the middle of its foot in map pixels, and how
@@ -3478,12 +3523,14 @@ class GlobalView:
         if activity.partner_id is not None:
             if self._fighting(resident):
                 return (*self._way_of(resident, FIGHT), None)
-            if self._arguing(resident):
+            # What is not talk and has a look of its own is that: a hug, a shove, cards.
+            own = self._showing(resident)
+            if own is None and self._arguing(resident):
                 return (*self._way_of(resident, ARGUE), None)
             # What two sit down to, they sit down to: cards, a story. And whatever they
             # have to say to each other they say with their hands, sitting or standing.
             together = self._seat_of(resident)
-            talk = self._talk_of(resident)
+            talk = (own.clip, own.rate) if own is not None else self._talk_of(resident)
             if talk is None:
                 return (*together, None) if together is not None else (IDLE_CLIP, 0.0, None)
             return (together[0], talk[1], talk[0]) if together is not None else (*talk, None)
@@ -3495,6 +3542,10 @@ class GlobalView:
         work = self._work_of(resident)
         if work is not None:
             return (work[0].clip, work[0].rate, None)
+        own = self._showing(resident)
+        if own is not None:
+            # What is done alone with a look of its own, on the body that sits if it is sat to.
+            return (seat[0], own.rate, own.clip) if seat is not None else (own.clip, own.rate, None)
         return (*seat, None) if seat is not None else (IDLE_CLIP, 0.0, None)
 
     def _speaking(self, resident: Resident) -> bool:
@@ -3519,7 +3570,7 @@ class GlobalView:
         if talk is None or activity is None or activity.partner_id is None or activity.action in talk.silent:
             return None
         minutes = self.world.clock.total_minutes - activity.began_at
-        if talk.greet is not None and activity.brought and minutes < talk.greet_minutes:
+        if talk.greet is not None and self._began_it(resident) and minutes < talk.greet_minutes:
             return (talk.greet.clip, talk.greet.rate)
         if self._speaking(resident):
             kind = self.world.registries.manners.kind_for(TALK)

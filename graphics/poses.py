@@ -58,6 +58,33 @@ class OnTheGround:
     up: Doing
 
 
+# What a face does while its wearer is at something: its eyes shut, its mouth going.
+EYES_SHUT, MOUTH_GOES = "shut", "goes"
+
+
+@dataclass(frozen=True)
+class Showing:
+    """How one of two is shown at what they do together, or somebody at something alone: the
+    clip, how many turns of it a second, and what their face does meanwhile."""
+
+    clip: str
+    rate: float = 1.0
+    eyes_shut: bool = False
+    mouth_goes: bool = False
+
+
+@dataclass(frozen=True)
+class Together:
+    """How something two do together that is not talk is shown: whoever does it, and whoever
+    it is done to or with, each with a clip of their own or none, in which case they speak
+    or listen as at any talk; and how much nearer each other than they stand they are shown
+    for it, each going that far, in tiles."""
+
+    doer: Showing | None = None
+    other: Showing | None = None
+    near: float = 0.0
+
+
 @dataclass(frozen=True)
 class Talking:
     """How two who have something to say to each other are shown. Whoever speaks does so in
@@ -94,6 +121,10 @@ class Poses:
     seat: Doing | None = None
     # Talking. None where two who talk stand as anybody stands.
     talk: Talking | None = None
+    # What two do together that is not talk, by what it is: a hug, a shove.
+    together: dict[str, Together] = field(default_factory=dict)
+    # What is done alone and has a look of its own, by what it is: dancing, singing.
+    alone: dict[str, Showing] = field(default_factory=dict)
 
     def working(self, job_id: str | None, with_tool: bool) -> Doing:
         """How somebody at their post is shown, by their job and whether they have its tool in hand."""
@@ -119,6 +150,15 @@ def _doing(data: Any, what: str, fallback: Doing = Doing()) -> Doing:
         raise ValueError(f"{what} goes at a rate it cannot have: {rate}")
     prop = data.get("prop")
     return Doing(str(data.get("clip", fallback.clip)), rate, str(prop) if prop is not None else None)
+
+
+def _showing(data: Any, what: str) -> Showing:
+    if not isinstance(data, dict) or "clip" not in data:
+        raise ValueError(f"{what} must say what clip shows it")
+    rate = float(data.get("rate", 1.0))
+    if rate <= 0:
+        raise ValueError(f"{what} goes at a rate it cannot have: {rate}")
+    return Showing(str(data["clip"]), rate, data.get("eyes") == EYES_SHUT, data.get("mouth") == MOUTH_GOES)
 
 
 def poses_from_data(data: dict[str, Any]) -> Poses:
@@ -155,7 +195,15 @@ def poses_from_data(data: dict[str, Any]) -> Poses:
             max(0.0, float(said.get("greet_minutes", 0.0))),
             tuple(str(action) for action in said.get("silent", ())),
         )
-    return Poses(handles, work, jobs, _doing(data.get("build"), "Building", work), pocket, rough, seat, talk)
+    together = {}
+    for action, said in data.get("together", {}).items():
+        together[str(action)] = Together(
+            _showing(said["doer"], f"Whoever does {action}") if "doer" in said else None,
+            _showing(said["other"], f"Whoever {action} is done to") if "other" in said else None,
+            max(0.0, float(said.get("near", 0.0))),
+        )
+    alone = {str(action): _showing(said, f"Doing {action}") for action, said in data.get("alone", {}).items()}
+    return Poses(handles, work, jobs, _doing(data.get("build"), "Building", work), pocket, rough, seat, talk, together, alone)
 
 
 def load_poses(path: Path = POSES_PATH) -> Poses:

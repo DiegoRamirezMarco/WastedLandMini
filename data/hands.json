@@ -34,7 +34,10 @@
     "shoot_aim": "grip", "shoot_braced": "grip", "shoot_hip": "grip",
     "eat": "grip", "eat_wolf": "grip", "eat_dainty": "grip", "pocket": "open",
     "talk_calm": "open", "talk_hands": "open", "talk_shy": "relaxed",
-    "listen": "relaxed", "laugh": "relaxed", "wave": "open"
+    "listen": "relaxed", "laugh": "relaxed", "wave": "open",
+    "hug": "open", "kiss": "relaxed", "flirt": "relaxed", "point": "fist", "cower": "open",
+    "shove": "open", "stagger": "open", "comfort": "open", "cry": "relaxed", "bow": "relaxed",
+    "dance": "open", "sing": "open", "cards": "grip", "chess": "relaxed"
   },
   "held": {"thick": [0.0, 1.4], "opens": 0.5},
   "quick": 9.0
